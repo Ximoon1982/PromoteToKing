@@ -1,0 +1,37 @@
+P2KStandardizedWebsite_v1/
+├── assets
+│   ├── css
+│   │   ├── analyze-match-modal.css
+│   │   ├── analyze-match.css
+│   │   ├── legacy-loader.css
+│   │   ├── site.css
+│   │   └── upcoming-matches-analyzer.css
+│   ├── images
+│   │   └── p2k-logo.jpg
+│   └── js
+│       ├── pages
+│       │   ├── analyze-match-modal.js
+│       │   ├── analyze-match.js
+│       │   ├── find-match.js
+│       │   ├── match-creation-analyzer.js
+│       │   └── upcoming-matches-analyzer.js
+│       ├── shared
+│       │   └── api-cache.js
+│       └── site-config.js
+├── docs
+│   └── ARCHITECTURE.md
+├── AnalyzeMatch.html
+├── AnalyzeMatch_v4.html
+├── AnalyzeMatches_v1.htm
+├── AnalyzeMatchModal.html
+├── AnalyzeMatchModal_v1.html
+├── FindMatch_v1.htm
+├── FindMatch_v29.htm
+├── index.html
+├── MatchCreationAnalyzer_v1.htm
+├── p2k-logo.jpg
+├── P2K_Match_Creation_Analyzer_v21.html
+├── P2K_Upcoming_Matches_Analyzer_v42.htm
+├── README.md
+├── site-manifest.json
+└── STRUCTURE.txt

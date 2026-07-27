@@ -1,0 +1,52 @@
+/* Embedded modal overrides layered over upcoming-matches-analyzer.css. */
+/* Embedded single-match mode used by the Match Assistant modal. */
+  html, body {
+    min-height: 100%;
+    background: #171513;
+  }
+
+  body {
+    padding: 8px;
+  }
+
+  #p2kUpcomingAnalyzer {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  #p2kUpcomingAnalyzer > .p2k-header,
+  #p2kAnalyzeButton,
+  #p2kUpcomingAnalyzer > .p2k-filter-title,
+  #p2kUpcomingAnalyzer > .p2k-filter-group,
+  #p2kUpcomingAnalyzer > .p2k-legend,
+  #p2kRecruitmentRecap,
+  #p2kSearchToolbar,
+  #p2kCopyChoiceModal,
+  #p2kCopyModal,
+  #p2kUpcomingAnalyzer .p2k-result-summary,
+  #p2kUpcomingAnalyzer .p2k-copy-html,
+  #p2kUpcomingAnalyzer .p2k-detail-toggle,
+  #p2kUpcomingAnalyzer .p2k-card-actions {
+    display: none !important;
+  }
+
+  #p2kStatus {
+    margin: 0 0 8px;
+  }
+
+  #p2kResults {
+    margin-top: 0;
+  }
+
+  #p2kResults .p2k-card {
+    margin: 0;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 4px; }
+    #p2kResults .p2k-card { border-radius: 8px; }
+  }

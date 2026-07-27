@@ -1,0 +1,17 @@
+{
+  "publicEntryPoints": [
+    "FindMatch_v1.htm",
+    "AnalyzeMatches_v1.htm",
+    "MatchCreationAnalyzer_v1.htm",
+    "AnalyzeMatch.html"
+  ],
+  "internalPages": [
+    "AnalyzeMatchModal.html"
+  ],
+  "sharedAssets": [
+    "assets/js/site-config.js",
+    "assets/js/shared/api-cache.js",
+    "assets/css/upcoming-matches-analyzer.css",
+    "assets/images/p2k-logo.jpg"
+  ]
+}

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="dark" name="color-scheme"/>
+<title>Promote to King Match Analyzer</title>
+<!-- AnalyzeMatch.html - Version 3: single-request in-progress projections from match start ratings -->
+
+<link href="assets/css/analyze-match.css" rel="stylesheet"/></head>
+<body>
+<div class="p2k-analyzer" id="p2kUpcomingAnalyzer">
+<div class="p2k-header">
+<h2>Promote to King Match Analyzer</h2>
+<img alt="Promote to King club logo" src="assets/images/p2k-logo.jpg" title="Promote to King"/>
+</div>
+<form class="p2k-reference-form" id="p2kMatchForm">
+<label class="p2k-reference-label" for="p2kMatchReference">Chess.com team match ID or URL</label>
+<div class="p2k-reference-row">
+<input autocomplete="off" class="p2k-reference-input" id="p2kMatchReference" inputmode="url" placeholder="Example: 1234567 or https://www.chess.com/club/matches/club-name/1234567" spellcheck="false" type="text"/>
+<button class="p2k-main-button" id="p2kAnalyzeButton" type="submit">Analyze match</button>
+</div>
+<div class="p2k-reference-help">The page accepts <code>?match=1234567</code> or a URL-encoded match URL. Add <code>&amp;club=promote-to-king</code> (or a URL-encoded full Chess.com club URL) to select that club automatically. <code>team</code> is also accepted as an alias of <code>club</code>.</div>
+</form>
+<div aria-live="polite" class="p2k-status" id="p2kStatus" style="display:none">
+<div class="p2k-status-row">
+<div class="p2k-status-text" id="p2kStatusText"></div>
+</div>
+<div aria-hidden="true" class="p2k-progress-track" id="p2kProgressTrack">
+<div class="p2k-progress-bar" id="p2kProgressBar"></div>
+</div>
+</div>
+<fieldset class="p2k-team-selector" hidden="" id="p2kTeamSelector">
+<legend>Analyze from the perspective of</legend>
+<div class="p2k-choices" id="p2kTeamChoices"></div>
+</fieldset>
+<div class="p2k-results" id="p2kResults">
+<div class="p2k-empty-prompt">Enter a Chess.com team match number or URL above to display its complete lineup analysis. A club slug or full club URL may be supplied through the club parameter.</div>
+</div>
+<div aria-hidden="true" class="p2k-chart-modal" hidden="" id="p2kChartModal">
+<div aria-labelledby="p2kChartModalTitle" aria-modal="true" class="p2k-chart-modal-dialog" role="dialog">
+<div class="p2k-chart-modal-header">
+<div class="p2k-chart-modal-title" id="p2kChartModalTitle"></div>
+<button class="p2k-chart-modal-close" id="p2kChartModalClose" type="button">Close</button>
+</div>
+<div id="p2kChartModalBody"></div>
+</div>
+</div>
+</div>
+<script src="assets/js/shared/api-cache.js"></script>
+<script src="assets/js/pages/analyze-match.js"></script>
+</body>
+</html>
