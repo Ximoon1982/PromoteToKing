@@ -1,4 +1,4 @@
-P2KStandardizedWebsite_v1/
+P2KStandardizedWebsite/
 ├── assets
 │   ├── css
 │   │   ├── analyze-match-modal.css
@@ -21,17 +21,12 @@ P2KStandardizedWebsite_v1/
 ├── docs
 │   └── ARCHITECTURE.md
 ├── AnalyzeMatch.html
-├── AnalyzeMatch_v4.html
-├── AnalyzeMatches_v1.htm
+├── AnalyzeMatches.htm
 ├── AnalyzeMatchModal.html
-├── AnalyzeMatchModal_v1.html
-├── FindMatch_v1.htm
-├── FindMatch_v29.htm
+├── FindMatch.htm
 ├── index.html
-├── MatchCreationAnalyzer_v1.htm
+├── MatchCreationAnalyzer.htm
 ├── p2k-logo.jpg
-├── P2K_Match_Creation_Analyzer_v21.html
-├── P2K_Upcoming_Matches_Analyzer_v42.htm
 ├── README.md
 ├── site-manifest.json
 └── STRUCTURE.txt

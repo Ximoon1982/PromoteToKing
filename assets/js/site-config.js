@@ -1,9 +1,9 @@
 /* Central deployment configuration. Override values before loading page scripts when needed. */
 window.P2K_SITE_CONFIG = Object.freeze({
   routes: Object.freeze({
-    findMatch: "FindMatch_v1.htm",
-    upcomingMatches: "AnalyzeMatches_v1.htm",
-    matchCreation: "MatchCreationAnalyzer_v1.htm",
+    findMatch: "FindMatch.htm",
+    upcomingMatches: "AnalyzeMatches.htm",
+    matchCreation: "MatchCreationAnalyzer.htm",
     analyzeMatch: "AnalyzeMatch.html",
     analyzeMatchModal: "AnalyzeMatchModal.html"
   }),

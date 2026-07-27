@@ -4,9 +4,9 @@
 
 | Entry point | Controller | Stylesheet |
 |---|---|---|
-| `FindMatch_v1.htm` | `assets/js/pages/find-match.js` | `assets/css/legacy-loader.css` |
-| `AnalyzeMatches_v1.htm` | `assets/js/pages/upcoming-matches-analyzer.js` | `assets/css/upcoming-matches-analyzer.css` |
-| `MatchCreationAnalyzer_v1.htm` | `assets/js/pages/match-creation-analyzer.js` | `assets/css/legacy-loader.css` |
+| `FindMatch.htm` | `assets/js/pages/find-match.js` | `assets/css/legacy-loader.css` |
+| `AnalyzeMatches.htm` | `assets/js/pages/upcoming-matches-analyzer.js` | `assets/css/upcoming-matches-analyzer.css` |
+| `MatchCreationAnalyzer.htm` | `assets/js/pages/match-creation-analyzer.js` | `assets/css/legacy-loader.css` |
 | `AnalyzeMatch.html` | `assets/js/pages/analyze-match.js` | `assets/css/analyze-match.css` |
 
 ## Internal page

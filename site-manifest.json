@@ -1,8 +1,8 @@
 {
   "publicEntryPoints": [
-    "FindMatch_v1.htm",
-    "AnalyzeMatches_v1.htm",
-    "MatchCreationAnalyzer_v1.htm",
+    "FindMatch.htm",
+    "AnalyzeMatches.htm",
+    "MatchCreationAnalyzer.htm",
     "AnalyzeMatch.html"
   ],
   "internalPages": [
