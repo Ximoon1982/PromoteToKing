@@ -21,6 +21,7 @@
   const chartModalTitle = document.getElementById("p2kChartModalTitle");
   const chartModalBody = document.getElementById("p2kChartModalBody");
   const chartModalClose = document.getElementById("p2kChartModalClose");
+  const selectedTeamLogo = document.getElementById("p2kSelectedTeamLogo");
 
   const state = {
     rawMatch: null,
@@ -29,6 +30,8 @@
     preferredClubSlug: "",
     startedMatchData: null,
     analysis: null,
+    clubProfiles: new Map(),
+    logoRequestToken: 0,
     lastChartTrigger: null
   };
 
@@ -147,6 +150,58 @@
     return parseClubReference(team?.["@id"]) ||
       parseClubReference(team?.url) ||
       slugifyClubName(teamName(team, ""));
+  }
+  /* P2K_SELECTED_TEAM_LOGO */
+  function hideSelectedTeamLogo() {
+    if (!selectedTeamLogo) return;
+    selectedTeamLogo.hidden = true;
+    selectedTeamLogo.removeAttribute("src");
+    selectedTeamLogo.alt = "";
+    selectedTeamLogo.title = "";
+  }
+
+  async function updateSelectedTeamLogo() {
+    const requestToken = ++state.logoRequestToken;
+    const selectedEntry = teamEntries(state.rawMatch)
+      .find(([key]) => key === state.selectedTeamKey);
+
+    hideSelectedTeamLogo();
+    if (!selectedTeamLogo || !selectedEntry) return;
+
+    const selectedTeam = selectedEntry[1];
+    const selectedName = teamName(selectedTeam, selectedEntry[0]);
+    const clubSlug = teamClubSlug(selectedTeam);
+    if (!clubSlug) return;
+
+    let clubProfile;
+    if (state.clubProfiles.has(clubSlug)) {
+      clubProfile = state.clubProfiles.get(clubSlug);
+    } else {
+      try {
+        clubProfile = await loadJSON(
+          `https://api.chess.com/pub/club/${encodeURIComponent(clubSlug)}`
+        );
+      } catch (error) {
+        console.warn(`Unable to load the ${selectedName} club logo.`, error);
+        clubProfile = null;
+      }
+      state.clubProfiles.set(clubSlug, clubProfile);
+    }
+
+    if (requestToken !== state.logoRequestToken) return;
+
+    const iconURL = String(clubProfile?.icon || "").trim();
+    if (!iconURL) return;
+
+    selectedTeamLogo.onerror = () => {
+      if (requestToken === state.logoRequestToken) {
+        hideSelectedTeamLogo();
+      }
+    };
+    selectedTeamLogo.src = iconURL;
+    selectedTeamLogo.alt = `${selectedName} club logo`;
+    selectedTeamLogo.title = selectedName;
+    selectedTeamLogo.hidden = false;
   }
 
   function teamKeyForClub(match, clubReference) {
@@ -1211,9 +1266,20 @@
     `;
   }
 
-  function buildRecruitmentRecommendation(match, selectedTeam, otherTeam, bounds, maxPlayers, isLeagueMatch, selectedName, otherName) {
+  function buildRecruitmentRecommendation(match, selectedTeam, otherTeam, bounds, maxPlayers, minPlayers, isLeagueMatch, selectedName, otherName) {
     const selectedRatings = ratedPlayers(selectedTeam, bounds).map(player => player.rating);
     const otherRatings = ratedPlayers(otherTeam, bounds).map(player => player.rating);
+    /* P2K_MANDATORY_SELECTED_MINIMUM */
+    const mandatoryMinimumPlayers = Math.max(
+      0,
+      Number.isFinite(Number(minPlayers))
+        ? Math.floor(Number(minPlayers))
+        : 0
+    );
+    const missingForMinimum = Math.max(
+      0,
+      mandatoryMinimumPlayers - selectedRatings.length
+    );
     const opponentCapacity = Number.isFinite(maxPlayers)
       ? Math.min(maxPlayers, otherRatings.length)
       : otherRatings.length;
@@ -1237,7 +1303,7 @@
       };
     }
 
-    if (targetBoardCount === 0) {
+    if (targetBoardCount === 0 && missingForMinimum === 0) {
       return {
         needsRecruitment: false,
         isLeagueMatch,
@@ -1252,7 +1318,17 @@
       current.boardCount >= targetBoardCount &&
       current.netBoardAdvantage > 2;
 
-    if (friendlyTargetAlreadyExceeded || recruitmentTargetReached(current, targetBoardCount, isLeagueMatch)) {
+    if (
+      missingForMinimum === 0 &&
+      (
+        friendlyTargetAlreadyExceeded ||
+        recruitmentTargetReached(
+          current,
+          targetBoardCount,
+          isLeagueMatch
+        )
+      )
+    ) {
       return {
         needsRecruitment: false,
         isLeagueMatch,
@@ -1265,7 +1341,11 @@
       };
     }
 
-    const missingForFullComparison = Math.max(0, targetBoardCount - selectedRatings.length);
+    const missingForFullComparison = Math.max(
+      0,
+      targetBoardCount - selectedRatings.length,
+      missingForMinimum
+    );
     const observedTopRating = Math.max(1800, selectedRatings[0] || 0, otherRatings[0] || 0);
     const maximumCandidateRating = Number.isFinite(bounds.maximum)
       ? Math.min(3000, Math.floor(bounds.maximum / 25) * 25)
@@ -1274,9 +1354,15 @@
       maximumCandidateRating,
       Math.max(100, Math.ceil(bounds.minimum / 25) * 25)
     );
-    const maximumRecruitCount = Math.min(
-      12,
-      Math.max(missingForFullComparison, Number.isFinite(maxPlayers) ? Math.min(maxPlayers, 8) : 6, 1)
+    const maximumRecruitCount = Math.max(
+      missingForFullComparison,
+      Math.min(
+        12,
+        Math.max(
+          Number.isFinite(maxPlayers) ? Math.min(maxPlayers, 8) : 6,
+          1
+        )
+      )
     );
 
     let solution = null;
@@ -1287,7 +1373,16 @@
           ...Array.from({ length: recruitCount }, () => candidateRating)
         ].sort((a, b) => b - a);
         const projected = compareRecruitmentLineups(projectedRatings, otherRatings, maxPlayers);
-        if (recruitmentTargetReached(projected, targetBoardCount, isLeagueMatch)) {
+        const minimumReached =
+          projectedRatings.length >= mandatoryMinimumPlayers;
+        const lineupTargetReached =
+          targetBoardCount === 0 ||
+          recruitmentTargetReached(
+            projected,
+            targetBoardCount,
+            isLeagueMatch
+          );
+        if (minimumReached && lineupTargetReached) {
           solution = { recruitCount, candidateRating, projected };
           break;
         }
@@ -1664,6 +1759,7 @@
         otherTeam,
         bounds,
         maxPlayers,
+        minPlayers,
         isLeagueMatch,
         selectedName,
         otherName
@@ -1680,8 +1776,8 @@
       ? "p2k-recruitment-panel p2k-recruitment-needed"
       : "p2k-recruitment-panel p2k-recruitment-ready";
     const goalInformation = analysis.isLeagueMatch
-      ? `League matches target a significant ${analysis.selectedName} board advantage: at least a 20% net board margin and at least 60% of paired boards rated in its favour.`
-      : `Friendly matches target parity or a small ${analysis.selectedName} board advantage. The model recommends the lowest tested player count and rating threshold that reaches at least an even board balance.`;
+      ? `League matches must first reach the minimum-player requirement, then target a significant ${analysis.selectedName} board advantage: at least a 20% net board margin and at least 60% of paired boards rated in its favour.`
+      : `Friendly matches must first reach the minimum-player requirement, then target parity or a small ${analysis.selectedName} board advantage. The model recommends the lowest tested player count and rating threshold that reaches at least an even board balance.`;
     return `
       <div class="${panelClass}">
         <div class="p2k-recruitment-title">
@@ -1877,6 +1973,7 @@
     updateAddressBar();
     renderTeamSelector();
     renderAnalysis();
+    void updateSelectedTeamLogo();
   }
 
   function openChartModal(chartType, triggerButton = null) {
@@ -1929,6 +2026,8 @@
     state.matchId = matchId;
     state.preferredClubSlug = parseClubReference(preferredClubReference) || state.preferredClubSlug;
     state.startedMatchData = null;
+    state.logoRequestToken += 1;
+    hideSelectedTeamLogo();
     analyzeButton.disabled = true;
     matchInput.disabled = true;
     teamSelector.hidden = true;
@@ -1958,6 +2057,7 @@
       updateAddressBar();
       renderTeamSelector();
       renderAnalysis();
+      void updateSelectedTeamLogo();
 
       const missingClubText = preferredClubReference && !preferredKey
         ? ` The requested club was not one of the two match teams, so ${state.analysis.selectedName} was selected.`
@@ -1966,7 +2066,7 @@
         ? ` ${state.startedMatchData.boards.length} boards projected from the match response; no board endpoints requested.`
         : "";
       setStatus(`Match ${matchId} loaded.${boardText}${missingClubText} Select either team to change the analysis perspective.`, "success", 100);
-      document.title = `${rawMatch?.name || `Match ${matchId}`} — P2K Match Analyzer`;
+      document.title = `${rawMatch?.name || `Match ${matchId}`} — Open Match Analyzer`;
     } catch (error) {
       console.error(error);
       const message = error instanceof HttpError && error.status === 404
@@ -1978,6 +2078,8 @@
       state.rawMatch = null;
       state.startedMatchData = null;
       state.analysis = null;
+      state.logoRequestToken += 1;
+      hideSelectedTeamLogo();
     } finally {
       analyzeButton.disabled = false;
       matchInput.disabled = false;

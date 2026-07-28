@@ -8,7 +8,7 @@ No bundler or build command is required.
 - `FindMatch.htm` — Match Assistant
 - `AnalyzeMatches.htm` — Upcoming Matches Analyzer
 - `MatchCreationAnalyzer.htm` — Match Creation Analyzer
-- `AnalyzeMatch.html` — standalone single-match analyzer
+- `AnalyzeMatch.html` — Open Match Analyzer
 
 Internal helper:
 

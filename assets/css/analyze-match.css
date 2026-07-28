@@ -1382,3 +1382,16 @@
   #p2kUpcomingAnalyzer .p2k-projection-warning {
     color: #ffd078;
   }
+
+/* P2K_HEADER_LOGO_GROUP */
+#p2kUpcomingAnalyzer .p2k-header-logos {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+#p2kUpcomingAnalyzer .p2k-header-logos img[hidden] {
+  display: none;
+}
+

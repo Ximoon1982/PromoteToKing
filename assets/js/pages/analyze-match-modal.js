@@ -786,9 +786,20 @@
     return ratings;
   }
 
-  function buildRecruitmentRecommendation(match, p2kTeam, opponentTeam, bounds, maxPlayers, isLeagueMatch) {
+  function buildRecruitmentRecommendation(match, p2kTeam, opponentTeam, bounds, maxPlayers, minPlayers, isLeagueMatch) {
     const p2kRatings = ratedPlayers(p2kTeam, bounds).map(player => player.rating);
     const opponentRatings = ratedPlayers(opponentTeam, bounds).map(player => player.rating);
+    /* P2K_MANDATORY_MINIMUM_RECRUITMENT */
+    const mandatoryMinimumPlayers = Math.max(
+      0,
+      Number.isFinite(Number(minPlayers))
+        ? Math.floor(Number(minPlayers))
+        : 0
+    );
+    const missingForMinimum = Math.max(
+      0,
+      mandatoryMinimumPlayers - p2kRatings.length
+    );
     const opponentCapacity = Number.isFinite(maxPlayers)
       ? Math.min(maxPlayers, opponentRatings.length)
       : opponentRatings.length;
@@ -815,7 +826,7 @@
       };
     }
 
-    if (targetBoardCount === 0) {
+    if (targetBoardCount === 0 && missingForMinimum === 0) {
       return {
         actionable: false,
         needsRecruitment: false,
@@ -836,7 +847,11 @@
      * - In every other case where a call is needed, the simulation starts with
      *   enough recruits to bring P2K up to the opponent's eligible lineup size.
      */
-    const missingForFullComparison = Math.max(0, targetBoardCount - p2kRatings.length);
+    const missingForFullComparison = Math.max(
+      0,
+      targetBoardCount - p2kRatings.length,
+      missingForMinimum
+    );
     const missingShare = targetBoardCount > 0
       ? missingForFullComparison / targetBoardCount
       : 0;
@@ -851,8 +866,11 @@
       missingShare <= .20;
 
     if (
-      friendlyAlreadyAdvantagedWithSmallShortfall ||
-      recruitmentTargetReached(current, targetBoardCount, isLeagueMatch)
+      missingForMinimum === 0 &&
+      (
+        friendlyAlreadyAdvantagedWithSmallShortfall ||
+        recruitmentTargetReached(current, targetBoardCount, isLeagueMatch)
+      )
     ) {
       return {
         actionable: true,
@@ -909,7 +927,16 @@
         ].sort((a, b) => b - a);
         const projected = compareRecruitmentLineups(projectedRatings, opponentRatings, maxPlayers);
 
-        if (recruitmentTargetReached(projected, targetBoardCount, isLeagueMatch)) {
+        const minimumReached =
+          projectedRatings.length >= mandatoryMinimumPlayers;
+        const lineupTargetReached =
+          targetBoardCount === 0 ||
+          recruitmentTargetReached(
+            projected,
+            targetBoardCount,
+            isLeagueMatch
+          );
+        if (minimumReached && lineupTargetReached) {
           solution = { recruitCount, candidateRating, projected };
           break;
         }
@@ -1003,6 +1030,7 @@
       opponentTeam,
       bounds,
       maxPlayers,
+      minPlayers,
       leagueMatches.length > 0
     );
     const priorityReasons = [];
@@ -1151,6 +1179,12 @@
   }
 
   function excludeLowUrgencyFriendlyFromRecap(match) {
+    if (
+      Number(match?.minPlayers) > 0 &&
+      Number(match?.eligibleP2KPlayers) < Number(match?.minPlayers)
+    ) {
+      return false;
+    }
     if (!match || match.isLeagueMatch) return false;
     const recommendation = match.recruitmentRecommendation;
     const current = recommendation?.current;
@@ -1585,8 +1619,8 @@
       ? "p2k-recruitment-panel p2k-recruitment-needed"
       : "p2k-recruitment-panel p2k-recruitment-ready";
     const goalInformation = match.isLeagueMatch
-      ? "League matches target a significant P2K board advantage: at least a 20% net board margin (normally a minimum of two extra advantageous boards, or one when only one board is available), and at least 60% of paired boards rated in P2K's favour."
-      : "Friendly matches target parity or a small P2K board advantage. The model recommends the lowest tested player count and rating threshold that reaches at least an even board balance.";
+      ? "League matches must first reach the minimum-player requirement, then target a significant P2K board advantage: at least a 20% net board margin (normally a minimum of two extra advantageous boards, or one when only one board is available), and at least 60% of paired boards rated in P2K's favour."
+      : "Friendly matches must first reach the minimum-player requirement, then target parity or a small P2K board advantage. The model recommends the lowest tested player count and rating threshold that reaches at least an even board balance.";
 
     return `
       <div class="${panelClass}">

@@ -5,40 +5,87 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Promote to King Tools</title>
+  <link rel="icon" type="image/jpeg" href="assets/images/p2k-logo.jpg">
   <link rel="stylesheet" href="assets/css/site.css">
 </head>
 <body>
   <main class="site-shell">
     <header class="site-header">
-      <img src="assets/images/p2k-logo.jpg" alt="Promote to King club logo">
+      <img
+        src="assets/images/p2k-logo.jpg"
+        alt="Promote to King club logo"
+      >
       <div>
         <h1>Promote to King Tools</h1>
-        <p class="site-subtitle">One standardized deployment for player matching, upcoming-match management, match creation, and single-match analysis.</p>
+        <p class="site-subtitle">
+          Match selection, upcoming-match management, match creation,
+          and open team-match analysis.
+        </p>
       </div>
     </header>
-    <section class="tool-grid" aria-label="P2K tools">
-      <article class="tool-card">
-        <h2>Match Assistant</h2>
-        <p>Find suitable open daily matches for a selected Promote to King player.</p>
-        <a href="FindMatch.htm">Open assistant</a>
-      </article>
-      <article class="tool-card">
-        <h2>Upcoming Matches</h2>
-        <p>Assess registration lineups, lockability, recruitment needs, and score projections.</p>
-        <a href="AnalyzeMatches.htm">Open analyzer</a>
-      </article>
-      <article class="tool-card">
-        <h2>Match Creation</h2>
-        <p>Review registration inventory, recent starts, opponents, players, and scoring.</p>
-        <a href="MatchCreationAnalyzer.htm">Open analyzer</a>
-      </article>
-      <article class="tool-card">
-        <h2>Single Match Analysis</h2>
-        <p>Analyze one Chess.com match from its ID or URL and switch team perspective.</p>
-        <a href="AnalyzeMatch.html">Analyze a match</a>
-      </article>
+
+    <nav class="site-tabs" role="tablist" aria-label="Promote to King tools">
+      <button
+        class="site-tab"
+        id="tab-find"
+        type="button"
+        role="tab"
+        aria-selected="true"
+        aria-controls="tool-content"
+        data-key="find"
+        data-route="FindMatch.htm"
+      >Match Assistant</button>
+
+      <button
+        class="site-tab"
+        id="tab-upcoming"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="tool-content"
+        data-key="upcoming"
+        data-route="AnalyzeMatches.htm"
+        tabindex="-1"
+      >Upcoming Matches</button>
+
+      <button
+        class="site-tab"
+        id="tab-creation"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="tool-content"
+        data-key="creation"
+        data-route="MatchCreationAnalyzer.htm"
+        tabindex="-1"
+      >Match Creation</button>
+
+      <button
+        class="site-tab"
+        id="tab-open"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="tool-content"
+        data-key="open"
+        data-route="AnalyzeMatch.html"
+        tabindex="-1"
+      >Open Match Analyzer</button>
+    </nav>
+
+    <section
+      class="tool-content"
+      id="tool-content"
+      role="tabpanel"
+      aria-labelledby="tab-find"
+      aria-live="polite"
+    >
+      <div class="tool-loading" id="tool-loading">
+        Loading Match Assistant…
+      </div>
     </section>
-    <div class="site-note">Existing public entry-point filenames are preserved. The detailed modal helper remains internal at <strong>AnalyzeMatchModal.html</strong>.</div>
   </main>
+
+  <script src="assets/js/pages/site-tabs.js"></script>
 </body>
 </html>

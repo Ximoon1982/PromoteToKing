@@ -3,6 +3,57 @@
   "use strict";
   const baseURL = window.P2K_SITE_CONFIG?.legacySources?.findMatch || "https://raw.githubusercontent.com/Ximoon1982/P2KMatchFinder/ee3de88243845808d5de5adb957dc79ae6a54ad1/FindMatch_v1.htm";
   const scoreCSS = "\n    .recommendation-line {\n      display: flex;\n      flex-wrap: wrap;\n      align-items: center;\n      gap: 5px 7px;\n    }\n    .recommendation-score {\n      display: inline-flex;\n      min-width: 54px;\n      align-items: center;\n      justify-content: center;\n      padding: 3px 7px;\n      border: 1px solid rgba(255, 255, 255, .28);\n      border-radius: 999px;\n      font-size: 11px;\n      font-weight: 800;\n      line-height: 1;\n    }\n    .recommendation-score-high {\n      border-color: rgba(104, 202, 116, .65);\n      background: rgba(80, 175, 92, .18);\n      color: #9be5a4;\n    }\n    .recommendation-score-medium {\n      border-color: rgba(246, 183, 60, .62);\n      background: rgba(217, 141, 24, .16);\n      color: #ffd078;\n    }\n    .recommendation-score-low {\n      border-color: rgba(255, 255, 255, .24);\n      background: rgba(255, 255, 255, .06);\n      color: #c9c2b9;\n    }\n    .recommendation-score-label {\n      color: #f0e4cf;\n      font-size: 12px;\n      font-weight: 800;\n    }\n    .recommendation-info-wrap {\n      position: relative;\n      display: inline-flex;\n      align-items: center;\n    }\n    .recommendation-info {\n      display: inline-flex;\n      width: 17px;\n      height: 17px;\n      padding: 0;\n      align-items: center;\n      justify-content: center;\n      border: 1px solid rgba(158, 216, 245, .55);\n      border-radius: 50%;\n      background: rgba(158, 216, 245, .08);\n      color: #9ed8f5;\n      font: inherit;\n      font-size: 10px;\n      font-weight: 800;\n      line-height: 1;\n      cursor: pointer;\n    }\n    .recommendation-info:hover,\n    .recommendation-info:focus-visible {\n      border-color: #9ed8f5;\n      background: rgba(158, 216, 245, .17);\n      outline: none;\n    }\n    .recommendation-info-tooltip {\n      display: none;\n      position: fixed;\n      z-index: 999999;\n      left: 50%;\n      top: 50%;\n      transform: translate(-50%, -50%);\n      width: min(360px, calc(100vw - 24px));\n      max-width: calc(100vw - 24px);\n      max-height: calc(100vh - 24px);\n      max-height: calc(100dvh - 24px);\n      overflow-x: hidden;\n      overflow-y: auto;\n      overscroll-behavior: contain;\n      -webkit-overflow-scrolling: touch;\n      padding: 12px 14px;\n      border: 1px solid rgba(158, 216, 245, .58);\n      border-radius: 10px;\n      background: #24211e;\n      box-shadow: 0 12px 36px rgba(0, 0, 0, .62);\n      color: #eee5d8;\n      font-size: 12px;\n      font-weight: 400;\n      line-height: 1.48;\n      text-align: left;\n      white-space: normal;\n      overflow-wrap: anywhere;\n      pointer-events: auto;\n    }\n    .recommendation-info-tooltip strong {\n      color: #9ed8f5;\n      font-weight: 800;\n    }\n    .recommendation-analysis-button {\n      display: flex;\n      width: 100%;\n      min-height: 36px;\n      margin-top: 12px;\n      padding: 8px 11px;\n      align-items: center;\n      justify-content: center;\n      border: 1px solid rgba(246, 183, 60, .68);\n      border-radius: 8px;\n      background: rgba(217, 141, 24, .16);\n      color: #ffd078;\n      font-size: 12px;\n      font-weight: 800;\n      line-height: 1.25;\n      text-align: center;\n      text-decoration: none;\n      cursor: pointer;\n      pointer-events: auto;\n    }\n    .recommendation-analysis-button:hover,\n    .recommendation-analysis-button:focus-visible {\n      border-color: #f6b73c;\n      background: rgba(217, 141, 24, .26);\n      color: #ffe1a1;\n      outline: none;\n    }\n    .recommendation-info-wrap:hover .recommendation-info-tooltip,\n    .recommendation-info-wrap.is-open .recommendation-info-tooltip {\n      display: block;\n    }\n    .p2k-detailed-analysis-modal[hidden] {\n      display: none !important;\n    }\n    .p2k-detailed-analysis-modal {\n      position: fixed;\n      inset: 0;\n      z-index: 1000000;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      padding: 12px;\n      background: rgba(0, 0, 0, .78);\n      backdrop-filter: blur(2px);\n    }\n    .p2k-detailed-analysis-dialog {\n      position: relative;\n      width: min(1180px, calc(100vw - 24px));\n      height: min(900px, calc(100vh - 24px));\n      height: min(900px, calc(100dvh - 24px));\n      overflow: hidden;\n      border: 1px solid rgba(246, 183, 60, .65);\n      border-radius: 12px;\n      background: #171513;\n      box-shadow: 0 18px 58px rgba(0, 0, 0, .72);\n    }\n    .p2k-detailed-analysis-header {\n      display: flex;\n      min-height: 48px;\n      align-items: center;\n      justify-content: space-between;\n      gap: 12px;\n      padding: 9px 10px 9px 14px;\n      border-bottom: 1px solid rgba(246, 183, 60, .30);\n      background: #24211e;\n    }\n    .p2k-detailed-analysis-title {\n      color: #ffd078;\n      font-size: 14px;\n      font-weight: 900;\n    }\n    .p2k-detailed-analysis-close {\n      min-width: 36px;\n      min-height: 32px;\n      padding: 5px 9px;\n      border: 1px solid rgba(255, 114, 95, .62);\n      border-radius: 7px;\n      background: rgba(217, 74, 58, .14);\n      color: #ff8b79;\n      font-size: 13px;\n      font-weight: 800;\n      cursor: pointer;\n    }\n    .p2k-detailed-analysis-close:hover,\n    .p2k-detailed-analysis-close:focus-visible {\n      border-color: #ff8b79;\n      background: rgba(217, 74, 58, .24);\n      outline: none;\n    }\n    .p2k-detailed-analysis-frame-wrap {\n      position: absolute;\n      inset: 49px 0 0;\n      background: #171513;\n    }\n    .p2k-detailed-analysis-loading {\n      position: absolute;\n      inset: 0;\n      z-index: 1;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      padding: 18px;\n      color: #ffd078;\n      font-size: 13px;\n      font-weight: 800;\n      text-align: center;\n      pointer-events: none;\n    }\n    .p2k-detailed-analysis-frame {\n      position: relative;\n      z-index: 2;\n      width: 100%;\n      height: 100%;\n      border: 0;\n      background: #171513;\n    }\n    body.p2k-analysis-modal-open {\n      overflow: hidden !important;\n    }\n    @media (max-width: 600px) {\n      .p2k-detailed-analysis-modal { padding: 4px; }\n      .p2k-detailed-analysis-dialog {\n        width: calc(100vw - 8px);\n        height: calc(100vh - 8px);\n        height: calc(100dvh - 8px);\n        border-radius: 8px;\n      }\n      .p2k-detailed-analysis-header { min-height: 44px; padding-left: 10px; }\n      .p2k-detailed-analysis-frame-wrap { inset: 45px 0 0; }\n    }\n\n";
+  /* P2K_USERNAME_SEARCH_ROW */
+  const usernameSearchRowCSS = `
+    .p2k-user-search-row {
+      display: flex;
+      width: 100%;
+      align-items: stretch;
+      gap: 10px;
+    }
+
+    .p2k-user-search-row .username {
+      width: auto;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .p2k-user-search-row .search-button {
+      width: auto;
+      flex: 0 0 auto;
+      margin-top: 0 !important;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 620px) {
+      .p2k-user-search-row {
+        gap: 7px;
+      }
+
+      .p2k-user-search-row .search-button {
+        width: auto;
+        padding-right: 14px;
+        padding-left: 14px;
+      }
+    }
+  `;
+
+  function installUsernameSearchRow(html) {
+    html = mustReplace(
+      html,
+      /\n  <\/style>/,
+      usernameSearchRowCSS + "\n  </style>",
+      "username and Explore button row styles"
+    );
+
+    return mustReplace(
+      html,
+      /(\n    <input[\s\S]*?\bid="p2kUsername"[\s\S]*?\n    >)\s*(\n    <button[\s\S]*?\bid="p2kSearchButton"[\s\S]*?<\/button>)/,
+      '\n    <div class="p2k-user-search-row">$1$2\n    </div>',
+      "username and Explore button row"
+    );
+  }
+
   const registrationReplacement = "const registrationMatches = p2kPrioritizeMatchReferences(\n            Array.isArray(clubMatches.registered)\n              ? clubMatches.registered.filter(item => String(item?.time_class || \"\").toLowerCase() === \"daily\")\n              : []\n          );";
   const sortToggleHTML = `    <fieldset class="filter-group" title="Choose how the analyzed match results should be ordered.">
       <legend class="filter-title">Sort results</legend>
@@ -176,6 +227,16 @@
   }
 
   function addRecommendationScores(html) {
+    html = installUsernameSearchRow(html);
+    /* P2K_GENERATED_FAVICON */
+    if (!/<link\b[^>]*\brel=["'][^"']*\bicon\b/i.test(html)) {
+      html = mustReplace(
+        html,
+        /<\/title>/i,
+        '</title>\n  <link rel="icon" type="image/jpeg" href="assets/images/p2k-logo.jpg">',
+        "generated Match Assistant favicon"
+      );
+    }
     html = html.replace(
       /<!--\s*Version 19:[\s\S]*?-->/i,
       "<!-- Version 29: lazy single-match Upcoming Analyzer detail modal inside recommendation info, viewport-safe hover/click recommendation info, selectable recommendation-score/start-date sorting, robust recommendation score, always-fresh club match index, shared IndexedDB cache for details, request deduplication, conditional requests, and priority-first serial processing -->"
