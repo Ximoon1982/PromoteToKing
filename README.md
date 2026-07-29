@@ -37,3 +37,11 @@ All deployable page names are unversioned. Historical versioned aliases are inte
 The current Match Assistant and Match Creation Analyzer remain compatibility loaders around pinned historical source files. Their local custom logic and styling are externalized, and the pinned source URLs are centralized in `assets/js/site-config.js`. The Upcoming Analyzer, standalone match analyzer, and modal helper are fully local standalone pages.
 
 A future cleanup can vendor those two historical base files without changing any public URL: place local copies in the site and update only the two `legacySources` values in `assets/js/site-config.js`.
+
+## Optional simulated Chess.com OAuth
+
+Add `?oauth=1` to `index.html` to enable the simulated login UI. For example:
+
+`https://www.promotetoking.org/?oauth=1`
+
+The feature uses only the public Chess.com player profile endpoint. It never requests a Chess.com password or OAuth token. The selected user is stored locally in the browser and is automatically supplied to the Match Assistant. Without the flag, the website behaves exactly as before.

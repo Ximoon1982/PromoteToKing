@@ -14,6 +14,8 @@
     "assets/css/upcoming-matches-analyzer.css",
     "assets/images/p2k-logo.jpg",
     "assets/css/site.css",
-    "assets/js/pages/site-tabs.js"
+    "assets/js/pages/site-tabs.js",
+    "assets/css/simulated-oauth.css",
+    "assets/js/shared/simulated-oauth.js"
   ]
 }

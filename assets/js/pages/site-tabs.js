@@ -12,6 +12,30 @@
   const LEGACY_KEYS = new Set(["creation"]);
   const MAIN_TITLE = "Promote to King Tools";
 
+  const SIMULATED_OAUTH_TRUE_VALUES = new Set([
+    "1", "true", "yes", "on", "enabled"
+  ]);
+
+  function simulatedOAuthEnabled() {
+    const params = new URLSearchParams(window.location.search);
+    const explicitValue = params.get("oauth") ?? params.get("simulatedOAuth");
+    if (explicitValue !== null) {
+      return SIMULATED_OAUTH_TRUE_VALUES.has(
+        String(explicitValue).trim().toLowerCase()
+      );
+    }
+
+    return window.P2K_ENABLE_SIMULATED_OAUTH === true ||
+      window.P2K_SITE_CONFIG?.features?.simulatedOAuth === true;
+  }
+
+  function carrySimulatedOAuthFlag(url, key) {
+    if (key === "find" && simulatedOAuthEnabled()) {
+      url.searchParams.set("oauth", "1");
+    }
+    return url;
+  }
+
   class LocalFileModeError extends Error {
     constructor(route) {
       super(
@@ -100,10 +124,12 @@
   }
 
   function standaloneURL(tab) {
-    return new URL(
-      String(tab?.dataset?.route || routeForKey(tab?.dataset?.key)),
+    const key = tab?.dataset?.key || "find";
+    const url = new URL(
+      String(tab?.dataset?.route || routeForKey(key)),
       window.location.href
-    ).href;
+    );
+    return carrySimulatedOAuthFlag(url, key).href;
   }
 
   function openStandalone(tab) {
@@ -623,7 +649,10 @@
     currentKey = key;
     currentRoute = routeForKey(key);
     const token = ++activeRenderToken;
-    const pageURL = new URL(currentRoute, window.location.href);
+    const pageURL = carrySimulatedOAuthFlag(
+      new URL(currentRoute, window.location.href),
+      key
+    );
 
     selectTab(key);
     keepMainDocumentTitle();

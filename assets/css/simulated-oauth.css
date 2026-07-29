@@ -1,0 +1,400 @@
+/* Optional simulated Chess.com OAuth UI. Loaded everywhere but visible only
+   when assets/js/shared/simulated-oauth.js confirms an explicit feature flag. */
+
+.p2k-auth-host {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.p2k-auth-login-button,
+.p2k-auth-primary,
+.p2k-auth-secondary,
+.p2k-auth-danger,
+.p2k-auth-close,
+.p2k-auth-avatar-button {
+  font: inherit;
+}
+
+.p2k-auth-login-button {
+  min-height: 40px;
+  padding: 9px 13px;
+  border: 1px solid rgba(246, 183, 60, .68);
+  border-radius: 9px;
+  background: rgba(217, 141, 24, .16);
+  color: #ffd078;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.p2k-auth-login-button:hover,
+.p2k-auth-login-button:focus-visible {
+  border-color: #f6b73c;
+  background: rgba(217, 141, 24, .27);
+  outline: none;
+}
+
+.p2k-auth-avatar-button {
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid rgba(246, 183, 60, .78);
+  border-radius: 12px;
+  background: #111;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, .4);
+  cursor: pointer;
+}
+
+.p2k-auth-avatar-button:hover,
+.p2k-auth-avatar-button:focus-visible {
+  border-color: #ffd078;
+  box-shadow: 0 0 0 3px rgba(246, 183, 60, .18),
+    0 5px 14px rgba(0, 0, 0, .4);
+  outline: none;
+}
+
+.p2k-auth-avatar,
+.p2k-auth-profile-avatar,
+.p2k-auth-assistant-avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.p2k-auth-avatar-fallback {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #3c3329, #1a1714);
+  color: #ffd078;
+  font-weight: 900;
+  letter-spacing: .03em;
+}
+
+.p2k-auth-modal[hidden] {
+  display: none !important;
+}
+
+.p2k-auth-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, .78);
+  backdrop-filter: blur(2px);
+}
+
+.p2k-auth-dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-height: min(720px, calc(100vh - 32px));
+  max-height: min(720px, calc(100dvh - 32px));
+  overflow: auto;
+  border: 1px solid rgba(246, 183, 60, .64);
+  border-radius: 12px;
+  background: #1b1815;
+  box-shadow: 0 18px 58px rgba(0, 0, 0, .72);
+  color: #eee5d8;
+}
+
+.p2k-auth-dialog-header {
+  display: flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 10px 10px 15px;
+  border-bottom: 1px solid rgba(246, 183, 60, .28);
+  background: #24211e;
+}
+
+.p2k-auth-dialog-header h2 {
+  margin: 0;
+  color: #ffd078;
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.p2k-auth-close {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .19);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .05);
+  color: #ddd4c8;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.p2k-auth-close:hover,
+.p2k-auth-close:focus-visible {
+  border-color: rgba(246, 183, 60, .68);
+  color: #ffd078;
+  outline: none;
+}
+
+.p2k-auth-dialog-body {
+  padding: 17px;
+}
+
+.p2k-auth-note {
+  margin: 0 0 16px;
+  padding: 11px 12px;
+  border-left: 4px solid #9ed8f5;
+  border-radius: 7px;
+  background: rgba(158, 216, 245, .08);
+  color: #d9eefa;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.p2k-auth-login-form {
+  display: grid;
+  gap: 9px;
+}
+
+.p2k-auth-login-form label {
+  color: #f0e4cf;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.p2k-auth-login-form input {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 8px;
+  background: #100f0e;
+  color: #f4efe8;
+  font: inherit;
+}
+
+.p2k-auth-login-form input:focus {
+  border-color: #f6b73c;
+  outline: 2px solid rgba(246, 183, 60, .16);
+  outline-offset: 1px;
+}
+
+.p2k-auth-error {
+  min-height: 18px;
+  color: #ff8b79;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.p2k-auth-primary,
+.p2k-auth-secondary,
+.p2k-auth-danger {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.p2k-auth-primary {
+  border: 1px solid rgba(246, 183, 60, .68);
+  background: rgba(217, 141, 24, .19);
+  color: #ffd078;
+}
+
+.p2k-auth-primary:hover,
+.p2k-auth-primary:focus-visible,
+.p2k-auth-secondary:hover,
+.p2k-auth-secondary:focus-visible {
+  border-color: #f6b73c;
+  background: rgba(217, 141, 24, .29);
+  outline: none;
+}
+
+.p2k-auth-primary:disabled {
+  cursor: progress;
+  opacity: .65;
+}
+
+.p2k-auth-secondary {
+  border: 1px solid rgba(246, 183, 60, .48);
+  background: rgba(217, 141, 24, .10);
+  color: #ffd078;
+}
+
+.p2k-auth-danger {
+  border: 1px solid rgba(255, 114, 95, .55);
+  background: rgba(217, 74, 58, .12);
+  color: #ff9b8e;
+}
+
+.p2k-auth-danger:hover,
+.p2k-auth-danger:focus-visible {
+  border-color: #ff8b79;
+  background: rgba(217, 74, 58, .22);
+  outline: none;
+}
+
+.p2k-auth-profile-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.p2k-auth-profile-avatar {
+  width: 78px;
+  height: 78px;
+  flex: 0 0 78px;
+  border: 2px solid rgba(246, 183, 60, .66);
+  border-radius: 14px;
+  background: #111;
+}
+
+.p2k-auth-profile-identity {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.p2k-auth-profile-identity strong {
+  overflow: hidden;
+  color: #ffd078;
+  font-size: 19px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.p2k-auth-profile-identity span {
+  color: #c9c2b9;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.p2k-auth-profile-details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 7px 13px;
+  margin: 17px 0 0;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 9px;
+  background: rgba(0, 0, 0, .12);
+  font-size: 12px;
+}
+
+.p2k-auth-profile-details dt {
+  color: #a9a197;
+  font-weight: 800;
+}
+
+.p2k-auth-profile-details dd {
+  min-width: 0;
+  margin: 0;
+  color: #eee5d8;
+  overflow-wrap: anywhere;
+}
+
+.p2k-auth-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 17px;
+}
+
+.p2k-auth-profile-actions > * {
+  flex: 1 1 170px;
+}
+
+body.p2k-auth-modal-open {
+  overflow: hidden !important;
+}
+
+.p2k-auth-assistant-user {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px;
+  border: 1px solid rgba(246, 183, 60, .36);
+  border-radius: 8px;
+  background: rgba(217, 141, 24, .10);
+  color: #eee5d8;
+}
+
+.p2k-auth-assistant-avatar {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border: 1px solid rgba(246, 183, 60, .52);
+  border-radius: 7px;
+  background: #111;
+}
+
+.p2k-auth-assistant-label {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.p2k-auth-assistant-label strong {
+  color: #ffd078;
+}
+
+@media (max-width: 720px) {
+  .p2k-auth-avatar-button {
+    width: 48px;
+    height: 48px;
+  }
+
+  .p2k-auth-login-button {
+    min-height: 38px;
+    max-width: 126px;
+    padding: 7px 9px;
+    font-size: 11px;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 520px) {
+  .p2k-auth-modal {
+    align-items: flex-start;
+    padding: 7px;
+  }
+
+  .p2k-auth-dialog {
+    width: calc(100vw - 14px);
+    max-height: calc(100vh - 14px);
+    max-height: calc(100dvh - 14px);
+  }
+
+  .p2k-auth-dialog-body {
+    padding: 14px;
+  }
+
+  .p2k-auth-assistant-user {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .p2k-auth-assistant-label {
+    white-space: normal;
+  }
+}

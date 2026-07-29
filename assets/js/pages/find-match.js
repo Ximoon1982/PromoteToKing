@@ -226,7 +226,30 @@
     return updated;
   }
 
+  function installSimulatedOAuthAssets(html) {
+    if (!/assets\/css\/simulated-oauth\.css/i.test(html)) {
+      html = mustReplace(
+        html,
+        /<\/head>/i,
+        '  <link rel="stylesheet" href="assets/css/simulated-oauth.css">\n</head>',
+        "simulated OAuth styles"
+      );
+    }
+
+    if (!/assets\/js\/shared\/simulated-oauth\.js/i.test(html)) {
+      html = mustReplace(
+        html,
+        /<\/body>/i,
+        '  <script src="assets/js/shared/simulated-oauth.js"></script>\n</body>',
+        "simulated OAuth runtime"
+      );
+    }
+
+    return html;
+  }
+
   function addRecommendationScores(html) {
+    html = installSimulatedOAuthAssets(html);
     html = installUsernameSearchRow(html);
     /* P2K_GENERATED_FAVICON */
     if (!/<link\b[^>]*\brel=["'][^"']*\bicon\b/i.test(html)) {
@@ -239,7 +262,7 @@
     }
     html = html.replace(
       /<!--\s*Version 19:[\s\S]*?-->/i,
-      "<!-- Version 29: lazy single-match Upcoming Analyzer detail modal inside recommendation info, viewport-safe hover/click recommendation info, selectable recommendation-score/start-date sorting, robust recommendation score, always-fresh club match index, shared IndexedDB cache for details, request deduplication, conditional requests, and priority-first serial processing -->"
+      "<!-- Version 30: version 29 functionality plus optional simulated Chess.com OAuth via ?oauth=1 -->"
     );
 
     html = mustReplace(
