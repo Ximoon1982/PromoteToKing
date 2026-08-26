@@ -1,0 +1,58 @@
+module"
+     ).then(() => {
+@@ -1344,6 +1353,7 @@ const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, character =>
+   async function loadMemberInsights(options = {}) { return (await ensureDashboardInsightsModule()).loadMemberInsights(options); }
+   async function loadMatchInsights(options = {}) { return (await ensureDashboardInsightsModule()).loadMatchInsights(options); }
+   async function loadOpponentInsights(options = {}) { return (await ensureDashboardInsightsModule()).loadOpponentInsights(options); }
++  async function loadArenaInsights(options = {}) { return (await ensureDashboardInsightsModule()).loadArenaInsights(options); }
+   async function openMatchDetail(matchId, options = {}) { return (await ensureDashboardInsightsModule()).openMatchDetail(matchId, options); }
+   function renderNativeBarLine(...args) { ensureDashboardInsightsModule().then(api => api.renderNativeBarLine(...args)).catch(error => console.warn(error)); }
+ function integratedFrames() {
+diff --git a/server/team-points/src/AchievementCatalog.php b/server/team-points/src/AchievementCatalog.php
+index a74953b..9592595 100644
+--- a/server/team-points/src/AchievementCatalog.php
++++ b/server/team-points/src/AchievementCatalog.php
+@@ -3,13 +3,14 @@ declare(strict_types=1);
+ namespace P2K\TeamPoints;
+ final class AchievementCatalog {
+  public static function all(): array { return [
+-            self::item('first-match','First Match','Participate in your first recorded Promote to King team match.','matches',self::placeholder('first-match'),self::placeholder('first-match')),
++            self::item('first-match','First Match','Participate in your first recorded Promote to King team match.','matches','assets/images/achievements/first-match.png','assets/images/achievements/thumbs/128/first-match.webp'),
+             self::item('first-point','First Step','Earn your first Team Point.','team-points',self::placeholder('first-point'),self::placeholder('first-point')),
+-            self::item('matches-10','Rising Star','Play in 10 Promote to King team matches.','matches',self::placeholder('matches-10'),self::placeholder('matches-10')),
+-            self::item('matches-50','Clutch Player','Play in 50 Promote to King team matches.','matches',self::placeholder('matches-50'),self::placeholder('matches-50')),
+-            self::item('matches-100','Great Strategist','Play in 100 Promote to King team matches.','matches',self::placeholder('matches-100'),self::placeholder('matches-100')),
+-            self::item('matches-250','Match Veteran','Play in 250 Promote to King team matches.','matches',self::placeholder('matches-250'),self::placeholder('matches-250')),
+-            self::item('matches-500','Match Legend','Play in 500 Promote to King team matches.','matches',self::placeholder('matches-500'),self::placeholder('matches-500')),
++            self::item('matches-10','Rising Star','Play in 10 Promote to King team matches.','matches','assets/images/achievements/matches-10.png','assets/images/achievements/thumbs/128/matches-10.webp'),
++            self::item('matches-50','Clutch Player','Play in 50 Promote to King team matches.','matches','assets/images/achievements/matches-50.png','assets/images/achievements/thumbs/128/matches-50.webp'),
++            self::item('matches-100','Great Strategist','Play in 100 Promote to King team matches.','matches','assets/images/achievements/matches-100.png','assets/images/achievements/thumbs/128/matches-100.webp'),
++            self::item('matches-250','Match Veteran','Play in 250 Promote to King team matches.','matches','assets/images/achievements/matches-250.png','assets/images/achievements/thumbs/128/matches-250.webp'),
++            self::item('matches-500','Match Legend','Play in 500 Promote to King team matches.','matches','assets/images/achievements/matches-500.png','assets/images/achievements/thumbs/128/matches-500.webp'),
++            self::item('matches-1000','Match Immortal','Play in 1,000 Promote to King team matches.','matches','assets/images/achievements/matches-1000.png','assets/images/achievements/thumbs/128/matches-1000.webp'),
+             self::item('games-100','Centurion','Complete 100 team games.','games','assets/images/achievements/games-100.png','assets/images/achievements/thumbs/128/games-100.webp'),
+             self::item('games-500','Five Hundred Games','Complete 500 team games.','games','assets/images/achievements/games-500.png','assets/images/achievements/thumbs/128/games-500.webp'),
+             self::item('games-1000','One Thousand Games','Complete 1,000 team games.','games','assets/images/achievements/games-1000.png','assets/images/achievements/thumbs/128/games-1000.webp'),
+diff --git a/server/team-points/src/AnalyticsBuilder.php b/server/team-points/src/AnalyticsBuilder.php
+index 6df4e21..b5c66b1 100644
+--- a/server/team-points/src/AnalyticsBuilder.php
++++ b/server/team-points/src/AnalyticsBuilder.php
+@@ -457,7 +457,7 @@ final class AnalyticsBuilder
+                 if($sameDayCount===1){$dayTs=strtotime($day.' UTC');if($dayTs!==false){$dayIndex=(int)floor($dayTs/86400);$st['start_day_streak']=$st['last_start_day_index']!==null&&$dayIndex===$st['last_start_day_index']+1?$st['start_day_streak']+1:1;$st['last_start_day_index']=$dayIndex;$st['start_day_peak']=max((int)$st['start_day_peak'],(int)$st['start_day_streak']);foreach([[3,'match-start-streak-3'],[5,'match-start-streak-5'],[7,'match-start-streak-7'],[10,'match-start-streak-10'],[14,'match-start-streak-14']] as $m)if($st['start_day_streak']===$m[0])$record($u,$m[1],$startAt,'match-start-time','match',(string)$r['match_name'],(string)$r['match_url']);}}
+             }
+             if($st['matches']===1)$record($u,'first-match',$at,'match-time','match',(string)$r['match_name'],(string)$r['match_url']);
+-            foreach([10,50,100,250,500] as $n)if($st['matches']===$n)$record($u,'matches-'.$n,$at,'match-time','match',(string)$r['match_name'],(string)$r['match_url']);
++            foreach([10,50,100,250,500,1000] as $n)if($st['matches']===$n)$record($u,'matches-'.$n,$at,'match-time','match',(string)$r['match_name'],(string)$r['match_url']);
+             $opponentSlug=strtolower(trim((string)($r['opponent_slug']??'')));
+             if($opponentSlug!==''){
+                 if(isset($st['opponents'][$opponentSlug])){$st['rematches']++;foreach([[5,'old-foes-5'],[10,'old-foes-10'],[25,'old-foes-25']] as $m)if($st['rematches']===$m[0])$record($u,$m[1],$at,'match-time','match',(string)$r['match_name'],(string)$r['match_url']);}
+diff --git a/server/team-points/src/LiveRanksService.php b/server/team-points/src/LiveRanksService.php
+index 0c320a5..0663e92 100644
+--- a/server/team-points/src/LiveRanksService.php
++++ b/server/team-points/src/LiveRanksService.php
+@@ -773,6 +773,200 @@ final class LiveRanksService
+         ];
+     }
+ 
++    /** Public MCA/Arena Insights derived only from processed Results CSV evidence and canonical MIRA attribution. */
++    public function publicArenasInsights(string $s

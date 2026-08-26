@@ -1,0 +1,75 @@
+_percent).toFixed(1) + "%"}</b>`
++    });
++  }
++
++  function renderArenaTrend(rows) {
++    const trend = Array.isArray(rows) ? rows.map(row => ({ ...row, chart_date: arenaDateLabel(row) })) : [];
++    if (!trend.length) {
++      ["arenasParticipationChart","arenasPlacementChart","arenasPercentileChart","arenasPointsChart","arenasResultsChart","arenasScoreChart"].forEach(id => nativeChartEmpty(byId(id), "No processed MCA Results data is available."));
++      return;
++    }
++    renderArenaParticipation(trend);
++    const ranks = trend.map(row => Number(row.best_rank)).filter(Number.isFinite), rankMax = Math.max(10, ...(ranks.length ? ranks : [10]));
++    renderNativeLine("arenasPlacementChart", trend, {
++      xKey: "chart_date", yMin: 1, yMax: rankMax, invertY: true, axisFormatter: value => `#${Math.max(1, Math.round(value))}`,
++      series: [{ key: "best_rank", label: "Best finish", color: "#f6b73c", decimals: 0 }],
++      tooltipExtra: row => `${escapeHTML(row.arena_name)}<br>Best: <b>${row.best_finisher ? escapeHTML(row.best_finisher) : "—"}</b> · Field: <b>${number(row.total_players)}</b><br>P2K: <b>${number(row.p2k_players)}</b> · Top 10: <b>${number(row.top10_count)}</b>`
++    });
++    renderNativeLine("arenasPercentileChart", trend, {
++      xKey: "chart_date", yMin: 0, yMax: 100, axisFormatter: value => `${Math.round(value)}%`,
++      series: [{ key: "best_percentile", label: "Best percentile", color: "#48b8a8", decimals: 1 }],
++      tooltipExtra: row => `${escapeHTML(row.arena_name)}<br>Finish: <b>${row.best_rank ? `#${number(row.best_rank)}` : "—"}</b> of <b>${number(row.total_players)}</b>`
++    });
++    renderNativeBarLine("arenasPointsChart", trend, { xKey: "chart_date", barKey: "p2k_points", lineKey: "cumulative_points", barLabel: "Arena MCA points", lineLabel: "Cumulative MCA points" });
++    const resultRows = trend.filter(row => row.games != null);
++    renderNativeStackedBars("arenasResultsChart", resultRows, { labelKey: "chart_date", series: [
++      { key: "wins", label: "Wins", color: "#5fbf72" }, { key: "draws", label: "Draws", color: "#f6b73c" }, { key: "losses", label: "Losses", color: "#e7685a" }
++    ], showTotals: false });
++    renderNativeLine("arenasScoreChart", resultRows, { xKey: "chart_date", yMin: 0, yMax: 100, axisFormatter: value => `${Math.round(value)}%`, series: [{ key: "score_percent", label: "Score", color: "#a98ae8", decimals: 1 }], tooltipExtra: row => `${escapeHTML(row.arena_name)}<br>W / D / L: <b>${number(row.wins)} / ${number(row.draws)} / ${number(row.losses)}</b>` });
++    document.querySelectorAll('[data-chart-reset^="arenas"]').forEach(button => { const id = button.dataset.chartReset; button.onclick = () => byId(id)?._p2kResetZoom?.(); });
++  }
++
++  function arenaLeadersColumns() {
++    return [
++      { key: "username", type: "text", render: row => cellWithSub(insightAction(row.username, () => openUnifiedPlayerProfile(row.username)), row.current_member ? "Current member" : "Former member") },
++      ...["arenas","wins","podiums","top10s"].map(key => ({ key, type: "number", align: "right", render: row => number(row[key]) })),
++      { key: "points", type: "number", align: "right", render: row => Number(row.points || 0).toFixed(1).replace(/\.0$/, "") },
++      ...["game_wins","draws","losses"].map(key => ({ key, type: "number", align: "right", render: row => row[key] == null ? "—" : number(row[key]) })),
++      { key: "best_finish", type: "number", align: "right", render: row => row.best_finish ? `#${number(row.best_finish)}` : "—" },
++      { key: "live_rank_name", type: "text", render: row => row.live_rank_name || "Unranked" }
++    ];
++  }
++
++  function arenaTableColumns() {
++    return [
++      { key: "event_date", type: "text", render: row => cellWithSub(row.event_date || "—", row.event_date_approximate ? "Approximate" : "Known date") },
++      { key: "arena_name", type: "text", render: row => cellWithSub(insightAction(row.arena_name || row.arena_slug, () => openArenaDetail(row.file_id)), row.best_finisher ? `Best: ${row.best_finisher}` : row.arena_slug) },
++      ...["total_players","p2k_players"].map(key => ({ key, type: "number", align: "right", render: row => number(row[key]) })),
++      { key: "p2k_share_percent", type: "number", align: "right", render: row => row.p2k_share_percent == null ? "—" : `${Number(row.p2k_share_percent).toFixed(1)}%` },
++      { key: "best_rank", type: "number", render: row => row.best_rank ? cellWithSub(`#${number(row.best_rank)}`, row.best_finisher || "") : "—" },
++      ...["top10_count","podium_count"].map(key => ({ key, type: "number", align: "right", render: row => number(row[key]) })),
++      { key: "p2k_points", type: "number", align: "right", render: row => Number(row.p2k_points || 0).toFixed(1).replace(/\.0$/, "") },
++      { key: "score_percent", type: "number", align: "right", render: row => row.score_percent == null ? "—" : `${Number(row.score_percent).toFixed(1)}%` }
++    ];
++  }
++
++  function renderArenaRecords(records) {
++    const host = byId("arenasRecords"); if (!host) return;
++    const rows = Array.isArray(records) ? records : [];
++    host.innerHTML = rows.length ? rows.map(row => {
++      const subject = row.username ? `<button type="button" data-arena-record-player="${escapeHTML(row.username)}">${escapeHTML(row.username)}</button>` : row.file_id ? `<button type="button" data-arena-record-file="${Number(row.file_id)}">${escapeHTML(row.arena || "Arena")}</button>` : escapeHTML(row.arena || "—");
++      const value = row.key === "points" || row.key === "arena_points" ? Number(row.value || 0).toFixed(1).replace(/\.0$/, "") : number(row.value);
++      return `<div><span>${escapeHTML(row.label)}</span><strong>${subject} · ${value}</strong></div>`;
++    }).join("") : '<p class="p2k-table-status">No arena records are available.</p>';
++    host.querySelectorAll("[data-arena-record-player]").forEach(button => button.addEventListener("click", () => openUnifiedPlayerProfile(button.dataset.arenaRecordPlayer)));
++    host.querySelectorAll("[data-arena-record-file]").forEach(button => button.addEventListener("click", () => openArenaDetail(Number(button.dataset.arenaRecordFile))));
++  }
++
++  async function openArenaDetail(fileId) {
++    if (!Number.isFinite(Number(fileId)) || Number(fileId) <= 0) return;
++    showInsightsModal({ eyebrow: "Arena Insights", title: "Arena", subtitle: "Loading MCA Results detail…", html: '<p class="p2k-table-status">Loading arena detail…</p>' });
++    try {
++      const payload = await loadJSON(arenaInsightsURL(state.arenasTableState, { section: "detail", fileId }), { credentials: "same-origin" });
++      if (payload?.ok === false) throw new Error(payload?.error?.message || "Arena detail is unavailable.");
++      const arena = payload.arena || {}, participants = Array.isArray(payload.participants) ? payload.participants : [];
++      const rows = participants.map(row => `<tr><td>${escapeHTML(row.username)}</td><td class=

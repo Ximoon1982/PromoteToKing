@@ -1,0 +1,95 @@
+me-origin"});if(payload?.ok===false)throw new Error(payload?.error?.message||"Opponent insights are unavailable.");applyOpponentSummaryPayload(payload);window.P2K_PROGRESSIVE?.snapshotSet?.("opponents-insights-summary",payload);state.opponentsLoaded=true;if(status)status.textContent="Opponent summary ready · heatmaps use all matches · table loads as you scroll";const observe=window.P2K_PROGRESSIVE?.observe||((_,fn)=>{setTimeout(fn,0);return()=>{}});state.opponentsProgressiveStops.push(observe(byId("opponentsDataTable"),loadTable,{rootMargin:"600px 0px"}));}catch(error){if(status){status.classList.add("is-error");status.textContent=`Unable to load opponent insights: ${error.message||error}`;}}
+   }
+ 
+-    return Object.freeze({ loadMemberInsights, loadMatchInsights, loadOpponentInsights, openMatchDetail, renderNativeBarLine });
++    return Object.freeze({ loadMemberInsights, loadMatchInsights, loadArenaInsights, loadOpponentInsights, openMatchDetail, openArenaDetail, renderNativeBarLine });
+   };
+ })();
+diff --git a/assets/js/pages/dashboard-v2.js b/assets/js/pages/dashboard-v2.js
+index cad1c4f..355e846 100644
+--- a/assets/js/pages/dashboard-v2.js
++++ b/assets/js/pages/dashboard-v2.js
+@@ -23,7 +23,7 @@ const requestedView = String(params.get("view") || "").toLowerCase() === "admin"
+ const requestedInsights = String(params.get("insights") || "").toLowerCase();
+ const requestedHall = String(params.get("hall") || "").toLowerCase();
+ let publicPage = ["dashboard", "insights", "hall", "administration"].includes(requestedPage) ? requestedPage : "dashboard";
+-let insightsSubtab = ["team", "members", "matches", "opponents"].includes(requestedInsights) ? requestedInsights : "team";
++let insightsSubtab = ["team", "members", "matches", "arenas", "opponents"].includes(requestedInsights) ? requestedInsights : "team";
+ let hallSubtab = ["achievements", "daily", "live", "tournaments"].includes(requestedHall) ? requestedHall : "achievements";
+ if (requestedPage === "team-insights") { publicPage = "insights"; insightsSubtab = "team"; }
+ if (requestedPage === "tournaments") { publicPage = "hall"; hallSubtab = "tournaments"; }
+@@ -48,7 +48,8 @@ assistantFilter: ["next7","priority"].includes(String(params.get("assistantFilte
+ personalMode: params.get("playerMode") === "live" ? "live" : "daily",
+ opponentsTable: tableStateFromURL("opp", { sort: "total", direction: "desc", filter: "all", page: 1 }),
+ matchesTable: tableStateFromURL("match", { sort: "start_time", direction: "desc", filter: "all", page: 1 }),
+-membersTable: tableStateFromURL("member", { sort: "points", direction: "desc", filter: "current", page: 1 })
++membersTable: tableStateFromURL("member", { sort: "points", direction: "desc", filter: "current", page: 1 }),
++arenasTable: tableStateFromURL("arena", { sort: "event_date", direction: "desc", filter: "all", page: 1 })
+ };
+ };
+ const initialNavigation = navigationFromURL();
+@@ -76,12 +77,17 @@ personalMode: initialNavigation.personalMode || "daily",
+ opponentsTableState: initialNavigation.opponentsTable,
+ matchesTableState: initialNavigation.matchesTable,
+ membersTableState: initialNavigation.membersTable,
++arenasTableState: initialNavigation.arenasTable,
+ opponentsTable: null,
+ matchesTable: null,
+ membersTable: null,
++arenasTable: null,
++arenasLeadersTable: null,
+ opponentsLoaded: false,
+ matchesLoaded: false,
+ membersLoaded: false,
++arenasLoaded: false,
++arenasParticipationMetric: "players",
+ liveRanksLoaded: false,
+ liveRanksPayload: null,
+ teamData: null,
+@@ -997,6 +1003,7 @@ if (state.publicPage === "dashboard" && state.personalMode === "live") url.searc
+ writeTableState(url, "opp", state.opponentsTableState, state.publicPage === "insights" && state.insightsSubtab === "opponents");
+ writeTableState(url, "match", state.matchesTableState, state.publicPage === "insights" && state.insightsSubtab === "matches");
+ writeTableState(url, "member", state.membersTableState, state.publicPage === "insights" && state.insightsSubtab === "members");
++writeTableState(url, "arena", state.arenasTableState, state.publicPage === "insights" && state.insightsSubtab === "arenas");
+ const method = replace ? "replaceState" : "pushState";
+ window.history[method]({ page: state.publicPage, hall: state.hallSubtab, insights: state.insightsSubtab }, "", url);
+ }
+@@ -1044,6 +1051,7 @@ document.querySelectorAll("[data-admin-panel]").forEach(p=>p.hidden=p.dataset.ad
+ if (showInsights && state.insightsSubtab === "team") ensureIntegratedFrame("teamInsightsFrame");
+ if (showInsights && state.insightsSubtab === "members") loadMemberInsights();
+ if (showInsights && state.insightsSubtab === "matches") loadMatchInsights();
++if (showInsights && state.insightsSubtab === "arenas") loadArenaInsights();
+ if (showInsights && state.insightsSubtab === "opponents") loadOpponentInsights();
+ if (showHall && state.hallSubtab === "live") loadLiveRanksNative();
+ if (showHall && state.hallSubtab === "tournaments") ensureIntegratedFrame("tournamentsFrame");
+@@ -1064,7 +1072,7 @@ state.view = "public";
+ if (page === "team-insights") page = "insights";
+ if (page === "tournaments") { page = "hall"; hallSubtab = "tournaments"; }
+ state.publicPage = ["dashboard", "hall", "insights", "administration"].includes(page) && (page !== "administration" || state.admin || !state.adminResolved) ? page : "dashboard";
+-if (state.publicPage === "insights" && ["team", "members", "matches", "opponents"].includes(insightsSubtab)) state.insightsSubtab = insightsSubtab;
++if (state.publicPage === "insights" && ["team", "members", "matches", "arenas", "opponents"].includes(insightsSubtab)) state.insightsSubtab = insightsSubtab;
+ if (state.publicPage === "hall" && ["daily", "live", "tournaments", "achievements"].includes(hallSubtab)) state.hallSubtab = hallSubtab;
+ renderView();
+ if (updateHistory) writeNavigationState({ replace: replaceHistory });
+@@ -1092,11 +1100,12 @@ renderHallRanks(state.hallData);
+ }
+ }
+ function selectInsightsSubtab(key, { updateHistory = true } = {}) {
+-if (!["team", "members", "matches", "opponents"].includes(key)) return;
++if (!["team", "members", "matches", "arenas", "opponents"].includes(key)) return;
+ state.insightsSubtab = key;
+ renderView();
+ if (key === "members") loadMemberInsights();
+ if (key === "matches") loadMatchInsights();
++if (key === "arenas") loadArenaInsights();
+ if (key === "opponents") loadOpponentInsights();
+ if (updateHistory) writeNavigationState();
+ }
+@@ -1331,7 +1340,7 @@ const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, character =>
+     if (window.P2K_DASHBOARD_INSIGHTS) return Promise.resolve(window.P2K_DASHBOARD_INSIGHTS);
+     if (dashboardInsightsModulePromise) return dashboardInsightsModulePromise;
+     dashboardInsightsModulePromise = loadFeatureScriptWithRetry(
+-      "assets/js/pages/dashboard-insights.js?v=2.10.6.23",
++      "assets/js/pages/dashboard-insights.js?v=2.10.6.24",
+       () => typeof window.P2K_CREATE_DASHBOARD_INSIGHTS === "function",
+       "Dashboard Insights 

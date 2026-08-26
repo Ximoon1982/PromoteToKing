@@ -1,0 +1,99 @@
+diff --git a/POST_v2.10.6.24_MATCHES_ARTWORK_INTEGRATION.json b/POST_v2.10.6.24_MATCHES_ARTWORK_INTEGRATION.json
+index 2967b83..66e0a95 100644
+--- a/POST_v2.10.6.24_MATCHES_ARTWORK_INTEGRATION.json
++++ b/POST_v2.10.6.24_MATCHES_ARTWORK_INTEGRATION.json
+@@ -9,77 +9,77 @@
+       "master": "assets/images/achievements/first-match.png",
+       "master_sha256": "1b01b2c41731b9475eacf4161a472c3c4b48ccbfbacf754c3c557d6710b9a408",
+       "thumb_128": "assets/images/achievements/thumbs/128/first-match.webp",
+-      "thumb_128_sha256": "c1be31fd6ad7a66d72031389cd129afd9346eab0fa34a233c75b819686c04f04",
++      "thumb_128_sha256": "8b7b0f342087f60a010089898b0dafdffc8176f87f3f4dbffb53dd7242839105",
+       "mini_64": "assets/images/achievements/mini/64/first-match.webp",
+-      "mini_64_sha256": "4456cc786a681709ecd1a3a1f556db7e7d80adeb774b6b843d211afcc4ba0931",
++      "mini_64_sha256": "6c61d2e9ec82fb0d4c6b8e3f9b9e52a7460c5962e07e6af2b92b1d9949269226",
+       "mini_legacy": "assets/images/achievements/mini/first-match.webp",
+-      "mini_legacy_sha256": "4456cc786a681709ecd1a3a1f556db7e7d80adeb774b6b843d211afcc4ba0931"
++      "mini_legacy_sha256": "6c61d2e9ec82fb0d4c6b8e3f9b9e52a7460c5962e07e6af2b92b1d9949269226"
+     },
+     {
+       "key": "matches-10",
+       "master": "assets/images/achievements/matches-10.png",
+       "master_sha256": "23264658ea01c24efefde22932ccc5b50d506525ad0379cca6ce324d0cb55ca3",
+       "thumb_128": "assets/images/achievements/thumbs/128/matches-10.webp",
+-      "thumb_128_sha256": "b25db1713e3e775759a5dd28a7a741c6908cf4a1e1f07a2d877c8fd8c8a3e137",
++      "thumb_128_sha256": "696d3689cd175e442d30233df92955c8415016436458f55184e5c757f63dcea4",
+       "mini_64": "assets/images/achievements/mini/64/matches-10.webp",
+-      "mini_64_sha256": "eb0723b34e8e4ca3c114ff1d8f99c7e9f855834a43a1a9cc4ad3b60c85a859e9",
++      "mini_64_sha256": "668cbd3d83965c6b5372297be7997e3017d1f2fa013b6881eedda9be7e65e454",
+       "mini_legacy": "assets/images/achievements/mini/matches-10.webp",
+-      "mini_legacy_sha256": "eb0723b34e8e4ca3c114ff1d8f99c7e9f855834a43a1a9cc4ad3b60c85a859e9"
++      "mini_legacy_sha256": "668cbd3d83965c6b5372297be7997e3017d1f2fa013b6881eedda9be7e65e454"
+     },
+     {
+       "key": "matches-50",
+       "master": "assets/images/achievements/matches-50.png",
+       "master_sha256": "73d8ef601b8bd7e5de711804958af7795ca6b7be6795ac6fd1e9b578e8d96e84",
+       "thumb_128": "assets/images/achievements/thumbs/128/matches-50.webp",
+-      "thumb_128_sha256": "388682078d469df783a7acdae38e532e230e4dc39a6877e4254d57e41f73add8",
++      "thumb_128_sha256": "15c0011374f622202f9bd38cd9f17a20067271e897cdc6dd2e324f6bdb791e12",
+       "mini_64": "assets/images/achievements/mini/64/matches-50.webp",
+-      "mini_64_sha256": "2928fdbc3efe1fa0816fd35ad9a12f3c3bd7ae2ece2a8d9fe07c38c231c17eb4",
++      "mini_64_sha256": "ef83dc2ee2c2288ac9883bc7bd7ead1786f49195a7a12a27e246f3084ebd4b17",
+       "mini_legacy": "assets/images/achievements/mini/matches-50.webp",
+-      "mini_legacy_sha256": "2928fdbc3efe1fa0816fd35ad9a12f3c3bd7ae2ece2a8d9fe07c38c231c17eb4"
++      "mini_legacy_sha256": "ef83dc2ee2c2288ac9883bc7bd7ead1786f49195a7a12a27e246f3084ebd4b17"
+     },
+     {
+       "key": "matches-100",
+       "master": "assets/images/achievements/matches-100.png",
+       "master_sha256": "9eb1b19dd877aa0da16597eb324a886096cebf1245fa6fdebd3cd9393b5a5203",
+       "thumb_128": "assets/images/achievements/thumbs/128/matches-100.webp",
+-      "thumb_128_sha256": "7a8d48618c44ade9f4573682c36bacf6d8b7c9be9403bd42a866e2518a277acb",
++      "thumb_128_sha256": "015ce23c4cd4458085a47a91062af556e99c60dcb3bc017bb4e170481c0af826",
+       "mini_64": "assets/images/achievements/mini/64/matches-100.webp",
+-      "mini_64_sha256": "a04eea690319f375545487eae4a2a7515dbada168745c80c7c67c93c30d1363d",
++      "mini_64_sha256": "10b8974b479825aa0f1ae2311d469ba099cf59a862e5a17c7ff2ec5f2a8bfc8d",
+       "mini_legacy": "assets/images/achievements/mini/matches-100.webp",
+-      "mini_legacy_sha256": "a04eea690319f375545487eae4a2a7515dbada168745c80c7c67c93c30d1363d"
++      "mini_legacy_sha256": "10b8974b479825aa0f1ae2311d469ba099cf59a862e5a17c7ff2ec5f2a8bfc8d"
+     },
+     {
+       "key": "matches-250",
+       "master": "assets/images/achievements/matches-250.png",
+       "master_sha256": "4c301a0c180c7f186299384bb5b72229b7db9f2cf557fe0f1c30feb6af539c63",
+       "thumb_128": "assets/images/achievements/thumbs/128/matches-250.webp",
+-      "thumb_128_sha256": "59229e148754b312d18cbb37a13dff0cf23fa8192cb3237b27ce9a35c5f6ac2b",
++      "thumb_128_sha256": "107f1461bd54c4d685efd45d3145c4ab9433f72fd36a12e412c7724594600510",
+       "mini_64": "assets/images/achievements/mini/64/matches-250.webp",
+-      "mini_64_sha256": "5b4fa463852df1e2cd12723be02ea35f17af0e803ca8a8ff2c4ec643284a8477",
++      "mini_64_sha256": "6419c3de7022a24783f4127334ed2bc650f5a5fc21d31c2e8290c4424f265bfb",
+       "mini_legacy": "assets/images/achievements/mini/matches-250.webp",
+-      "mini_legacy_sha256": "5b4fa463852df1e2cd12723be02ea35f17af0e803ca8a8ff2c4ec643284a8477"
++      "mini_legacy_sha256": "6419c3de7022a24783f4127334ed2bc650f5a5fc21d31c2e8290c4424f265bfb"
+     },
+     {
+       "key": "matches-500",
+       "master": "assets/images/achievements/matches-500.png",
+       "master_sha256": "d7db0a37c0b8fbe1024069ea07d0d1fd1acc45302cb2767ad85159d971c68ab4",
+       "thumb_128": "assets/images/achievements/thumbs/128/matches-500.webp",
+-      "thumb_128_sha256": "ed8f73b1858d9a26fef26de71e16ff5746151ad38f71ac0a88890dbfe7015921",
++      "thumb_128_sha256": "624f85a0d912118a195fcb09d4e2a3adbae7bf079a13d6504f2b19663b87240b",
+       "mini_64": "assets/images/achievements/mini/64/matches-500.webp",
+-      "mini_64_sha256": "0cc8885a96eaf7a2ce99b6d9e91be418b1fdb4ff55df5d4e18f5bd20a430c581",
++      "mini_64_sha256": "62f8884cedc7f0bf1ca9010b55f88148877c6a2f7d5e448bb35960793ce470b0",
+       "mini_legacy": "assets/images/achievements/mini/matches-500.webp",
+-      "mini_legacy_sha256": "0cc8885a96eaf7a2ce99b6d9e91be418b1fdb4ff55df5d4e18f5bd20a430c581"
++      "mini_legacy_sha256": "62f8884cedc7f0bf1ca9010b55f88148877c6a2f7d5e448bb35960793ce470b0"
+     },
+     {
+       "key": "matches-1000",
+       "master": "assets/images/achievements/matches-1000.png",
+       "master_sha256": "d9877e6a912f7e309283cf4f78cac8783152712d6639e3736b9b71d45251c808",
+       "thumb_128": "assets/images/achievements/thumbs/128/matches-1000.webp",
+-      "thumb_128_sha256": "6985ac0710c2ddfd89f0fc7166ca1b5cb589294387c1d1e75a31e2a5558fccf2",
++      "thumb_128_sha256": "c32a170fbf18cc8c9f4ac5a5019b4eb09cf2c985e85db4aa953536f64767f3fa",
+       "mini_64": "assets/images/achievements/mini/64/matches-1000.webp",
+-      "mini_64_sha256": "738e11b578591e732565f2d88a24720da537a3311a78f29a488e6b8252e16799",
++      "mini_64_sha256": "4db71863906503bd136d2cd8bec0645472e2951d35f70600282da545ff83e6c1",
+       "mini_legacy": "assets/images/achievements/mini/matches-1000.webp",
+-      "mini_legacy_sha256

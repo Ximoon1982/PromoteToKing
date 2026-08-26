@@ -1,0 +1,60 @@
+.getBoundingClientRect(), px = (event.clientX - rect.left) / rect.width * width; if (drag !== null) { selection.setAttribute("visibility", "visible"); selection.setAttribute("x", Math.min(drag, px)); selection.setAttribute("width", Math.abs(px - drag)); return; } const index = localIndex(px), row = visible[index], x = X(index); cross.setAttribute("x1", x); cross.setAttribute("x2", x); cross.setAttribute("visibility", "visible"); nativeChartTip(host, event, tipHTML(row)); });
++    overlay.addEventListener("pointerleave", () => { if (drag === null) { cross.setAttribute("visibility", "hidden"); hideNativeChartTip(host); } }); overlay.addEventListener("pointerdown", event => { if(event.pointerType==="touch")return; const rect = svg.getBoundingClientRect(); drag = (event.clientX - rect.left) / rect.width * width; overlay.setPointerCapture(event.pointerId); }); overlay.addEventListener("pointerup", event => { const rect = svg.getBoundingClientRect(), finish = (event.clientX - rect.left) / rect.width * width, begin = drag; drag = null; selection.setAttribute("visibility", "hidden"); if (begin === null || Math.abs(finish - begin) < 18) return; const a = localIndex(Math.min(begin, finish)), b = localIndex(Math.max(begin, finish)); nativeChartZoom.set(hostId, [start + a, start + b]); renderNativeLine(hostId, rows, { xKey, series, tooltipExtra, futureBoundary, yMin, yMax, invertY, axisFormatter }); }); overlay.addEventListener("dblclick", () => { nativeChartZoom.delete(hostId); renderNativeLine(hostId, rows, { xKey, series, tooltipExtra, futureBoundary, yMin, yMax, invertY, axisFormatter }); });
+     const tickCount = Math.min(6, visible.length); for (let i = 0; i < tickCount; i += 1) { const index = Math.round((visible.length - 1) * i / Math.max(1, tickCount - 1)), label = nativeSVG("text", { x: X(index), y: height - 12, "text-anchor": i === 0 ? "start" : i === tickCount - 1 ? "end" : "middle", class: "p2k-chart-axis" }); label.textContent = String(visible[index][xKey]); svg.appendChild(label); }
+-    overlay.addEventListener("click",event=>{const rect=svg.getBoundingClientRect(),px=(event.clientX-rect.left)/rect.width*width,index=localIndex(px),row=visible[index],x=X(index);cross.setAttribute("x1",x);cross.setAttribute("x2",x);cross.setAttribute("visibility","visible");nativeChartTip(host,event,`<strong>${escapeHTML(String(row[xKey]))}</strong><br>${series.map(item=>`<span style="color:${item.color}">●</span> ${escapeHTML(item.label)}: <b>${row[item.key]==null?"—":Number(row[item.key]||0).toFixed(item.decimals??1)}</b>`).join("<br>")}${typeof tooltipExtra==="function"?`<br>${tooltipExtra(row)}`:""}`);});
+-    installPinchZoom(overlay,svg,hostId,rows,start,end,()=>renderNativeLine(hostId,rows,{xKey,series,tooltipExtra,futureBoundary}));
+-    host._p2kResetZoom = () => { nativeChartZoom.delete(hostId); renderNativeLine(hostId, rows, { xKey, series, tooltipExtra, futureBoundary }); };
++    overlay.addEventListener("click",event=>{const rect=svg.getBoundingClientRect(),px=(event.clientX-rect.left)/rect.width*width,index=localIndex(px),row=visible[index],x=X(index);cross.setAttribute("x1",x);cross.setAttribute("x2",x);cross.setAttribute("visibility","visible");nativeChartTip(host,event,tipHTML(row));});
++    installPinchZoom(overlay,svg,hostId,rows,start,end,()=>renderNativeLine(hostId,rows,{xKey,series,tooltipExtra,futureBoundary,yMin,yMax,invertY,axisFormatter}));
++    host._p2kResetZoom = () => { nativeChartZoom.delete(hostId); renderNativeLine(hostId, rows, { xKey, series, tooltipExtra, futureBoundary, yMin, yMax, invertY, axisFormatter }); };
+   }
+   function renderNativeBarLine(hostId, rows, { xKey="month", barKey="points", lineKey="cumulative_points", barLabel="Monthly points", lineLabel="Cumulative points" } = {}) {
+     const host=byId(hostId);if(!host)return;host.replaceChildren();if(!Array.isArray(rows)||!rows.length)return nativeChartEmpty(host,"No database data is available.");
+diff --git a/assets/js/pages/dashboard-insights.js b/assets/js/pages/dashboard-insights.js
+index e97243f..9e8d7ad 100644
+--- a/assets/js/pages/dashboard-insights.js
++++ b/assets/js/pages/dashboard-insights.js
+@@ -50,7 +50,7 @@ function membersTableColumns() {
+       };
+       if (window.P2K_CREATE_INSIGHTS_CHARTS) return finish();
+       const script = document.createElement("script");
+-      script.src = "assets/js/pages/dashboard-insights-charts.js?v=2.10.4";
++      script.src = "assets/js/pages/dashboard-insights-charts.js?v=2.10.6.24";
+       script.defer = true; script.onload = finish; script.onerror = () => reject(new Error("Unable to load Insights chart module."));
+       document.head.appendChild(script);
+     });
+@@ -300,6 +300,141 @@ function membersTableColumns() {
+     }catch(error){if(status){status.classList.add("is-error");status.textContent=`Unable to load match insights: ${error.message||error}`;}}
+   }
+ 
++  function arenaInsightsURL(tableState = state.arenasTableState, { section = "all", fileId = 0 } = {}) {
++    const url = new URL("server/team-points/public/arenas-insights.php", window.location.href);
++    if (section && section !== "all") url.searchParams.set("section", section);
++    if (fileId) url.searchParams.set("file_id", String(fileId));
++    if (section === "table" || section === "all") {
++      url.searchParams.set("page", String(Math.max(1, Number(tableState?.page) || 1)));
++      url.searchParams.set("page_size", "25");
++      if (tableState?.query) url.searchParams.set("search", tableState.query);
++      if (tableState?.sort) url.searchParams.set("sort", tableState.sort);
++      url.searchParams.set("direction", tableState?.direction === "asc" ? "asc" : "desc");
++    }
++    return url.href;
++  }
++
++  function arenaDateLabel(row) {
++    const date = String(row?.event_date || "");
++    return row?.event_date_approximate ? `${date}≈` : date;
++  }
++
++  function renderArenaParticipation(rows) {
++    const metric = state.arenasParticipationMetric === "share" ? "share" : "players";
++    byId("arenasParticipationPlayers")?.classList.toggle("is-active", metric === "players");
++    byId("arenasParticipationShare")?.classList.toggle("is-active", metric === "share");
++    const mapped = rows.map(row => ({ ...row, chart_date: arenaDateLabel(row) }));
++    renderNativeLine("arenasParticipationChart", mapped, metric === "share" ? {
++      xKey: "chart_date", yMin: 0, yMax: 100, axisFormatter: value => `${Math.round(value)}%`,
++      series: [{ key: "p2k_share_percent", label: "P2K share", color: "#4aa8d8", decimals: 1 }],
++      tooltipExtra: row => `${escapeHTML(row.arena_name)}<br>Field: <b>${number(row.total_players)}</b> · P2K: <b>${number(row.p2k_players)}</b>`
++    } : {
++      xKey: "chart_date", series: [{ key: "p2k_players", label: "P2K players", color: "#4aa8d8", decimals: 0 }],
++      tooltipExtra: row => `${escapeHTML(row.arena_name)}<br>Full field: <b>${number(row.total_players)}</b> · Share: <b>${row.p2k_share_percent == null ? "—" : Number(row.p2k_share

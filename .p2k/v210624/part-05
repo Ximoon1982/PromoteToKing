@@ -1,0 +1,36 @@
+"is-right">${row.rank ? `#${number(row.rank)}` : "—"}</td><td class="is-right">${Number(row.points || 0).toFixed(1).replace(/\.0$/, "")}</td><td class="is-right">${row.games == null ? "—" : number(row.games)}</td><td class="is-right">${row.wins == null ? "—" : number(row.wins)}</td><td class="is-right">${row.draws == null ? "—" : number(row.draws)}</td><td class="is-right">${row.losses == null ? "—" : number(row.losses)}</td></tr>`).join("");
++      const source = arena.event_url ? `<p><a class="p2k-table-link" href="${escapeHTML(arena.event_url)}" target="_blank" rel="noopener">Open source arena on Chess.com ↗</a></p>` : "";
++      showInsightsModal({ eyebrow: "Arena Insights", title: arena.arena_name || arena.arena_slug || "Arena", subtitle: `${arena.event_date || "Unknown date"}${arena.event_date_approximate ? " · approximate date" : ""}`, html: `<div class="p2k-detail-kpis"><div><span>Field</span><strong>${number(arena.total_players)}</strong></div><div><span>P2K players</span><strong>${number(arena.p2k_players)}</strong></div><div><span>Best finish</span><strong>${arena.best_rank ? `#${number(arena.best_rank)}` : "—"}</strong></div><div><span>MCA points</span><strong>${Number(arena.p2k_points || 0).toFixed(1).replace(/\.0$/, "")}</strong></div><div><span>Top 10</span><strong>${number(arena.top10_count)}</strong></div><div><span>Podiums</span><strong>${number(arena.podium_count)}</strong></div></div>${source}<div class="p2k-table-wrap"><table class="p2k-table"><thead><tr><th>Player</th><th class="is-right">Rank</th><th class="is-right">Points</th><th class="is-right">Games</th><th class="is-right">W</th><th class="is-right">D</th><th class="is-right">L</th></tr></thead><tbody>${rows || '<tr><td colspan="7" class="p2k-table-empty">No canonical P2K participant rows are available.</td></tr>'}</tbody></table></div>` });
++    } catch (error) { showInsightsModal({ eyebrow: "Arena Insights", title: "Arena unavailable", subtitle: "", html: `<p class="p2k-table-status is-error">${escapeHTML(error.message || error)}</p>` }); }
++  }
++
++  function applyArenaPayload(payload) {
++    const summary = payload?.summary || {}, trend = Array.isArray(payload?.trend) ? payload.trend : [], leaders = Array.isArray(payload?.leaders) ? payload.leaders : [];
++    setText("arenasStatPlayed", number(summary.arenas)); setText("arenasStatParticipations", number(summary.participations)); setText("arenasStatPlayers", number(summary.unique_players)); setText("arenasStatVictories", number(summary.victories)); setText("arenasStatPodiums", number(summary.podiums)); setText("arenasStatTop10", number(summary.top10_finishes)); setText("arenasStatBest", summary.best_finish ? `#${number(summary.best_finish)}` : "—"); setText("arenasStatAverage", Number(summary.average_p2k_players || 0).toFixed(1)); setText("arenasDatabaseBadge", `MCA Results · schema ${number(payload?.meta?.analytics_schema_version)}`);
++    renderArenaTrend(trend); renderArenaRecords(payload?.records || []);
++    if (!state.arenasLeadersTable) state.arenasLeadersTable = new window.P2KDataTable({ root: byId("arenasLeadersTable"), columns: arenaLeadersColumns(), rows: leaders, pageSize: 25, searchInput: byId("arenasLeadersSearch"), countHost: byId("arenasLeadersCount"), pagerHost: byId("arenasLeadersPager"), state: { sort: "points", direction: "desc", page: 1 } }); else state.arenasLeadersTable.setRows(leaders);
++    setText("arenasLeadersStatus", `Canonical MCA leaders · ${number(leaders.length)} players`);
++    const totalRows = Number(payload?.pagination?.total_rows || 0);
++    if (!state.arenasTable) state.arenasTable = new window.P2KDataTable({ root: byId("arenasDataTable"), columns: arenaTableColumns(), rows: payload.rows || [], totalRows, pageSize: 25, searchInput: byId("arenasTableSearch"), countHost: byId("arenasTableCount"), pagerHost: byId("arenasTablePager"), state: state.arenasTableState, remoteLoader: async tableState => { const remote = await loadJSON(arenaInsightsURL(tableState, { section: "table" }), { credentials: "same-origin" }); return { rows: remote.rows || [], totalRows: Number(remote.pagination?.total_rows || 0), pagination: remote.pagination }; }, onRemoteState: event => { const status = byId("arenasTableStatus"); if (!status) return; status.classList.toggle("is-error", Boolean(event.error)); status.textContent = event.loading ? "Loading matching arena rows…" : event.error ? `Unable to load arena rows: ${event.error.message || event.error}` : `Arena archive ready · ${number(event.payload?.totalRows || 0)} matching arenas`; }, onStateChange: next => { state.arenasTableState = next; writeNavigationState({ replace: true }); } }); else state.arenasTable.setRemoteData(payload.rows || [], totalRows);
++    setText("arenasTableStatus", `Arena archive ready · ${number(totalRows)} stored arenas`);
++  }
++
++  async function loadArenaInsights({ force = false } = {}) {
++    if (state.arenasLoaded && !force) return;
++    const status = byId("arenasTableStatus"); if (status) { status.classList.remove("is-error"); status.textContent = "Loading Arena Insights…"; }
++    const playersButton = byId("arenasParticipationPlayers"), shareButton = byId("arenasParticipationShare");
++    if (playersButton && !playersButton.dataset.bound) { playersButton.dataset.bound = "1"; playersButton.addEventListener("click", () => { state.arenasParticipationMetric = "players"; if (state.arenasTrend) renderArenaParticipation(state.arenasTrend); }); }
++    if (shareButton && !shareButton.dataset.bound) { shareButton.dataset.bound = "1"; shareButton.addEventListener("click", () => { state.arenasParticipationMetric = "share"; if (state.arenasTrend) renderArenaParticipation(state.arenasTrend); }); }
++    const cached = window.P2K_PROGRESSIVE?.snapshotGet?.("arenas-insights-v1", 6 * 3600000); if (cached?.payload) { state.arenasTrend = cached.payload.trend || []; applyArenaPayload(cached.payload); if (status) status.textContent = "Cached Arena Insights · refreshing…"; }
++    try {
++      const payload = await loadJSON(arenaInsightsURL(state.arenasTableState), { credentials: "same-origin" });
++      if (payload?.ok === false) throw new Error(payload?.error?.message || "Arena Insights are unavailable.");
++      state.arenasTrend = payload.trend || []; applyArenaPayload(payload); window.P2K_PROGRESSIVE?.snapshotSet?.("arenas-insights-v1", payload); state.arenasLoaded = true;
++    } catch (error) { if (status) { status.classList.add("is-error"); status.textContent = `Unable to load Arena Insights: ${error.message || error}`; } }
++  }
++
+   function opponentsTableColumns() {
+     return [
+       { key: "name", type: "text", render: row => cellWithSub(insightAction(row.name || row.slug, () => openOpponentProfile(row.slug)), row.disabled ? "Disabled club" : row.slug) },
+@@ -346,6 +481,6 @@ function membersTableColumns() {
+     try{const payload=await loadJSON(opponentInsightsURL(state.opponentsTableState,{section:"summary"}),{credentials:"sa

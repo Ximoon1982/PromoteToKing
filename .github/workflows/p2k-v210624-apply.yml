@@ -1,0 +1,117 @@
+name: P2K v2.10.6.24 one-shot integration
+
+on:
+  push:
+    branches:
+      - next/v2.10.6.24
+    paths:
+      - .p2k/v210624/RUN
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout triggering revision
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct and verify integration patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .p2k/v210624/part-* > /tmp/v210624.patch
+          test "$(sha256sum /tmp/v210624.patch | awk '{print $1}')" = "a75497e855c0b12557fd8c5a7385eecc7546279e87b0219f4fe39951acbd1bb9"
+          git apply --check /tmp/v210624.patch
+          git apply /tmp/v210624.patch
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install deterministic artwork/test dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check pillow==12.3.0 pytest
+
+      - name: Generate approved Matches derivatives
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/generate-v210624-matches-derivatives.py
+          python tools/generate-v210624-matches-derivatives.py --verify-only
+
+      - name: Validate v2.10.6.24 checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l server/team-points/public/arenas-insights.php
+          php -l server/team-points/src/AchievementCatalog.php
+          php -l server/team-points/src/AnalyticsBuilder.php
+          php -l server/team-points/src/LiveRanksService.php
+          node --check assets/js/pages/dashboard-insights-charts.js
+          node --check assets/js/pages/dashboard-insights.js
+          node --check assets/js/pages/dashboard-v2.js
+          python -m pytest -q tests/test_v210624_arenas_matches_artwork.py
+          php tests/php_v210624_arena_service_harness.php
+
+      - name: Commit expanded validated source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "P2K Release Automation"
+          git config user.email "p2k-release@users.noreply.github.com"
+          git add \
+            POST_v2.10.6.24_MATCHES_ARTWORK_INTEGRATION.json \
+            assets/css/dashboard-v2.css \
+            assets/js/pages/dashboard-insights-charts.js \
+            assets/js/pages/dashboard-insights.js \
+            assets/js/pages/dashboard-v2.js \
+            assets/images/achievements/thumbs/128/first-match.webp \
+            assets/images/achievements/thumbs/128/matches-10.webp \
+            assets/images/achievements/thumbs/128/matches-50.webp \
+            assets/images/achievements/thumbs/128/matches-100.webp \
+            assets/images/achievements/thumbs/128/matches-250.webp \
+            assets/images/achievements/thumbs/128/matches-500.webp \
+            assets/images/achievements/thumbs/128/matches-1000.webp \
+            assets/images/achievements/mini/64/first-match.webp \
+            assets/images/achievements/mini/64/matches-10.webp \
+            assets/images/achievements/mini/64/matches-50.webp \
+            assets/images/achievements/mini/64/matches-100.webp \
+            assets/images/achievements/mini/64/matches-250.webp \
+            assets/images/achievements/mini/64/matches-500.webp \
+            assets/images/achievements/mini/64/matches-1000.webp \
+            assets/images/achievements/mini/first-match.webp \
+            assets/images/achievements/mini/matches-10.webp \
+            assets/images/achievements/mini/matches-50.webp \
+            assets/images/achievements/mini/matches-100.webp \
+            assets/images/achievements/mini/matches-250.webp \
+            assets/images/achievements/mini/matches-500.webp \
+            assets/images/achievements/mini/matches-1000.webp \
+            server/team-points/src/AchievementCatalog.php \
+            server/team-points/src/AnalyticsBuilder.php \
+            server/team-points/src/LiveRanksService.php \
+            tests/php_v210624_arena_service_harness.php \
+            tests/test_v210624_arenas_matches_artwork.py \
+            tools/generate-v210624-matches-derivatives.py \
+            ui-v2.html
+          if git diff --cached --quiet; then
+            echo "No source changes to commit" >&2
+            exit 1
+          fi
+          git commit -m "v2.10.6.24: integrate Arenas insights and Matches artwork"
+          git push origin HEAD:next/v2.10.6.24
