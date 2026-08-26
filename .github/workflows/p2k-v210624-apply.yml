@@ -29,6 +29,17 @@ jobs:
           git apply --check /tmp/v210624.patch
           git apply /tmp/v210624.patch
 
+      - name: Install approved Matches masters
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="artwork/approved-next-release/v2.10.6.24/matches"
+          dst="assets/images/achievements"
+          mkdir -p "$dst"
+          for key in first-match matches-10 matches-50 matches-100 matches-250 matches-500 matches-1000; do
+            install -m 0644 "$src/$key.png" "$dst/$key.png"
+          done
+
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -81,6 +92,13 @@ jobs:
             assets/js/pages/dashboard-insights-charts.js \
             assets/js/pages/dashboard-insights.js \
             assets/js/pages/dashboard-v2.js \
+            assets/images/achievements/first-match.png \
+            assets/images/achievements/matches-10.png \
+            assets/images/achievements/matches-50.png \
+            assets/images/achievements/matches-100.png \
+            assets/images/achievements/matches-250.png \
+            assets/images/achievements/matches-500.png \
+            assets/images/achievements/matches-1000.png \
             assets/images/achievements/thumbs/128/first-match.webp \
             assets/images/achievements/thumbs/128/matches-10.webp \
             assets/images/achievements/thumbs/128/matches-50.webp \
