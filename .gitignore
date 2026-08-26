@@ -1,0 +1,58 @@
+# Promote to King repository safety rules
+# Canonical shipped examples/scaffolding remain tracked. Only local/runtime state is ignored.
+
+# Local secrets and host-specific configuration
+.env
+.env.*
+!.env.example
+**/config.local.php
+**/oauth.local.php
+**/green.local.php
+**/database.local.php
+**/secrets.php
+**/secret.php
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+
+# Database/runtime dumps
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.sql.gz
+*.bak
+*.pid
+*.lock
+*.tmp
+*.temp
+
+# Mutable P2K runtime data: keep the canonical scaffolding files
+/data/live-ranks/uploads/*
+!/data/live-ranks/uploads/.gitkeep
+/data/live-ranks/processed/*
+!/data/live-ranks/processed/.gitkeep
+/data/live-ranks/backups/*
+!/data/live-ranks/backups/.gitkeep
+/data/tournaments/backups/*
+!/data/tournaments/backups/.gitkeep
+/data/tournaments/cache/*
+!/data/tournaments/cache/.gitkeep
+/data/tournaments/locks/*
+!/data/tournaments/locks/.gitkeep
+/data/match-tracking/matches/*
+!/data/match-tracking/matches/.gitkeep
+/data/match-tracking/quarantine/*
+!/data/match-tracking/quarantine/.gitkeep
+/logs/match-assistant/*
+!/logs/match-assistant/.gitkeep
+/logs/scheduled-tasks/*
+!/logs/scheduled-tasks/.gitkeep
+
+# Local development/runtime clutter
+__pycache__/
+.pytest_cache/
+node_modules/
+.DS_Store
+Thumbs.db
