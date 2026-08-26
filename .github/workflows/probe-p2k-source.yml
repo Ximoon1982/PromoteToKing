@@ -8,7 +8,7 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe deployed archive candidates
+      - name: Inspect deployed archive negotiation
         shell: bash
         run: |
           set -u
@@ -16,12 +16,12 @@ jobs:
             PromoteToKing_Standalone_v2.10.6.23_SOURCE.zip \
             PromoteToKing_Standalone_v2.10.6.22_SOURCE.zip \
             PromoteToKing_Standalone_v2.10.6.21_SOURCE.zip \
-            PromoteToKing_Standalone_v2.10.6.20_SOURCE.zip \
-            P2K_v2.10.6.15_or_v2.10.6.16_or_v2.10.6.17_or_v2.10.6.18_or_v2.10.6.19_or_v2.10.6.20_or_v2.10.6.21_or_v2.10.6.22_to_v2.10.6.23_INCREMENTAL.zip
+            PromoteToKing_Standalone_v2.10.6.20_SOURCE.zip
           do
-            url="https://www.promotetoking.org/$f"
-            code=$(curl -L -sS -o /tmp/probe.bin -w '%{http_code}' "$url" || true)
-            size=$(wc -c </tmp/probe.bin 2>/dev/null || echo 0)
-            sha=$(sha256sum /tmp/probe.bin 2>/dev/null | awk '{print $1}')
-            echo "$f HTTP=$code SIZE=$size SHA256=$sha"
+            echo "===== $f ====="
+            curl -sS -D /tmp/headers.txt -o /tmp/body.bin "https://www.promotetoking.org/$f" || true
+            cat /tmp/headers.txt
+            echo "BODY:"
+            head -c 1200 /tmp/body.bin | strings
+            echo
           done
