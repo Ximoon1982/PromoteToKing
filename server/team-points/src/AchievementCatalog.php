@@ -1,0 +1,260 @@
+<?php
+declare(strict_types=1);
+namespace P2K\TeamPoints;
+final class AchievementCatalog {
+ public static function all(): array { return [
+            self::item('first-match','First Match','Participate in your first recorded Promote to King team match.','matches',self::placeholder('first-match'),self::placeholder('first-match')),
+            self::item('first-point','First Step','Earn your first Team Point.','team-points',self::placeholder('first-point'),self::placeholder('first-point')),
+            self::item('matches-10','Rising Star','Play in 10 Promote to King team matches.','matches',self::placeholder('matches-10'),self::placeholder('matches-10')),
+            self::item('matches-50','Clutch Player','Play in 50 Promote to King team matches.','matches',self::placeholder('matches-50'),self::placeholder('matches-50')),
+            self::item('matches-100','Great Strategist','Play in 100 Promote to King team matches.','matches',self::placeholder('matches-100'),self::placeholder('matches-100')),
+            self::item('matches-250','Match Veteran','Play in 250 Promote to King team matches.','matches',self::placeholder('matches-250'),self::placeholder('matches-250')),
+            self::item('matches-500','Match Legend','Play in 500 Promote to King team matches.','matches',self::placeholder('matches-500'),self::placeholder('matches-500')),
+            self::item('games-100','Centurion','Complete 100 team games.','games','assets/images/achievements/games-100.png','assets/images/achievements/thumbs/128/games-100.webp'),
+            self::item('games-500','Five Hundred Games','Complete 500 team games.','games','assets/images/achievements/games-500.png','assets/images/achievements/thumbs/128/games-500.webp'),
+            self::item('games-1000','One Thousand Games','Complete 1,000 team games.','games','assets/images/achievements/games-1000.png','assets/images/achievements/thumbs/128/games-1000.webp'),
+            self::item('games-5000','Five Thousand Games','Complete 5,000 team games.','games','assets/images/achievements/games-5000.png','assets/images/achievements/thumbs/128/games-5000.webp'),
+            self::item('games-10000','Ten Thousand Games','Complete 10,000 team games.','games','assets/images/achievements/games-10000.png','assets/images/achievements/thumbs/128/games-10000.webp'),
+            self::item('wins-50','Tactical Mind','Win 50 team games.','wins','assets/images/achievements/wins-50.png','assets/images/achievements/thumbs/128/wins-50.webp'),
+            self::item('wins-250','Unstoppable','Win 250 team games.','wins','assets/images/achievements/wins-250.png','assets/images/achievements/thumbs/128/wins-250.webp'),
+            self::item('wins-1000','One Thousand Wins','Win 1,000 team games.','wins','assets/images/achievements/wins-1000.png','assets/images/achievements/thumbs/128/wins-1000.webp'),
+            self::item('daily-pawn','Pawn Daily Rank','Reach 10 Team Points.','daily-ranks','assets/images/ranks/01_Pawn_10_points.png','assets/images/ranks/01_Pawn_10_points.png'),
+            self::item('daily-knight','Knight Daily Rank','Reach 20 Team Points.','daily-ranks','assets/images/ranks/02_Knight_20_points.png','assets/images/ranks/02_Knight_20_points.png'),
+            self::item('daily-bishop','Bishop Daily Rank','Reach 50 Team Points.','daily-ranks','assets/images/ranks/03_Bishop_50_points.png','assets/images/ranks/03_Bishop_50_points.png'),
+            self::item('daily-rook','Rook Daily Rank','Reach 100 Team Points.','daily-ranks','assets/images/ranks/04_Rook_100_points.png','assets/images/ranks/04_Rook_100_points.png'),
+            self::item('daily-queen','Queen Daily Rank','Reach 150 Team Points.','daily-ranks','assets/images/ranks/05_Queen_150_points.png','assets/images/ranks/05_Queen_150_points.png'),
+            self::item('daily-king','King Daily Rank','Reach 250 Team Points.','daily-ranks','assets/images/ranks/06_King_250_points.png','assets/images/ranks/06_King_250_points.png'),
+            self::item('daily-bronze-king','Bronze King Daily Rank','Reach 500 Team Points.','daily-ranks','assets/images/ranks/07_Bronze_King_500_points.png','assets/images/ranks/07_Bronze_King_500_points.png'),
+            self::item('daily-silver-king','Silver King Daily Rank','Reach 1,000 Team Points.','daily-ranks','assets/images/ranks/08_Silver_King_1000_points.png','assets/images/ranks/08_Silver_King_1000_points.png'),
+            self::item('daily-gold-king','Gold King Daily Rank','Reach 1,500 Team Points.','daily-ranks','assets/images/ranks/09_Gold_King_1500_points.png','assets/images/ranks/09_Gold_King_1500_points.png'),
+            self::item('daily-platinum-king','Platinum King Daily Rank','Reach 2,000 Team Points.','daily-ranks','assets/images/ranks/10_Platinum_King_2000_points.png','assets/images/ranks/10_Platinum_King_2000_points.png'),
+            self::item('daily-amethyst-king','Amethyst King Daily Rank','Reach 3,000 Team Points.','daily-ranks','assets/images/ranks/11_Amethyst_King_3000_points.png','assets/images/ranks/11_Amethyst_King_3000_points.png'),
+            self::item('daily-topaz-king','Topaz King Daily Rank','Reach 4,000 Team Points.','daily-ranks','assets/images/ranks/12_Topaz_King_4000_points.png','assets/images/ranks/12_Topaz_King_4000_points.png'),
+            self::item('daily-emerald-king','Emerald King Daily Rank','Reach 5,500 Team Points.','daily-ranks','assets/images/ranks/13_Emerald_King_5500_points.png','assets/images/ranks/13_Emerald_King_5500_points.png'),
+            self::item('daily-sapphire-king','Sapphire King Daily Rank','Reach 7,000 Team Points.','daily-ranks','assets/images/ranks/14_Sapphire_King_7000_points.png','assets/images/ranks/14_Sapphire_King_7000_points.png'),
+            self::item('daily-ruby-king','Ruby King Daily Rank','Reach 8,500 Team Points.','daily-ranks','assets/images/ranks/15_Ruby_King_8500_points.png','assets/images/ranks/15_Ruby_King_8500_points.png'),
+            self::item('daily-diamond-king','Diamond King Daily Rank','Reach 10,000 Team Points.','daily-ranks','assets/images/ranks/16_Diamond_King_10000_points.png','assets/images/ranks/16_Diamond_King_10000_points.png'),
+            self::item('live-rank-pawn','Live Pawn','Reach 50 MCA points.','live-ranks','assets/images/live-ranks/01_Live_Pawn_50_points.png','assets/images/live-ranks/01_Live_Pawn_50_points.png'),
+            self::item('live-rank-knight','Live Knight','Reach 150 MCA points.','live-ranks','assets/images/live-ranks/02_Live_Knight_150_points.png','assets/images/live-ranks/02_Live_Knight_150_points.png'),
+            self::item('live-rank-bishop','Live Bishop','Reach 500 MCA points.','live-ranks','assets/images/live-ranks/03_Live_Bishop_500_points.png','assets/images/live-ranks/03_Live_Bishop_500_points.png'),
+            self::item('live-rank-rook','Live Rook','Reach 2,500 MCA points.','live-ranks','assets/images/achievements/masters/live-rank-rook-v297.png','assets/images/achievements/thumbs/128/live-rank-rook-v297.webp'),
+            self::item('live-rank-queen','Live Queen','Reach 7,500 MCA points.','live-ranks','assets/images/live-ranks/05_Live_Queen_7500_points.png','assets/images/live-ranks/05_Live_Queen_7500_points.png'),
+            self::item('live-rank-king','Live King','Reach 15,000 MCA points.','live-ranks','assets/images/live-ranks/06_Live_King_15000_points.png','assets/images/live-ranks/06_Live_King_15000_points.png'),
+            self::item('league-debut','League Debut','Play one recognized league match.','leagues','assets/images/achievements/league-debut.png','assets/images/achievements/thumbs/128/league-debut.webp'),
+            self::item('league-regular','League Regular','Play 10 recognized league matches.','leagues','assets/images/achievements/league-regular.png','assets/images/achievements/thumbs/128/league-regular.webp'),
+            self::item('league-veteran','League Veteran','Play 25 recognized league matches.','leagues','assets/images/achievements/league-veteran.png','assets/images/achievements/thumbs/128/league-veteran.webp'),
+            self::item('league-specialist','League Specialist','Play 50 recognized league matches.','leagues','assets/images/achievements/league-specialist.png','assets/images/achievements/thumbs/128/league-specialist.webp'),
+            self::item('league-legend','League Legend','Play 100 recognized league matches.','leagues','assets/images/achievements/league-legend.png','assets/images/achievements/thumbs/128/league-legend.webp'),
+            self::item('multi-league','Multi-League Competitor','Participate in three supported leagues.','leagues','assets/images/achievements/multi-league.png','assets/images/achievements/thumbs/128/multi-league.webp'),
+            self::item('all-league','All-League Competitor','Participate in all five supported leagues.','leagues','assets/images/achievements/all-league.png','assets/images/achievements/thumbs/128/all-league.webp'),
+            self::item('1wl-competitor','1WL Competitor','Play 1 One World League match.','league-1wl','assets/images/achievements/1wl-competitor.png','assets/images/achievements/thumbs/128/1wl-competitor.webp'),
+            self::item('1wl-veteran','1WL Veteran','Play 10 One World League matches.','league-1wl','assets/images/achievements/1wl-veteran.png','assets/images/achievements/thumbs/128/1wl-veteran.webp'),
+            self::item('1wl-legend','1WL Legend','Play 20 One World League matches.','league-1wl','assets/images/achievements/1wl-legend.png','assets/images/achievements/thumbs/128/1wl-legend.webp'),
+            self::item('1wl-first-point','1WL First Point','Score 1 individual point in One World League matches.','league-1wl','assets/images/achievements/1wl-first-point.png','assets/images/achievements/thumbs/128/1wl-first-point.webp'),
+            self::item('1wl-scorer','1WL Scorer','Score 5 individual points in One World League matches.','league-1wl','assets/images/achievements/1wl-scorer.png','assets/images/achievements/thumbs/128/1wl-scorer.webp'),
+            self::item('1wl-specialist','1WL Specialist','Score 10 individual points in One World League matches.','league-1wl','assets/images/achievements/1wl-specialist.png','assets/images/achievements/thumbs/128/1wl-specialist.webp'),
+            self::item('1wl-master','1WL Master','Score 20 individual points in One World League matches.','league-1wl','assets/images/achievements/1wl-master.png','assets/images/achievements/thumbs/128/1wl-master.webp'),
+            self::item('pcl-competitor','PCL Competitor','Play 1 Phoenix Chess League match.','league-pcl','assets/images/achievements/pcl-competitor.png','assets/images/achievements/thumbs/128/pcl-competitor.webp'),
+            self::item('pcl-veteran','PCL Veteran','Play 10 Phoenix Chess League matches.','league-pcl','assets/images/achievements/pcl-veteran.png','assets/images/achievements/thumbs/128/pcl-veteran.webp'),
+            self::item('pcl-legend','PCL Legend','Play 20 Phoenix Chess League matches.','league-pcl','assets/images/achievements/pcl-legend.png','assets/images/achievements/thumbs/128/pcl-legend.webp'),
+            self::item('pcl-first-point','PCL First Point','Score 1 individual point in Phoenix Chess League matches.','league-pcl','assets/images/achievements/pcl-first-point.png','assets/images/achievements/thumbs/128/pcl-first-point.webp'),
+            self::item('pcl-scorer','PCL Scorer','Score 5 individual points in Phoenix Chess League matches.','league-pcl','assets/images/achievements/pcl-scorer.png','assets/images/achievements/thumbs/128/pcl-scorer.webp'),
+            self::item('pcl-specialist','PCL Specialist','Score 10 individual points in Phoenix Chess League matches.','league-pcl','assets/images/achievements/pcl-specialist.png','assets/images/achievements/thumbs/128/pcl-specialist.webp'),
+            self::item('pcl-master','PCL Master','Score 20 individual points in Phoenix Chess League matches.','league-pcl','assets/images/achievements/pcl-master.png','assets/images/achievements/thumbs/128/pcl-master.webp'),
+            self::item('tcmac-competitor','TCMAC Competitor','Play 1 TCMAC match.','league-tcmac','assets/images/achievements/tcmac-competitor.png','assets/images/achievements/thumbs/128/tcmac-competitor.webp'),
+            self::item('tcmac-veteran','TCMAC Veteran','Play 10 TCMAC matches.','league-tcmac','assets/images/achievements/tcmac-veteran.png','assets/images/achievements/thumbs/128/tcmac-veteran.webp'),
+            self::item('tcmac-legend','TCMAC Legend','Play 20 TCMAC matches.','league-tcmac','assets/images/achievements/tcmac-legend.png','assets/images/achievements/thumbs/128/tcmac-legend.webp'),
+            self::item('tcmac-first-point','TCMAC First Point','Score 1 individual point in TCMAC matches.','league-tcmac','assets/images/achievements/tcmac-first-point.png','assets/images/achievements/thumbs/128/tcmac-first-point.webp'),
+            self::item('tcmac-scorer','TCMAC Scorer','Score 5 individual points in TCMAC matches.','league-tcmac','assets/images/achievements/tcmac-scorer.png','assets/images/achievements/thumbs/128/tcmac-scorer.webp'),
+            self::item('tcmac-specialist','TCMAC Specialist','Score 10 individual points in TCMAC matches.','league-tcmac','assets/images/achievements/tcmac-specialist.png','assets/images/achievements/thumbs/128/tcmac-specialist.webp'),
+            self::item('tcmac-master','TCMAC Master','Score 20 individual points in TCMAC matches.','league-tcmac','assets/images/achievements/tcmac-master.png','assets/images/achievements/thumbs/128/tcmac-master.webp'),
+            self::item('tmcl-competitor','TMCL Competitor','Play 1 TMCL match.','league-tmcl','assets/images/achievements/tmcl-competitor.png','assets/images/achievements/thumbs/128/tmcl-competitor.webp'),
+            self::item('tmcl-veteran','TMCL Veteran','Play 10 TMCL matches.','league-tmcl','assets/images/achievements/tmcl-veteran.png','assets/images/achievements/thumbs/128/tmcl-veteran.webp'),
+            self::item('tmcl-legend','TMCL Legend','Play 20 TMCL matches.','league-tmcl','assets/images/achievements/tmcl-legend.png','assets/images/achievements/thumbs/128/tmcl-legend.webp'),
+            self::item('tmcl-first-point','TMCL First Point','Score 1 individual point in TMCL matches.','league-tmcl','assets/images/achievements/tmcl-first-point.png','assets/images/achievements/thumbs/128/tmcl-first-point.webp'),
+            self::item('tmcl-scorer','TMCL Scorer','Score 5 individual points in TMCL matches.','league-tmcl','assets/images/achievements/tmcl-scorer.png','assets/images/achievements/thumbs/128/tmcl-scorer.webp'),
+            self::item('tmcl-specialist','TMCL Specialist','Score 10 individual points in TMCL matches.','league-tmcl','assets/images/achievements/tmcl-specialist.png','assets/images/achievements/thumbs/128/tmcl-specialist.webp'),
+            self::item('tmcl-master','TMCL Master','Score 20 individual points in TMCL matches.','league-tmcl','assets/images/achievements/tmcl-master.png','assets/images/achievements/thumbs/128/tmcl-master.webp'),
+            self::item('kotml-competitor','KOTML Competitor','Play 1 KOTML match.','league-kotml','assets/images/achievements/kotml-competitor.png','assets/images/achievements/thumbs/128/kotml-competitor.webp'),
+            self::item('kotml-veteran','KOTML Veteran','Play 10 KOTML matches.','league-kotml','assets/images/achievements/kotml-veteran.png','assets/images/achievements/thumbs/128/kotml-veteran.webp'),
+            self::item('kotml-legend','KOTML Legend','Play 20 KOTML matches.','league-kotml','assets/images/achievements/kotml-legend.png','assets/images/achievements/thumbs/128/kotml-legend.webp'),
+            self::item('kotml-first-point','KOTML First Point','Score 1 individual point in KOTML matches.','league-kotml','assets/images/achievements/kotml-first-point.png','assets/images/achievements/thumbs/128/kotml-first-point.webp'),
+            self::item('kotml-scorer','KOTML Scorer','Score 5 individual points in KOTML matches.','league-kotml','assets/images/achievements/kotml-scorer.png','assets/images/achievements/thumbs/128/kotml-scorer.webp'),
+            self::item('kotml-specialist','KOTML Specialist','Score 10 individual points in KOTML matches.','league-kotml','assets/images/achievements/kotml-specialist.png','assets/images/achievements/thumbs/128/kotml-specialist.webp'),
+            self::item('kotml-master','KOTML Master','Score 20 individual points in KOTML matches.','league-kotml','assets/images/achievements/kotml-master.png','assets/images/achievements/thumbs/128/kotml-master.webp'),
+            self::item('seniority-1m','New Recruit','Maintain continuous membership for one month.','seniority','assets/images/achievements/seniority-1m.png','assets/images/achievements/thumbs/128/seniority-1m.webp'),
+            self::item('seniority-3m','Established Member','Maintain continuous membership for three months.','seniority','assets/images/achievements/seniority-3m.png','assets/images/achievements/thumbs/128/seniority-3m.webp'),
+            self::item('seniority-6m','Six-Month Member','Maintain continuous membership for six months.','seniority','assets/images/achievements/seniority-6m.png','assets/images/achievements/thumbs/128/seniority-6m.webp'),
+            self::item('seniority-1y','One-Year Member','Maintain continuous membership for one year.','seniority','assets/images/achievements/seniority-1y.png','assets/images/achievements/thumbs/128/seniority-1y.webp'),
+            self::item('seniority-2y','Two-Year Member','Maintain continuous membership for two years.','seniority','assets/images/achievements/seniority-2y.png','assets/images/achievements/thumbs/128/seniority-2y.webp'),
+            self::item('seniority-3y','Three-Year Member','Maintain continuous membership for three years.','seniority','assets/images/achievements/seniority-3y.png','assets/images/achievements/thumbs/128/seniority-3y.webp'),
+            self::item('seniority-5y','Five-Year Member','Maintain continuous membership for five years.','seniority','assets/images/achievements/seniority-5y.png','assets/images/achievements/thumbs/128/seniority-5y.webp'),
+            self::item('mca-debut','MCA Debut','Participate in 1 Multi-Club Arena.','mca-participation','assets/images/achievements/mca-debut.png','assets/images/achievements/thumbs/128/mca-debut.webp'),
+            self::item('mca-10','Arena Regular','Participate in 10 Multi-Club Arenas.','mca-participation','assets/images/achievements/mca-10.png','assets/images/achievements/thumbs/128/mca-10.webp'),
+            self::item('mca-50','Arena Veteran','Participate in 50 Multi-Club Arenas.','mca-participation','assets/images/achievements/mca-50.png','assets/images/achievements/thumbs/128/mca-50.webp'),
+            self::item('mca-100','Arena Legend','Participate in 100 Multi-Club Arenas.','mca-participation','assets/images/achievements/mca-100.png','assets/images/achievements/thumbs/128/mca-100.webp'),
+            self::item('mca-250','Arena Ironman','Participate in 250 Multi-Club Arenas.','mca-participation','assets/images/achievements/mca-250.png','assets/images/achievements/thumbs/128/mca-250.webp'),
+            self::item('mca-top10','MCA Top Ten','Finish in the top ten of an MCA.','mca-placement','assets/images/achievements/mca-top10.png','assets/images/achievements/thumbs/128/mca-top10.webp'),
+            self::item('mca-top10-10','Top-Ten Regular','Record ten MCA top-ten finishes.','mca-placement','assets/images/achievements/mca-top10-10.png','assets/images/achievements/thumbs/128/mca-top10-10.webp'),
+            self::item('mca-podium','MCA Podium Finisher','Finish on an MCA podium.','mca-placement','assets/images/achievements/mca-podium.png','assets/images/achievements/thumbs/128/mca-podium.webp'),
+            self::item('mca-podium-5','Podium Regular','Record five MCA podium finishes.','mca-placement','assets/images/achievements/mca-podium-5.png','assets/images/achievements/thumbs/128/mca-podium-5.webp'),
+            self::item('mca-win-1','First MCA Victory','Win 1 MCA event.','mca-victories','assets/images/achievements/mca-win-1.png','assets/images/achievements/thumbs/128/mca-win-1.webp'),
+            self::item('mca-win-5','Repeat MCA Winner','Win 5 MCA events.','mca-victories','assets/images/achievements/mca-win-5.png','assets/images/achievements/thumbs/128/mca-win-5.webp'),
+            self::item('mca-win-10','MCA Dynasty','Win 10 MCA events.','mca-victories','assets/images/achievements/mca-win-10.png','assets/images/achievements/thumbs/128/mca-win-10.webp'),
+            self::item('mca-streak-3','Streak Starter','Record a streak of 3 in one MCA.','mca-streaks','assets/images/achievements/mca-streak-3.png','assets/images/achievements/thumbs/128/mca-streak-3.webp'),
+            self::item('mca-streak-5','On a Roll','Record a streak of 5 in one MCA.','mca-streaks','assets/images/achievements/mca-streak-5.png','assets/images/achievements/thumbs/128/mca-streak-5.webp'),
+            self::item('mca-streak-10','Hot Streak','Record a streak of 10 in one MCA.','mca-streaks','assets/images/achievements/mca-streak-10.png','assets/images/achievements/thumbs/128/mca-streak-10.webp'),
+            self::item('mca-streak-15','Arena Inferno','Record a streak of 15 in one MCA.','mca-streaks','assets/images/achievements/mca-streak-15.png','assets/images/achievements/thumbs/128/mca-streak-15.webp'),
+            self::item('mca-streak-20','Unbreakable Streak','Record a streak of 20 in one MCA.','mca-streaks','assets/images/achievements/mca-streak-20.png','assets/images/achievements/thumbs/128/mca-streak-20.webp'),
+            self::item('mca-wins-5','Arena Fighter','Win 5 games in one MCA.','mca-single-wins','assets/images/achievements/mca-wins-5.png','assets/images/achievements/thumbs/128/mca-wins-5.webp'),
+            self::item('mca-wins-10','Arena Hunter','Win 10 games in one MCA.','mca-single-wins','assets/images/achievements/mca-wins-10.png','assets/images/achievements/thumbs/128/mca-wins-10.webp'),
+            self::item('mca-wins-15','Arena Dominator','Win 15 games in one MCA.','mca-single-wins','assets/images/achievements/mca-wins-15.png','assets/images/achievements/thumbs/128/mca-wins-15.webp'),
+            self::item('mca-wins-20','Arena Conqueror','Win 20 games in one MCA.','mca-single-wins','assets/images/achievements/mca-wins-20.png','assets/images/achievements/thumbs/128/mca-wins-20.webp'),
+            self::item('mca-wins-25','Arena Warlord','Win 25 games in one MCA.','mca-single-wins','assets/images/achievements/arena-warlord.png','assets/images/achievements/thumbs/128/arena-warlord.webp'),
+            self::item('mca-wins-50','Arena Champion','Win 50 games in one MCA.','mca-single-wins','assets/images/achievements/arena-champion.png','assets/images/achievements/thumbs/128/arena-champion.webp'),
+            self::item('mca-wins-75','Arena Overlord','Win 75 games in one MCA.','mca-single-wins','assets/images/achievements/arena-overlord.png','assets/images/achievements/thumbs/128/arena-overlord.webp'),
+            self::item('mca-wins-100','Arena Immortal','Win 100 games in one MCA.','mca-single-wins','assets/images/achievements/arena-immortal.png','assets/images/achievements/thumbs/128/arena-immortal.webp'),
+            self::item('same-day-matches-2','Double Call','Start 2 Promote to King team matches on the same UTC calendar day.','same-day-match-starts','assets/images/achievements/same-day-matches-2.png','assets/images/achievements/thumbs/128/same-day-matches-2.webp'),
+            self::item('same-day-matches-3','Triple Call','Start 3 Promote to King team matches on the same UTC calendar day.','same-day-match-starts','assets/images/achievements/same-day-matches-3.png','assets/images/achievements/thumbs/128/same-day-matches-3.webp'),
+            self::item('same-day-matches-4','Fourfold Call','Start 4 Promote to King team matches on the same UTC calendar day.','same-day-match-starts','assets/images/achievements/same-day-matches-4.png','assets/images/achievements/thumbs/128/same-day-matches-4.webp'),
+            self::item('same-day-matches-5','Fivefold Call','Start 5 Promote to King team matches on the same UTC calendar day.','same-day-match-starts','assets/images/achievements/same-day-matches-5.png','assets/images/achievements/thumbs/128/same-day-matches-5.webp'),
+            self::item('concurrent-games-5','Five Boards Burning','Have 5 Promote to King team games active at the same time.','concurrent-games','assets/images/achievements/concurrent-games-5.png','assets/images/achievements/thumbs/128/concurrent-games-5.webp'),
+            self::item('concurrent-games-10','Ten Boards Burning','Have 10 Promote to King team games active at the same time.','concurrent-games','assets/images/achievements/concurrent-games-10.png','assets/images/achievements/thumbs/128/concurrent-games-10.webp'),
+            self::item('concurrent-games-25','Twenty-Five in Flight','Have 25 Promote to King team games active at the same time.','concurrent-games','assets/images/achievements/concurrent-games-25.png','assets/images/achievements/thumbs/128/concurrent-games-25.webp'),
+            self::item('concurrent-games-50','Fifty Fronts','Have 50 Promote to King team games active at the same time.','concurrent-games','assets/images/achievements/concurrent-games-50.png','assets/images/achievements/thumbs/128/concurrent-games-50.webp'),
+            self::item('concurrent-games-100','Hundred-Game Storm','Have 100 Promote to King team games active at the same time.','concurrent-games','assets/images/achievements/concurrent-games-100.png','assets/images/achievements/thumbs/128/concurrent-games-100.webp'),
+            // v2.9.0 legacy breadth achievements. These keys and meanings are retained
+            // unchanged so upgrades never delete or reinterpret an earned achievement.
+            self::item('groups-5','Achievement Explorer','Earn at least one achievement in 5 eligible achievement groups.','achievement-breadth','assets/images/achievements/groups-5.png','assets/images/achievements/thumbs/128/groups-5.webp'),
+            self::item('groups-10','Achievement Voyager','Earn at least one achievement in 10 eligible achievement groups.','achievement-breadth','assets/images/achievements/groups-10.png','assets/images/achievements/thumbs/128/groups-10.webp'),
+            self::item('groups-15','Achievement Pathfinder','Earn at least one achievement in 15 eligible achievement groups.','achievement-breadth','assets/images/achievements/groups-15.png','assets/images/achievements/thumbs/128/groups-15.webp'),
+            self::item('groups-all','Achievement Universalist','Earn at least one achievement in every eligible achievement group.','achievement-breadth','assets/images/achievements/groups-all.png','assets/images/achievements/thumbs/128/groups-all.webp'),
+            self::item('tournament-first-medal','First Tournament Medal','Earn any tournament medal.','tournaments','assets/images/achievements/first-tournament-medal.png','assets/images/achievements/thumbs/128/first-tournament-medal.webp'),
+            self::item('tournament-first-gold','Tournament Champion','Earn a tournament gold medal.','tournaments','assets/images/achievements/tournament-champion.png','assets/images/achievements/thumbs/128/tournament-champion.webp'),
+            self::item('tournament-medals-5','Five Tournament Medals','Earn five tournament medals.','tournaments','assets/images/achievements/five-tournament-medals.png','assets/images/achievements/thumbs/128/five-tournament-medals.webp'),
+            self::item('tournament-medals-10','Ten Tournament Medals','Earn ten tournament medals.','tournaments','assets/images/achievements/ten-tournament-medals.png','assets/images/achievements/thumbs/128/ten-tournament-medals.webp'),
+            // Additive group-breadth ladder requested after v2.9.0. New keys are
+            // deliberately distinct from the legacy keys even where thresholds overlap.
+            self::item('breadth-groups-1','Breadth Initiate','Earn at least one achievement in 1 distinct eligible achievement group.','achievement-group-breadth','assets/images/achievements/breadth-groups-1.png','assets/images/achievements/thumbs/128/breadth-groups-1.webp'),
+            self::item('breadth-groups-5','Breadth Explorer','Earn at least one achievement in 5 distinct eligible achievement groups.','achievement-group-breadth','assets/images/achievements/breadth-groups-5.png','assets/images/achievements/thumbs/128/breadth-groups-5.webp'),
+            self::item('breadth-groups-10','Breadth Voyager','Earn at least one achievement in 10 distinct eligible achievement groups.','achievement-group-breadth','assets/images/achievements/breadth-groups-10.png','assets/images/achievements/thumbs/128/breadth-groups-10.webp'),
+            self::item('breadth-groups-15','Breadth Pathfinder','Earn at least one achievement in 15 distinct eligible achievement groups.','achievement-group-breadth','assets/images/achievements/breadth-groups-15.png','assets/images/achievements/thumbs/128/breadth-groups-15.webp'),
+            self::item('breadth-groups-20','Breadth Universalist','Earn at least one achievement in 20 distinct eligible achievement groups.','achievement-group-breadth','assets/images/achievements/breadth-groups-20.png','assets/images/achievements/thumbs/128/breadth-groups-20.webp'),
+
+            // v2.9.5 additive achievement families. These deliberately use new keys;
+            // no pre-v2.9.5 catalogue identity is removed, renamed or repurposed.
+            self::item('collector-25','Achievement Collector','Earn 25 achievements, excluding Collector achievements themselves.','achievement-collector','assets/images/achievements/collector-25.png','assets/images/achievements/thumbs/128/collector-25.webp'),
+            self::item('collector-50','Achievement Curator','Earn 50 achievements, excluding Collector achievements themselves.','achievement-collector','assets/images/achievements/collector-50.png','assets/images/achievements/thumbs/128/collector-50.webp'),
+            self::item('collector-75','Achievement Hunter','Earn 75 achievements, excluding Collector achievements themselves.','achievement-collector','assets/images/achievements/collector-75.png','assets/images/achievements/thumbs/128/collector-75.webp'),
+            self::item('collector-100','Century Collector','Earn 100 achievements, excluding Collector achievements themselves.','achievement-collector','assets/images/achievements/collector-100.png','assets/images/achievements/thumbs/128/collector-100.webp'),
+            self::item('collector-125','Grand Collector','Earn 125 achievements, excluding Collector achievements themselves.','achievement-collector','assets/images/achievements/collector-125.png','assets/images/achievements/thumbs/128/collector-125.webp'),
+            self::item('rivalry-5','Familiar Foe','Participate in 5 Promote to King team matches against the same opponent club.','rivalries','assets/images/achievements/rivalry-5.png','assets/images/achievements/thumbs/128/rivalry-5.webp'),
+            self::item('rivalry-10','Recurring Rival','Participate in 10 Promote to King team matches against the same opponent club.','rivalries','assets/images/achievements/rivalry-10.png','assets/images/achievements/thumbs/128/rivalry-10.webp'),
+            self::item('rivalry-25','Rivalry Veteran','Participate in 25 Promote to King team matches against the same opponent club.','rivalries','assets/images/achievements/rivalry-25.png','assets/images/achievements/thumbs/128/rivalry-25.webp'),
+            self::item('rivalry-50','Old Adversary','Participate in 50 Promote to King team matches against the same opponent club.','rivalries','assets/images/achievements/rivalry-50.png','assets/images/achievements/thumbs/128/rivalry-50.webp'),
+            self::item('opponent-countries-10','Globetrotter','Participate in Promote to King team matches against clubs from 10 distinct stored countries or regions.','global-opposition','assets/images/achievements/opponent-countries-10.png','assets/images/achievements/thumbs/128/opponent-countries-10.webp'),
+            self::item('opponent-countries-25','World Challenger','Participate in Promote to King team matches against clubs from 25 distinct stored countries or regions.','global-opposition','assets/images/achievements/opponent-countries-25.png','assets/images/achievements/thumbs/128/opponent-countries-25.webp'),
+            self::item('opponent-countries-50','Global Ambassador','Participate in Promote to King team matches against clubs from 50 distinct stored countries or regions.','global-opposition','assets/images/achievements/opponent-countries-50.png','assets/images/achievements/thumbs/128/opponent-countries-50.webp'),
+            self::item('chess960-matches-10','Chess960 Initiate','Participate in 10 Promote to King Chess960 team matches.','chess960-specialization','assets/images/achievements/chess960-matches-10.png','assets/images/achievements/thumbs/128/chess960-matches-10.webp'),
+            self::item('chess960-matches-50','Chess960 Specialist','Participate in 50 Promote to King Chess960 team matches.','chess960-specialization','assets/images/achievements/chess960-matches-50.png','assets/images/achievements/thumbs/128/chess960-matches-50.webp'),
+            self::item('chess960-matches-100','Chess960 Veteran','Participate in 100 Promote to King Chess960 team matches.','chess960-specialization','assets/images/achievements/chess960-matches-100.png','assets/images/achievements/thumbs/128/chess960-matches-100.webp'),
+            self::item('active-months-3','Steady Presence','Participate in at least one Promote to King team match in 3 consecutive UTC calendar months.','activity-continuity','assets/images/achievements/active-months-3.png','assets/images/achievements/thumbs/128/active-months-3.webp'),
+            self::item('active-months-6','Evergreen','Participate in at least one Promote to King team match in 6 consecutive UTC calendar months.','activity-continuity','assets/images/achievements/active-months-6.png','assets/images/achievements/thumbs/128/active-months-6.webp'),
+            self::item('active-months-12','Year-Round Player','Participate in at least one Promote to King team match in 12 consecutive UTC calendar months.','activity-continuity','assets/images/achievements/active-months-12.png','assets/images/achievements/thumbs/128/active-months-12.webp'),
+            self::item('large-match-100','Big Match Player','Participate in a Promote to King team match with at least 100 boards.','large-matches','assets/images/achievements/large-match-100.png','assets/images/achievements/thumbs/128/large-match-100.webp'),
+            self::item('large-match-200','Giant Battle','Participate in a Promote to King team match with at least 200 boards.','large-matches','assets/images/achievements/large-match-200.png','assets/images/achievements/thumbs/128/large-match-200.webp'),
+            self::item('large-match-500','Titanic Battle','Participate in a Promote to King team match with at least 500 boards.','large-matches','assets/images/achievements/large-match-500.png','assets/images/achievements/thumbs/128/large-match-500.webp'),
+            self::item('upset-100','Punching Up','Win a team-match game against an opponent whose stored paired board rating is at least 100 points higher.','rating-upsets','assets/images/achievements/upset-100.png','assets/images/achievements/thumbs/128/upset-100.webp'),
+            self::item('upset-200','Against the Odds','Win a team-match game against an opponent whose stored paired board rating is at least 200 points higher.','rating-upsets','assets/images/achievements/upset-200.png','assets/images/achievements/thumbs/128/upset-200.webp'),
+            self::item('upset-400','Giant Slayer','Win a team-match game against an opponent whose stored paired board rating is at least 400 points higher.','rating-upsets','assets/images/achievements/upset-400.png','assets/images/achievements/thumbs/128/upset-400.webp'),
+            self::item('match-score-15','Unbeaten Pair','Score at least 1.5/2 across both completed games of one Promote to King team-match board.','match-performance','assets/images/achievements/match-score-15.png','assets/images/achievements/thumbs/128/match-score-15.webp'),
+            self::item('match-score-20','Perfect Pair','Score 2/2 across both completed games of one Promote to King team-match board.','match-performance','assets/images/achievements/match-score-20.png','assets/images/achievements/thumbs/128/match-score-20.webp'),
+            self::item('match-two-draws','Draw Specialist','Draw both completed games of one Promote to King team-match board.','match-performance','assets/images/achievements/match-two-draws.png','assets/images/achievements/thumbs/128/match-two-draws.webp'),
+            self::item('tournament-medal-set','Podium Variety','Earn at least one gold, one silver and one bronze tournament medal.','tournament-versatility','assets/images/achievements/tournament-medal-set.png','assets/images/achievements/thumbs/128/tournament-medal-set.webp'),
+            self::item('rivalry-turnaround','Old Rival, New Victory','Participate in a Promote to King team-match win against a club after previously participating in a Promote to King loss against that same club.','rivalry-turnaround','assets/images/achievements/rivalry-turnaround.png','assets/images/achievements/thumbs/128/rivalry-turnaround.webp'),
+            // v2.10.3: continuity, match-impact and opponent/match-result families.
+            self::item('match-start-streak-3','Three Days Running','Start at least one Promote to King team match on 3 consecutive UTC calendar days.','consecutive-match-start-days','assets/images/achievements/match-start-streak-3.png','assets/images/achievements/thumbs/128/match-start-streak-3.webp'),
+            self::item('match-start-streak-5','Five-Day Run','Start at least one Promote to King team match on 5 consecutive UTC calendar days.','consecutive-match-start-days','assets/images/achievements/match-start-streak-5.png','assets/images/achievements/thumbs/128/match-start-streak-5.webp'),
+            self::item('match-start-streak-7','Full Week','Start at least one Promote to King team match on 7 consecutive UTC calendar days.','consecutive-match-start-days','assets/images/achievements/match-start-streak-7.png','assets/images/achievements/thumbs/128/match-start-streak-7.webp'),
+            self::item('match-start-streak-10','Ten Days Straight','Start at least one Promote to King team match on 10 consecutive UTC calendar days.','consecutive-match-start-days','assets/images/achievements/match-start-streak-10.png','assets/images/achievements/thumbs/128/match-start-streak-10.webp'),
+            self::item('match-start-streak-14','Fortnight Fighter','Start at least one Promote to King team match on 14 consecutive UTC calendar days.','consecutive-match-start-days','assets/images/achievements/match-start-streak-14.png','assets/images/achievements/thumbs/128/match-start-streak-14.webp'),
+            self::item('match-winner-1','Game Changer','Contribute enough board points to turn a Promote to King team match from a non-win into a win.','match-impact','assets/images/achievements/match-winner-1.png','assets/images/achievements/thumbs/128/match-winner-1.webp'),
+            self::item('match-winner-5','Difference Maker','Be a decisive match winner in 5 Promote to King team matches.','match-impact','assets/images/achievements/match-winner-5.png','assets/images/achievements/thumbs/128/match-winner-5.webp'),
+            self::item('match-winner-10','Match Turner','Be a decisive match winner in 10 Promote to King team matches.','match-impact','assets/images/achievements/match-winner-10.png','assets/images/achievements/thumbs/128/match-winner-10.webp'),
+            self::item('match-winner-15','Victory Architect','Be a decisive match winner in 15 Promote to King team matches.','match-impact','assets/images/achievements/match-winner-15.png','assets/images/achievements/thumbs/128/match-winner-15.webp'),
+            self::item('match-winner-20','Kingmaker','Be a decisive match winner in 20 Promote to King team matches.','match-impact','assets/images/achievements/match-winner-20.png','assets/images/achievements/thumbs/128/match-winner-20.webp'),
+            self::item('match-saver-1','Saving the Day','Contribute enough board points to save a Promote to King team match from a loss into a draw.','match-impact','assets/images/achievements/match-saver-1.png','assets/images/achievements/thumbs/128/match-saver-1.webp'),
+            self::item('match-saver-5','Match Saver','Save 5 Promote to King team matches from defeat.','match-impact','assets/images/achievements/match-saver-5.png','assets/images/achievements/thumbs/128/match-saver-5.webp'),
+            self::item('match-saver-10','Rescue Specialist','Save 10 Promote to King team matches from defeat.','match-impact','assets/images/achievements/match-saver-10.png','assets/images/achievements/thumbs/128/match-saver-10.webp'),
+            self::item('match-saver-15','Last Line of Defence','Save 15 Promote to King team matches from defeat.','match-impact','assets/images/achievements/match-saver-15.png','assets/images/achievements/thumbs/128/match-saver-15.webp'),
+            self::item('match-saver-20','Guardian of the Draw','Save 20 Promote to King team matches from defeat.','match-impact','assets/images/achievements/match-saver-20.png','assets/images/achievements/thumbs/128/match-saver-20.webp'),
+            self::item('photo-finish-5','Photo Finish','Participate in 5 finished Promote to King team matches decided by no more than 1 point.','close-calls','assets/images/achievements/photo-finish-5.png','assets/images/achievements/thumbs/128/photo-finish-5.webp'),
+            self::item('close-call-veteran-20','Close-Call Veteran','Participate in 20 finished Promote to King team matches decided by no more than 1 point.','close-calls','assets/images/achievements/close-call-veteran-20.png','assets/images/achievements/thumbs/128/close-call-veteran-20.webp'),
+            self::item('close-call-master-50','Close-Call Master','Participate in 50 finished Promote to King team matches decided by no more than 1 point.','close-calls','assets/images/achievements/close-call-master-50.png','assets/images/achievements/thumbs/128/close-call-master-50.webp'),
+            self::item('close-call-legend-100','Close-Call Legend','Participate in 100 finished Promote to King team matches decided by no more than 1 point.','close-calls','assets/images/achievements/close-call-legend-100.png','assets/images/achievements/thumbs/128/close-call-legend-100.webp'),
+            self::item('winning-side-10','Winning Side','Participate in 10 finished Promote to King team-match victories.','winning-side','assets/images/achievements/winning-side-10.png','assets/images/achievements/thumbs/128/winning-side-10.webp'),
+            self::item('winning-side-50','Winning Side 50','Participate in 50 finished Promote to King team-match victories.','winning-side','assets/images/achievements/winning-side-50.png','assets/images/achievements/thumbs/128/winning-side-50.webp'),
+            self::item('winning-side-100','Winning Side 100','Participate in 100 finished Promote to King team-match victories.','winning-side','assets/images/achievements/winning-side-100.png','assets/images/achievements/thumbs/128/winning-side-100.webp'),
+            self::item('winning-side-250','Winning Side 250','Participate in 250 finished Promote to King team-match victories.','winning-side','assets/images/achievements/winning-side-250.png','assets/images/achievements/thumbs/128/winning-side-250.webp'),
+            self::item('opponent-variety-25','Opponent Variety','Face 25 distinct opponent clubs in Promote to King team matches.','opponent-variety','assets/images/achievements/opponent-variety-25.png','assets/images/achievements/thumbs/128/opponent-variety-25.webp'),
+            self::item('opponent-variety-50','Opponent Variety 50','Face 50 distinct opponent clubs in Promote to King team matches.','opponent-variety','assets/images/achievements/opponent-variety-50.png','assets/images/achievements/thumbs/128/opponent-variety-50.webp'),
+            self::item('opponent-variety-100','Opponent Variety 100','Face 100 distinct opponent clubs in Promote to King team matches.','opponent-variety','assets/images/achievements/opponent-variety-100.png','assets/images/achievements/thumbs/128/opponent-variety-100.webp'),
+            self::item('old-foes-5','Rematch','Accumulate 5 rematch participations against opponent clubs already faced before.','old-foes','assets/images/achievements/old-foes-5.png','assets/images/achievements/thumbs/128/old-foes-5.webp'),
+            self::item('old-foes-10','Old Foes','Accumulate 10 rematch participations against opponent clubs already faced before.','old-foes','assets/images/achievements/old-foes-10.png','assets/images/achievements/thumbs/128/old-foes-10.webp'),
+            self::item('old-foes-25','Archrivals','Accumulate 25 rematch participations against opponent clubs already faced before.','old-foes','assets/images/achievements/old-foes-25.png','assets/images/achievements/thumbs/128/old-foes-25.webp'),
+        ]; }
+ public static function earned(array $profile): array {
+  $keys=[]; $points=(float)($profile['points']??0); $matches=(int)($profile['matches']??0); $games=(int)($profile['games']??0); $wins=(int)($profile['wins']??0);
+  if($matches>0)$keys[]='first-match'; if($points>0)$keys[]='first-point';
+  foreach([10,50,100,250,500] as $n)if($matches>=$n)$keys[]='matches-'.$n;
+  foreach([100,500,1000,5000,10000] as $n)if($games>=$n)$keys[]='games-'.$n;
+  foreach([50,250,1000] as $n)if($wins>=$n)$keys[]='wins-'.$n;
+  foreach(Repository::dailyRankDefinitions() as $r)if($points>=(float)$r['minimum'])$keys[]='daily-'.(string)$r['key'];
+  $live=is_array($profile['live']??null)?$profile['live']:[]; $lp=(float)($live['points']??0);
+  foreach(LiveRanksService::thresholds() as $r)if($lp>=(float)$r['minimum'])$keys[]='live-rank-'.preg_replace('/^live_/','',(string)$r['key']);
+  $arenas=(int)($live['arenas']??0); foreach([[1,'mca-debut'],[10,'mca-10'],[50,'mca-50'],[100,'mca-100'],[250,'mca-250']] as $x)if($arenas>=$x[0])$keys[]=$x[1];
+  $top10=(int)($live['top10']??0); if($top10>0)$keys[]='mca-top10'; if($top10>=10)$keys[]='mca-top10-10';
+  $top3=(int)($live['top3']??0); if($top3>0)$keys[]='mca-podium'; if($top3>=5)$keys[]='mca-podium-5';
+  foreach(self::all() as $it)$catalog[$it['key']]=$it; $out=[]; foreach(array_unique($keys) as $k)if(isset($catalog[$k]))$out[]=$catalog[$k]+['level'=>'earned']; return $out;
+ }
+ public static function legacyBreadthCategories(): array {
+  // Frozen v2.9.0 scope. Old groups-* achievements must not change meaning when
+  // later releases add new achievement families.
+  return ['matches','team-points','games','wins','daily-ranks','live-ranks','leagues','league-1wl','league-pcl','league-tcmac','league-tmcl','league-kotml','seniority','mca-participation','mca-placement','mca-victories','mca-streaks','mca-single-wins','same-day-match-starts','concurrent-games','tournaments'];
+ }
+ public static function eligibleBreadthCategories(): array {
+  $categories=[]; foreach(self::all() as $item){$category=(string)$item['category'];if($category!==''&&$category!=='achievement-breadth'&&$category!=='achievement-group-breadth'&&$category!=='achievement-collector')$categories[$category]=true;} return array_keys($categories);
+ }
+ public static function familyDefinitions(): array {
+  return [
+   'core-participation'=>['label'=>'Core participation','categories'=>['matches','team-points','games','wins','match-performance','large-matches','match-impact','close-calls','winning-side']],
+   'ranks'=>['label'=>'Ranks','categories'=>['daily-ranks','live-ranks']],
+   'leagues'=>['label'=>'Leagues','categories'=>['leagues','league-1wl','league-pcl','league-tcmac','league-tmcl','league-kotml']],
+   'membership-activity'=>['label'=>'Membership & activity','categories'=>['seniority','same-day-match-starts','concurrent-games','activity-continuity','consecutive-match-start-days']],
+   'mca'=>['label'=>'MCA','categories'=>['mca-participation','mca-placement','mca-victories','mca-streaks','mca-single-wins']],
+   'tournaments'=>['label'=>'Tournaments','categories'=>['tournaments','tournament-versatility']],
+   'opponents-variants'=>['label'=>'Opponents & variants','categories'=>['rivalries','rivalry-turnaround','global-opposition','chess960-specialization','rating-upsets','opponent-variety','old-foes']],
+   'achievement-mastery'=>['label'=>'Achievement mastery','categories'=>['achievement-breadth','achievement-group-breadth','achievement-collector']],
+  ];
+ }
+ public static function familyForCategory(string $category): array {
+  foreach(self::familyDefinitions() as $key=>$family)if(in_array($category,$family['categories'],true))return ['key'=>$key,'label'=>$family['label']];
+  return ['key'=>'other','label'=>'Other'];
+ }
+ public static function categoryLabel(string $category): string {
+  $labels=['team-points'=>'Team Points','daily-ranks'=>'Daily ranks','live-ranks'=>'Live ranks','league-1wl'=>'1WL','league-pcl'=>'PCL','league-tcmac'=>'TCMAC','league-tmcl'=>'TMCL','league-kotml'=>'KOTML','mca-participation'=>'MCA participation','mca-placement'=>'MCA placement','mca-victories'=>'MCA victories','mca-streaks'=>'MCA streaks','mca-single-wins'=>'MCA single-arena wins','same-day-match-starts'=>'Same-day match starts','concurrent-games'=>'Concurrent games','achievement-breadth'=>'Achievement breadth','achievement-group-breadth'=>'Achievement group breadth','achievement-collector'=>'Collector','global-opposition'=>'Global opposition','chess960-specialization'=>'Chess960 specialization','activity-continuity'=>'Activity continuity','large-matches'=>'Large matches','rating-upsets'=>'Rating upsets','match-performance'=>'Match performance','tournament-versatility'=>'Tournament versatility','rivalry-turnaround'=>'Rivalry turnaround','consecutive-match-start-days'=>'Consecutive match-start days','match-impact'=>'Match Impact','close-calls'=>'Photo finish / close calls','winning-side'=>'Winning Side','opponent-variety'=>'Opponent Variety','old-foes'=>'Rematch / Old Foes'];
+  return $labels[$category]??ucwords(str_replace('-',' ',$category));
+ }
+ private static function placeholder(string $key): string { return 'assets/images/achievements/placeholders/'.preg_replace('/[^a-z0-9_-]+/i','-',strtolower($key)).'.svg'; }
+ private static function usableArtwork(string $path): bool {
+  if($path===''||$path==='p2k-logo.jpg')return false;
+  $full=dirname(__DIR__,3).'/'.ltrim($path,'/');
+  return is_file($full)&&filesize($full)>0;
+ }
+ private static function item(string $key,string $label,string $description,string $category,string $icon='p2k-logo.jpg',string $miniature=''):array{
+  if(!self::usableArtwork($icon))$icon=self::placeholder($key);
+  $miniature=$miniature?:$icon;if(!self::usableArtwork($miniature))$miniature=$icon;
+  $family=self::familyForCategory($category);
+  return ['key'=>$key,'label'=>$label,'description'=>$description,'criteria'=>$description,'category'=>$category,'category_label'=>self::categoryLabel($category),'family'=>$family['key'],'family_label'=>$family['label'],'icon'=>$icon,'miniature'=>$miniature];
+ }
+}

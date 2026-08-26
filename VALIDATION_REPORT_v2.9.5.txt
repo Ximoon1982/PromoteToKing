@@ -1,0 +1,67 @@
+PROMOTE TO KING v2.9.5 — VALIDATION REPORT
+Date: 2026-08-11 (Europe/Luxembourg)
+Baseline: v2.9.4 standalone
+
+RESULT
+------
+PASS
+
+ACHIEVEMENT CATALOGUE
+---------------------
+- v2.9.4 baseline keys preserved: 133 / 133.
+- New v2.9.5 achievements: 29.
+- Total catalogue: 162 unique keys.
+- Original v2.9.0 breadth category universe frozen to 21 categories.
+- Collector achievements excluded from their own count and from breadth inputs.
+
+DATA / SCHEMA
+-------------
+- Core schema: 10 (additive upgrade from 9).
+- Analytics schema: 6 (unchanged).
+- Added opponent country-code persistence.
+- Added paired P2K/opponent board rating + source/capture provenance.
+- Match-lineup rating evidence takes priority over board-game fallback.
+- Missing/stale opponent profile hydration is bounded within the existing Club lane.
+- No database reset or destructive reseed required.
+
+AUTOMATED TESTS
+---------------
+- Focused v2.9.5 achievement/schema/OAuth tests: PASS.
+- Full pytest regression suite: 276 / 276 PASS.
+- Package validator: PASS.
+- Static UI feature suite: PASS.
+- PHP syntax validation: PASS.
+- JavaScript syntax validation: PASS.
+- Python compilation validation: PASS.
+
+BROWSER GATES
+-------------
+- Team Insights mobile/chart containment gate: PASS, 0 page errors.
+- Aggregate Insights · Opponents heatmap gate: PASS, exactly 2 charts, 0 page errors.
+- Native v2.9.3/v2.9.4 all-match heatmap compatibility gate: PASS, 0 page errors.
+- Hall unified player-search gate: PASS at 1280 / 960 / 760 / 600 px, no document or host overflow; 4 cards in one row at desktop widths.
+- OAuth POC contract/mock tests: 6 / 6 PASS.
+
+OAUTH POC
+---------
+- Retained OAuthTest.php.
+- Exact oauth=2 gate retained.
+- Login, logout, success/failure and authenticated username display retained.
+- Production updater preserves an existing config/oauth-test.php.
+
+PACKAGING / UPGRADE
+-------------------
+- Final standalone inventory target: 1085 release files.
+- v2.9.4 -> v2.9.5 incremental payload target: 100 changed/new files; no deletions.
+- Incremental overlay reproduces the standalone release tree byte-for-byte.
+- ZIP integrity: PASS.
+- Argumentless updater simulation: PASS.
+- Updater payload SHA-256 verification: PASS.
+- Full pre-change configuration/data/log/crontab/replaced-file backup: PASS.
+- Existing private OAuth client config preservation: PASS.
+- Existing unrelated CRON preservation: PASS.
+- v2.9.5 CRON installation: exactly 4 dispatcher entries PASS.
+
+PRODUCTION LIMITATIONS
+----------------------
+No production MariaDB migration or live Chess.com OAuth authorization was executed in this build environment. Country/rating-dependent historical achievements deliberately remain unknown until authoritative stored evidence is populated by normal revalidation. The POC requires the real issued Chess.com application name, client ID and registered redirect URL in production config/oauth-test.php.

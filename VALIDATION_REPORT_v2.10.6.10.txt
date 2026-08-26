@@ -1,0 +1,54 @@
+Promote to King v2.10.6.10 validation report
+Generated: 2026-08-20 UTC
+Baseline: v2.10.6.9
+
+SCOPE
+- Fix 1: Registration matches — next 15 days uses the same canonical registered-match records/date keys as Registered matches by start date.
+- Fix 2: continuous tracked-match monitoring expires at known start + 24h for automatic, manual and legacy sources; history remains; one-off recording remains possible.
+- Fix 3: Dashboard Match Assistant loader/preparation visibility is controlled by a single state synchronizer so a ready assistant cannot coexist with a stale loader.
+
+FOCUSED REGRESSION
+- tests/test_v210610_release.py: 5/5 PASS.
+- PHP tracking-expiry semantic probe: PASS for manual, legacy-v2.1.2 and automatic-league sources; +23h59 remains eligible and +24h01 expires.
+- Standalone Python tracking-expiry semantic probe: PASS with the same boundary/source cases.
+
+APPLICABLE CURRENT RELEASE REGRESSION
+- v2.10.6.6 timestamp-only MCA + v2.10.6.7 observability + v2.10.6.8 operational cutover + v2.10.6.9 Green-native live reads + v2.10.6.10 corrective: 24/24 applicable tests PASS.
+- 5 historical tests that assert an older release identity as the current VERSION were deselected; their non-identity behavior assertions are included in the 24 passing checks.
+
+PACKAGE / SYNTAX
+- tests/validate_package.py: PASS.
+- Static UI feature tests: PASS.
+- PHP syntax: 127/127 PASS.
+- JavaScript syntax: 59/59 PASS.
+- site-manifest/package declaration validation: PASS.
+- No mutable production tracking registry/server secrets shipped.
+- No GitHub-backed runtime/source references.
+
+DELTA FROM v2.10.6.9
+- Modified source files: 18.
+- Added source files: 5.
+- Removed source files: 0.
+- Incremental payload files: 23.
+- Database schema change: NONE.
+- Database reset/reseed: NONE.
+- CRON definition change: NONE.
+- Green routing/cutover change: NONE.
+- Team Points scoring change: NONE.
+- Image/artwork change: NONE.
+
+PRELIMINARY INSTALLER REPLAY
+- Pristine v2.10.6.9 SOURCE + v2.10.6.10 incremental updater: PASS.
+- Expected source files: 951.
+- Replayed source files: 951.
+- Missing: 0.
+- Extra: 0.
+- SHA-256 content differences: 0.
+
+FINAL PUBLISHED-BYTE REPLAY
+- Final package rebuild/replay after freezing the validation content: PASS.
+- Expected source files: 951.
+- Replayed source files: 951.
+- Missing: 0.
+- Extra: 0.
+- SHA-256 content differences: 0.

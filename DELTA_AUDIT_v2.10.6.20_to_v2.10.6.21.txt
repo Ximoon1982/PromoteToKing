@@ -1,0 +1,34 @@
+Promote to King v2.10.6.20 -> v2.10.6.21 delta audit
+=====================================================
+
+Scope
+-----
+Admin-shell navigation visual parity only.
+
+Runtime/UI changes
+------------------
+- assets/js/pages/dashboard-v2.js
+  * Removes the visible Administration / Administrator dashboard intro block.
+  * Reuses the public dashboard-page-tabs component for six Admin categories.
+  * Adds six matching dashboard-tab-icon SVGs.
+  * Moves OAuth/local admin + Refresh live cards immediately below the menu.
+- assets/css/dashboard-v2.css
+  * Removes the separate dashboard-admin-shell-tabs styling contract.
+  * Six equal desktop Admin columns.
+  * Same public 620 px breakpoint and two-column mobile collapse.
+- ui-v2.html / assets/js/site-config.js
+  * v2.10.6.21 cache/release generation only.
+
+Preserved
+---------
+- Public four-item navigation and public page DOM.
+- Admin category names, card catalogue, deep links and URL state.
+- Green/GAB/GFFL/heatmap runtime.
+- Database schema/data, CRON, routing, scoring and artwork.
+
+Final tree delta
+----------------
+- 13 modified files.
+- 6 added files.
+- 0 removed files.
+- Final canonical tree: 1,016 files.

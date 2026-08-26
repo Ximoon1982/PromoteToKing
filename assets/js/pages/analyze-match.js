@@ -1,10 +1,10 @@
 /* Standalone single-match analyzer page logic. */
-(() => {
+(async () => {
   "use strict";
+  if (window.P2K_ADMIN_ACCESS_READY && !(await window.P2K_ADMIN_ACCESS_READY)) return;
 
-  const REQUEST_ATTEMPTS = 3;
-  const JSONP_TIMEOUT_MS = 20000;
-  const LEAGUE_ACRONYMS = ["1WL", "TCMAC", "KOTML", "TMCL", "WKCL", "PCL", "CW"];
+  const REQUEST_ATTEMPTS = window.P2K_SITE_CONFIG?.api?.defaultAttempts || 3;
+  const LEAGUE_ACRONYMS = [...(window.P2K_SITE_CONFIG?.leagueAcronyms || ["1WL", "TCMAC", "KOTML", "TMCL", "WKCL", "PCL", "CW"])];
 
   const root = document.getElementById("p2kUpcomingAnalyzer");
   const matchForm = document.getElementById("p2kMatchForm");
@@ -22,27 +22,20 @@
   const chartModalBody = document.getElementById("p2kChartModalBody");
   const chartModalClose = document.getElementById("p2kChartModalClose");
   const selectedTeamLogo = document.getElementById("p2kSelectedTeamLogo");
+  const standaloneLink = document.getElementById("p2kStandaloneLink");
 
   const state = {
     rawMatch: null,
     matchId: null,
     selectedTeamKey: null,
     preferredClubSlug: "",
+    lockedClubScope: false,
     startedMatchData: null,
     analysis: null,
     clubProfiles: new Map(),
     logoRequestToken: 0,
     lastChartTrigger: null
   };
-
-  class HttpError extends Error {
-    constructor(status, url) {
-      super(`HTTP ${status} while loading ${url}`);
-      this.name = "HttpError";
-      this.status = status;
-      this.url = url;
-    }
-  }
 
   class CancellationError extends Error {
     constructor(message = "The operation was cancelled.") {
@@ -386,96 +379,21 @@
     });
   }
 
-  function appendCallbackParameter(url, callbackName) {
-    return `${url}${url.includes("?") ? "&" : "?"}callback=${encodeURIComponent(callbackName)}`;
-  }
-
-  function loadJSONP(url, signal = null) {
-    return new Promise((resolve, reject) => {
-      if (signal?.aborted) {
-        reject(new CancellationError());
-        return;
-      }
-
-      const callbackName = `p2kUpcomingJsonp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      const script = document.createElement("script");
-      let timer = null;
-
-      const cleanup = () => {
-        if (timer !== null) window.clearTimeout(timer);
-        signal?.removeEventListener("abort", onAbort);
-        script.remove();
-        try {
-          delete window[callbackName];
-        } catch (_) {
-          window[callbackName] = undefined;
-        }
-      };
-
-      const onAbort = () => {
-        cleanup();
-        reject(new CancellationError());
-      };
-
-      window[callbackName] = data => {
-        cleanup();
-        resolve(data);
-      };
-
-      script.onerror = () => {
-        cleanup();
-        reject(new Error(`JSONP request failed for ${url}`));
-      };
-
-      timer = window.setTimeout(() => {
-        cleanup();
-        reject(new Error(`JSONP request timed out for ${url}`));
-      }, JSONP_TIMEOUT_MS);
-
-      signal?.addEventListener("abort", onAbort, { once: true });
-      script.src = appendCallbackParameter(url, callbackName);
-      script.async = true;
-      document.head.appendChild(script);
-    });
-  }
-
-  async function requestJSONOnce(url, signal = null, options = {}) {
-    if (signal?.aborted) throw new CancellationError();
-
-    try {
-      const response = await fetch(url, {
-        method: "GET",
-        mode: "cors",
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-        signal,
-        p2kCacheMode: options.networkOnly === true ? "network-only" : "default"
-      });
-
-      if (!response.ok) throw new HttpError(response.status, url);
-      return await response.json();
-    } catch (error) {
-      if (signal?.aborted || error?.name === "AbortError") throw new CancellationError();
-      if (error instanceof HttpError) throw error;
-      return await loadJSONP(url, signal);
-    }
-  }
-
   async function loadJSON(url, signal = null, options = {}) {
-    let lastError = null;
-
-    for (let attempt = 1; attempt <= REQUEST_ATTEMPTS; attempt += 1) {
-      try {
-        return await requestJSONOnce(url, signal, options);
-      } catch (error) {
-        lastError = error;
-        if (error instanceof CancellationError) throw error;
-        if (error instanceof HttpError && error.status === 404) throw error;
-        if (attempt < REQUEST_ATTEMPTS) await delay(attempt * 800, signal);
-      }
+    if (signal?.aborted) throw new CancellationError();
+    if (!window.P2K_API_CLIENT) throw new Error("P2K_API_CLIENT is not loaded.");
+    try {
+      return await window.P2K_API_CLIENT.json(url, {
+        signal,
+        attempts: REQUEST_ATTEMPTS,
+        timeoutMs: options.timeoutMs,
+        cacheMode: options.networkOnly === true ? "network-only" : "default",
+        priority: options.priority
+      });
+    } catch (error) {
+      if (signal?.aborted || error?.category === "cancelled") throw new CancellationError();
+      throw error;
     }
-
-    throw lastError || new Error(`Unable to load ${url}`);
   }
 
   function numericSetting(value, fallback) {
@@ -933,12 +851,13 @@
   function formatStartDate(timestamp) {
     if (!Number.isFinite(timestamp)) return "Start date unavailable";
 
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat("en-GB", {
       year: "numeric",
       month: "short",
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "UTC",
       timeZoneName: "short"
     }).format(new Date(timestamp * 1000));
   }
@@ -954,14 +873,14 @@
   }
 
   function formatDecimal(value, digits = 1) {
-    return Number(value).toLocaleString(undefined, {
+    return Number(value).toLocaleString("en-GB", {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits
     });
   }
 
   function formatInteger(value) {
-    return Number(value).toLocaleString(undefined, {
+    return Number(value).toLocaleString("en-GB", {
       maximumFractionDigits: 0
     });
   }
@@ -993,7 +912,7 @@
 
   function infoMarkHTML(message, accessibleLabel = "Information") {
     const safeMessage = escapeAttribute(message);
-    return `<span class="p2k-info-mark" tabindex="0" role="img" aria-label="${escapeAttribute(accessibleLabel)}: ${safeMessage}" title="${safeMessage}" data-tooltip="${safeMessage}">i</span>`;
+    return `<button type="button" class="p2k-info-mark p2k-info-button" aria-expanded="false" aria-controls="p2kSharedInfoPopover" aria-label="${escapeAttribute(accessibleLabel)}: ${safeMessage}" data-p2k-info-message="${safeMessage}">i</button>`;
   }
 
   function renderRatingStatisticsHTML(statistics, p2kName, opponentName) {
@@ -1163,7 +1082,7 @@
     ].filter(Boolean).join("");
 
     return `
-      ${large ? "" : `<div class="p2k-chart-heading"><div class="p2k-chart-title">Registered players by rating bracket (100 Elo)${infoMarkHTML("Bars show registered players in each 100-Elo bracket. Solid bars are rating-eligible; translucent bars are outside the match rating window. Hover a bar for the exact count.", "Rating bracket chart information")}</div>${expandButton}</div>`}
+      ${large ? "" : `<div class="p2k-chart-heading"><div class="p2k-chart-title">Registered players by rating bracket (100 Elo)${infoMarkHTML("Bars show registered players in each 100-Elo bracket. Solid bars are rating-eligible; translucent bars are outside the match rating window. Hover or tap a bar for the exact count.", "Rating bracket chart information")}</div>${expandButton}</div>`}
       <div class="p2k-chart-wrap">
         <div class="p2k-chart-scroll">
           <svg class="p2k-chart-svg" width="${chartWidth}" height="${chartBottom + bottomPadding}" viewBox="0 0 ${chartWidth} ${chartBottom + bottomPadding}" role="img" aria-label="Registered eligible and non-eligible players by rating bracket for ${escapeAttribute(p2kName)} and ${escapeAttribute(opponentName)}">
@@ -1247,7 +1166,7 @@
       : "";
 
     return `
-      ${large ? "" : `<div class="p2k-chart-heading"><div class="p2k-chart-title">Cumulative registered players at or above rating (100 Elo steps)${infoMarkHTML("Each point is the number of registered players rated at or above that 100-Elo threshold. Hover a point for the exact total.", "Cumulative chart information")}</div>${expandButton}</div>`}
+      ${large ? "" : `<div class="p2k-chart-heading"><div class="p2k-chart-title">Cumulative registered players at or above rating (100 Elo steps)${infoMarkHTML("Each point is the number of registered players rated at or above that 100-Elo threshold. Hover or tap a point for the exact total.", "Cumulative chart information")}</div>${expandButton}</div>`}
       <div class="p2k-chart-wrap">
         <div class="p2k-chart-scroll">
           <svg class="p2k-chart-svg" width="${chartWidth}" height="${chartBottom + bottomPadding}" viewBox="0 0 ${chartWidth} ${chartBottom + bottomPadding}" role="img" aria-label="Cumulative registered player counts at or above each rating threshold for ${escapeAttribute(p2kName)} and ${escapeAttribute(opponentName)}">
@@ -1726,6 +1645,17 @@
     const selectedLineup = selectedLineupRatings(selectedTeam, maxPlayers, bounds);
     const otherLineup = selectedLineupRatings(otherTeam, maxPlayers, bounds);
     const details = detailedLineupAnalysis(selectedTeam, otherTeam, bounds, maxPlayers);
+    const selectedEligibleCount = ratedPlayers(selectedTeam, bounds).length;
+    const configuredClubKey = teamKeyForClub(rawMatch, window.P2K_SITE_CONFIG?.clubSlug || "promote-to-king");
+    const configuredClubEntry = entries.find(([key]) => key === configuredClubKey);
+    const configuredClubEligibleCount = configuredClubEntry ? ratedPlayers(configuredClubEntry[1], bounds).length : selectedEligibleCount;
+    if (minPlayers > 0 && configuredClubEligibleCount < minPlayers) {
+      const configuredClubIsSelected = !configuredClubKey || selectedEntry[0] === configuredClubKey;
+      details.p2kWinProbability = configuredClubIsSelected ? 0 : 1;
+      details.opponentWinProbability = configuredClubIsSelected ? 1 : 0;
+      details.drawProbability = 0;
+      details.minimumEligibilityForfeit = true;
+    }
     const lineupComparison = compareLineups(selectedLineup, otherLineup);
     const isLeagueMatch = matchingLeagueAcronyms(rawMatch?.name).length > 0;
 
@@ -1767,6 +1697,21 @@
       cacheKey: `single_${stableHash(state.matchId || rawMatch?.["@id"] || rawMatch?.url || rawMatch?.name)}`
     };
   }
+
+  window.P2K_MATCH_HISTORY_SUMMARIZER = rawMatch => {
+    const p2kKey = teamKeyForClub(rawMatch, window.P2K_SITE_CONFIG?.clubSlug || "promote-to-king");
+    if (!p2kKey) return null;
+    const analysis = analyzePerspective(rawMatch, p2kKey);
+    if (!analysis?.details) return null;
+    return {
+      p2kName: analysis.selectedName || "Promote to King",
+      opponentName: analysis.otherName || "Opponent",
+      p2kCount: analysis.selectedPlayerCount,
+      opponentCount: analysis.otherPlayerCount,
+      minPlayers: analysis.minPlayers,
+      p2kWinProbability: analysis.details.p2kWinProbability
+    };
+  };
 
   function recruitmentPanelHTML(analysis) {
     if (isMatchInProgress(analysis.raw) || isMatchFinished(analysis.raw)) return "";
@@ -1845,6 +1790,9 @@
       selectedName,
       otherName
     );
+    const historyChart = window.P2K_MATCH_HISTORY_UI?.placeholderHTML?.(
+      analysis.raw?.["@id"] || analysis.raw?.url || state.matchId
+    ) || "";
 
     if (details.boardCount === 0) {
       return `
@@ -1855,6 +1803,7 @@
           <div class="p2k-detail-line">Detailed lineup prediction is unavailable because no rating-eligible board can be paired.</div>
           ${cumulative}
           ${histogram}
+          ${historyChart}
           ${statistics}
         </div>`;
     }
@@ -1901,11 +1850,17 @@
 
         ${cumulative}
         ${histogram}
+        ${historyChart}
         ${statistics}
       </div>`;
   }
 
   function renderTeamSelector() {
+    if (state.lockedClubScope) {
+      teamChoices.innerHTML = "";
+      teamSelector.hidden = true;
+      return;
+    }
     const entries = teamEntries(state.rawMatch);
     teamChoices.innerHTML = entries.map(([key, team]) => `
       <label>
@@ -1945,9 +1900,25 @@
         </div>
       </section>
       ${detailedInfoHTML(analysis)}`;
+    window.P2K_MATCH_HISTORY_UI?.hydrate?.(resultsBox);
   }
 
 
+
+  function updateStandaloneLink() {
+    if (!standaloneLink) return;
+    const embedded = new URLSearchParams(window.location.search).get("embedded") === "1" || window.self !== window.top;
+    standaloneLink.hidden = !embedded;
+    try {
+      const url = new URL("AnalyzeMatch.html", window.location.href);
+      if (state.matchId) url.searchParams.set("match", state.matchId);
+      const selectedTeam = teamEntries(state.rawMatch).find(([key]) => key === state.selectedTeamKey)?.[1];
+      const selectedSlug = teamClubSlug(selectedTeam) || state.preferredClubSlug;
+      if (selectedSlug) url.searchParams.set("club", selectedSlug);
+      if (state.lockedClubScope) url.searchParams.set("scope", state.preferredClubSlug || "promote-to-king");
+      standaloneLink.href = url.href;
+    } catch (_) { standaloneLink.href = "AnalyzeMatch.html"; }
+  }
 
   function updateAddressBar() {
     try {
@@ -1957,11 +1928,13 @@
       const selectedSlug = teamClubSlug(selectedTeam);
       if (selectedSlug) url.searchParams.set("club", selectedSlug);
       else url.searchParams.delete("club");
+      if (state.lockedClubScope) url.searchParams.set("scope", state.preferredClubSlug || "promote-to-king"); else url.searchParams.delete("scope");
       url.searchParams.delete("team");
       url.searchParams.delete("id");
       url.searchParams.delete("url");
       history.replaceState(null, "", url);
     } catch (_) {}
+    updateStandaloneLink();
   }
 
   function selectPerspective(teamKey) {
@@ -1981,7 +1954,7 @@
     if (!analysis?.details) return;
     state.lastChartTrigger = triggerButton;
     if (chartType === "cumulative") {
-      chartModalTitle.innerHTML = `${escapeHTML(state.rawMatch?.name || "Match")} — cumulative players at or above rating${infoMarkHTML("Each point is the number of registered players rated at or above that 100-Elo threshold. Hover a point for the exact total.", "Cumulative chart information")}`;
+      chartModalTitle.innerHTML = `${escapeHTML(state.rawMatch?.name || "Match")} — cumulative players at or above rating${infoMarkHTML("Each point is the number of registered players rated at or above that 100-Elo threshold. Hover or tap a point for the exact total.", "Cumulative chart information")}`;
       chartModalBody.innerHTML = renderCumulativeRatingHTML(
         analysis.details.cumulativeRatingData,
         analysis.selectedName,
@@ -1989,7 +1962,7 @@
         { large: true }
       );
     } else {
-      chartModalTitle.innerHTML = `${escapeHTML(state.rawMatch?.name || "Match")} — registered players by rating bracket${infoMarkHTML("Bars show registered players in each 100-Elo bracket. Solid bars are rating-eligible; translucent bars are outside the match rating window. Hover a bar for the exact count.", "Rating bracket chart information")}`;
+      chartModalTitle.innerHTML = `${escapeHTML(state.rawMatch?.name || "Match")} — registered players by rating bracket${infoMarkHTML("Bars show registered players in each 100-Elo bracket. Solid bars are rating-eligible; translucent bars are outside the match rating window. Hover or tap a bar for the exact count.", "Rating bracket chart information")}`;
       chartModalBody.innerHTML = renderRatingHistogramHTML(
         analysis.details.ratingBracketHistogram,
         analysis.details.ratingStatistics,
@@ -2018,11 +1991,17 @@
       matchId = parseMatchReference(reference);
     } catch (error) {
       setStatus(error.message, "error");
+      window.CLUB_ANALYSIS_FAILURE_UI?.attach?.(statusText, [{
+        error,
+        phase: "Match reference",
+        matchName: String(reference || "Invalid match reference")
+      }], { title: "Open Match Analyzer failure" });
       resultsBox.innerHTML = `<div class="p2k-empty-prompt">${escapeHTML(error.message)}</div>`;
       teamSelector.hidden = true;
       return;
     }
 
+    const matchApiUrl = `https://api.chess.com/pub/match/${encodeURIComponent(matchId)}`;
     state.matchId = matchId;
     state.preferredClubSlug = parseClubReference(preferredClubReference) || state.preferredClubSlug;
     state.startedMatchData = null;
@@ -2035,7 +2014,7 @@
     setStatus(`Loading match ${matchId}…`, "working", 25);
 
     try {
-      const initialMatch = await loadJSON(`https://api.chess.com/pub/match/${encodeURIComponent(matchId)}`, null, { networkOnly: true });
+      const initialMatch = await loadJSON(matchApiUrl, null, { networkOnly: true });
       let rawMatch = initialMatch;
 
       if (isMatchInProgress(initialMatch)) {
@@ -2069,10 +2048,17 @@
       document.title = `${rawMatch?.name || `Match ${matchId}`} — Open Match Analyzer`;
     } catch (error) {
       console.error(error);
-      const message = error instanceof HttpError && error.status === 404
+      const message = (error?.status === 404 || error?.category === "not-found")
         ? `Match ${matchId} was not found in the Chess.com public API.`
         : `Unable to analyze match ${matchId}: ${error?.message || error}`;
       setStatus(message, "error");
+      window.CLUB_ANALYSIS_FAILURE_UI?.attach?.(statusText, [{
+        error,
+        apiUrl: error?.url || matchApiUrl,
+        matchId,
+        phase: "Match analysis",
+        matchName: `Match ${matchId}`
+      }], { title: "Open Match Analyzer failure" });
       resultsBox.innerHTML = `<div class="p2k-empty-prompt">${escapeHTML(message)}</div>`;
       teamSelector.hidden = true;
       state.rawMatch = null;
@@ -2109,10 +2095,13 @@
     if (event.key === "Escape") closeChartModal();
   });
 
+  updateStandaloneLink();
   const parameters = new URLSearchParams(window.location.search);
   const initialReference = parameters.get("match") || parameters.get("id") || parameters.get("url");
   const initialClubReference = parameters.get("club") || parameters.get("team") || "";
-  state.preferredClubSlug = parseClubReference(initialClubReference);
+  const lockedScopeReference = parameters.get("scope") || "";
+  state.lockedClubScope = Boolean(parseClubReference(lockedScopeReference));
+  state.preferredClubSlug = parseClubReference(lockedScopeReference) || parseClubReference(initialClubReference);
   if (initialReference) {
     matchInput.value = initialReference;
     analyzeReference(initialReference, initialClubReference);

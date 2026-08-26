@@ -1,0 +1,41 @@
+Promote to King v2.9.20 -> v2.9.21 exact source delta audit
+===========================================================
+Baseline: exact frozen v2.9.20 standalone SHA256 49fdf0693cdc939dfeb4e6f7d10eb4c931e8b1a4c5bf0a3d4e9b43c3a1c819ed
+Target release: v2.9.21
+
+Scope
+-----
+Focused MCA Processing Request Budget Fix (MPRBF):
+- MCA process_start receives a 110-second client deadline instead of the generic 30-second Team Points timeout.
+- MCA process_step receives a 75-second client deadline.
+- Authenticated MCA profile batches use a 12-second learned-CPS launch budget and a hard 32-profile cap.
+- The backend independently applies the same rate-derived cap, protecting against stale clients.
+- No schema, scoring, MIAC/MIRA semantics, CRON cadence, DMBHF or ACDM behavior changes.
+
+Exact source delta
+------------------
+Added: 14
+Changed: 56
+Removed: 0
+Target release files: 1533
+
+Added files
+-----------
+DELTA_AUDIT_v2.9.20_to_v2.9.21.txt
+INSTALL_v2.9.21.md
+MCA_REQUEST_BUDGET_AUDIT_v2.9.21.md
+MIGRATION_v2.9.21.md
+RELEASE_NOTES_v2.9.21.md
+VALIDATION_REPORT_v2.9.21.txt
+cron-dispatch-v2.9.21.sh
+install-miac-seed-v2.9.21.sh
+install-oauth-v2.9.21.sh
+reset-install-cron-v2.9.21.sh
+tests/test_v2921_mca_request_budget.py
+tests/test_v2921_release.py
+update-v2.9.20-to-v2.9.21.sh
+weekly-backup-v2.9.21.sh
+
+Removed files
+-------------
+(none)

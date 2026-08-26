@@ -1,0 +1,84 @@
+Promote to King v2.9.14 validation report
+==========================================
+Base release: exact verified v2.9.13 standalone
+Baseline standalone SHA256: d4eec954fa4b6f9dadd46e8a8da0bef2980707227d8455d07527cf4121467da3
+Core schema: 13 (unchanged)
+Analytics schema: 6 (unchanged)
+Achievement catalogue: 162 (unchanged)
+External CRON cadence: unchanged (4 tasks)
+
+Source validation
+-----------------
+- Python regression suite: 402/402 PASS
+- Package validator: PASS
+- Chromium/browser gates: 13/13 PASS
+- PHP lint / JavaScript syntax / release shell syntax: PASS via package validator and explicit release-script checks
+
+ACSR / P0 interactive-survival validation
+-----------------------------------------
+- Fresh real-OAuth startup seed: 30 paced requests/s, connection cap 3
+- Startup seed remains adaptive: retained 700-detail transport/cache gate settles to mocked 46.5 requests/s and uses up to six gateway posts
+- Background OAuth gateway posts are limited to 5 of 6; one POST lane is reserved for foreground work
+- Deliberate saturation gate: five background gateway POSTs active, foreground request admitted through sixth lane with 0 ms measured gateway delay in final source run
+- Max measured foreground queue wait in saturation gate: 0 ms
+- Background admission suppressions observed: 3
+- Page errors: 0
+- ACSR automatic acquisition is background-class traffic; queued foreground work suppresses new background admission
+- Server-shared OAuth launch authority and 1.5 s foreground hold remain authoritative
+
+Transport/cache regression
+--------------------------
+- v2.9.12 transport/cache browser stress gate: PASS
+- 700 Match Creation detail requests completed
+- 150 old finished-match cache hits / 50 network misses
+- Max six active OAuth gateway posts
+- No direct Chess.com browser bypass / page errors in validated gates
+- Persisted OAuth clean-URL gateway behavior: PASS at v2.9.14 startup cap 3
+- Slow match-detail transport and rate-convergence gates: PASS
+
+Filesystem/inode hardening
+--------------------------
+- Compact updater state backup helper: PASS
+- Updater no longer recursively clones production data/config trees into _backup
+- Release rollback files are stored in one compact archive + checksum
+- Browser-observation limiter, ACAMR/continuous-refresh ledgers, caches, match snapshots and housekeeping families are bounded by fixed state, entry caps or retention
+- Package validator rejects .pytest_cache, __pycache__ and .pyc artifacts
+- Team Points Administration exposes hosting file-count/object-budget metrics
+
+Achievement/UI regression
+-------------------------
+- Rejected matches/team-points achievement raster artwork removed; placeholder-only contract enforced
+- Achievement catalogue folds Families only; group titles/metrics/bars remain expanded
+- >10-element achievement display bars are progressive rather than segmented
+- Challenge criterion hover, compact dashboard challenge rows and action placement contracts: PASS
+- Hall / Team Insights full-width browser/layout gates: PASS across retained viewport matrix
+
+Exact candidate packaging/updater replay
+----------------------------------------
+- Extracted standalone: 402/402 pytest PASS
+- Extracted standalone package validator: PASS
+- Extracted standalone transport/layout critical browser gates: PASS
+- Exact v2.9.13 -> v2.9.14 incremental replay: PASS
+- Delta: 23 added, 85 changed, 35 removed; 108 incremental payload files
+- Protected config.local.php: byte-identical after replay
+- Protected oauth.local.php: byte-identical after replay
+- Protected data/server-config.json: byte-identical after replay
+- Exactly four v2.9.14 P2K CRON entries installed
+- Unrelated synthetic CRON entry retained; v2.9.13 dispatcher entries removed
+- All 35 rejected achievement artwork paths absent after replay
+- Persistent _backup output from one updater run: exactly 4 files, 0 per-backup directories
+  (state tar.gz + checksum; release-files tar.gz + checksum)
+- Strong inode fixture: 5,000 disposable Chess.com cache files present during replay; all 5,000 remained in production, 0 were copied into the state backup
+- Synthetic replay tree: 6,184 files before updater -> 6,176 after updater, including the four compact rollback files
+- Legacy directory-style backups are not silently deleted; dry-run-first consolidation helper is supplied
+
+Final-byte freeze
+-----------------
+- This report is included in the immutable final archive rebuild.
+- Exact final incremental updater replay: PASS with the same protected-config, CRON, removal and 5,000-cache-file inode fixture described above.
+- Exact final standalone extraction: regression/package checks repeated after the report-only rebuild.
+- No runtime code changes occur after this report-only rebuild; published SHA-256 values identify those exact final bytes.
+
+Environment note
+----------------
+The validation container has PHP PDO but no installed PDO database driver. v2.9.14 introduces no database schema migration. Updater replay therefore substitutes only the live database connection used to confirm the already-required Core 13 / Analytics 6 state; payload verification, compact backups, removals, protected files, CRON changes, rollback material and all other updater operations run for real.

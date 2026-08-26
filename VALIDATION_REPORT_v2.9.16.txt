@@ -1,0 +1,62 @@
+Promote to King v2.9.16 validation report
+=========================================
+Baseline: exact frozen v2.9.15 standalone SHA256 83813c121c82b6c318e230065baaf52fd6930854ebdbb2723acb4159f0dc070e
+Source policy: internal source/package history only; GitHub not used.
+
+Release scope
+-------------
+- 35 approved league-specific achievement artworks (1WL, PCL, TCMAC, TMCL, KOTML), exact approved 640x640 PNG masters plus 128px and 64px derivatives.
+- DRR Fix: fail-soft cached Dashboard recommendations while live refresh continues.
+- MLP Fix: browser lifecycle observations trigger coalesced authoritative lifecycle verification without writing canonical status directly.
+- General achievement catalogues have no progress bars; player catalogues retain progress.
+- FFSD Fix: Fast Fetch liveness/null-safe rendering, failure-reason telemetry and canonical-vs-browser work semantics.
+- UDR Fix: UI v2 direct/admin deep links preserve ui=v2 and route/subview/context across startup/history.
+- OICR Fix: full-history canonical result aggregation, explicit result/heatmap coverage and correct loss mapping.
+- Opponent Chess.com links normalize PubAPI URLs to human club URLs at write/read boundaries.
+- PMAF Fix: bounded archive fallback for known-valid current players whose /matches endpoint itself is unusable; transient/auth/rate-limit/gateway failures never activate it.
+
+Compatibility
+-------------
+- Core schema: 13 (unchanged)
+- Analytics schema: 6 (unchanged)
+- Achievement catalogue: 162 definitions (unchanged)
+- External CRON cadence: four tasks (unchanged)
+- OAuth tuning namespace / P0 Interactive Survival: unchanged
+- No database reset/reseed
+
+Source-tree validation
+----------------------
+- pytest: 421 / 421 PASS
+- package/static validator: PASS
+- PHP syntax: 103 / 103 PASS
+- JavaScript asset syntax: 51 / 51 PASS
+- Dashboard size guard: PASS (< 172000 bytes)
+- Retained Chromium matrix: 13 / 13 PASS, 0 page errors
+  * startup/admin v2.8.10 gate: PASS
+  * v2.9.14 Interactive Survival: PASS; reserved foreground lane retained; 1 ms admission in numbered-source run
+  * v2.9.3 Opponent Balance/OICR host: PASS
+  * v2.9.9 OAuth throughput: PASS
+  * legacy v2.8.9 startup/admin: PASS
+  * v2.9.10 persisted OAuth: PASS; 0 direct Chess.com bypasses
+  * v2.9.10 challenge context: PASS
+  * v2.9.11 Match Creation transport: PASS
+  * v2.9.11 rate convergence: PASS
+  * v2.9.12 transport/cache: PASS; 150 cache hits / 50 misses / 700 details / max 6 gateway posts / settled 46.5 rps
+  * v2.8.11 responsive layouts/pinch: PASS
+  * v2.9.2 Opponent Balance compatibility: PASS
+  * v2.9.4 Hall/layout: PASS
+
+Release-package validation
+--------------------------
+- Candidate standalone ZIP integrity: PASS
+- Candidate standalone clean extraction: 421 / 421 pytest PASS
+- Candidate standalone package/static validator: PASS
+- Candidate v2.9.15 -> v2.9.16 incremental ZIP integrity: PASS
+- Incremental manifest: 231 payload files, 0 removals; 3 unchanged compact backup/recovery helpers deliberately force-staged.
+- Actual bash updater replay against a fresh exact canonical v2.9.15 tree: PASS
+- Post-upgrade target release files: 1281 checked / 0 byte mismatches
+- Protected config.local.php, oauth.local.php and data/server-config.json: byte-identical
+- Disposable Chess.com cache fixture: 5000 retained in production / 0 copied into state backup
+- Compact _backup: exactly 4 files / 0 directories
+- CRON: 4 v2.9.16 managed entries; 0 v2.9.15 managed entries; unrelated CRON retained
+- Final report-inclusive archive rebuild and exact replay are repeated after this report is frozen; those immutable-byte results are recorded in FINAL_FREEZE_REPORT_v2.9.16.txt.

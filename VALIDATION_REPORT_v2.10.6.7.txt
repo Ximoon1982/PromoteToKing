@@ -1,0 +1,45 @@
+Promote to King v2.10.6.7 validation report
+============================================
+Baseline: v2.10.6.6 authoritative SOURCE
+Purpose: Green cutover observability/readiness correction
+
+Functional scope
+----------------
+PASS - Green DB UTC timestamps are parsed as UTC and rendered in browser-local time.
+PASS - GAB reconciliation is presented as convergence work, not cumulative-attempts / unique-target progress.
+PASS - reconciliation exposes cumulative projection attempts, pass number, and last exact full-pass remaining count when available.
+PASS - GAB overall cannot display 100% while any lane is incomplete.
+PASS - GAB finalizes to ready immediately when the last lane completes at a slice boundary.
+PASS - status self-heals running->ready only when every GAB lane is completed, and refuses stale ready when a lane is incomplete.
+PASS - obsolete hard-coded read-parity denominator 13 removed.
+PASS - read-parity total is set from the actual smoke-test check count.
+PASS - pending read-parity shows no fake denominator.
+PASS - GQAC explains its waiting state before quick_boards cohort initialization.
+PASS - status exposes Green validation, adapter readiness, combined read_cutover_ready, and exact blockers.
+PASS - existing fail-closed migration/read cutover gates remain present and unchanged in authority.
+PASS - public default remains Blue; no automatic cutover is performed.
+
+Regression results
+------------------
+Focused v2.10.6.7 + v2.10.6.6 timestamp-only tests: 11/11 PASS.
+Applicable Green production behavior regression set: 32/32 PASS.
+Static/UI package validator: PASS.
+Node JS syntax checks: 59/59 PASS.
+PHP lint: 127/127 PASS.
+
+Migration / operational safety
+------------------------------
+Database schema change: NONE.
+Database reset: NO.
+Reseed: NO.
+CRON change: NO.
+Image change: NO.
+MCA timestamp-only behavior from v2.10.6.6: PRESERVED.
+Green public-read gate weakened: NO.
+Recommended first production cutover phase after all gates pass: green_reads_both_writing.
+Blue remains maintained as rollback source during this first Green-read phase.
+
+Incremental replay
+------------------
+PASS - pristine v2.10.6.6 + incremental overlay reproduced 936/936 source files exactly: 0 missing, 0 extra, 0 SHA-256 differences.
+PASS - independently extracted v2.10.6.7 SOURCE ZIP passed the package validator.

@@ -9,6 +9,22 @@
   margin-left: auto;
 }
 
+.p2k-auth-viewing-as {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  margin-left: 8px;
+  padding: 4px 8px;
+  border: 1px solid rgba(246, 183, 60, .42);
+  border-radius: 999px;
+  background: rgba(246, 183, 60, .10);
+  color: #ffd078;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
 .p2k-auth-login-button,
 .p2k-auth-primary,
 .p2k-auth-secondary,
@@ -397,4 +413,91 @@ body.p2k-auth-modal-open {
   .p2k-auth-assistant-label {
     white-space: normal;
   }
+}
+
+.p2k-auth-api-access {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid rgba(158, 216, 245, .28);
+  border-radius: 9px;
+  background: rgba(158, 216, 245, .06);
+}
+
+.p2k-auth-api-access-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.p2k-auth-api-access-copy strong {
+  color: #eef7fc;
+  font-size: 13px;
+}
+
+.p2k-auth-api-access-copy span,
+.p2k-auth-api-access-status {
+  color: #bcd2df;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.p2k-auth-api-access-status {
+  grid-column: 1 / -1;
+}
+
+.p2k-auth-switch {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
+.p2k-auth-switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.p2k-auth-switch-track {
+  position: relative;
+  display: block;
+  width: 44px;
+  height: 24px;
+  border: 1px solid rgba(255, 255, 255, .26);
+  border-radius: 999px;
+  background: #34302c;
+  transition: background .16s ease, border-color .16s ease;
+}
+
+.p2k-auth-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ded7cd;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
+  transition: transform .16s ease, background .16s ease;
+}
+
+.p2k-auth-switch input:checked + .p2k-auth-switch-track {
+  border-color: rgba(246, 183, 60, .72);
+  background: rgba(217, 141, 24, .55);
+}
+
+.p2k-auth-switch input:checked + .p2k-auth-switch-track::after {
+  transform: translateX(20px);
+  background: #fff1ca;
+}
+
+.p2k-auth-switch input:focus-visible + .p2k-auth-switch-track {
+  outline: 2px solid rgba(246, 183, 60, .45);
+  outline-offset: 2px;
 }

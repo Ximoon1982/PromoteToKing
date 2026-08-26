@@ -1,0 +1,110 @@
+{
+  "status": "integrated-v2.9.22.3",
+  "baseline": {
+    "version": "2.9.22.2",
+    "standalone_sha256_actual": "9d1d2b125257195ae40ce5735b0c5e87f45255100fa92d0bea5be2cf5793efd2"
+  },
+  "scope": "approved seniority achievement artwork only",
+  "source_archive": "P2K_APPROVED_Seniority_Artwork_FutureIntegration.zip",
+  "approved_count": 7,
+  "records": [
+    {
+      "key": "seniority-1m",
+      "achievement_name": "New Recruit",
+      "source_pack": "P2K_APPROVED_Seniority_Artwork_FutureIntegration.zip",
+      "source_member": "approved_seniority_640/seniority-1m_640x640.png",
+      "master": "assets/images/achievements/seniority-1m.png",
+      "master_sha256": "28383f7835c1dfbaf4bbf4511597b2ef75cd47dbab49f70b72ac33053a641079",
+      "thumb_128": "assets/images/achievements/thumbs/128/seniority-1m.webp",
+      "thumb_128_sha256": "61a3d38589f5e7797a32a7caad6c2bb5d48df360d1ffad2f200c9ced36f37f9f",
+      "mini_64": "assets/images/achievements/mini/64/seniority-1m.webp",
+      "mini_64_sha256": "12c406020cfdf35ee27d7854e8cff1d330ebe48a8e9f40dea043d46f868f4611",
+      "mini_legacy": "assets/images/achievements/mini/seniority-1m.webp",
+      "mini_legacy_sha256": "12c406020cfdf35ee27d7854e8cff1d330ebe48a8e9f40dea043d46f868f4611"
+    },
+    {
+      "key": "seniority-3m",
+      "achievement_name": "Established Member",
+      "source_pack": "P2K_APPROVED_Seniority_Artwork_FutureIntegration.zip",
+      "source_member": "approved_seniority_640/seniority-3m_640x640.png",
+      "master": "assets/images/achievements/seniority-3m.png",
+      "master_sha256": "72694a7f6e6841ddf2504cceee5ac8460b0df6832ee629196a195f02c90e38b6",
+      "thumb_128": "assets/images/achievements/thumbs/128/seniority-3m.webp",
+      "thumb_128_sha256": "317e34b1d52d5a748185ab27214b54d2ecfc461fa08f5ac5a86f95a7c8c9a8f8",
+      "mini_64": "assets/images/achievements/mini/64/seniority-3m.webp",
+      "mini_64_sha256": "303e6c0a65e7581766f648a860518e35162f4fa780980b3a9efb12b5ae6caa7b",
+      "mini_legacy": "assets/images/achievements/mini/seniority-3m.webp",
+      "mini_legacy_sha256": "303e6c0a65e7581766f648a860518e35162f4fa780980b3a9efb12b5ae6caa7b"
+    },
+    {
+      "key": "seniority-6m",
+      "achievement_name": "Six-Month Member",
+      "source_pack": "P2K_APPROVED_Seniority_Artwork_FutureIntegration.zip",
+      "source_member": "approved_seniority_640/seniority-6m_640x640.png",
+      "master": "assets/images/achievements/seniority-6m.png",
+      "master_sha256": "b56e47199823fe26f6c72051b09ce3d93fce0cb79b8bbf831a564dd8556f74ce",
+      "thumb_128": "assets/images/achievements/thumbs/128/seniority-6m.webp",
+      "thumb_128_sha256": "6d4ed650d0edc049a5e69dd4cadb5a4adf320245ab074519669242ce08813682",
+      "mini_64": "assets/images/achievements/mini/64/seniority-6m.webp",
+      "mini_64_sha256": "d8f6f9c279d56b2e86082fb61825c44744f7a5fad866d44179cd48709a9ef881",
+      "mini_legacy": "assets/images/achievements/mini/seniority-6m.webp",
+      "mini_legacy_sha256": "d8f6f9c279d56b2e86082fb61825c44744f7a5fad866d44179cd48709a9ef881"
+    },
+    {
+      "key": "seniority-1y",
+      "achievement_name": "One-Year Member",
+      "source_pack": "P2K_APPROVED_Seniority_Artwork_FutureIntegration.zip",
+      "source_member": "approved_seniority_640/seniority-1y_640x640.png",
+      "master": "assets/images/achievements/seniority-1y.png",
+      "master_sha256": "10e83fdaadbeeb3bc535ce04b44f5aacc65a4fcf41c750fe4272104c084de7ea",
+      "thumb_128": "assets/images/achievements/thumbs/128/seniority-1y.webp",
+      "thumb_128_sha256": "ac7633b1874d0786019849e820b5bd9bbefa209a36c70498c42ccc2f03e989c4",
+      "mini_64": "assets/images/achievements/mini/64/seniority-1y.webp",
+      "mini_64_sha256": "1a79d6b701399115764785930ccd2bdd0518116da4ab0e55285a6bea553d01f4",
+      "mini_legacy": "assets/images/achievements/mini/seniority-1y.webp",
+      "mini_legacy_sha256": "1a79d6b701399115764785930ccd2bdd0518116da4ab0e55285a6bea553d01f4"
+    },
+    {
+      "key": "seniority-2y",
+      "achievement_name": "Two-Year Member",
+      "source_pack": "P2K_APPROVED_Seniority_Artwork_FutureIntegration.zip",
+      "source_member": "approved_seniority_640/seniority-2y_640x640.png",
+      "master": "assets/images/achievements/seniority-2y.png",
+      "master_sha256": "29df8bd9198cb909e9eca8763283c3ce2056431c0ec481ca15a2a6dc1be77977",
+      "thumb_128": "assets/images/achievements/thumbs/128/seniority-2y.webp",
+      "thumb_128_sha256": "c1f65d0be63500824307228d9db46a8ca5c0fbdc1fcb2f4a4a69b908c376eeec",
+      "mini_64": "assets/images/achievements/mini/64/seniority-2y.webp",
+      "mini_64_sha256": "bfb6329c617e6498c8525b0e194d48f788852b2a7fc1c93ee9b94e8380ff7b2b",
+      "mini_legacy": "assets/images/achievements/mini/seniority-2y.webp",
+      "mini_legacy_sha256": "bfb6329c617e6498c8525b0e194d48f788852b2a7fc1c93ee9b94e8380ff7b2b"
+    },
+    {
+      "key": "seniority-3y",
+      "achievement_name": "Three-Year Member",
+      "source_pack": "P2K_APPROVED_Seniority_Artwork_FutureIntegration.zip",
+      "source_member": "approved_seniority_640/seniority-3y_640x640.png",
+      "master": "assets/images/achievements/seniority-3y.png",
+      "master_sha256": "5c139c9a12cf8e4384a8ccfe296af350cda98cbfe42cf30339180ecb2884502c",
+      "thumb_128": "assets/images/achievements/thumbs/128/seniority-3y.webp",
+      "thumb_128_sha256": "4cabc1e32c0a7e18aefa77457859d98dc37044aa88cf4ac7b4b8dfeccd6101c8",
+      "mini_64": "assets/images/achievements/mini/64/seniority-3y.webp",
+      "mini_64_sha256": "951f877457b96e0a0d9093968e45d2be6373de2fa06452c36636b33b4554bf54",
+      "mini_legacy": "assets/images/achievements/mini/seniority-3y.webp",
+      "mini_legacy_sha256": "951f877457b96e0a0d9093968e45d2be6373de2fa06452c36636b33b4554bf54"
+    },
+    {
+      "key": "seniority-5y",
+      "achievement_name": "Five-Year Member",
+      "source_pack": "P2K_APPROVED_Seniority_Artwork_FutureIntegration.zip",
+      "source_member": "approved_seniority_640/seniority-5y_640x640.png",
+      "master": "assets/images/achievements/seniority-5y.png",
+      "master_sha256": "5f3df0691d33ed2f4b53d6b6c4dcda308b02f2416eb6aa3f144f7a62d2e16a01",
+      "thumb_128": "assets/images/achievements/thumbs/128/seniority-5y.webp",
+      "thumb_128_sha256": "5d94e7bf92f54e89a5a7640f06d9530a495c47664bf6bde5c6fce3e7a9db75ce",
+      "mini_64": "assets/images/achievements/mini/64/seniority-5y.webp",
+      "mini_64_sha256": "ff1b5b8b4a7a7596ad59055ee370d47e1a5131a4cee430ba622061865926f2a8",
+      "mini_legacy": "assets/images/achievements/mini/seniority-5y.webp",
+      "mini_legacy_sha256": "ff1b5b8b4a7a7596ad59055ee370d47e1a5131a4cee430ba622061865926f2a8"
+    }
+  ]
+}

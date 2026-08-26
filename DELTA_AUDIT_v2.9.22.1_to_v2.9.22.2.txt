@@ -1,0 +1,14 @@
+Promote to King v2.9.22.1 -> v2.9.22.2 delta audit
+
+Scope: OAuth saturation / Fresh Points Reconstruction throughput hotfix.
+Core schema: 15 unchanged.
+Analytics schema: 7 unchanged.
+Database migration: none.
+CRON contract: existing v2.9.22 4 operational + 1 weekly jobs unchanged.
+
+Exact target inventory: 1,570 files.
+Added: 12 files.
+Changed: 56 files.
+Removed: 0 files.
+True byte delta: 68 files.
+Incremental payload additionally force-stages the 3 unchanged compact rollback helpers.

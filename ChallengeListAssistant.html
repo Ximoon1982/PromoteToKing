@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="dark" name="color-scheme"/>
+<meta content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self' https://api.chess.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" http-equiv="Content-Security-Policy"/><title>Promote to King Challenge Assistant</title>
+<link href="assets/images/p2k-logo.jpg" rel="icon" type="image/jpeg"/>
+<link href="assets/css/site.css?v=2.10.6" rel="stylesheet"/>
+<link href="assets/css/upcoming-matches-analyzer.css?v=2.10.6" rel="stylesheet"/>
+<link href="assets/css/challenge-list-assistant.css?v=2.10.6" rel="stylesheet"/>
+<script src="config/site-branding.js?v=2.10.6"></script><script src="assets/js/site-config.js?v=2.10.6"></script><script defer src="assets/js/shared/real-oauth.js?v=2.10.6"></script><script src="assets/js/shared/simulated-oauth.js?v=2.10.6"></script><script src="assets/js/shared/team-points-client.js?v=2.10.6"></script><script defer src="assets/js/shared/authenticated-member-refresh.js?v=2.10.6"></script><script src="assets/js/shared/admin-page-guard.js?v=2.10.6"></script><style>html.admin-access-pending body{visibility:hidden}</style>
+<link rel="stylesheet" href="assets/css/admin-embedded.css?v=2.10.6">
+<script src="assets/js/shared/embedded-page.js?v=2.10.6"></script>
+<link href="assets/css/responsive-unification.css?v=2.10.6" rel="stylesheet"/>
+</head>
+<body>
+<div class="p2k-challenge-assistant" id="p2kUpcomingAnalyzer">
+<div class="p2k-header">
+<div><h2>Promote to King Challenge Assistant</h2></div>
+<img alt="Promote to King club logo" src="assets/images/p2k-logo.jpg" title="Promote to King"/>
+</div>
+<div aria-label="Challenge list tools" class="site-tabs p2k-cla-tabs" role="tablist">
+<button aria-controls="p2kRecommendationPanel" aria-selected="true" class="site-tab" data-p2k-tab="recommendation" id="p2kRecommendationTab" role="tab" type="button">Challenge recommendation</button>
+<button aria-controls="p2kClubCheckerPanel" aria-selected="false" class="site-tab" data-p2k-tab="checker" id="p2kClubCheckerTab" role="tab" tabindex="-1" type="button">Club URL checker</button>
+<button aria-controls="p2kActivityCheckerPanel" aria-selected="false" class="site-tab" data-p2k-tab="activity" id="p2kActivityCheckerTab" role="tab" tabindex="-1" type="button">Club activity checker</button>
+</div>
+<div id="p2kChallengeServerDefault" hidden><span id="p2kChallengeServerStatus"></span><button id="p2kChallengeServerLoad" type="button"></button><button id="p2kChallengeServerSave" type="button"></button></div>
+<section aria-labelledby="p2kClubCheckerTab" class="p2k-cla-tab-panel" data-p2k-panel="checker" hidden id="p2kClubCheckerPanel" role="tabpanel">
+<p class="p2k-cla-intro">Paste or upload a list of Chess.com club URLs. The assistant checks each club endpoint and lists the normal club URLs that return an HTTP, network, timeout, or invalid-response error.</p>
+<fieldset class="p2k-filter-group">
+<legend>Club list input</legend>
+<div class="p2k-cla-input-grid">
+<div class="p2k-cla-field">
+<label class="p2k-cla-label" for="p2kCheckerInput">Paste URLs or slugs</label>
+<textarea class="p2k-cla-textarea" id="p2kCheckerInput" placeholder="https://www.chess.com/club/promote-to-king
+1-day-per-move-club" spellcheck="false"></textarea>
+</div>
+<div class="p2k-cla-field">
+<span class="p2k-cla-label">Upload a text or CSV file</span>
+<div class="p2k-cla-file-card">
+<p>The selected file replaces the pasted text in this tab.</p>
+<input accept=".txt,.csv,text/plain,text/csv" class="p2k-cla-file-input" id="p2kCheckerFile" type="file"/>
+<label class="p2k-cla-file-button" for="p2kCheckerFile">Choose file</label>
+<div class="p2k-cla-file-name" id="p2kCheckerFileName">No file selected</div>
+<p class="p2k-cla-file-hint">Accepted: normal club URLs, API club URLs, or plain slugs.</p>
+</div>
+</div>
+</div>
+<div class="p2k-cla-actions">
+<button class="p2k-main-button" disabled="" id="p2kCheckerStart" type="button">Start checking</button>
+<button class="p2k-cla-secondary-button" disabled="" id="p2kCheckerPause" type="button">Pause</button>
+<button class="p2k-cla-secondary-button p2k-cla-stop-button" disabled="" id="p2kCheckerStop" type="button">Stop</button>
+<button class="p2k-cla-secondary-button" id="p2kCheckerClear" type="button">Clear</button>
+</div>
+</fieldset>
+<div class="p2k-cla-summary-grid">
+<div class="p2k-cla-stat"><span>Unique clubs</span><strong id="p2kCheckerTotal">0</strong></div>
+<div class="p2k-cla-stat"><span>Checked</span><strong id="p2kCheckerChecked">0</strong></div>
+<div class="p2k-cla-stat"><span>Errors found</span><strong id="p2kCheckerMatches">0</strong></div>
+<div class="p2k-cla-stat"><span>Invalid inputs</span><strong id="p2kCheckerInvalid">0</strong></div>
+</div>
+<div class="p2k-cla-progress-wrap">
+<div class="p2k-progress-track"><div class="p2k-progress-bar" id="p2kCheckerProgress"></div></div>
+<div class="p2k-cla-current" id="p2kCheckerCurrent">Ready.</div>
+</div>
+<div class="p2k-status p2k-cla-status" id="p2kCheckerStatus">Load a list and start checking.</div>
+<div class="p2k-cla-result-block">
+<div class="p2k-cla-result-heading">
+<div class="p2k-cla-result-title">Club URLs returning an error</div>
+<div class="p2k-cla-output-actions">
+<button class="p2k-cla-secondary-button" disabled="" id="p2kCheckerCopy" type="button">Copy URLs</button>
+<button class="p2k-cla-secondary-button" disabled="" id="p2kCheckerDownload" type="button">Download CSV</button>
+</div>
+</div>
+<textarea class="p2k-cla-output" id="p2kCheckerOutput" placeholder="Error URLs will appear here." readonly=""></textarea>
+</div>
+<details class="p2k-cla-errors">
+<summary>Error details</summary>
+<textarea class="p2k-cla-output" id="p2kCheckerDetails" placeholder="Detailed status information will appear here." readonly=""></textarea>
+</details>
+<div class="p2k-cla-note">Requests use the shared adaptive Chess.com transport: real OAuth can process the batch in parallel and backs off automatically when Chess.com signals pressure; anonymous or simulated OAuth remains serial. A known Chess.com endpoint is checked first; when that preflight fails, the batch is not classified.</div>
+</section>
+<section aria-labelledby="p2kActivityCheckerTab" class="p2k-cla-tab-panel" data-p2k-panel="activity" hidden="" id="p2kActivityCheckerPanel" role="tabpanel">
+<p class="p2k-cla-intro">Paste or upload a club list. The result contains clubs with no match in registration, no match in progress, and no finished match that started within the previous six calendar months.</p>
+<fieldset class="p2k-filter-group">
+<legend>Club list input</legend>
+<div class="p2k-cla-input-grid">
+<div class="p2k-cla-field">
+<label class="p2k-cla-label" for="p2kActivityInput">Paste URLs or slugs</label>
+<textarea class="p2k-cla-textarea" id="p2kActivityInput" placeholder="https://www.chess.com/club/promote-to-king
+1-day-per-move-club" spellcheck="false"></textarea>
+</div>
+<div class="p2k-cla-field">
+<span class="p2k-cla-label">Upload a text or CSV file</span>
+<div class="p2k-cla-file-card">
+<p>The selected file replaces the pasted text in this tab.</p>
+<input accept=".txt,.csv,text/plain,text/csv" class="p2k-cla-file-input" id="p2kActivityFile" type="file"/>
+<label class="p2k-cla-file-button" for="p2kActivityFile">Choose file</label>
+<div class="p2k-cla-file-name" id="p2kActivityFileName">No file selected</div>
+<p class="p2k-cla-file-hint">A club with missing finished-match dates is kept out of the inactive result and shown in the error list.</p>
+</div>
+</div>
+</div>
+<div class="p2k-cla-actions">
+<button class="p2k-main-button" disabled="" id="p2kActivityStart" type="button">Start checking</button>
+<button class="p2k-cla-secondary-button" disabled="" id="p2kActivityPause" type="button">Pause</button>
+<button class="p2k-cla-secondary-button p2k-cla-stop-button" disabled="" id="p2kActivityStop" type="button">Stop</button>
+<button class="p2k-cla-secondary-button" id="p2kActivityClear" type="button">Clear</button>
+</div>
+</fieldset>
+<div class="p2k-cla-summary-grid">
+<div class="p2k-cla-stat"><span>Unique clubs</span><strong id="p2kActivityTotal">0</strong></div>
+<div class="p2k-cla-stat"><span>Checked</span><strong id="p2kActivityChecked">0</strong></div>
+<div class="p2k-cla-stat"><span>Inactive clubs</span><strong id="p2kActivityMatches">0</strong></div>
+<div class="p2k-cla-stat"><span>Request/data errors</span><strong id="p2kActivityInvalid">0</strong></div>
+</div>
+<div class="p2k-cla-progress-wrap">
+<div class="p2k-progress-track"><div class="p2k-progress-bar" id="p2kActivityProgress"></div></div>
+<div class="p2k-cla-current" id="p2kActivityCurrent">Ready.</div>
+</div>
+<div class="p2k-status p2k-cla-status" id="p2kActivityStatus">Load a list and start checking.</div>
+<div class="p2k-cla-cutoff" id="p2kActivityCutoff"></div>
+<div class="p2k-cla-result-block">
+<div class="p2k-cla-result-heading">
+<div class="p2k-cla-result-title">Clubs meeting all inactivity conditions</div>
+<div class="p2k-cla-output-actions">
+<button class="p2k-cla-secondary-button" disabled="" id="p2kActivityCopy" type="button">Copy URLs</button>
+<button class="p2k-cla-secondary-button" disabled="" id="p2kActivityDownload" type="button">Download CSV</button>
+</div>
+</div>
+<textarea class="p2k-cla-output" id="p2kActivityOutput" placeholder="Inactive club URLs will appear here." readonly=""></textarea>
+</div>
+<details class="p2k-cla-errors">
+<summary>Request and data errors</summary>
+<textarea class="p2k-cla-output" id="p2kActivityDetails" placeholder="Unclassifiable clubs will appear here." readonly=""></textarea>
+</details>
+<div class="p2k-cla-note">The six-month cutoff is fixed when a new run starts. A finished match counts as recent when its <code>start_time</code> is on or after the cutoff.</div>
+</section>
+
+<section aria-labelledby="p2kRecommendationTab" class="p2k-cla-tab-panel" data-p2k-panel="recommendation" id="p2kRecommendationPanel" role="tabpanel">
+<p class="p2k-cla-intro">Find clubs to challenge in the supplied list order, beginning immediately after the last challenge sent. Current and recent Promote to King opponents are excluded, and qualifying clubs must reach the selected recent average-board threshold.</p>
+<fieldset class="p2k-filter-group" id="p2kRecommendationClubListFieldset">
+<legend>Ordered club list</legend>
+<div class="p2k-cla-input-grid">
+<div class="p2k-cla-field">
+<label class="p2k-cla-label" for="p2kRecommendationInput">Paste URLs, slugs, or club names</label>
+<textarea class="p2k-cla-textarea" id="p2kRecommendationInput" placeholder="https://www.chess.com/club/one-day-per-move-club
+Beautiful Romania
+TCMAC" spellcheck="false"></textarea>
+</div>
+<div class="p2k-cla-field">
+<span class="p2k-cla-label">Upload a text or CSV file</span>
+<div class="p2k-cla-file-card">
+<p>The selected file replaces the pasted text in this tab. The original list order is preserved.</p>
+<input accept=".txt,.csv,text/plain,text/csv" class="p2k-cla-file-input" id="p2kRecommendationFile" type="file"/>
+<label class="p2k-cla-file-button" for="p2kRecommendationFile">Choose file</label>
+<div class="p2k-cla-file-name" id="p2kRecommendationFileName">No file selected</div>
+<p class="p2k-cla-file-hint">Accepted: normal/API club URLs, slugs, or one club name per line.</p>
+</div>
+</div>
+</div>
+</fieldset>
+<fieldset class="p2k-filter-group">
+<legend>Recommendation settings</legend>
+<div class="p2k-cla-mode-tabs" role="tablist" aria-label="Challenge recommendation mode">
+<button class="p2k-cla-mode-tab" id="p2kRecommendationModeNew" type="button" role="tab" aria-selected="true" data-recommendation-mode="new">New challenge</button>
+<button class="p2k-cla-mode-tab" id="p2kRecommendationModeRematch" type="button" role="tab" aria-selected="false" data-recommendation-mode="rematch">Rematch opportunities</button>
+</div>
+<div class="p2k-cla-settings-grid">
+<div class="p2k-cla-field p2k-cla-wide-field" id="p2kLastChallengeField">
+<label class="p2k-cla-label" for="p2kLastChallenge">Last challenge sent</label>
+<input class="p2k-cla-text-input" id="p2kLastChallenge" placeholder="Club URL, slug, or name" type="text"/>
+<div class="p2k-cla-help">The scan begins with the next club in the list and rolls over to the beginning when needed.</div>
+</div>
+<div class="p2k-cla-field p2k-cla-wide-field" id="p2kOldestRematchField" hidden>
+<label class="p2k-cla-label" for="p2kOldestRematch">Oldest finished match to consider</label>
+<input class="p2k-cla-text-input" id="p2kOldestRematch" placeholder="Match ID, URL, API URL, or slug containing the match ID" type="text"/>
+<div class="p2k-cla-help">Finished club matches are scanned chronologically from this match through the latest available finished match. Each unique opponent is then checked against the same challenge criteria.</div>
+</div>
+<div class="p2k-cla-field">
+<label class="p2k-cla-label" for="p2kExclusionDays">P2K opponent exclusion</label>
+<div class="p2k-cla-number-row"><input class="p2k-cla-number-input" id="p2kExclusionDays" min="0" step="1" type="number" value="30"/><span>days</span></div>
+</div>
+<div class="p2k-cla-field">
+<label class="p2k-cla-label" for="p2kMinimumBoards">Minimum average boards</label>
+<div class="p2k-cla-number-row"><input class="p2k-cla-number-input" id="p2kMinimumBoards" min="0" step="0.1" type="number" value="5"/><span>boards</span></div>
+</div>
+<div class="p2k-cla-field">
+<label class="p2k-cla-label" for="p2kBoardHistoryDays">Board-average history</label>
+<div class="p2k-cla-number-row"><input class="p2k-cla-number-input" id="p2kBoardHistoryDays" min="1" step="1" type="number" value="90"/><span>days</span></div>
+</div>
+</div>
+<div class="p2k-cla-actions">
+<button class="p2k-main-button" disabled="" id="p2kRecommendationStart" type="button">Find 10 recommendations</button>
+<button class="p2k-cla-secondary-button" disabled="" id="p2kRecommendationPause" type="button">Pause</button>
+<button class="p2k-cla-secondary-button p2k-cla-stop-button" disabled="" id="p2kRecommendationStop" type="button">Stop</button>
+<button class="p2k-cla-secondary-button" id="p2kRecommendationClear" type="button">Clear</button>
+</div>
+</fieldset>
+<div class="p2k-cla-summary-grid">
+<div class="p2k-cla-stat"><span>Unique clubs</span><strong id="p2kRecommendationTotal">0</strong></div>
+<div class="p2k-cla-stat"><span>Checked</span><strong id="p2kRecommendationChecked">0</strong></div>
+<div class="p2k-cla-stat"><span>Recommendations</span><strong id="p2kRecommendationMatches">0</strong></div>
+<div class="p2k-cla-stat"><span>Input/request errors</span><strong id="p2kRecommendationInvalid">0</strong></div>
+</div>
+<div class="p2k-cla-progress-wrap">
+<div class="p2k-progress-track"><div class="p2k-progress-bar" id="p2kRecommendationProgress"></div></div>
+<div class="p2k-cla-current" id="p2kRecommendationCurrent">Ready.</div>
+</div>
+<div class="p2k-status p2k-cla-status" id="p2kRecommendationStatus">Load the ordered club list and enter the last challenge sent, or select Rematch opportunities.</div>
+<div class="p2k-cla-cutoff" id="p2kRecommendationCutoff"></div>
+<div class="p2k-cla-result-block">
+<div class="p2k-cla-result-heading">
+<div class="p2k-cla-result-title">Challenge recommendations</div>
+<div class="p2k-cla-output-actions">
+<button class="p2k-cla-secondary-button" disabled="" id="p2kRecommendationCopy" type="button">Copy recommendations</button>
+<button class="p2k-cla-secondary-button" disabled="" id="p2kRecommendationDownload" type="button">Download CSV</button>
+</div>
+</div>
+<div class="p2k-cla-recommendation-results" id="p2kRecommendationResults"><div class="p2k-cla-empty">No club has qualified yet.</div></div>
+<div class="p2k-cla-find-more-row"><button class="p2k-cla-secondary-button" hidden="" id="p2kRecommendationFindMore" type="button">Find 5 more</button></div>
+</div>
+<details class="p2k-cla-errors">
+<summary>Evaluation details</summary>
+<textarea class="p2k-cla-output" id="p2kRecommendationDetails" placeholder="Recommended, skipped, and failed candidates will appear here." readonly=""></textarea>
+</details>
+<div class="p2k-cla-note">Requests use the shared adaptive transport. Real OAuth evaluates candidates in parallel while preserving the ordered recommendation list; anonymous or simulated OAuth remains serial. The initial run finds up to 10 recommendations. Each Find 5 more run continues without rechecking settled clubs.</div>
+</section>
+</div>
+<script src="assets/js/site-config.js?v=2.10.6"></script><script src="assets/js/shared/tab-activity.js?v=2.10.6"></script><script src="assets/js/shared/api-cache.js?v=2.10.6"></script><script src="assets/js/shared/match-priority.js?v=2.10.6"></script><script src="assets/js/shared/api-client.js?v=2.10.6"></script><script src="assets/js/pages/challenge-list-assistant.js?v=2.10.6"></script><script src="assets/js/shared/control-hints.js?v=2.10.6"></script></body>
+</html>

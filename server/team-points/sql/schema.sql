@@ -1,0 +1,4 @@
+-- v2.8.0 is a fresh two-database architecture.
+-- Do not apply the pre-2.8 single-database schema here.
+-- Core:      server/team-points/sql/core-schema.sql
+-- Analytics: server/team-points/sql/analytics-schema.sql

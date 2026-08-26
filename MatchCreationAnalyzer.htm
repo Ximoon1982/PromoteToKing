@@ -5,14 +5,57 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <meta content="dark" name="color-scheme"/>
-<title>Promote to King Match Creation Analyzer</title>
-<link rel="icon" type="image/jpeg" href="assets/images/p2k-logo.jpg">
-<!-- Version 22 loader: version 21 plus cumulative clickable analysis stages and board-scaled secured-draw points -->
-
-<link href="assets/css/legacy-loader.css" rel="stylesheet"/></head>
+<meta content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self' https://api.chess.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" http-equiv="Content-Security-Policy"/><title>Promote to King Match Creation Analyzer</title>
+<link href="assets/images/p2k-logo.jpg" rel="icon" type="image/jpeg"/>
+<!-- Version 23: standalone local implementation; preserves Version 22 functionality without a legacy runtime loader -->
+<link href="assets/css/match-creation-analyzer.css?v=2.10.6.11" rel="stylesheet"/><link href="assets/css/analysis-failure-ui.css?v=2.10.6.11" rel="stylesheet"/>
+<script src="config/site-branding.js?v=2.10.6.11"></script><script src="assets/js/site-config.js?v=2.10.6.11"></script><script defer src="assets/js/shared/real-oauth.js?v=2.10.6.11"></script><script src="assets/js/shared/simulated-oauth.js?v=2.10.6.11"></script><script defer src="assets/js/shared/authenticated-member-refresh.js?v=2.10.6.11"></script><script src="assets/js/shared/admin-page-guard.js?v=2.10.6.11"></script><style>html.admin-access-pending body{visibility:hidden}</style>
+<link rel="stylesheet" href="assets/css/admin-embedded.css?v=2.10.6.11">
+<script src="assets/js/shared/svg-touch-title.js?v=2.10.6.11"></script><script src="assets/js/shared/embedded-page.js?v=2.10.6.11"></script>
+<link href="assets/css/responsive-unification.css?v=2.10.6.11" rel="stylesheet"/>
+</head>
 <body>
-<div id="p2kV20LoaderStatus">Loading Promote to King Match Creation Analyzer…</div>
-
-
-<script src="assets/js/site-config.js"></script><script src="assets/js/shared/api-cache.js"></script><script src="assets/js/pages/match-creation-analyzer.js"></script></body>
+<script src="assets/js/site-config.js?v=2.10.6.11"></script><script src="assets/js/shared/tab-activity.js?v=2.10.6.11"></script>
+<script src="assets/js/shared/api-cache.js?v=2.10.6.11"></script>
+<script src="assets/js/shared/match-priority.js?v=2.10.6.11"></script><script src="assets/js/shared/api-client.js?v=2.10.6.11"></script>
+<main id="p2kCreationAnalyzer">
+<div class="p2k-header">
+<h2>Promote to King Match Creation Analyzer</h2>
+<img alt="Promote to King club logo" class="p2k-logo" src="assets/images/p2k-logo.jpg" title="Promote to King"/>
+</div>
+<button class="p2k-main-button" disabled="" id="p2kCreationAnalyzeButton" type="button">Detailed analyzis</button>
+<div aria-live="polite" class="p2k-status" id="p2kCreationStatus">
+<div class="p2k-status-row">
+<div class="p2k-status-text" id="p2kCreationStatusText"></div>
+<div class="p2k-processing-actions" id="p2kCreationProcessingActions">
+<button class="p2k-cancel-button" id="p2kCreationCancelButton" title="Pause the detailed analysis and keep all data loaded so far" type="button">
+          Cancel
+        </button>
+</div>
+</div>
+<div aria-hidden="true" class="p2k-progress-track" id="p2kCreationProgressTrack">
+<span class="p2k-progress-bar" id="p2kCreationProgressBar"></span>
+</div>
+<div aria-label="Detailed analysis stages" class="p2k-progress-stages" id="p2kCreationProgressStages">
+<div class="p2k-progress-stage" data-progress-stage="registration">
+<span class="p2k-progress-stage-number">Step 1</span>
+        Registration
+        <span class="p2k-progress-stage-count">0 / 0</span>
+</div>
+<div class="p2k-progress-stage" data-progress-stage="last30">
+<span class="p2k-progress-stage-number">Step 2</span>
+        Last 30 days
+        <span class="p2k-progress-stage-count">0 / 0</span>
+</div>
+<div class="p2k-progress-stage" data-progress-stage="remaining">
+<span class="p2k-progress-stage-number">Step 3</span>
+        Remaining
+        <span class="p2k-progress-stage-count">0 / 0</span>
+</div>
+</div>
+</div>
+<div class="p2k-results" id="p2kCreationResults"></div>
+<script src="assets/js/shared/analysis-coordinator.js?v=2.10.6.11"></script><script src="assets/js/shared/analysis-failure-ui.js?v=2.10.6.11"></script><script src="assets/js/pages/match-creation-analyzer.js?v=2.10.6.11"></script>
+</main>
+<script src="assets/js/pages/match-creation-charts.js?v=2.10.6.11"></script><script src="assets/js/shared/control-hints.js?v=2.10.6.11"></script></body>
 </html>

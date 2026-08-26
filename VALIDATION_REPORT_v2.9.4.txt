@@ -1,0 +1,72 @@
+Promote to King v2.9.4 validation report
+Date: 2026-08-10
+Baseline: v2.9.3 (OAuth POC1 retained)
+
+Scope
+- Achievement catalogue lineage audited from packaged v2.8.9 / v2.8.11 / v2.9.1 / v2.9.3 trees.
+- Current catalogue: 133 = all 128 v2.9.1 keys preserved + 5 new 1/5/10/15/20 distinct-group breadth achievements.
+- No v2.9.1 achievement key is removed or repurposed.
+- Insights · Opponents heatmap cold-load path optimized without changing the two-chart all-match behavior.
+
+Achievement lineage
+- v2.8.9: 115
+- v2.8.11: 115
+- v2.9.0/v2.9.1: 128 (+4 same-day, +5 concurrency, +4 shipped legacy breadth; no removals)
+- v2.9.4: all 128 v2.9.1 keys preserved in original order + 5 additive breadth-groups-* keys = 133 total.
+- Legacy groups-5/groups-10/groups-15/groups-all remain valid; new 1/5/10/15/20 breadth milestones do not reuse those identities.
+- tests/fixtures/v291_achievement_keys.txt freezes the 128-key preservation baseline.
+
+Heatmap optimization
+- balance fetch starts in parallel with Opponents summary.
+- session snapshot paints immediately on revisit and refreshes in background.
+- balance URL/cache key no longer includes irrelevant table paging/search/filter/sort.
+- stable 900-second server cache; 3600-second stale fallback.
+- browser cache max-age 300 seconds; stale-while-revalidate 1800 seconds.
+- full-history chronological ORDER BY removed.
+- backend no longer returns unused match id/status/time fields.
+- compact format v2: opponent dictionary + seven-number row tuples.
+- renderer accepts compact v2 and legacy object payloads.
+- rows are normalized once per payload with WeakMap reuse.
+- heatmap bins store count/deltaSum/coverageSum rather than arrays of row references.
+- decorative opponent pill list capped at 100 + remainder; data filtering remains all opponents.
+
+Representative transport benchmark (synthetic 20,000 matches)
+- old object payload: ~6.18 MiB raw JSON / ~490.6 KiB gzip
+- compact tuple payload: ~0.52 MiB raw JSON / ~131.9 KiB gzip
+- raw ratio ~8.3% of old; gzip ratio ~26.9% of old
+- this measures serialization format only, not production IONOS latency.
+
+Automated validation
+- Python regression suite: 268 passed.
+- Focused v2.9.4 lineage/performance + v2.9.3 corrective tests: 12 passed.
+- Package validator: passed.
+- PHP lint: passed for modified backend files and package validator all-PHP sweep.
+- Node syntax checks: passed through package validator.
+- Shell syntax: v2.9.4 dispatcher/installer/updater passed.
+- Static UI feature suite: passed.
+
+Browser validation
+- browser_gate_v294_hall: full-width unified player result; 4 desktop cards; responsive 2/1-column fallback; no spill at 1280/960/760/600 px.
+- browser_gate_v293: two aggregate heatmaps, filter rerender, 0 page errors.
+- browser_gate_v292: aggregate heatmap interactions/coverage, 0 page errors.
+- browser_gate_v2811: responsive Team Insights/pinch/opponent rendering, 0 page errors.
+- browser_startup_gate_v2810: dashboard/admin/ACAMR/task/tournament startup, 0 page errors.
+- browser_startup_gate_v289: dashboard/admin/ACAMR startup, 0 page errors.
+
+Hall of Fame player search
+- Outer unified-result host forced to one full-width track/block instead of inheriting the generic three-column host grid.
+- Desktop inner result grid uses four cards on one row.
+- Long content/actions are contained and wrapped; no horizontal spill in 1280/960/760/600 px browser checks.
+
+Schema
+- Core schema: 9 (unchanged)
+- Analytics schema: 6 (unchanged)
+- No reset, re-seed, or new DDL migration.
+
+Final artifact verification
+- Clean standalone extraction: package validator PASS.
+- Clean standalone extraction: full Python suite 268/268 PASS.
+- Clean standalone extraction: Hall browser gate PASS at 1280/960/760/600 px with no horizontal overflow.
+- Incremental archive: 79 payload entries, every SHA-256 verified.
+- Applying the incremental payload to the actual v2.9.3 standalone reconstructs all 1,045 v2.9.4 release files byte-for-byte.
+- Reconstructed incremental tree: package validator PASS.

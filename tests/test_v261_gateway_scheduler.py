@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+def check(v,m):
+    if not v: raise AssertionError(m)
+def main():
+    gateway=(ROOT/'server/shared/SharedChessGateway.php').read_text()
+    cache=(ROOT/'server/shared/FilesystemCache.php').read_text()
+    registry=(ROOT/'server/shared/TaskRegistry.php').read_text()
+    core=(ROOT/'server/team-points/sql/core-schema.sql').read_text()
+    analytics=(ROOT/'server/team-points/sql/analytics-schema.sql').read_text()
+    tp_cron=(ROOT/'server/team-points/public/cron.php').read_text()
+    tp_loop=(ROOT/'server/team-points/src/CronLoop.php').read_text()
+    tp_api=(ROOT/'server/team-points/public/api.php').read_text()
+    tp_worker=(ROOT/'server/team-points/src/Worker.php').read_text()
+    tournaments=(ROOT/'server/tournaments/src/ChessApi.php').read_text()
+    tournament_cron=(ROOT/'server/tournaments/public/cron.php').read_text()
+    tournament_service=(ROOT/'server/tournaments/src/TournamentService.php').read_text()
+    common=(ROOT/'api/_common.php').read_text(); router=(ROOT/'api/router.php').read_text()
+    control_api=(ROOT/'server/control/public/api.php').read_text(); control_page=(ROOT/'TaskControl.html').read_text(); control_js=(ROOT/'assets/js/pages/task-control.js').read_text(); dashboard=(ROOT/'assets/js/pages/dashboard-v2.js').read_text()
+    # v2.8 cache is explicitly filesystem-only and protected/compressed.
+    check('FilesystemCache' in gateway and 'database_independent' in gateway and 'gzip_filesystem' in gateway,'Shared gateway is not filesystem-backed')
+    check('gzencode' in cache and 'gzdecode' in cache and '.json.gz' in cache,'Filesystem cache is not gzip-backed')
+    for forbidden in ('p2k_shared_http_cache','p2k_tp_http_cache'):
+        check(forbidden not in core+analytics, f'Legacy SQL cache table returned: {forbidden}')
+        check(forbidden not in gateway, f'Gateway still references SQL cache: {forbidden}')
+    check('If-None-Match' in gateway and 'If-Modified-Since' in gateway and 'probeHealthInsideLock' in gateway and 'false_404_protection' in gateway,'Gateway conditional/health protections were lost')
+    for token in ('p2k_control_tasks','p2k_control_task_runs','p2k_control_task_logs','GET_LOCK','RELEASE_LOCK','lastBeginReason'):
+        check(token in registry,f'Unified task registry missing {token}')
+    check("'team-points'" in registry and "expected_interval_seconds' => 300" in registry,'Team Points cadence not five minutes')
+    check("'match-tracking'" in registry and "expected_interval_seconds' => 3600" in registry,'Match monitoring cadence not hourly')
+    check("'tournaments'" in registry and "expected_interval_seconds' => 300" in registry,'Tournament cadence not five minutes')
+    check('SharedChessGateway' in tournaments and 'SharedChessGateway' in common,'API consumers lost shared gateway')
+    check('TaskRegistry' in tournament_cron and "beginRun('tournaments'" in tournament_cron,'Tournament CRON not centrally registered')
+    check("beginRun('match-tracking'" in router and "finishRun('match-tracking'" in router,'Match tracking not centrally registered')
+    check('max(15, min(50' in tp_loop and 'min(35' in tp_loop,'Hosting timeout clamps missing')
+    check("'self_scheduling'=>false" in tp_cron and "'host_limit_seconds'=>60" in tp_cron,'Team Points CRON contract missing')
+    check("beginRun('team-points'" in tp_cron and "finishRun('team-points'" in tp_cron,'Team Points CRON unified logging missing')
+    check("mode'=>'lazy'" in tp_cron and 'rebuildAll' not in tp_cron,'Heavy Analytics rebuild returned to five-minute Core CRON')
+    check('manual_compatibility_segment' in tp_api,'Bounded manual compatibility action missing')
+    check('hasOutboundRequestBudget' in tp_worker and 'deadline_checkpoint' in tp_worker,'Team Points worker resumability lost')
+    check("track_all('cron', 40)" in router and 'matchTrackingCursor' in common,'Match monitor checkpointing lost')
+    check("refresh('cron', 45)" in tournament_cron and 'hasRequestBudget' in tournament_service,'Tournament checkpointing lost')
+    for table in ('p2k_control_tasks','p2k_control_task_runs','p2k_control_task_logs'):
+        check(f'CREATE TABLE IF NOT EXISTS {table}' in core,f'Core schema missing {table}')
+    check('p2k_an_storage_samples' in analytics,'Analytics storage history missing')
+    check('TaskControl.html' in dashboard and 'server/control/public/api.php' in dashboard,'Unified maintenance link missing')
+    check('id="gateway"' in control_page and 'id="task-detail"' in control_page,'Task control anchors missing')
+    for command in ('start','resume','pause','refresh'): check(command in control_api and command in control_js,f'Unified control missing {command}')
+    print('v2.8.1 filesystem gateway, server scheduler and unified task-control tests passed.')
+if __name__=='__main__': main()

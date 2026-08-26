@@ -1,0 +1,34 @@
+Promote to King v2.7.3 validation report
+========================================
+Scope: authentication/page-access decoupling only.
+
+Validated invariants
+--------------------
+- VERSION = 2.7.3.
+- Team Points schema remains version 13.
+- server/team-points/sql/schema.sql is byte-for-byte identical to v2.7.2.
+- server/team-points/public/cron.php is byte-for-byte identical to v2.7.2.
+- No seed import is required.
+- No CRON endpoint or cadence change is required.
+- Standalone administrator page guard contains no fetch(), no Chess.com API URL, and no P2K_TEAM_POINTS_CLIENT dependency.
+- Dashboard administrator admission contains no Team Points database/session call.
+- Classic site router administrator admission contains no Team Points database/session call.
+- ?admin=1 remains an offline-safe administrator page entry path.
+- Embedded administrator pages inherit parent administrator state.
+- OAuth admin claims and optional local adminUsernames allow-list are supported without DB/API access.
+- AnalyzeMatch.html is public and no longer contains the administrator guard.
+- DB-backed server endpoints retain their existing secured Team Points session requirements.
+
+Test results
+------------
+- Node static UI feature suite: PASS.
+- All Python regression tests: PASS.
+- v2.7.3 auth-decoupling regression test: PASS.
+- Package validator: PASS.
+- All assets/js JavaScript files: node --check PASS.
+- All server/api PHP files: php -l PASS.
+- Python compileall: PASS.
+- Existing Team Points integration tests: PASS.
+- Existing tracking/local server integration tests: PASS.
+
+Production database was not modified during validation.

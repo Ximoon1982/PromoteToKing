@@ -1,0 +1,113 @@
+Promote to King v2.9.21 -> v2.9.22 exact source delta audit
+===========================================================
+Baseline SHA256: 5d60e98b0ed5d0c9485e7ae70f32e92cd6931748dfcc25d5d66c291b2e060005
+Added: 17
+Changed: 72
+Removed: 0
+Target release files: 1550
+
+Added files
+-----------
+DELTA_AUDIT_v2.9.21_to_v2.9.22.txt
+FRESH_POINTS_RECONSTRUCTION_ACDM_AUDIT_v2.9.22.md
+INSTALL_v2.9.22.md
+MIGRATION_v2.9.22.md
+RELEASE_NOTES_v2.9.22.md
+VALIDATION_REPORT_v2.9.22.txt
+assets/js/pages/fresh-points-reconstruction.js
+cron-dispatch-v2.9.22.sh
+install-miac-seed-v2.9.22.sh
+install-oauth-v2.9.22.sh
+reset-install-cron-v2.9.22.sh
+server/team-points/sql/core-migration-v2.9.22.sql
+server/team-points/src/FreshPointsReconstruction.php
+tests/browser_gate_v2922_reconstruction.py
+tests/test_v2922_fresh_reconstruction_acdm.py
+update-v2.9.21-to-v2.9.22.sh
+weekly-backup-v2.9.22.sh
+
+Changed files
+-------------
+AnalyzeMatch.html
+AnalyzeMatchModal.html
+AnalyzeMatches.htm
+ChallengeListAssistant.html
+ClubIntelligence.html
+DataReconciliation.html
+FindMatch.htm
+InsightsHealth.html
+LeagueSeasonCenter.html
+LiveRanks.html
+MatchCreationAnalyzer.htm
+Opponents.html
+RecruitMatch.html
+RecruitmentDemandPlanner.html
+TaskControl.html
+TaskLogs.html
+TeamInsights.html
+TeamPointsAdmin.html
+TournamentAchievementBadgesDemo.html
+TournamentManagement.html
+Tournaments.html
+VERSION
+assets/css/task-control.css
+assets/js/pages/task-control.js
+assets/js/shared/active-convergence-refresh.js
+assets/js/shared/api-client.js
+assets/js/shared/client-continuous-refresh.js
+assets/js/site-config.js
+index.html
+server/control/public/api.php
+server/team-points/config/config.example.php
+server/team-points/sql/core-schema.sql
+server/team-points/src/CronLoop.php
+server/team-points/src/OAuthSession.php
+server/team-points/src/Repository.php
+server/team-points/src/Worker.php
+site-manifest.json
+tests/run-tests.js
+tests/test_post_v2913_acsr_ui.py
+tests/test_post_v2913_filesystem_hardening.py
+tests/test_post_v297_client_continuous_refresh.py
+tests/test_post_v297_observation_provenance.py
+tests/test_v2810_release.py
+tests/test_v2811_release.py
+tests/test_v281_hotfix2_integration.py
+tests/test_v281_release.py
+tests/test_v282_release.py
+tests/test_v283_release.py
+tests/test_v284_release.py
+tests/test_v285_release.py
+tests/test_v286_release.py
+tests/test_v2881_hotfix.py
+tests/test_v288_release.py
+tests/test_v289_release.py
+tests/test_v290_release.py
+tests/test_v2910_oauth_ingest_freshness.py
+tests/test_v2913_queue_dedup.py
+tests/test_v2916_release.py
+tests/test_v2917_release.py
+tests/test_v2918_cmdi_pir_miac_mira_artwork_backup.py
+tests/test_v2919_release.py
+tests/test_v291_release.py
+tests/test_v2920_release.py
+tests/test_v2921_release.py
+tests/test_v292_corrective_release.py
+tests/test_v293_user_corrections.py
+tests/test_v295_achievement_expansion.py
+tests/test_v297_corrective_release.py
+tests/test_v298_release.py
+tests/test_v299_oauth_throughput.py
+tests/validate_package.py
+ui-v2.html
+
+Removed files
+-------------
+(none)
+
+Release scope
+-------------
+- Fresh Points Reconstruction card + Club/Player acquisition, checkpoint, review, approval and targeted queue supersession.
+- Core 14 -> 15 additive reconstruction staging migration.
+- ACDM/Club worker correction: 100-item Club capacity, 34s floor/36s ceiling, adaptive browser pulses 16..64.
+- No achievement catalogue change; Analytics remains 7; no destructive reset.

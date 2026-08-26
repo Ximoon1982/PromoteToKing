@@ -1,38 +1,125 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <meta content="dark" name="color-scheme"/>
-<title>Promote to King Match Assistant</title>
-<link rel="icon" type="image/jpeg" href="assets/images/p2k-logo.jpg">
-<!-- Version 31 loader: version 30 functionality plus optional simulated Chess.com OAuth via ?oauth=1. -->
-<link href="assets/css/legacy-loader.css" rel="stylesheet"/>
+<meta content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self' https://api.chess.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" http-equiv="Content-Security-Policy"/><title>Promote to King Match Assistant</title>
+<link href="assets/images/p2k-logo.jpg" rel="icon" type="image/jpeg"/>
+<!-- Version 32: standalone local implementation with packaged API client and league-only recommendation filter -->
+<link href="assets/css/find-match.css?v=2.10.6.11" rel="stylesheet"/>
+<link href="assets/css/simulated-oauth.css?v=2.10.6.11" rel="stylesheet"/>
+<link href="assets/css/info-popover.css?v=2.10.6.11" rel="stylesheet"/>
 </head>
 <body>
-<div id="p2kFindV28LoaderStatus">Loading Promote to King Match Assistant…</div>
-
-<script src="assets/js/site-config.js"></script>
-<script src="assets/js/shared/api-cache.js"></script>
-<script src="assets/js/pages/find-match.js"></script>
-
-<!-- Default Statcounter code for P2kMatchAssistant
-https://ximoon1982.github.io/PromoteToKing//FindMatch.htm
--->
-<script type="text/javascript">
-var sc_project=13337768; 
-var sc_invisible=1; 
-var sc_security="da9e8630"; 
-</script>
-<script type="text/javascript"
-src="https://www.statcounter.com/counter/counter.js"
-async></script>
-<noscript><div class="statcounter"><a title="Web Analytics
-Made Easy - Statcounter" href="https://statcounter.com/"
-target="_blank"><img class="statcounter"
-src="https://c.statcounter.com/13337768/0/da9e8630/1/"
-alt="Web Analytics Made Easy - Statcounter"
-referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
-<!-- End of Statcounter Code -->
-</body>
+<script src="assets/js/site-config.js?v=2.10.6.11"></script><script src="assets/js/shared/tab-activity.js?v=2.10.6.11"></script><script src="assets/js/shared/info-popover.js?v=2.10.6.11"></script>
+<script src="assets/js/shared/api-cache.js?v=2.10.6.11"></script>
+<script src="assets/js/shared/match-priority.js?v=2.10.6.11"></script><script src="assets/js/shared/api-client.js?v=2.10.6.11"></script>
+<main class="finder" id="p2kMatchAssistant">
+<div class="header">
+<h1 class="title">Promote to King Match Assistant</h1>
+<div class="header-vignettes">
+<img alt="" class="user-avatar" hidden="" id="p2kUserAvatar" src="" title=""/>
+<img alt="Promote to King club logo" class="club-logo" src="assets/images/p2k-logo.jpg" title="Promote to King club logo"/>
+</div>
+</div>
+<div class="p2k-user-search-row">
+<input aria-label="Chess.com user name" autocapitalize="none" autocomplete="off" class="username" id="p2kUsername" placeholder="Chess.com user name" spellcheck="false" title="Enter the Chess.com user name whose ratings, registrations, and club memberships should be checked." type="text"/>
+<button class="search-button" id="p2kSearchButton" style="margin-top:12px" title="Load the player's ratings and clubs, process all open Promote to King matches, and display the matching results." type="button">Explore matches</button>
+</div>
+<div class="filters-heading">Filters</div>
+<fieldset class="filter-group" title="Choose which daily chess format to display.">
+<legend class="filter-title">Match type</legend>
+<div class="choices">
+<label class="choice" title="Show both classical Daily and Daily Chess 960 matches.">
+<input checked="" name="p2kMatchType" title="Show all supported daily match formats." type="radio" value="all"/>
+<span>All daily matches</span>
+</label>
+<label class="choice" title="Show standard Daily chess matches only.">
+<input name="p2kMatchType" title="Show classical Daily chess matches only." type="radio" value="classical"/>
+<span>Classical chess matches</span>
+</label>
+<label class="choice" title="Show Daily Chess 960 matches only.">
+<input name="p2kMatchType" title="Show Daily Chess 960 matches only." type="radio" value="chess960"/>
+<span>Chess 960 matches</span>
+</label>
+</div>
+</fieldset>
+<fieldset class="filter-group" title="Choose whether to show matches based on the player's registration status.">
+<legend class="filter-title">Registration status</legend>
+<div class="choices">
+<label class="choice" title="Show matches in which the player is not currently registered.">
+<input checked="" name="p2kRegistrationStatus" title="Show unregistered matches only." type="radio" value="not_registered"/>
+<span>Not registered</span>
+</label>
+<label class="choice" title="Show matches in which the player is already registered, regardless of lock, rating, or lineup limits.">
+<input name="p2kRegistrationStatus" title="Show registered matches only." type="radio" value="registered"/>
+<span>Registered</span>
+</label>
+<label class="choice" title="Show both registered and unregistered matches that satisfy the applicable rules.">
+<input name="p2kRegistrationStatus" title="Show all registration statuses." type="radio" value="all"/>
+<span>All matches</span>
+</label>
+</div>
+</fieldset>
+<fieldset class="filter-group" title="Choose whether to restrict the list to matches where the player's participation would be useful.">
+<legend class="filter-title">Recommendation filter</legend>
+<div class="choices">
+<label class="choice" title="Show only matches flagged as recommended by team size, lineup rating, or minimum-player needs.">
+<input checked="" name="p2kRecommendationFilter" title="Show recommended matches only." type="radio" value="recommended"/>
+<span>Recommended matches</span>
+</label>
+<label class="choice" title="Show only league matches identified by the configured league acronyms.">
+<input name="p2kRecommendationFilter" title="Show league matches only." type="radio" value="league"/>
+<span>League matches</span>
+</label>
+<label class="choice" title="Show recommended and non-recommended matches.">
+<input name="p2kRecommendationFilter" title="Show all matches regardless of recommendation status." type="radio" value="all"/>
+<span>All matches</span>
+</label>
+</div>
+</fieldset>
+<fieldset class="filter-group" title="Choose how the analyzed match results should be ordered.">
+<legend class="filter-title">Sort results</legend>
+<div class="choices">
+<label class="choice" title="Order matches from the highest recommendation score to the lowest.">
+<input checked="" name="p2kSortMode" title="Sort primarily by recommendation score." type="radio" value="score"/>
+<span>Recommendation score</span>
+</label>
+<label class="choice" title="Order matches from the earliest scheduled start date to the latest.">
+<input name="p2kSortMode" title="Sort primarily by start date." type="radio" value="date"/>
+<span>Start date</span>
+</label>
+</div>
+</fieldset>
+<div aria-label="Match color legend" class="color-legend" title="Color coding used for match results.">
+<span title="Priority league matches are shown first."><i class="legend-dot legend-dot-red"></i>Priority</span>
+<span title="Matches recommended because the player can help the team."><i class="legend-dot legend-dot-orange"></i>Recommended</span>
+<span title="Matches that are neither priority nor recommended."><i class="legend-dot legend-dot-green"></i>Other</span>
+</div>
+<div aria-live="polite" class="status" id="p2kStatus">
+<div class="status-row">
+<div class="status-text" id="p2kStatusText"></div>
+<div class="processing-actions" id="p2kProcessingActions">
+<button class="cancel-button" id="p2kCancelButton" title="Stop processing the remaining matches and display the results loaded so far." type="button">Cancel</button>
+</div>
+</div>
+<div aria-hidden="true" class="progress-track" id="p2kProgressTrack">
+<div class="progress-bar" id="p2kProgressBar"></div>
+</div>
+</div>
+<div class="ratings" id="p2kRatings"></div>
+<div aria-label="Search analyzed matches" class="match-search-toolbar" hidden="" id="p2kMatchSearchToolbar" role="search">
+<div class="match-search-group">
+<label class="match-search-label" for="p2kMatchSearch">Match</label>
+<input autocomplete="off" class="match-search" id="p2kMatchSearch" placeholder="Search match name or opponent..." spellcheck="false" title="Filter the analyzed results by match name or opponent club." type="search"/>
+<button class="search-clear" disabled="" hidden aria-hidden="true" tabindex="-1" id="p2kClearMatchSearch" title="Clear the match search and show all results allowed by the selected filters." type="button">Clear</button>
+</div>
+</div>
+<div class="results" id="p2kResults"></div>
+</main>
+<script src="assets/js/shared/analysis-coordinator.js?v=2.10.6.11"></script><script src="assets/js/pages/find-match.js?v=2.10.6.11"></script>
+<script defer src="assets/js/shared/real-oauth.js?v=2.10.6.11"></script><script src="assets/js/shared/simulated-oauth.js?v=2.10.6.11"></script><script defer src="assets/js/shared/authenticated-member-refresh.js?v=2.10.6.11"></script>
+<script src="assets/js/shared/analytics.js?v=2.10.6.11"></script><script src="assets/js/shared/control-hints.js?v=2.10.6.11"></script></body>
 </html>

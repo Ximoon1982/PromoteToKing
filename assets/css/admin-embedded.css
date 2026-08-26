@@ -1,0 +1,29 @@
+html.p2k-embedded,html.p2k-embedded body{background:transparent!important;min-height:0!important}html.p2k-embedded body{margin:0!important;padding:0!important}html.p2k-embedded .p2k-header,html.p2k-embedded .task-control-header{display:none!important}html.p2k-embedded .p2k-analyzer,html.p2k-embedded #p2kCreationAnalyzer,html.p2k-embedded .p2k-challenge-assistant,html.p2k-embedded .task-control{width:100%!important;max-width:none!important;margin:0!important;padding:4px 0 24px!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}html.p2k-embedded .task-control{gap:16px!important}html.p2k-embedded .control-card,html.p2k-embedded .control-section{scroll-margin-top:8px}html.p2k-embedded #adminModal{position:static!important;inset:auto!important;display:block!important;padding:0!important;background:transparent!important}html.p2k-embedded #adminModal[hidden]{display:block!important}html.p2k-embedded .admin-dialog{width:100%!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important}html.p2k-embedded .admin-dialog>.admin-head,html.p2k-embedded .admin-dialog>.admin-tabs{display:none!important}html.p2k-embedded main.site-shell,html.p2k-embedded header.site-header,html.p2k-embedded nav.site-tabs,html.p2k-embedded #tool-content{display:none!important}html.p2k-embedded .admin-panel{padding:0!important}html.p2k-embedded .admin-panel>.subtabs{margin-top:0!important}html.p2k-embedded .p2k-tp{width:100%!important;max-width:none!important;margin:0!important;padding:4px 0 24px!important;background:transparent!important}
+html.p2k-embedded .p2k-tp-header,html.p2k-embedded .p2k-tp-tabs{display:none!important}
+html.p2k-embedded .p2k-tp>[data-panel][hidden]{display:none!important}
+html.p2k-embedded .p2k-tp>[data-panel]:not([hidden]){display:block!important}
+
+/* v2.8.5: integrated Live-ranks computation fills its administration tab without an extra card frame. */
+html.p2k-embedded .p2k-tp [data-panel="live-ranks"]>.p2k-tp-card{border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;padding-left:0!important;padding-right:0!important}
+
+/* v2.10.6.14: the authenticated Admin shell owns page titles and navigation.
+   Embedded tools render only their working surface and grow to their content height. */
+html.p2k-embedded .ci-shell{width:100%!important;max-width:none!important;margin:0!important;padding:4px 0 24px!important}
+html.p2k-embedded .ci-hero{display:flex!important;justify-content:flex-end!important;align-items:center!important;min-height:0!important;margin:0 0 8px!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+html.p2k-embedded .ci-hero>div{display:none!important}
+html.p2k-embedded .ci-tabs{display:none!important}
+html.p2k-embedded .ci-status{margin-top:0!important}
+html.p2k-embedded .task-surface-tabs{display:flex!important;margin:0 0 14px!important}
+html.p2k-embedded .control-shell{width:100%!important;max-width:none!important;margin:0!important;padding:4px 0 24px!important}
+html.p2k-embedded .p2k-task-logs-heading{display:none!important}
+html.p2k-embedded body.p2k-runtime-diagnostics{background:transparent!important}
+html.p2k-embedded body.p2k-runtime-diagnostics main{width:100%!important;max-width:none!important;margin:0!important;padding:4px 0 24px!important}
+html.p2k-embedded body.p2k-runtime-diagnostics .hero{display:flex!important;justify-content:flex-end!important;align-items:center!important;min-height:0!important;margin:0 0 8px!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+html.p2k-embedded body.p2k-runtime-diagnostics .hero>div:first-child{display:none!important}
+html.p2k-embedded body.p2k-tournament-management .embedded-intro{display:none!important}
+html.p2k-embedded body.p2k-tournament-management{background:transparent!important}
+html.p2k-embedded body.p2k-tournament-management>.card,
+html.p2k-embedded body.p2k-tournament-management>.metrics{width:100%!important;max-width:none!important}
+html.p2k-embedded body.p2k-migration-page{background:transparent!important}
+html.p2k-embedded body.p2k-migration-page .mig-shell{width:100%!important;max-width:none!important;margin:0!important;padding:4px 0 24px!important}
+html.p2k-embedded body.p2k-migration-page .mig-head{display:none!important}

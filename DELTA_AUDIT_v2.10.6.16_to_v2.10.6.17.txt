@@ -1,0 +1,26 @@
+Promote to King v2.10.6.16 -> v2.10.6.17 delta audit
+
+Baseline source files: 986
+Target source files: 992
+Modified: 7
+Added: 6
+Removed: 0
+
+Modified:
+- MIGRATION_VERSION
+- VERSION
+- assets/js/site-config.js
+- server/team-points-green/src/GreenCompatibility.php
+- site-manifest.json
+- tests/validate_package.py
+- ui-v2.html
+
+Added:
+- DELTA_AUDIT_v2.10.6.16_to_v2.10.6.17.txt
+- INSTALL_v2.10.6.17.md
+- MIGRATION_v2.10.6.17.md
+- RELEASE_NOTES_v2.10.6.17.md
+- VALIDATION_REPORT_v2.10.6.17.txt
+- tests/test_v210617_gabcrf_game_canonicalization.py
+
+No files removed. No DB schema/reset/reseed, CRON definition, Blue/Green routing, scoring, artwork or public DOM/layout change.

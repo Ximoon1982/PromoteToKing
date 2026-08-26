@@ -1,0 +1,82 @@
+PROMOTE TO KING STANDALONE v2.8.9 — VALIDATION REPORT
+Date: 2026-08-09
+Status: PASS
+
+Baseline
+- Physical baseline: final v2.8.8.3 tree.
+- v2.8.8.x features/fixes retained.
+- v2.8.6 Dashboard data-loading/server-summary contract retained as the proven production path.
+- ACAMR re-enabled after root-cause isolation.
+
+Confirmed v2.8.7 regression
+- Production boundary: v2.8.6 works; v2.8.7 does not.
+- Browser execution reproduction on the unmodified pre-fix tree:
+  ReferenceError: integratedFrameIds is not defined
+- Failure occurs in initial renderView() -> setIntegratedFrameActivity() before loadTeamData() and applySession().
+- This explains both reported symptoms: Dashboard shell visible with no data, and authenticated configured admin not recognized.
+- Root correction: integrated iframe activity is discovered from the live DOM in the startup controller; no lazy module owns a startup-required frame list.
+- The stale unused integratedFrameIds copy was also removed from the lazy Insights module.
+
+Secondary dependency defect corrected
+- The v2.8.8.3 emergency rollback restored the v2.8.6 loadTeamData() body but the clubMembersAPI constant had been removed by the later refactor.
+- v2.8.9 restores the complete dependency contract, including clubMembersAPI, so the post-paint Chess.com member/profile/match second wave cannot fail on a missing identifier.
+
+Authentication / Administration
+- Configured/local administrator recognition occurs before remote Chess.com verification.
+- OAuth admin role claims remain supported.
+- Embedded Administration tools retain parent/iframe race handling and bounded retry.
+
+ACAMR
+- Re-enabled in v2.8.9.
+- Real OAuth: active regardless of simulated-OAuth flag.
+- Simulated authentication: active only with oauth/simulatedOAuth flag.
+- Unauthenticated: inactive.
+- Club Points / Member Points support, relevant member archives/boards, ratings and roster freshness: enabled.
+- Tournaments: excluded.
+- Match-registration / registered-player monitoring / recruitment tracking: excluded.
+- Browser data remains non-authoritative; server verification remains required.
+
+Automated source-tree validation
+- pytest regression suite: 169 / 169 PASS.
+- Package/static UI validator: PASS.
+- Static UI Node suite: PASS.
+- PHP lint: 84 / 84 PASS.
+- Standalone assets/js syntax: 42 / 42 PASS.
+- Inline HTML/HTM JavaScript: 11 / 11 PASS.
+- Python AST/compile validation: 44 / 44 PASS.
+- JSON parse validation: 4 / 4 PASS.
+
+Browser execution gate (Chromium + Playwright, network mocked)
+- Unmodified v2.8.8.3 reproduction: FAIL as expected with integratedFrameIds ReferenceError, Dashboard stuck Loading, admin false.
+- v2.8.9 Dashboard startup: PASS.
+- Team database values rendered: PASS (4,000 mocked members, Database ready).
+- Simulated configured Ximoon admin recognized: PASS.
+- Administration page activation: PASS.
+- Uncaught Dashboard page exceptions: 0.
+- ACAMR simulated-auth activation: PASS.
+- ACAMR observation source tag: PASS.
+- ACAMR tournament/registration client filter: PASS (only allowed stats task executed in gate).
+
+Database / operations
+- Core schema: 6.
+- Analytics schema: 5.
+- No DB reset/reseed/new SQL migration required from v2.8.8.x.
+- CRON cadence unchanged: Club 5m, Tournament 10m, Player 30m, League hourly.
+- ACAMR adds no CRON entry.
+
+Packaging gate
+- Source tree is frozen after manifest regeneration.
+- Candidate and final ZIPs are clean-extracted and must repeat pytest, package validator, syntax/lint, CRON and browser startup/ACAMR gates before handoff.
+
+Candidate clean-ZIP validation
+- pytest: 169 / 169 PASS.
+- Package/static UI validator: PASS.
+- Chromium browser Dashboard/admin/ACAMR gate: PASS; zero page errors.
+- PHP lint: 84 / 84 PASS.
+- JavaScript syntax: 44 / 44 PASS.
+- Python AST/compile: 44 / 44 PASS.
+- Inline HTML/HTM JavaScript: 11 / 11 PASS.
+- JSON parse: 4 / 4 PASS.
+- CRON helper shell syntax: PASS.
+
+The final immutable ZIP is rebuilt from this report-bearing tree and independently clean-extracted/revalidated before handoff.

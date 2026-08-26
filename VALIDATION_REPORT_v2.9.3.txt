@@ -1,0 +1,41 @@
+Promote to King v2.9.3 validation report
+Date: 2026-08-10
+Baseline: v2.9.2
+
+Corrective scope
+- Insights · Opponents owns the single aggregate all-match Opponent Balance heatmap pair.
+- Public balance population is all stored non-void matches with boards; plotted rows require paired-board rating provenance and report coverage.
+- Club Intelligence no longer exposes a duplicate Balance Analyzer tab.
+- Achievement breadth is additive: 124 prior catalogue definitions + 5 breadth definitions = 129 total.
+- Player achievement reads union persisted unlocks with profile-derived earned achievements so a breadth unlock cannot suppress older earned achievements.
+
+Schema
+- Core schema: 9 (unchanged)
+- Analytics schema: 6 (unchanged)
+- No reset, re-seed, or new schema migration.
+
+Automated validation
+- Python regression suite: 256 passed.
+- v2.9.3 corrective tests: 6 passed.
+- Package validator: passed.
+- Node JavaScript syntax checks: passed through package validator.
+- PHP lint for package PHP sources: passed through package validator.
+- Static UI feature tests: passed through package validator.
+
+Browser validation
+- browser_gate_v293.py: passed; exactly two aggregate heatmap SVGs; all-match coverage copy present; shared filters rerender the same two charts; 0 page errors.
+- browser_gate_v292.py: passed; aggregate heatmap compatibility; 0 page errors.
+- browser_gate_v2811.py: passed; Team Insights responsive charts/pinch and opponent rendering; 0 page errors.
+- browser_startup_gate_v2810.py: passed; dashboard/admin/ACAMR/task/tournament startup; 0 page errors.
+- browser_startup_gate_v289.py: passed; dashboard/admin/ACAMR startup; 0 page errors.
+
+Incremental updater simulation
+- Disposable v2.9.2 site upgraded to v2.9.3 with update-v2.9.2-to-v2.9.3.sh.
+- Incremental payload: 63 verified files.
+- Post-install payload SHA-256 mismatches: 0.
+- Configuration/data/log/crontab backup path created before replacement work.
+- Existing unrelated CRON entry preserved.
+- Previous managed v2.9.2 CRON block removed.
+- Exactly four v2.9.3 managed CRON entries installed.
+- Simulated root HTTP gate: 200.
+- Result: SUCCESS.

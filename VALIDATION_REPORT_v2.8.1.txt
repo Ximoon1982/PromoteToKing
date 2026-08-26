@@ -1,0 +1,55 @@
+Promote to King v2.8.1 validation report
+========================================
+Date: 2026-08-07
+Baseline: v2.8.0 Recovery Fix 6 + AuthBaseline
+Upgrade type: in-place Core/Analytics schema migration (1 -> 2)
+
+Static / syntax validation
+--------------------------
+PHP files linted: 66
+JavaScript files syntax-checked: 38
+Python regression scripts executed: 21
+Pytest v2.8.1 focused assertions: 7 passed
+Package validator: passed
+Node retained static UI test suite: passed
+Local server/API integration tests: passed
+Team Points local integration tests: passed
+
+Database architecture assertions
+--------------------------------
+- Existing v2.8 Core/Analytics pair is upgraded in place; no seed reload is required.
+- Core schema version 2 adds p2k_avg_rating and opponent_avg_rating to match metadata.
+- Analytics schema version 2 adds corresponding materialized rating fields.
+- Analytics schema version 2 adds p2k_an_achievement_unlocks.
+- Analytics schema version 2 adds first_place_count to Live/MCA player aggregates.
+- First post-migration Analytics refresh is forced by invalidating the previous refresh marker/state.
+- Team Points CRON is migration-aware.
+- Core/Analytics/filesystem split and filesystem HTTP cache remain unchanged.
+
+Requested feature assertions
+----------------------------
+1. Lineup evolution ends with live lineup; real UTC axis, hover, drag zoom, keyboard previous/next and win-probability delta are present.
+2. Administration Live ranks uses integrated TeamPointsAdmin live-ranks content with natural-height frame reporting.
+3. Open Match Analyzer is integrated, has standalone URL propagation for match/POV, and no default P2K logo.
+4. Tournament medalist rows/header markers retain medal-specific styling.
+5. Public Promote to King club API is primary admin list; branding allow-list is outage fallback; Team Points DB is not used for page admission.
+6. Storage & Capacity is an Administration subtab; dashboard System health has overall/storage health.
+7. Administrator priority-card links use integrated Administration routes.
+8. Team Insights duplicate metric block removed.
+9. Opponent treemap removed; Top 25 + Others visualization present.
+10. Opponent result history uses stacked monthly W/D/L chart with hover and drag zoom.
+11. Match/opponent detail loading modals are replaced in place.
+12. Opponent intelligence includes time-control and rating-bracket win-rate charts.
+13. Match Insights uses full-width/larger charts, removes Closest, adds Longest ongoing, and constrains lower-edge chart spill.
+14. Member Insights graph dimensions increased.
+15. Unified player profile suppresses unranked images; Team Points progression combines monthly bars and cumulative line with hover/zoom.
+16. Achievement unlocks persist in Analytics with timestamp precision and member counts; MCA 1/5/10 first-place achievement counts supported.
+17. All-achievements groups are folded by default and show achieved/total counts.
+
+Known data limitation
+---------------------
+The original v2.8 seed snapshot did not contain per-match lineup ratings. Historical opponent rating-bracket analytics therefore populate as authoritative match details are refreshed. Time-control and W/D/L analytics use already stored historical fields.
+
+Production limitation
+---------------------
+The actual schema migration was not executed against the user's production IONOS credentials in this validation environment. Migration SQL is additive/idempotent and is invoked automatically by the deployed Team Points endpoints/CRON.

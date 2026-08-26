@@ -1,0 +1,27 @@
+v2.10.6.21 -> v2.10.6.22
+modified=15
+added=6
+removed=0
+
+Modified before final audit/report freeze:
+CHANGELOG.md
+MIGRATION_VERSION
+RELEASE_NOTES.md
+TEST_HISTORY.md
+TaskControl.html
+UPDATE_HISTORY.md
+VERSION
+assets/js/pages/dashboard-insights.js
+assets/js/pages/dashboard-v2.js
+assets/js/site-config.js
+server/team-points-green/src/GreenAnalyticsBootstrap.php
+server/team-points-green/src/GreenWorker.php
+site-manifest.json
+tests/validate_package.py
+ui-v2.html
+
+Added before final audit/report freeze:
+INSTALL_v2.10.6.22.md
+MIGRATION_v2.10.6.22.md
+RELEASE_NOTES_v2.10.6.22.md
+tests/test_v210622_correctives.py

@@ -1,0 +1,41 @@
+PROMOTE TO KING STANDALONE v2.8.8.3 — VALIDATION REPORT
+Date: 2026-08-08
+Status: PASS
+
+Purpose
+- Production confirmation places the Dashboard data-loading regression boundary at v2.8.7.
+- v2.8.8.3 deliberately restores the v2.8.6 Dashboard data-loading/server-summary contract.
+- ACAMR is disabled client-side and server-side for this release.
+- Independent v2.8.8.x fixes/features remain retained.
+
+Rollback contract verified
+- dashboard-v2.js loadTeamData() follows the v2.8.6 sequence.
+- Repository::publicClubDashboard() follows the v2.8.6 sequence.
+- Normal shared Chess.com API observation path is pre-ACAMR/v2.8.6 style.
+- No HTML/HTM page loads authenticated-member-refresh.js.
+- ACAMR planner returns enabled=false and issues no claims.
+- Stale source=acamr observations are ignored by observe.php.
+- Runtime asset cache token is v2.8.8.3.
+
+Source-tree validation
+- pytest: 160 / 160 PASS.
+- Package/static UI validator: PASS.
+- PHP lint: 84 / 84 PASS.
+- JavaScript syntax: 44 / 44 PASS.
+- Inline HTML/HTM JavaScript: 11 / 11 PASS.
+- Python compilation: 42 / 42 PASS.
+- JSON parse validation: 3 / 3 PASS.
+- Argument-less CRON helper syntax/install behavior: PASS.
+- Fake destructive crontab replacement: PASS with exactly four unchanged schedules.
+
+Database / operations
+- Core schema: 6 (unchanged from v2.8.8).
+- Analytics schema: 5 (unchanged).
+- No DB reset/reseed/manual SQL migration required.
+- CRON cadence unchanged: Club 5m, Tournament 10m, Player 30m, League hourly.
+- ACAMR adds no CRON entry and is disabled.
+
+Final artifact validation
+- Candidate ZIP clean extraction: 160 / 160 pytest PASS.
+- Candidate ZIP package/static validator: PASS.
+- Final immutable ZIP is rebuilt after this report/manifest freeze and is required to repeat the same clean-extraction gate before handoff.

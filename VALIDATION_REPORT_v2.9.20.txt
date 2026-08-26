@@ -1,0 +1,36 @@
+Promote to King v2.9.20 validation report
+=========================================
+Date: 2026-08-14
+Baseline: exact frozen v2.9.19 standalone SHA256 42074a47ca5bdd3f859199589b5c2aa9b78af7f1c2bafdb1f4621e35fad172c8
+Source policy: internal source/package history only; GitHub not used.
+
+Release scope
+-------------
+- MCA OAuth Rate Capture Fix (MORCF).
+- Parent-viewport-visible MIAC/name-transition evidence modal.
+- Standard 25-row Club Intelligence table pagination, including Members 50 -> 25.
+- Dashboard Match Board Hydration Fix (DMBHF): registered/ongoing match details hydrate authoritative boards; games = boards x 2.
+- ACSR Canonical Drain Mode (ACDM): debt/urgency-aware Club/Player draining with bounded productive chaining, adaptive pulse budget and P0 foreground yield.
+
+Compatibility
+-------------
+- Core schema: 14 (unchanged)
+- Analytics schema: 7 (unchanged)
+- Achievement catalogue: 162 (unchanged)
+- MIAC seed: unchanged
+- CRON: 4 operational + 1 weekly long-life backup, cadences unchanged
+- No database reset, reseed or schema migration
+
+Source validation
+-----------------
+- pytest: 457 / 457 PASS
+- v2.9.20 focused source acceptance: 10 / 10 PASS
+- v2.9.20 embedded alias pagination/modal + DMBHF runtime browser gate: PASS; 0 page errors
+- Dashboard controller: 171928 bytes (< 172000-byte retained guard)
+- Package/static validator: PASS
+- PHP syntax: 107 / 107 PASS
+- JavaScript asset syntax: 52 / 52 PASS
+- Top-level/release shell syntax: 92 / 92 PASS
+- Browser execution matrix: 15 / 15 PASS; reported page errors: 0
+
+Exact package extraction and updater replay results are completed before freeze and summarized in FINAL_FREEZE_REPORT_v2.9.20.txt.

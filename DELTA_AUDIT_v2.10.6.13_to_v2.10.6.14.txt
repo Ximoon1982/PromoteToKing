@@ -1,0 +1,35 @@
+Promote to King v2.10.6.13 -> v2.10.6.14 delta audit
+
+Baseline source files: 968
+Modified existing files: 16
+Added source/release files: 6
+Removed files: 0
+Expected v2.10.6.14 source files: 974
+
+Modified:
+- ClubIntelligence.html
+- DataReconciliation.html
+- InsightsHealth.html
+- MIGRATION_VERSION
+- TaskControl.html
+- TaskLogs.html
+- TeamPointsMigration.html
+- TournamentManagement.html
+- VERSION
+- assets/css/admin-embedded.css
+- assets/css/dashboard-v2.css
+- assets/js/pages/dashboard-v2.js
+- assets/js/site-config.js
+- site-manifest.json
+- tests/validate_package.py
+- ui-v2.html
+
+Added:
+- DELTA_AUDIT_v2.10.6.13_to_v2.10.6.14.txt
+- INSTALL_v2.10.6.14.md
+- MIGRATION_v2.10.6.14.md
+- RELEASE_NOTES_v2.10.6.14.md
+- VALIDATION_REPORT_v2.10.6.14.txt
+- tests/test_v210614_admin_detail_integration.py
+
+No production database, CRON, scoring, routing, or image files are removed or migrated.

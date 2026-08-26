@@ -1,0 +1,49 @@
+Promote to King v2.10.6.16 validation report
+
+Baseline: v2.10.6.15
+Target:   v2.10.6.16
+
+Functional gates:
+- Green cycle-boundary corrective suite: 7 / 7 PASS
+- Public Dashboard / Hall / Insights DOM fingerprints: PASS, unchanged
+- Completed-cycle tail-pass guard: PASS
+- Missing-GQAC active Quick-cycle self-heal: PASS
+- Periodic terminal profile/stats checkpoint: PASS
+- Quick Profiles / Quick Stats real phase progress: PASS
+- Phase totals preserved on completion: PASS
+- completeCycle synchronous analytics rebuild removed: PASS
+- Global Green worker lock released before analytics maintenance: PASS
+- Analytics maintenance serialized under dedicated lock: PASS
+- Full Green/compatibility analytics materialization minimum restored to 300 s: PASS
+- Live per-object Green compatibility projection remains immediate: PASS
+- Post-lock analytics failures isolated from finite Green-worker success: PASS
+- Core-lock vs post-lock timing telemetry: PASS
+- Task Control Green timestamps: UTC
+- PHP syntax: GreenWorker.php / GreenRepository.php PASS
+- JavaScript syntax: task-control.js / site-config.js PASS
+
+Compatibility:
+- Applicable v2.10.6.14 / v2.10.6.15 behavior gates: 6 / 6 PASS
+- Full-height Admin details preserved.
+- MCA global-Task-Control over-embedding corrective preserved.
+- Embedded height reporting preserved.
+- Scheduled tasks / Green Team Points native navigation remains visible.
+- Green subtab URL persistence preserved.
+- GAB, GFFL and Green Accelerator controls/metrics preserved.
+- Historical frozen tests that hard-code previous release identities/cache literals are intentionally superseded.
+
+Telemetry note:
+- Historical cycle duration rows recorded before v2.10.6.16 may contain boundary-timing distortion caused by work executed before the next cycle timer formally started. Raw historical durations are retained; Task Control labels this history accordingly.
+
+Release gates:
+- Complete package validator on canonical source: PASS
+- Preliminary full-source extraction: 986 expected / 986 extracted / 0 missing / 0 extra / 0 SHA differences; package validator PASS
+- Preliminary incremental installer replay over untouched v2.10.6.15: 986 expected / 986 installed / 0 missing / 0 extra / 0 SHA differences; package validator PASS
+- Final artifacts rebuilt after this report and subjected to the same exact-tree/hash gates before delivery.
+
+Database schema change: no
+Database reset/reseed: no
+CRON schedule change: no
+Blue/Green routing change: no
+Scoring change: no
+Artwork change: no

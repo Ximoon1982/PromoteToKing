@@ -1,0 +1,25 @@
+Promote to King v2.9.1 — Validation Report
+Built: 2026-08-10T15:42:00+02:00
+Base: verified v2.9.0 standalone
+
+Release-tree regression validation:
+- Full pytest suite: 238/238 PASS
+- v2.9.1 focused release tests: 10/10 PASS
+- ACAMR telemetry/correctness tests: 8/8 PASS
+- PHP/JavaScript syntax checks: PASS during release preparation
+- Balance Analyzer browser interaction gate (system Chromium): PASS — 2 heatmaps, wheel zoom, shared filter redraw, zero page errors
+
+Release-specific coverage includes:
+- v2.9.1 identity/cache markers and IONOS versioned PHP CLI CRON contract
+- Admin Data Reconciliation confirmation, bounded apply, authoritative conflict handling and chronological DailyData checkpoint
+- Opponent Balance Analyzer data scope and 2D heatmap interaction machinery
+- Team Depth/member activity/Hall/opponent usability fixes
+- achievement search/breadth/framed rank artwork/progress behavior
+- Traffic DNT/GPC diagnostics and isolated collector self-test
+- ACAMR persistent client/session identity semantics, accurate claim/member accounting, per-work-class delivery/fetch/authoritative-queue metrics and warning semantics
+
+Final release checks:
+- Clean-package validator: PASS
+- Full and incremental ZIP integrity: PASS
+- v2.9.0 → v2.9.1 updater dry-run on a disposable v2.9.0 extraction: PASS
+- Dry-run installed VERSION=2.9.1, verified all incremental payload hashes and installed exactly four v2.9.1 CRON entries.

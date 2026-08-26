@@ -1,0 +1,38 @@
+PROMOTE TO KING v2.10.5.1 — VALIDATION REPORT
+==============================================
+Release purpose: runtime-version / cache-marker consistency corrective
+Baseline: v2.10.5
+
+RESULT: PASS
+
+Validated invariants
+--------------------
+- VERSION = 2.10.5.1
+- MIGRATION_VERSION = 2.10.5.1
+- site-manifest version/releaseVersion/migrationVersion = 2.10.5.1
+- browser site-config version = 2.10.5.1
+- browser site-config builtAt = 2026-08-18T13:03:00Z
+- all active top-level HTML/HTM 2.10.x cache markers = 2.10.5.1
+- dynamic first-party loaders in site-config = 2.10.5.1
+- GreenConfig runtime release = 2.10.5.1
+- Green migration API release/panel build = 2.10.5.1
+- migration accelerator client build = 2.10.5.1
+- v2.10.5 functional regression suite preserved
+- package/static UI validator PASS
+- JavaScript syntax checks PASS
+- PHP lint PASS
+- no generated Python cache/test artifacts included
+
+Unchanged contracts
+-------------------
+- Core schema 16
+- Analytics schema 8
+- no database schema change
+- no database reset
+- no reseed
+- no CRON change
+- Green worker 50s soft / 55s hard unchanged
+- public Team Points reads remain Blue by default
+- Green public-read cutover remains safety-gated
+- v2.10.5 GQAC/Quick fixes unchanged
+- v2.10.5 member chronology unchanged

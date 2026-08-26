@@ -1,0 +1,39 @@
+Promote to King source delta audit
+v2.10.6.11 -> v2.10.6.12
+==============================================
+
+Predecessor files: 956
+v2.10.6.12 files: 962
+Modified: 8
+Added: 6
+Removed: 0
+
+Modified files
+--------------
+MIGRATION_VERSION
+VERSION
+assets/css/dashboard-v2.css
+assets/js/pages/dashboard-v2.js
+assets/js/site-config.js
+site-manifest.json
+tests/validate_package.py
+ui-v2.html
+
+Added files
+-----------
+DELTA_AUDIT_v2.10.6.11_to_v2.10.6.12.txt
+INSTALL_v2.10.6.12.md
+MIGRATION_v2.10.6.12.md
+RELEASE_NOTES_v2.10.6.12.md
+VALIDATION_REPORT_v2.10.6.12.txt
+tests/test_v210612_admin_shell.py
+
+Removed files
+-------------
+None
+
+Release scope
+-------------
+Authenticated Dashboard Admin shell only; six top-level admin tabs, live operational cards, status/freshness/source metadata, deep links, and complete Lost & found catalogue.
+Public Dashboard / Hall of Fame / Insights are regression-locked to v2.10.6.11.
+No database, CRON, scoring, Green routing or artwork change.

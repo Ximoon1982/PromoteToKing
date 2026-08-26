@@ -1,0 +1,39 @@
+Promote to King v2.10.6.19 -> v2.10.6.20 delta audit
+======================================================
+
+Scope
+-----
+Correct Green Factorized Freshness Lane terminal-debt handling so legitimate
+Daily team-match cancellations do not remain permanently due or consume repeated
+CRON/browser requests.
+
+Root causes corrected
+---------------------
+1. CRON match-detail 404/410 updated match state but did not close GFFL debt.
+2. Browser-accelerated successful GFFL match-detail observations ingested data but
+   did not close GFFL debt.
+3. Browser accelerator did not convert GFFL 404/410 into accepted terminal
+   observations, so they surfaced as repeated failures.
+4. Trusted legacy rows preserve historical facts on terminal HTTP responses and
+   therefore remained otherwise eligible for GFFL forever.
+5. Pending/Due/Oldest due metrics counted stranded debt that the planner could no
+   longer service.
+
+Corrective behavior
+-------------------
+- HTTP 200 closes the GFFL obligation from CRON and browser accelerator paths.
+- HTTP 404/410 closes the current GFFL freshness obligation from both paths.
+- A match cancelled while still in registration may legitimately become 404; that
+  is treated as a terminal cancellation state, not corruption.
+- Trusted legacy match/game/point facts remain preserved on terminal HTTP states.
+- armGfflMatch suppresses automatic re-arming while last_http_status is 404/410.
+- gfflPlan/gfflSnapshot self-heal already-stranded terminal/ineligible debt.
+- Chess.com club-index reappearance clears terminal suppression; non-trusted rows
+  voided solely by HTTP terminal state can be revived for fresh verification, while
+  trusted legacy facts/status remain protected.
+- Task Control exposes Terminal closed for current 404/410 retired obligations.
+
+Data safety
+-----------
+No database schema change, reset, reseed, CRON-definition change, Blue/Green
+routing change, scoring change, heatmap formula change, or artwork change.

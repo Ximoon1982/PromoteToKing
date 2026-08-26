@@ -1,0 +1,50 @@
+Promote to King v2.9.19 validation report
+=========================================
+Date: 2026-08-13
+Baseline: exact frozen v2.9.18 standalone SHA256 c419aae7974ffd050e0641711792aa1673a616f2e7bedc09fb115e2ce519980a
+Source policy: internal source/package history only; GitHub not used.
+
+Release scope
+-------------
+- MIAC POC-style alias/name-change chain explorer, evidence table/modal and separate manual queue.
+- Shared physical-board candidate evidence auto-confirms with coalesced generation changes; explicit rejection remains sticky; contradictory non-null player_id remains a hard conflict.
+- IPDR: MIAC generation propagates to Analytics, Achievements and MIRA; canonical alias aggregation for player/monthly/Daily projections, profiles and achievement derivation.
+- Definitive MCA same-arena and Daily same-physical-board historical substitution evidence with evidence persistence before replacement/reassignment.
+- Achievement Most-earned current-member ranking; unearned progress; Previous/Next and keyboard navigation in dashboard and standalone catalogue.
+- Members summary metric cleanup; live-only history graph suppression; mobile framed-art containment; profile/dashboard achievement wording and desktop admin row alignment.
+
+Compatibility
+-------------
+- Core schema: 14 (unchanged)
+- Analytics schema: 7 (unchanged)
+- Achievement catalogue: 162 (unchanged)
+- MIAC seed: unchanged from v2.9.18
+- CRON: 4 operational + 1 weekly long-life backup, cadences unchanged
+- OAuth tuning namespace: unchanged
+- No database reset, reseed or schema migration
+
+Numbered source validation
+--------------------------
+- pytest: 447 / 447 PASS
+- Dedicated v2.9.19 UI/IPDR acceptance: 12 / 12 PASS
+- Release-identity tests: 4 / 4 PASS
+- Static UI feature suite: PASS
+- PHP syntax: 107 / 107 PASS
+- JavaScript assets syntax: 51 / 51 PASS
+- Top-level/release shell syntax: 86 / 86 PASS
+- Dashboard controller: 170408 bytes (< 172000-byte guard)
+- Package/static validator: PASS after final manifest regeneration
+
+Chromium validation
+-------------------
+Retained matrix: 13 / 13 PASS; browser gates report 0 page errors.
+- P0 Interactive Survival: initial 30 CPS / cap 3; 1 foreground lane reserved; foreground admission 0 ms.
+- Transport/cache 700-detail stress: 150 cache hits / 50 network misses / max 6 gateway posts / settled 46.5 requests/s.
+- Persisted OAuth: 0 direct Chess.com bypasses.
+- Rate convergence/backoff, Match Creation transport, challenge context, Opponent Intelligence, responsive Team Insights, Hall/layout and startup/admin gates: PASS.
+Additional gates:
+- Chart maximize: viewport containment, legend, zoom and DOM restoration PASS.
+- MIAC review: chain explorer + shared-board auto-confirm + real manual candidate confirmation refresh PASS.
+- v2.9.19 UI: 390px Live Rook = 72px with 5px inset/contain; live-only history not mounted; admin rows aligned at 72px; Most-earned ranking/counts and unearned progress + keyboard navigation PASS.
+
+Release-package/exact-updater validation is recorded in FINAL_FREEZE_REPORT_v2.9.19.txt after immutable package construction.

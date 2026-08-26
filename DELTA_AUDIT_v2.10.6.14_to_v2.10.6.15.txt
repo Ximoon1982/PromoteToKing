@@ -1,0 +1,27 @@
+Promote to King v2.10.6.14 -> v2.10.6.15 delta audit
+
+Modified: 9
+Added: 6
+Removed: 0
+
+MODIFIED
+MIGRATION_VERSION
+TaskControl.html
+VERSION
+assets/css/admin-embedded.css
+assets/js/pages/dashboard-v2.js
+assets/js/site-config.js
+site-manifest.json
+tests/validate_package.py
+ui-v2.html
+
+ADDED
+INSTALL_v2.10.6.15.md
+MIGRATION_v2.10.6.15.md
+RELEASE_NOTES_v2.10.6.15.md
+VALIDATION_REPORT_v2.10.6.15.txt
+tests/test_v210615_green_task_control_reachability.py
+DELTA_AUDIT_v2.10.6.14_to_v2.10.6.15.txt
+
+REMOVED
+(none)

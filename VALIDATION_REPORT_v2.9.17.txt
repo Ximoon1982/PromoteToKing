@@ -1,0 +1,39 @@
+Promote to King v2.9.17 validation report
+=========================================
+Baseline: exact frozen v2.9.16 standalone SHA256 6eb50088ae0601172c71ca99ef8d6781eca35278504ee6e75e837381a3ba337d
+Source policy: internal source/package history only; GitHub not used.
+
+Release scope
+-------------
+- Approved 1WL artwork enforced for all seven 1WL achievements, including replacement Competitor/Veteran/Legend masters and 128/64 derivatives.
+- Insights Team Daily boards/current active boards clamped to current UTC date; requested durable-facts explanatory paragraph removed.
+- Tournament Excluded accounts metric removed.
+- Shared chart maximize keeps live chart and legend inside dynamic viewport and preserves zoom interactions.
+- ACDC Fix plus audit expansion: end-to-end absolute deadlines, dynamically bounded launch/lock/connect/request budgets, canonical stale-if-error prohibition, persistent Player/Club fairness, enforced Fast Fetch canonical quota, PMAF success-gated fallback freshness/cooldown, explicit client_refresh provenance, attempted-vs-terminal telemetry.
+- CTAR Pack: gateway lock released before upstream HTTP, server-attested OAuth response reuse, local-readiness match finalization coalescing, bulk club-index reads, batched queue commits, reduced archive/player continuation amplification, Analytics generation coalescing and longer idle planner backoff.
+
+Compatibility
+-------------
+- Core schema: 13 (unchanged)
+- Analytics schema: 6 (unchanged)
+- Achievement catalogue: 162 definitions (unchanged)
+- External CRON cadence: four tasks (unchanged)
+- OAuth adaptive tuning namespace: unchanged
+- No database reset/reseed
+
+Numbered-source validation
+--------------------------
+- pytest: 423 / 423 PASS
+- package/static validator: PASS
+- PHP syntax: 103 / 103 PASS
+- JavaScript asset syntax: 53 / 53 PASS
+- retained Chromium matrix: 13 / 13 PASS, 0 page errors
+- v2.9.17 chart maximize Chromium gate: PASS, 0 page errors
+  * dialog remained inside 900x620 viewport
+  * legend visible inside maximized dialog
+  * live maximized chart received zoom input
+  * close restored chart + legend DOM
+- P0 Interactive Survival: PASS; foreground gateway admission 0 ms, reserved foreground lane retained
+- v2.9.12 700-detail transport/cache stress: PASS; 700 details, max 6 gateway posts, settled mocked 46.5 requests/s, 0 page errors
+- persisted OAuth: PASS; 0 direct Chess.com browser bypasses
+- OICR/Opponent Balance gates: PASS

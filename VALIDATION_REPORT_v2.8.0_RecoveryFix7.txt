@@ -1,0 +1,35 @@
+PROMOTE TO KING v2.8.0 — RECOVERYFIX7 INTEGRATED VALIDATION
+Date: 2026-08-07
+Result: PASS
+
+Validated against the assembled standalone package.
+
+Integrated changes validated:
+- Core schema revision 2 stores opportunistic Daily and Chess960 rating snapshots on p2k_tp_members.
+- player-stats.php stores ratings through the shared Chess.com gateway without adding a separate rating crawler.
+- Analytics schema revision 2 materializes last_standard_game_at and last_chess960_game_at per member from canonical Core games and match rules.
+- Existing v2.8 databases upgrade in place from schema revision 1 to 2; pre-v2.8 single-database installs are not migrated.
+- 18 approved achievement image/miniature pairs that were shipped but still wired to the P2K logo fallback are now mapped to their achievement keys.
+- Team Insights zoom recomputes best-fit visible scales.
+- Cumulative match activity uses green Started, red Finished, gold In progress.
+- Daily boards and Club Points uses green Started boards, red Finished boards, gold Club Points.
+- Rolling 30-calendar-day future region is marked as Current registration status.
+- Current-year Year-over-year Club Points progression contains Low probability, Medium probability and High probability projections.
+- Match Recruitment Assistant model RM-2 uses stored Classical/Chess960 rating according to match rules.
+- Recruitment pool excludes: already registered members, unrated members, members outside the match rating range, members below the lowest rated opponent registration, and members of the opponent club.
+- Recruitment plan sorts remaining members by rating descending and adds the strongest players first.
+- Significant-advantage target requires the projected comparison board count, at least max(2,20%) net board advantage, at least 60% boards ahead, and at least 65% projected match-win probability.
+- Recruitment page retains visible staged progress and cancellation.
+- Normal recruitment path uses one same-origin stored-pool request plus one Chess.com opponent-club members request; no per-candidate stats or clubs requests.
+
+Validation performed:
+- Full tests/validate_package.py: PASS
+- Static UI feature tests: PASS
+- Node syntax checks for all JavaScript: PASS
+- PHP lint for all PHP files: PASS
+- Python compilation checks: PASS
+- Manifest/file inventory consistency: PASS
+- Existing shell integrity checks: PASS
+
+Production note:
+No production database mutation or live Chess.com scan was executed in the build environment. Database schema upgrades and recruitment results should be verified after deployment using the hosted v2.8 Core/Analytics databases.

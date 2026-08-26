@@ -1,0 +1,4 @@
+Options -Indexes
+<FilesMatch "^(?:\.ht|.*\.(?:sql|ini|log|bak))$">
+  Require all denied
+</FilesMatch>

@@ -1,0 +1,1056 @@
+{
+  "release": "2.9.2",
+  "policy": "Install only explicit catalogue-key recovered mappings; never infer ambiguous artwork. All 65 resolved active raster masters are exactly 640x640; standardized 64x64 and 128x128 derivatives are packaged for each.",
+  "summary": {
+    "catalog_items": 129,
+    "resolved_raster": 58,
+    "approved_recovered": 0,
+    "rejected_recovered_now_placeholders": 7,
+    "explicit_placeholders": 64
+  },
+  "items": [
+    {
+      "key": "first-match",
+      "status": "rejected-placeholder",
+      "approval_id": "REC-0001",
+      "source_file": "image-gen-1(10).png",
+      "source_sha256": "8466f10a34b4b35a2af72965d6b0ca942565d964b6fa6abfe8d0293978a0cd84",
+      "master": null,
+      "mini_64": null,
+      "thumb_128": null,
+      "rejection_reason": "Recovered match/team-points artwork was rejected; placeholder-only policy restored post-v2.9.13.",
+      "placeholder": "assets/images/achievements/placeholders/first-match.svg"
+    },
+    {
+      "key": "first-point",
+      "status": "rejected-placeholder",
+      "approval_id": "REC-0018",
+      "source_file": "image-gen-2(10).png",
+      "source_sha256": "1550af9a0c66bc69e1bb50a19614ddb3c0bc533677cbee8a147ac5a0379529e7",
+      "master": null,
+      "mini_64": null,
+      "thumb_128": null,
+      "rejection_reason": "Recovered match/team-points artwork was rejected; placeholder-only policy restored post-v2.9.13.",
+      "placeholder": "assets/images/achievements/placeholders/first-point.svg"
+    },
+    {
+      "key": "matches-10",
+      "status": "rejected-placeholder",
+      "approval_id": "REC-0026",
+      "source_file": "image-gen-3(10).png",
+      "source_sha256": "ef7f484e59db60cb436b8ed41a3c59f268b53a0a92fc2351b642648767f710f0",
+      "master": null,
+      "mini_64": null,
+      "thumb_128": null,
+      "rejection_reason": "Recovered match/team-points artwork was rejected; placeholder-only policy restored post-v2.9.13.",
+      "placeholder": "assets/images/achievements/placeholders/matches-10.svg"
+    },
+    {
+      "key": "matches-50",
+      "status": "rejected-placeholder",
+      "approval_id": "REC-0034",
+      "source_file": "image-gen-4(10).png",
+      "source_sha256": "42502c69dc3af5580c873225631575d62f07489388856ac149b1ce3a0def05c9",
+      "master": null,
+      "mini_64": null,
+      "thumb_128": null,
+      "rejection_reason": "Recovered match/team-points artwork was rejected; placeholder-only policy restored post-v2.9.13.",
+      "placeholder": "assets/images/achievements/placeholders/matches-50.svg"
+    },
+    {
+      "key": "matches-100",
+      "status": "rejected-placeholder",
+      "approval_id": "REC-0049",
+      "source_file": "image-gen-5(9).png",
+      "source_sha256": "fb0e01f9bcd4f875185cc16c924fb6f6c48fa26bfb777ab9334706df9d63e57b",
+      "master": null,
+      "mini_64": null,
+      "thumb_128": null,
+      "rejection_reason": "Recovered match/team-points artwork was rejected; placeholder-only policy restored post-v2.9.13.",
+      "placeholder": "assets/images/achievements/placeholders/matches-100.svg"
+    },
+    {
+      "key": "matches-250",
+      "status": "rejected-placeholder",
+      "approval_id": "REC-0057",
+      "source_file": "image-gen-6(9).png",
+      "source_sha256": "c834bc4a85c3f5f1aebec9523a21ad69bdd6603843747ab37fdb4bce1109c900",
+      "master": null,
+      "mini_64": null,
+      "thumb_128": null,
+      "rejection_reason": "Recovered match/team-points artwork was rejected; placeholder-only policy restored post-v2.9.13.",
+      "placeholder": "assets/images/achievements/placeholders/matches-250.svg"
+    },
+    {
+      "key": "matches-500",
+      "status": "rejected-placeholder",
+      "approval_id": "REC-0062",
+      "source_file": "image-gen-7(6).png",
+      "source_sha256": "5398fb202249dfd469f2249754a5d4c29e51d072d5e0786e06d44843573ccf77",
+      "master": null,
+      "mini_64": null,
+      "thumb_128": null,
+      "rejection_reason": "Recovered match/team-points artwork was rejected; placeholder-only policy restored post-v2.9.13.",
+      "placeholder": "assets/images/achievements/placeholders/matches-500.svg"
+    },
+    {
+      "key": "games-100",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "games-100.png",
+      "source_sha256": "3df6fbd520c969bedc807195cc9e096d2d503f57f9482931442b132a7aeb26ef",
+      "master": "assets/images/achievements/games-100.png",
+      "mini_64": "assets/images/achievements/mini/64/games-100.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/games-100.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "games-500",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "games-500.png",
+      "source_sha256": "cbbd2d3f85d146df38c381323ab068b8968182b4ed157b10584c0a718c943ae3",
+      "master": "assets/images/achievements/games-500.png",
+      "mini_64": "assets/images/achievements/mini/64/games-500.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/games-500.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "games-1000",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "games-1000.png",
+      "source_sha256": "93a1cb656712915d2660a54fe726841bc1007cc565cdbf1c949c587309824ce8",
+      "master": "assets/images/achievements/games-1000.png",
+      "mini_64": "assets/images/achievements/mini/64/games-1000.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/games-1000.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "games-5000",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "games-5000.png",
+      "source_sha256": "59b8b8259b5c9dced74c658d6c3f4ccdea9448ce80de5bf9cb54b21fce518f53",
+      "master": "assets/images/achievements/games-5000.png",
+      "mini_64": "assets/images/achievements/mini/64/games-5000.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/games-5000.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "games-10000",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "games-10000.png",
+      "source_sha256": "cb326c28a94cd80421e6c3a9a79936f731332fe9675dbad6204f6b1d1924665e",
+      "master": "assets/images/achievements/games-10000.png",
+      "mini_64": "assets/images/achievements/mini/64/games-10000.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/games-10000.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "wins-50",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "wins-50.png",
+      "source_sha256": "fdeacb15f820de9f402cb40ec45e72798f1da4ca95a6a5344156caa12fda6dc8",
+      "master": "assets/images/achievements/wins-50.png",
+      "mini_64": "assets/images/achievements/mini/64/wins-50.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/wins-50.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "wins-250",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "wins-250.png",
+      "source_sha256": "81ef42282ec82e718dff1046d07d020c832fc41239663437ed94b2421c5e6f16",
+      "master": "assets/images/achievements/wins-250.png",
+      "mini_64": "assets/images/achievements/mini/64/wins-250.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/wins-250.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "wins-1000",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "wins-1000.png",
+      "source_sha256": "f6c0834b522e076f4024ed13132a5b5a12eb4e61d11c23246165166697154a4a",
+      "master": "assets/images/achievements/wins-1000.png",
+      "mini_64": "assets/images/achievements/mini/64/wins-1000.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/wins-1000.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-pawn",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "01_Pawn_10_points.png",
+      "source_sha256": "2fa5e7b61d1546880800549597d68572972aad95d8390f67490d82b1dfc3edfc",
+      "master": "assets/images/ranks/01_Pawn_10_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-pawn.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-pawn.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-knight",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "02_Knight_20_points.png",
+      "source_sha256": "0e63cb343341958ea539df1d910326fb8d0d925e2e1aacd296473628af21eab2",
+      "master": "assets/images/ranks/02_Knight_20_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-knight.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-knight.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-bishop",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "03_Bishop_50_points.png",
+      "source_sha256": "8a65a9f51f0fea3e416d24fb30ba3cd7d110d6b50b2703484b797556d0bc24c1",
+      "master": "assets/images/ranks/03_Bishop_50_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-bishop.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-bishop.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-rook",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "04_Rook_100_points.png",
+      "source_sha256": "8f773d8612eb28918b58a7f3809eaab1811d1f732b587e81fa3afe188ad9c6b4",
+      "master": "assets/images/ranks/04_Rook_100_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-rook.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-rook.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-queen",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "05_Queen_150_points.png",
+      "source_sha256": "a5a3e2f26fdc263d9f52e99007549cf36efb4010026d639cc52e972b533a8e5b",
+      "master": "assets/images/ranks/05_Queen_150_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-queen.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-queen.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-king",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "06_King_250_points.png",
+      "source_sha256": "1d7d78f0cafdbf40f66cfbb2a44131585fd0d85558ea24ed9794cd7e0b10bbf6",
+      "master": "assets/images/ranks/06_King_250_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-king.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-king.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-bronze-king",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "07_Bronze_King_500_points.png",
+      "source_sha256": "9691af270d5747eb88e9e9e35bd77653c405e2944a4ec305342f383bf5fa2df6",
+      "master": "assets/images/ranks/07_Bronze_King_500_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-bronze-king.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-bronze-king.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-silver-king",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "08_Silver_King_1000_points.png",
+      "source_sha256": "12ea607b7da5061745d68b82cccdb88157bbc54daf30ffed656e95ec497d8907",
+      "master": "assets/images/ranks/08_Silver_King_1000_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-silver-king.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-silver-king.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-gold-king",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "09_Gold_King_1500_points.png",
+      "source_sha256": "2f798c8b75395e09ec0f6478e0fde7a02436c63baddb2a3c7cda6a43c32ad298",
+      "master": "assets/images/ranks/09_Gold_King_1500_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-gold-king.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-gold-king.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-platinum-king",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "10_Platinum_King_2000_points.png",
+      "source_sha256": "c1cdb9de63b803eb34fc56ca7591d8d27dc9899a649940acf84b301ee48aa12f",
+      "master": "assets/images/ranks/10_Platinum_King_2000_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-platinum-king.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-platinum-king.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-amethyst-king",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "11_Amethyst_King_3000_points.png",
+      "source_sha256": "a2aea011f3083d7cdd745153ec13244178823edb7f10995746ca96674ce40afa",
+      "master": "assets/images/ranks/11_Amethyst_King_3000_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-amethyst-king.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-amethyst-king.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-topaz-king",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "12_Topaz_King_4000_points.png",
+      "source_sha256": "db2890b0de808620146a92a50aba1d788c969122697afc8949775dbc0de83138",
+      "master": "assets/images/ranks/12_Topaz_King_4000_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-topaz-king.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-topaz-king.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-emerald-king",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "13_Emerald_King_5500_points.png",
+      "source_sha256": "1c594a794ab7335814fcacab5ab9888c87e9c83815938875225b56df0ddbbea6",
+      "master": "assets/images/ranks/13_Emerald_King_5500_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-emerald-king.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-emerald-king.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-sapphire-king",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "14_Sapphire_King_7000_points.png",
+      "source_sha256": "12174bd4bdee332cd0574253951bef0911de11d48c3f4345b34efa9356b0ef29",
+      "master": "assets/images/ranks/14_Sapphire_King_7000_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-sapphire-king.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-sapphire-king.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-ruby-king",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "15_Ruby_King_8500_points.png",
+      "source_sha256": "16719160f7f57bb5c8d94eb2c06d145bf672f0f1f5beb3db9895ef5aca61515f",
+      "master": "assets/images/ranks/15_Ruby_King_8500_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-ruby-king.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-ruby-king.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "daily-diamond-king",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "16_Diamond_King_10000_points.png",
+      "source_sha256": "d04df337c09f6fc9334ec7042ea830a43d41e149c91a1a20d1937f04a91733fd",
+      "master": "assets/images/ranks/16_Diamond_King_10000_points.png",
+      "mini_64": "assets/images/achievements/mini/64/daily-diamond-king.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/daily-diamond-king.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "live-rank-pawn",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "01_Live_Pawn_50_points.png",
+      "source_sha256": "067be60ee4b107c8259a9ac430596de2a8a7cc97652fd9c4d605cf2e4889187a",
+      "master": "assets/images/live-ranks/01_Live_Pawn_50_points.png",
+      "mini_64": "assets/images/achievements/mini/64/live-rank-pawn.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/live-rank-pawn.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "live-rank-knight",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "02_Live_Knight_150_points.png",
+      "source_sha256": "a08a22bad4d3d6f66d9a154b1943f3c0f760ca69fade1dd111b44567a8e21b7f",
+      "master": "assets/images/live-ranks/02_Live_Knight_150_points.png",
+      "mini_64": "assets/images/achievements/mini/64/live-rank-knight.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/live-rank-knight.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "live-rank-bishop",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "03_Live_Bishop_500_points.png",
+      "source_sha256": "3ff83afbfbc63c02ba35e4641103c06eefb99aa4fd9f516ab33d2f13ef4c2476",
+      "master": "assets/images/live-ranks/03_Live_Bishop_500_points.png",
+      "mini_64": "assets/images/achievements/mini/64/live-rank-bishop.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/live-rank-bishop.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "live-rank-rook",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "04_Live_Rook_2500_points.png",
+      "source_sha256": "373585c49f964e10b03aa0de32894414f9543ba666ce70cf8f971152e05c4ec2",
+      "master": "assets/images/live-ranks/04_Live_Rook_2500_points.png",
+      "mini_64": "assets/images/achievements/mini/64/live-rank-rook.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/live-rank-rook.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "live-rank-queen",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "05_Live_Queen_7500_points.png",
+      "source_sha256": "7bdc0e1ec10289af12a2610627aa61af394eca0dc3815b7054ecaf3c590b95f3",
+      "master": "assets/images/live-ranks/05_Live_Queen_7500_points.png",
+      "mini_64": "assets/images/achievements/mini/64/live-rank-queen.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/live-rank-queen.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "live-rank-king",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "06_Live_King_15000_points.png",
+      "source_sha256": "6116342b9c798a3f8198baf25b7b3559f347711556c71061b909b93a824b5216",
+      "master": "assets/images/live-ranks/06_Live_King_15000_points.png",
+      "mini_64": "assets/images/achievements/mini/64/live-rank-king.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/live-rank-king.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "league-debut",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "league-debut.png",
+      "source_sha256": "ea10377124f1c0ab123d9f5cd14a4eac7d0d070baf039e8cf049b5a50e4e0dbc",
+      "master": "assets/images/achievements/league-debut.png",
+      "mini_64": "assets/images/achievements/mini/64/league-debut.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/league-debut.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "league-regular",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "league-regular.png",
+      "source_sha256": "1bd056380e8ebdaf82cb24c2e7d598f331becd559225afc68f2c1bdbe8e7cb09",
+      "master": "assets/images/achievements/league-regular.png",
+      "mini_64": "assets/images/achievements/mini/64/league-regular.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/league-regular.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "league-veteran",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "league-veteran.png",
+      "source_sha256": "deea3726801e1326a78ac62e0840d59881b6c16d5dedc1d00a21a9e80721aec0",
+      "master": "assets/images/achievements/league-veteran.png",
+      "mini_64": "assets/images/achievements/mini/64/league-veteran.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/league-veteran.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "league-specialist",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "league-specialist.png",
+      "source_sha256": "dbc095fa9f9e22928ab3a7c59fc4825559ed9ecb25a3dc2e0efad13633c14f84",
+      "master": "assets/images/achievements/league-specialist.png",
+      "mini_64": "assets/images/achievements/mini/64/league-specialist.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/league-specialist.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "league-legend",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "league-legend.png",
+      "source_sha256": "b9b1f6d9487ef3d39507deaf4285a7edcb9ed9daad5c56c70bb632cae48737b7",
+      "master": "assets/images/achievements/league-legend.png",
+      "mini_64": "assets/images/achievements/mini/64/league-legend.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/league-legend.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "multi-league",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "multi-league.png",
+      "source_sha256": "7691032c6524efb8f58880240372345e7463383790dadd91f70487565feb7c77",
+      "master": "assets/images/achievements/multi-league.png",
+      "mini_64": "assets/images/achievements/mini/64/multi-league.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/multi-league.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "all-league",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "all-league.png",
+      "source_sha256": "e8a85c8f7d7ef4b9a1626287b504e6854ed7a0e27a1d84a124ab47347df00aad",
+      "master": "assets/images/achievements/all-league.png",
+      "mini_64": "assets/images/achievements/mini/64/all-league.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/all-league.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "1wl-competitor",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "1wl-competitor.png",
+      "source_sha256": "d6ba8fdd0fdd593aabdf43aef2d618f32533200dfa071bcb39d6fded609894d3",
+      "master": "assets/images/achievements/1wl-competitor.png",
+      "mini_64": "assets/images/achievements/mini/64/1wl-competitor.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/1wl-competitor.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "1wl-veteran",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "1wl-veteran.png",
+      "source_sha256": "134b4e5455054446247684848ae3a081d0ac085da68f9337306ec5ffa63da27c",
+      "master": "assets/images/achievements/1wl-veteran.png",
+      "mini_64": "assets/images/achievements/mini/64/1wl-veteran.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/1wl-veteran.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "1wl-legend",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "1wl-legend.png",
+      "source_sha256": "d34469bf758448b74622eb9ce52b48e31237aea63c2691168bab28633820eb50",
+      "master": "assets/images/achievements/1wl-legend.png",
+      "mini_64": "assets/images/achievements/mini/64/1wl-legend.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/1wl-legend.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "1wl-first-point",
+      "status": "explicit-placeholder",
+      "source_file": "1wl-first-point.svg"
+    },
+    {
+      "key": "1wl-scorer",
+      "status": "explicit-placeholder",
+      "source_file": "1wl-scorer.svg"
+    },
+    {
+      "key": "1wl-specialist",
+      "status": "explicit-placeholder",
+      "source_file": "1wl-specialist.svg"
+    },
+    {
+      "key": "1wl-master",
+      "status": "explicit-placeholder",
+      "source_file": "1wl-master.svg"
+    },
+    {
+      "key": "pcl-competitor",
+      "status": "explicit-placeholder",
+      "source_file": "pcl-competitor.svg"
+    },
+    {
+      "key": "pcl-veteran",
+      "status": "explicit-placeholder",
+      "source_file": "pcl-veteran.svg"
+    },
+    {
+      "key": "pcl-legend",
+      "status": "explicit-placeholder",
+      "source_file": "pcl-legend.svg"
+    },
+    {
+      "key": "pcl-first-point",
+      "status": "explicit-placeholder",
+      "source_file": "pcl-first-point.svg"
+    },
+    {
+      "key": "pcl-scorer",
+      "status": "explicit-placeholder",
+      "source_file": "pcl-scorer.svg"
+    },
+    {
+      "key": "pcl-specialist",
+      "status": "explicit-placeholder",
+      "source_file": "pcl-specialist.svg"
+    },
+    {
+      "key": "pcl-master",
+      "status": "explicit-placeholder",
+      "source_file": "pcl-master.svg"
+    },
+    {
+      "key": "tcmac-competitor",
+      "status": "explicit-placeholder",
+      "source_file": "tcmac-competitor.svg"
+    },
+    {
+      "key": "tcmac-veteran",
+      "status": "explicit-placeholder",
+      "source_file": "tcmac-veteran.svg"
+    },
+    {
+      "key": "tcmac-legend",
+      "status": "explicit-placeholder",
+      "source_file": "tcmac-legend.svg"
+    },
+    {
+      "key": "tcmac-first-point",
+      "status": "explicit-placeholder",
+      "source_file": "tcmac-first-point.svg"
+    },
+    {
+      "key": "tcmac-scorer",
+      "status": "explicit-placeholder",
+      "source_file": "tcmac-scorer.svg"
+    },
+    {
+      "key": "tcmac-specialist",
+      "status": "explicit-placeholder",
+      "source_file": "tcmac-specialist.svg"
+    },
+    {
+      "key": "tcmac-master",
+      "status": "explicit-placeholder",
+      "source_file": "tcmac-master.svg"
+    },
+    {
+      "key": "tmcl-competitor",
+      "status": "explicit-placeholder",
+      "source_file": "tmcl-competitor.svg"
+    },
+    {
+      "key": "tmcl-veteran",
+      "status": "explicit-placeholder",
+      "source_file": "tmcl-veteran.svg"
+    },
+    {
+      "key": "tmcl-legend",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "tmcl-legend.png",
+      "source_sha256": "46eaa0dd2049f4c781d9c5b3939eac42e57c08efab72a2be7214f65d06096469",
+      "master": "assets/images/achievements/tmcl-legend.png",
+      "mini_64": "assets/images/achievements/mini/64/tmcl-legend.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/tmcl-legend.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "tmcl-first-point",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "tmcl-first-point.png",
+      "source_sha256": "c7754df3f4684d86d7707c962c1f12cd363b44808cfbdbd3cba31512d7ea4987",
+      "master": "assets/images/achievements/tmcl-first-point.png",
+      "mini_64": "assets/images/achievements/mini/64/tmcl-first-point.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/tmcl-first-point.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "tmcl-scorer",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "tmcl-scorer.png",
+      "source_sha256": "68c2b305e44963fdc88e730c320ef22c2f904d6f2076ee79d8a5987fb02d0431",
+      "master": "assets/images/achievements/tmcl-scorer.png",
+      "mini_64": "assets/images/achievements/mini/64/tmcl-scorer.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/tmcl-scorer.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "tmcl-specialist",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "tmcl-specialist.png",
+      "source_sha256": "b39e4bfba214defc63d1c0260fc2c712026f7b08672b26bbe30440afb3caeb6e",
+      "master": "assets/images/achievements/tmcl-specialist.png",
+      "mini_64": "assets/images/achievements/mini/64/tmcl-specialist.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/tmcl-specialist.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "tmcl-master",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "tmcl-master.png",
+      "source_sha256": "d2975793c81916902364fbf721525ef08b39e39bb0d1f03c5c860023fcc632de",
+      "master": "assets/images/achievements/tmcl-master.png",
+      "mini_64": "assets/images/achievements/mini/64/tmcl-master.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/tmcl-master.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "kotml-competitor",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "kotml-competitor.png",
+      "source_sha256": "d77e4aa4c8b0a94ea219c62552d2097f0529eb9cf4e84c36a0fbe6faf36c810b",
+      "master": "assets/images/achievements/kotml-competitor.png",
+      "mini_64": "assets/images/achievements/mini/64/kotml-competitor.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/kotml-competitor.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "kotml-veteran",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "kotml-veteran.png",
+      "source_sha256": "4677476da9d95bc9cf80508d0e9e3a5d2b1c23c109013ac70df90c4ac4621feb",
+      "master": "assets/images/achievements/kotml-veteran.png",
+      "mini_64": "assets/images/achievements/mini/64/kotml-veteran.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/kotml-veteran.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "kotml-legend",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "kotml-legend.png",
+      "source_sha256": "8159bbf5c8d51a3297aab2c46dcf14c16502976f555ae4d4871919a47e8097ea",
+      "master": "assets/images/achievements/kotml-legend.png",
+      "mini_64": "assets/images/achievements/mini/64/kotml-legend.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/kotml-legend.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "kotml-first-point",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "kotml-first-point.png",
+      "source_sha256": "85f55d0b446e051f4f3694e9950798a84f462e229540927cbc769c426dad28a3",
+      "master": "assets/images/achievements/kotml-first-point.png",
+      "mini_64": "assets/images/achievements/mini/64/kotml-first-point.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/kotml-first-point.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "kotml-scorer",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "kotml-scorer.png",
+      "source_sha256": "e422c695c20ecc616f36a604e3eb0393470be903a75074af7076e4b05d72f61a",
+      "master": "assets/images/achievements/kotml-scorer.png",
+      "mini_64": "assets/images/achievements/mini/64/kotml-scorer.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/kotml-scorer.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "kotml-specialist",
+      "status": "explicit-placeholder",
+      "source_file": "kotml-specialist.svg"
+    },
+    {
+      "key": "kotml-master",
+      "status": "explicit-placeholder",
+      "source_file": "kotml-master.svg"
+    },
+    {
+      "key": "seniority-1m",
+      "status": "explicit-placeholder",
+      "source_file": "seniority-1m.svg"
+    },
+    {
+      "key": "seniority-3m",
+      "status": "explicit-placeholder",
+      "source_file": "seniority-3m.svg"
+    },
+    {
+      "key": "seniority-6m",
+      "status": "explicit-placeholder",
+      "source_file": "seniority-6m.svg"
+    },
+    {
+      "key": "seniority-1y",
+      "status": "explicit-placeholder",
+      "source_file": "seniority-1y.svg"
+    },
+    {
+      "key": "seniority-2y",
+      "status": "explicit-placeholder",
+      "source_file": "seniority-2y.svg"
+    },
+    {
+      "key": "seniority-3y",
+      "status": "explicit-placeholder",
+      "source_file": "seniority-3y.svg"
+    },
+    {
+      "key": "seniority-5y",
+      "status": "explicit-placeholder",
+      "source_file": "seniority-5y.svg"
+    },
+    {
+      "key": "mca-debut",
+      "status": "explicit-placeholder",
+      "source_file": "mca-debut.svg"
+    },
+    {
+      "key": "mca-10",
+      "status": "explicit-placeholder",
+      "source_file": "mca-10.svg"
+    },
+    {
+      "key": "mca-50",
+      "status": "explicit-placeholder",
+      "source_file": "mca-50.svg"
+    },
+    {
+      "key": "mca-100",
+      "status": "explicit-placeholder",
+      "source_file": "mca-100.svg"
+    },
+    {
+      "key": "mca-250",
+      "status": "explicit-placeholder",
+      "source_file": "mca-250.svg"
+    },
+    {
+      "key": "mca-top10",
+      "status": "explicit-placeholder",
+      "source_file": "mca-top10.svg"
+    },
+    {
+      "key": "mca-top10-10",
+      "status": "explicit-placeholder",
+      "source_file": "mca-top10-10.svg"
+    },
+    {
+      "key": "mca-podium",
+      "status": "explicit-placeholder",
+      "source_file": "mca-podium.svg"
+    },
+    {
+      "key": "mca-podium-5",
+      "status": "explicit-placeholder",
+      "source_file": "mca-podium-5.svg"
+    },
+    {
+      "key": "mca-win-1",
+      "status": "explicit-placeholder",
+      "source_file": "mca-win-1.svg"
+    },
+    {
+      "key": "mca-win-5",
+      "status": "explicit-placeholder",
+      "source_file": "mca-win-5.svg"
+    },
+    {
+      "key": "mca-win-10",
+      "status": "explicit-placeholder",
+      "source_file": "mca-win-10.svg"
+    },
+    {
+      "key": "mca-streak-3",
+      "status": "explicit-placeholder",
+      "source_file": "mca-streak-3.svg"
+    },
+    {
+      "key": "mca-streak-5",
+      "status": "explicit-placeholder",
+      "source_file": "mca-streak-5.svg"
+    },
+    {
+      "key": "mca-streak-10",
+      "status": "explicit-placeholder",
+      "source_file": "mca-streak-10.svg"
+    },
+    {
+      "key": "mca-streak-15",
+      "status": "explicit-placeholder",
+      "source_file": "mca-streak-15.svg"
+    },
+    {
+      "key": "mca-streak-20",
+      "status": "explicit-placeholder",
+      "source_file": "mca-streak-20.svg"
+    },
+    {
+      "key": "mca-wins-5",
+      "status": "explicit-placeholder",
+      "source_file": "mca-wins-5.svg"
+    },
+    {
+      "key": "mca-wins-10",
+      "status": "explicit-placeholder",
+      "source_file": "mca-wins-10.svg"
+    },
+    {
+      "key": "mca-wins-15",
+      "status": "explicit-placeholder",
+      "source_file": "mca-wins-15.svg"
+    },
+    {
+      "key": "mca-wins-20",
+      "status": "explicit-placeholder",
+      "source_file": "mca-wins-20.svg"
+    },
+    {
+      "key": "mca-wins-25",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "arena-warlord.png",
+      "source_sha256": "eac584cc90b8bbedd5e7e2d2d1b9082c248cc0780cc1c7be14e9ca1046a93bcd",
+      "master": "assets/images/achievements/arena-warlord.png",
+      "mini_64": "assets/images/achievements/mini/64/mca-wins-25.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/mca-wins-25.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "mca-wins-50",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "arena-champion.png",
+      "source_sha256": "4ca1d2c9f11567a1e4a77eedf35bd381b7c08705557cef671022330e689eb62a",
+      "master": "assets/images/achievements/arena-champion.png",
+      "mini_64": "assets/images/achievements/mini/64/mca-wins-50.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/mca-wins-50.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "mca-wins-75",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "arena-overlord.png",
+      "source_sha256": "9805b8c55b96af1c2850b3111cdecb5dd3b32fdf6412baabd0467a4f158fa2eb",
+      "master": "assets/images/achievements/arena-overlord.png",
+      "mini_64": "assets/images/achievements/mini/64/mca-wins-75.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/mca-wins-75.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "mca-wins-100",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "arena-immortal.png",
+      "source_sha256": "0168cfd5d25f4d74e94c95210dd9059bb59564dd39496b96b3007081ced90fa5",
+      "master": "assets/images/achievements/arena-immortal.png",
+      "mini_64": "assets/images/achievements/mini/64/mca-wins-100.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/mca-wins-100.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "same-day-matches-2",
+      "status": "explicit-placeholder",
+      "source_file": "same-day-matches-2.svg"
+    },
+    {
+      "key": "same-day-matches-3",
+      "status": "explicit-placeholder",
+      "source_file": "same-day-matches-3.svg"
+    },
+    {
+      "key": "same-day-matches-4",
+      "status": "explicit-placeholder",
+      "source_file": "same-day-matches-4.svg"
+    },
+    {
+      "key": "same-day-matches-5",
+      "status": "explicit-placeholder",
+      "source_file": "same-day-matches-5.svg"
+    },
+    {
+      "key": "concurrent-games-5",
+      "status": "explicit-placeholder",
+      "source_file": "concurrent-games-5.svg"
+    },
+    {
+      "key": "concurrent-games-10",
+      "status": "explicit-placeholder",
+      "source_file": "concurrent-games-10.svg"
+    },
+    {
+      "key": "concurrent-games-25",
+      "status": "explicit-placeholder",
+      "source_file": "concurrent-games-25.svg"
+    },
+    {
+      "key": "concurrent-games-50",
+      "status": "explicit-placeholder",
+      "source_file": "concurrent-games-50.svg"
+    },
+    {
+      "key": "concurrent-games-100",
+      "status": "explicit-placeholder",
+      "source_file": "concurrent-games-100.svg"
+    },
+    {
+      "key": "groups-1",
+      "status": "explicit-placeholder",
+      "source_file": "groups-1.svg"
+    },
+    {
+      "key": "groups-5",
+      "status": "explicit-placeholder",
+      "source_file": "groups-5.svg"
+    },
+    {
+      "key": "groups-10",
+      "status": "explicit-placeholder",
+      "source_file": "groups-10.svg"
+    },
+    {
+      "key": "groups-15",
+      "status": "explicit-placeholder",
+      "source_file": "groups-15.svg"
+    },
+    {
+      "key": "groups-20",
+      "status": "explicit-placeholder",
+      "source_file": "groups-20.svg"
+    },
+    {
+      "key": "tournament-first-medal",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "first-tournament-medal.png",
+      "source_sha256": "c6201520ad3cb56ca81e0e5af1470bdb1a4cd9bd59d9567e70f26fe6bbd0c419",
+      "master": "assets/images/achievements/first-tournament-medal.png",
+      "mini_64": "assets/images/achievements/mini/64/tournament-first-medal.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/tournament-first-medal.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "tournament-first-gold",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "tournament-champion.png",
+      "source_sha256": "4db62005631e7cc9f51edd3cce91249b56da949816ab72e357828aa7c1c1e4c0",
+      "master": "assets/images/achievements/tournament-champion.png",
+      "mini_64": "assets/images/achievements/mini/64/tournament-first-gold.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/tournament-first-gold.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "tournament-medals-5",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "five-tournament-medals.png",
+      "source_sha256": "710f2ab7eec1bcf6b63854c496a6daf2d405f76b1397a8da206b421215a69e1c",
+      "master": "assets/images/achievements/five-tournament-medals.png",
+      "mini_64": "assets/images/achievements/mini/64/tournament-medals-5.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/tournament-medals-5.webp",
+      "normalized_in_place": true
+    },
+    {
+      "key": "tournament-medals-10",
+      "status": "existing-resolved",
+      "approval_id": "",
+      "source_file": "ten-tournament-medals.png",
+      "source_sha256": "f3a84ef89ac34c106b0db5156cc5ab2b30b40c305c759c5023a5ddbfb62fd4de",
+      "master": "assets/images/achievements/ten-tournament-medals.png",
+      "mini_64": "assets/images/achievements/mini/64/tournament-medals-10.webp",
+      "thumb_128": "assets/images/achievements/thumbs/128/tournament-medals-10.webp",
+      "normalized_in_place": true
+    }
+  ],
+  "current_policy_note": "Post-v2.9.13: Matches and Team Points recovered artwork is invalid and must remain placeholder-only."
+}

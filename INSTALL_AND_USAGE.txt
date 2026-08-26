@@ -1,0 +1,18 @@
+PROMOTE TO KING v2.8.0
+======================
+
+This release requires TWO FRESH EMPTY MariaDB databases: Core + Analytics.
+Do not point it at the old v2.7.x Team Points database.
+
+Read INSTALL_v2.8.0.md before deployment.
+Run the companion P2K_v2.8.0_Fresh_DB_Initializer_v1.0.0 after configuring both databases.
+Expected seed total: 4,473 members; 17,091 matches; 104,761 boards; 198,107 game events; 371,168 Club Points.
+
+Administrator storage monitoring:
+  TeamPointsAdmin.html?admin=1&tab=storage
+
+See also:
+  ARCHITECTURE_v2.8.0.md
+  CRON_SETUP_v2.8.0.md
+  DECOMMISSION_v2.8.0.md
+  RELEASE_NOTES_v2.8.0.md

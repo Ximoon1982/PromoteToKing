@@ -1,0 +1,38 @@
+PROMOTE TO KING v2.8.1 HOTFIX 2 — INTEGRATED VALIDATION
+Date: 2026-08-07
+Result: PASS
+
+Baseline convergence
+- v2.8.1 Hotfix1 retained as the application/UI baseline.
+- RecoveryFix7 feature work selectively carried forward.
+- Combined Core and Analytics schema revision: 3.
+- Supported in-place sources: v2.8 schema 1, v2.8.1/Hotfix1 schema 2, RecoveryFix7 schema 2.
+
+Integrated feature checks
+- Opportunistic Daily and Chess960 rating storage through the shared Chess.com gateway.
+- Materialized last_standard_game_at and last_chess960_game_at.
+- Recruitment Assistant RM-2 uses the match category rating and the stored member pool.
+- Recruitment excludes registered, unrated, out-of-range, below-lowest-opponent, and opponent-club members; strongest candidates are added first.
+- Team Insights retains v2.8.1 duplicate-KPI cleanup and adds RecoveryFix7 zoom scale fitting, color semantics, current-registration future shading, and Low/Medium/High Club Points projections.
+- 18 previously shipped achievement art pairs are mapped to their catalogue keys.
+
+Responsive cross-check
+- Dashboard layout itself is unchanged.
+- Insights, Hall of Fame and Administration containers are constrained to the same parent width as the site header.
+- Embedded pages share the dashboard mobile gutter instead of stacking standalone 12–24 px page gutters.
+- Wide tables keep desktop columns but scroll inside table wrappers on narrow screens.
+- Nested Hall/Insights/Administration tab bars become compact horizontal scrollers on phones.
+- Mobile card/filter spacing is reduced; desktop rules are unchanged outside the <=720 px breakpoints.
+
+Validation performed
+- Focused Python assertions: 13 passed.
+- Full tests/validate_package.py on a clean release tree: PASS.
+- Node retained static UI test suite: PASS.
+- JavaScript syntax checks: PASS.
+- PHP lint for all PHP files: PASS.
+- Python compilation: PASS.
+- HTML local-resource references and duplicate IDs: PASS.
+- Manifest/file inventory consistency: PASS.
+
+Production note
+No production MariaDB mutation and no live Chess.com recruitment scan were executed in this build environment. After deployment, verify the automatic schema-3 convergence against the hosted Core/Analytics databases and confirm recruitment results with current stored ratings.

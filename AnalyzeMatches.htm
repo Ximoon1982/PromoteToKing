@@ -5,19 +5,38 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <meta content="dark" name="color-scheme"/>
-<title>Promote to King Upcoming Matches Analyzer</title>
-<link rel="icon" type="image/jpeg" href="assets/images/p2k-logo.jpg">
-<!-- Promote to King Upcoming Matches Analyzer - Version 43: cumulative league minimum/lineup/win-chance recruitment and date-free plain-text copy -->
-<link href="assets/css/upcoming-matches-analyzer.css" rel="stylesheet"/></head>
+<meta content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self' https://api.chess.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" http-equiv="Content-Security-Policy"/><title>Promote to King Upcoming Matches Analyzer</title>
+<link href="assets/images/p2k-logo.jpg" rel="icon" type="image/jpeg"/>
+<!-- Promote to King Upcoming Matches Analyzer - Version 44: cumulative league minimum/lineup/win-chance recruitment and date-free plain-text copy -->
+<link href="assets/css/upcoming-matches-analyzer.css?v=2.10.6" rel="stylesheet"/><link href="assets/css/info-popover.css?v=2.10.6" rel="stylesheet"/><link href="assets/css/match-history.css?v=2.10.6" rel="stylesheet"/><link href="assets/css/analysis-failure-ui.css?v=2.10.6" rel="stylesheet"/>
+<script src="config/site-branding.js?v=2.10.6"></script><script src="assets/js/site-config.js?v=2.10.6"></script><script defer src="assets/js/shared/real-oauth.js?v=2.10.6"></script><script src="assets/js/shared/simulated-oauth.js?v=2.10.6"></script><script defer src="assets/js/shared/authenticated-member-refresh.js?v=2.10.6"></script><script src="assets/js/shared/admin-page-guard.js?v=2.10.6"></script><style>html.admin-access-pending body{visibility:hidden}</style>
+<link rel="stylesheet" href="assets/css/admin-embedded.css?v=2.10.6">
+<script src="assets/js/shared/svg-touch-title.js?v=2.10.6"></script><script src="assets/js/shared/embedded-page.js?v=2.10.6"></script>
+<link href="assets/css/responsive-unification.css?v=2.10.6" rel="stylesheet"/>
+</head>
 <body>
 <div class="p2k-analyzer" id="p2kUpcomingAnalyzer">
 <div class="p2k-header">
 <h2>Promote to King Upcoming Matches Analyzer</h2>
 <img alt="Promote to King club logo" src="assets/images/p2k-logo.jpg" title="Promote to King"/>
 </div>
-<button class="p2k-main-button" id="p2kAnalyzeButton" type="button">
-    Analyze upcoming matches
-  </button>
+<button class="p2k-main-button" id="p2kAnalyzeButton" type="button">Analyze</button>
+<div aria-live="polite" class="p2k-status" id="p2kStatus">
+<div class="p2k-status-row">
+<div class="p2k-status-text" id="p2kStatusText"></div>
+<div class="p2k-processing-actions" id="p2kProcessingActions">
+<button class="p2k-cancel-button" id="p2kCancelButton" title="Stop processing the remaining matches and display the results loaded so far." type="button">Cancel</button>
+</div>
+</div>
+<div aria-hidden="true" class="p2k-progress-track" id="p2kProgressTrack">
+<div class="p2k-progress-bar" id="p2kProgressBar"></div>
+</div>
+</div>
+<div aria-label="Upcoming matches sections" class="p2k-upcoming-tabs" role="tablist">
+<button aria-controls="p2kUpcomingMatchesPanel" aria-selected="true" class="p2k-upcoming-tab" id="p2kUpcomingMatchesTab" role="tab" type="button">Matches</button>
+<button aria-controls="p2kUpcomingPlayersPanel" aria-selected="false" class="p2k-upcoming-tab" id="p2kUpcomingPlayersTab" role="tab" tabindex="-1" type="button">Players</button>
+</div>
+<section aria-labelledby="p2kUpcomingMatchesTab" class="p2k-upcoming-panel" id="p2kUpcomingMatchesPanel" role="tabpanel">
 <div class="p2k-filter-title">Filters</div>
 <fieldset class="p2k-filter-group">
 <legend>Registration status</legend>
@@ -63,26 +82,52 @@
 <span><i class="p2k-dot p2k-dot-orange"></i>Open</span>
 <span><i class="p2k-dot p2k-dot-green"></i>Locked</span>
 </div>
-<div aria-live="polite" class="p2k-status" id="p2kStatus">
-<div class="p2k-status-row">
-<div class="p2k-status-text" id="p2kStatusText"></div>
-<div class="p2k-processing-actions" id="p2kProcessingActions">
-<button class="p2k-cancel-button" id="p2kCancelButton" title="Stop processing the remaining matches and display the results loaded so far." type="button">Cancel</button>
-</div>
-</div>
-<div aria-hidden="true" class="p2k-progress-track" id="p2kProgressTrack">
-<div class="p2k-progress-bar" id="p2kProgressBar"></div>
-</div>
-</div>
 <section aria-live="polite" class="p2k-recruitment-recap" hidden="" id="p2kRecruitmentRecap"></section>
 <div aria-label="Search analyzed matches" class="p2k-match-search-toolbar" hidden="" id="p2kSearchToolbar" role="search">
 <div class="p2k-match-search-group">
 <label class="p2k-search-label" for="p2kMatchSearch">Match</label>
 <input autocomplete="off" class="p2k-match-search" id="p2kMatchSearch" placeholder="Search match name or opponent..." spellcheck="false" type="search"/>
-<button class="p2k-search-clear" id="p2kClearSearch" type="button">Clear</button>
+<button class="p2k-search-clear" hidden aria-hidden="true" tabindex="-1" id="p2kClearSearch" type="button">Clear</button>
 </div>
 </div>
 <div class="p2k-results" id="p2kResults"></div>
+</section>
+<section aria-labelledby="p2kUpcomingPlayersTab" class="p2k-upcoming-panel p2k-players-panel" hidden id="p2kUpcomingPlayersPanel" role="tabpanel">
+<div class="p2k-players-intro">
+<div>
+<h3>Registered players</h3>
+<p>Promote to King players registered across the currently analyzed upcoming matches.</p>
+</div>
+<button aria-controls="p2kSharedInfoPopover" aria-expanded="false" aria-label="Player statistics information" class="p2k-info-button p2k-info-mark" data-p2k-info-message="Ratings and timeout rates are calculated only from the loaded match sheets. No player profile or player statistics endpoint is requested. Classical and Chess960 ratings and timeout percentages are shown separately. Timeout values are read as percentage points from the match sheets, so 1 is displayed as 1%. When several relevant match sheets contain a value, the median observed value is displayed." type="button">i</button>
+</div>
+<div class="p2k-player-summary" id="p2kPlayerSummary"></div>
+<div aria-label="Search and sort registered players" class="p2k-player-toolbar" role="search">
+<div class="p2k-player-search-group">
+<label class="p2k-search-label" for="p2kPlayerSearch">Player</label>
+<input autocomplete="off" class="p2k-match-search" id="p2kPlayerSearch" placeholder="Search player name..." spellcheck="false" type="search"/>
+<button class="p2k-search-clear" hidden aria-hidden="true" tabindex="-1" id="p2kClearPlayerSearch" type="button">Clear</button>
+</div>
+<label class="p2k-player-sort-label" for="p2kPlayerSort">Sort by
+<select class="p2k-player-sort" id="p2kPlayerSort">
+<option value="registrations-desc">Most registrations</option>
+<option value="registrations-asc">Fewest registrations</option>
+<option value="classical-desc">Classical rating — high to low</option>
+<option value="classical-asc">Classical rating — low to high</option>
+<option value="chess960-desc">Chess960 rating — high to low</option>
+<option value="chess960-asc">Chess960 rating — low to high</option>
+<option value="classicalTimeout-asc">Classical timeout — low to high</option>
+<option value="classicalTimeout-desc">Classical timeout — high to low</option>
+<option value="chess960Timeout-asc">Chess960 timeout — low to high</option>
+<option value="chess960Timeout-desc">Chess960 timeout — high to low</option>
+<option value="name-asc">Player name — A to Z</option>
+<option value="name-desc">Player name — Z to A</option>
+</select>
+</label>
+</div>
+<div aria-live="polite" class="p2k-player-results" id="p2kPlayerResults">
+<div class="p2k-empty">Analyze upcoming matches to build the registered-player list.</div>
+</div>
+</section>
 <div aria-hidden="true" class="p2k-chart-modal" hidden="" id="p2kChartModal">
 <div aria-labelledby="p2kChartModalTitle" aria-modal="true" class="p2k-chart-modal-dialog" role="dialog">
 <div class="p2k-chart-modal-header">
@@ -134,7 +179,5 @@
 </div>
 </div>
 </div>
-<script src="assets/js/shared/api-cache.js"></script>
-<script src="assets/js/pages/upcoming-matches-analyzer.js"></script>
-</body>
+<script src="assets/js/site-config.js?v=2.10.6"></script><script src="assets/js/shared/tab-activity.js?v=2.10.6"></script><script src="assets/js/shared/info-popover.js?v=2.10.6"></script><script src="assets/js/shared/api-cache.js?v=2.10.6"></script><script src="assets/js/shared/match-priority.js?v=2.10.6"></script><script src="assets/js/shared/api-client.js?v=2.10.6"></script><script src="assets/js/shared/analysis-coordinator.js?v=2.10.6"></script><script src="assets/js/pages/upcoming-matches-analyzer.js?v=2.10.6"></script><script src="assets/js/shared/analysis-failure-ui.js?v=2.10.6"></script><script src="assets/js/shared/upcoming-analysis-core.js?v=2.10.6"></script><script src="assets/js/shared/match-history-ui.js?v=2.10.6"></script><script src="assets/js/shared/control-hints.js?v=2.10.6"></script></body>
 </html>

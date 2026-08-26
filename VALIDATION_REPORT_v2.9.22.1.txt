@@ -1,0 +1,42 @@
+Promote to King v2.9.22.1 validation report
+==============================================
+Date: 2026-08-14 Europe/Luxembourg
+Baseline: exact frozen v2.9.22 standalone SHA-256 433e00e748250d2453860c63937f7e95dde27e359ae57a10a8845214cf6d14b0
+Scope: Fresh Points Reconstruction throughput hotfix only
+
+Release contract
+----------------
+- VERSION: 2.9.22.1
+- Core schema: 15 unchanged
+- Analytics schema: 7 unchanged
+- Existing v2.9.22 CRON contract retained unchanged
+- No SQL migration/reset/reseed
+- Protected OAuth/database/server configuration unchanged
+
+Focused throughput gates
+------------------------
+- Reconstruction fetch/persistence decoupling source contract: PASS
+- 400-row staging batch / 1,600-row high-water backpressure contract: PASS
+- Player archive fallback 24-member parallel pool: PASS
+- Old serial fallback loops absent: PASS
+- Archive discoveries batched per monthly response: PASS
+- Task Control OAuth launch/completion/persistence metrics: PASS
+- v2.9.22 reconstruction/ACDM inheritance gates: PASS
+
+Automated regression
+--------------------
+- pytest: 473 / 473 PASS
+- package/static validator: PASS before final release-document inventory rebuild
+- PHP lint: 108 source files covered by package validator
+- JavaScript syntax: 55 source files covered by package validator
+- Shell syntax: v2.9.22.1 updater PASS; retained release shell suite unchanged
+
+Browser execution
+-----------------
+- Fresh Points Reconstruction Task Control Chromium gate: PASS, 0 page errors
+- Updated gate verifies Bearer-parallel diagnostics, OAuth launch/completion rates and persistence backlog/batch counters.
+- Retained browser matrix: 16 / 16 PASS. The combined runner reached its wall-clock limit after 14 completed gates; the two tail gates (Hall and OAuth throughput) were rerun individually and both PASS with zero product assertion failures.
+
+Packaging/replay
+----------------
+Final standalone clean-extraction, exact incremental replay and updater replay are recorded in FINAL_FREEZE_REPORT_v2.9.22.1.txt after immutable archive construction.

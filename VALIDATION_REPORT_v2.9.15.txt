@@ -1,0 +1,53 @@
+Promote to King v2.9.15 validation report
+==========================================
+Base release: exact canonical v2.9.14 standalone released 2026-08-12
+Baseline standalone SHA256: bc9aca3b18f14b594b6bcbe9266088f2c6c2e07f03ebba6d663f74c361df64ab
+Core schema: 13 (unchanged)
+Analytics schema: 6 (unchanged)
+Achievement catalogue: 162 (unchanged)
+External CRON cadence: unchanged (4 tasks)
+
+Scope
+-----
+This is the telemetry corrective release that was temporarily prepared under the wrong v2.9.14 number. Functional source is unchanged from that corrected candidate except for release/runtime identity, cache-bust markers, versioned release scripts/docs, and compatibility-test version declarations.
+
+Telemetry-driven corrections
+----------------------------
+- ACSR authoritative Club/Member pulse: 34-second worker budget through a 45-second control request envelope; server derives/enforces a viable minimum from request_timeout_seconds while Worker::hasOutboundRequestBudget() remains unchanged.
+- Automatic archive repair: fallback-only, shared ACAMR + Continuous Refresh locked budget of 12 archive requests per 600 seconds, slot consumed only on emitted archive work, no speculative previous-month planner acquisition.
+- ISRE: Continuous Refresh persistence/UI-event/log outcomes batched by cycle; failures bounded/sampled; empty-plan logs throttled to at most once per minute; Task Control high-frequency renderer null-safe.
+- Member CRON: Player endpoint capped at 38 seconds with remaining wall-clock budget recomputed before optional maintenance classes, preserving margin under the existing 55-second shell curl ceiling.
+
+Source validation
+-----------------
+- Python regression suite: 406/406 PASS.
+- Package validator: PASS.
+- Functional normalized comparison to the corrected misnumbered candidate: PASS; after normalizing 2.9.15 release literals back to 2.9.14, functional source is byte-identical.
+- PHP lint / JavaScript syntax / release shell syntax: PASS.
+
+Retained Chromium/browser matrix
+--------------------------------
+- 13/13 retained gates PASS.
+- P0 Interactive Survival: five background gateway lanes occupied, foreground admitted through reserved lane in 1 ms; 0 page errors.
+- OAuth rate convergence: settled safely below detected boundary; 0 page errors.
+- Persisted OAuth: clean-URL authentication and gateway batching PASS; 0 direct Chess.com bypasses; 0 page errors.
+- Transport/cache stress: 700 Match Creation details, 150 cache hits / 50 network misses, max six gateway posts, mocked settled rate 46.5/s; 0 page errors.
+- Match Creation transport, OAuth throughput, Challenge context, v2.8.11 UI behavior, v2.9.2/v2.9.3 Opponent Balance, Hall/layout and both startup/admin gates: PASS with 0 page errors.
+
+Incremental updater replay
+--------------------------
+- Actual v2.9.14 -> v2.9.15 bash updater replay against a fresh exact canonical v2.9.14 tree: PASS.
+- Required unchanged compact-backup helpers are force-included in the staged incremental payload because the updater executes the backup helper from staging before touching production.
+- No release removals.
+- Protected config.local.php: byte-identical after replay.
+- Protected oauth.local.php: byte-identical after replay.
+- Protected data/server-config.json: byte-identical after replay.
+- Exactly four v2.9.15 P2K CRON entries installed; four v2.9.14 dispatcher entries removed.
+- Unrelated synthetic CRON entry retained.
+- 5,000 disposable Chess.com cache fixture files retained in production; 0 copied into the state backup.
+- Persistent _backup output: exactly 4 files / 0 subdirectories.
+- Every target release file byte-matched the v2.9.15 working tree after updater replay.
+
+Environment note
+----------------
+The validation container has PHP PDO but no installed PDO database driver. The updater replay substitutes only the live Core 13 / Analytics 6 database connection assertion; payload validation, compact backup, file application, protected files, CRON replacement, rollback material and filesystem fixtures run for real.

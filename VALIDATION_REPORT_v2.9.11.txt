@@ -1,0 +1,44 @@
+Promote to King v2.9.11 validation report
+
+Release base: v2.9.10
+Core schema: 12 (unchanged)
+Analytics schema: 6 (unchanged)
+Achievement catalogue: 162 (unchanged)
+Schema migration: none
+CRON cadence change: none
+
+Primary changes:
+- paced authenticated calls-per-second controller
+- safe/unsafe backlash-boundary convergence
+- endpoint-class latency baselines
+- Match Creation high-latency saturation handling
+- Speed Fetch learned-rate diagnostics
+- shared server-maintenance rate budget
+
+Frozen source validation:
+- pytest: 345/345 PASS
+- package validator: PASS
+- browser gates: 11/11 PASS, zero reported page errors
+- convergence gate: one backlash; settles ~19.90 calls/sec below ~22.28 unsafe boundary
+- Match Creation gate: 2.5 s match-detail latency sustains 8 calls/sec, then probes to 9/sec; separate 120 ms club-index and 2500 ms match-detail baselines; no false latency backoff
+
+Final clean standalone extraction:
+- VERSION 2.9.11
+- pytest: 345/345 PASS
+- package validator: PASS
+- browser gates: 11/11 PASS
+
+Final incremental updater replay from exact v2.9.10 baseline:
+- payload: 70 files (11 added, 59 changed, 0 removed)
+- payload hash manifest verification: PASS
+- existing Core 12 / Analytics 6 verification: PASS
+- schema upgrade/migration invocation: NONE
+- protected config.local.php: byte-identical PASS
+- protected oauth.local.php: byte-identical PASS
+- protected data/server-config.json: byte-identical PASS
+- unrelated CRON entry preserved: PASS
+- old v2.9.10 dispatcher entries removed: PASS
+- exactly four v2.9.11 dispatcher entries installed: PASS
+- updater backup/rollback state creation exercised: PASS
+
+Final release artifacts are checksummed only after these exact rebuilt bytes pass the clean extraction and updater replay.

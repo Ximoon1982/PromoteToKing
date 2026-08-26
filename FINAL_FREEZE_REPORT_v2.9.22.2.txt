@@ -1,0 +1,26 @@
+Promote to King v2.9.22.2 final freeze report
+
+Baseline: frozen corrected v2.9.22.1 source tree.
+Target inventory: 1,570 files.
+Delta: 12 added / 56 changed / 0 removed = 68 true byte-delta files.
+Incremental payload: 71 files (68 delta + 3 unchanged rollback helpers), plus manifest.
+
+Compatibility
+- Core schema 15 unchanged.
+- Analytics schema 7 unchanged.
+- No database migration/reset/reseed.
+- Existing v2.9.22 CRON contract retained unchanged.
+- Protected runtime configuration excluded from payload.
+
+Validation before packaging
+- pytest: 485/485 PASS.
+- PHP lint: 108 files PASS.
+- JS syntax: 53 files PASS.
+- shell syntax: 109 files PASS.
+- OAuth saturation browser gate: capacity 256; logical feeder 256; gateway target 32; 5 background POSTs; 0 page errors.
+- Legacy-cap feeder gate: transport_cap=2 did not collapse capacity; target 32; 0 page errors.
+- Fresh reconstruction UI browser gate: PASS / 0 page errors.
+- P0 interactive survival browser gate: PASS / reserved foreground lane retained.
+- Shared transport/cache browser gate: PASS.
+- Historical OAuth throughput browser gate: PASS.
+- Browser/startup gates: 20/20 PASS; all reported page errors 0.

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<title>Live ranks — Promote to King</title>
+<link href="assets/images/p2k-logo.jpg" rel="icon">
+<link href="assets/css/site.css?v=2.10.6" rel="stylesheet">
+<link href="assets/css/dashboard-v2.css?v=2.10.6" rel="stylesheet">
+<script defer src="assets/js/site-config.js?v=2.10.6"></script>
+<script defer src="assets/js/shared/real-oauth.js?v=2.10.6"></script><script defer src="assets/js/shared/simulated-oauth.js?v=2.10.6"></script><script defer src="assets/js/shared/authenticated-member-refresh.js?v=2.10.6"></script>
+<script defer src="assets/js/shared/rank-ladder.js?v=2.10.6"></script>
+<style>
+body{margin:0}.live-ranks-shell{max-width:1180px;margin:0 auto;padding:24px}.live-ranks-shell .dashboard-hall-page-card{display:block}.live-ranks-shell .dashboard-hall-ranks{margin-top:12px}@media(max-width:700px){.live-ranks-shell{padding:12px}}
+</style>
+</head>
+<body>
+<main class="live-ranks-shell">
+<section class="dashboard-card dashboard-hall-page-card">
+<div class="dashboard-modal-head"><div><p class="dashboard-kicker">Live arena points</p><h1>Live ranks and rank ladder</h1><p>Ranks are ordered from highest to lowest. Select a category to see its current members and standings.</p></div></div>
+<div class="dashboard-hall-summary">
+<div><span>Current members</span><strong id="liveRanksCurrentMembers">—</strong></div>
+<div><span>Ranked members</span><strong id="liveRanksRankedMembers">—</strong></div>
+<div><span>Team leader</span><strong id="liveRanksLeader">—</strong></div>
+<div><span>Your position</span><strong id="liveRanksPersonalPosition">—</strong></div>
+</div>
+<div class="dashboard-hall-status" id="liveRanksNativeStatus">Loading Live ranks…</div>
+<div class="dashboard-hall-ranks" id="liveRanksNativeGrid"></div>
+</section>
+</main>
+<script src="assets/js/pages/live-ranks-page.js?v=2.10.6"></script>
+</body>
+</html>

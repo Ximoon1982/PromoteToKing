@@ -1,0 +1,45 @@
+Promote to King Standalone v2.8.5 — validation report
+Date: 2026-08-08
+Result: PASS
+
+Release/storage
+- Release: v2.8.5
+- Core schema: 5 (additive upgrade from Core 4)
+- Analytics schema: 5
+- Database reset: NOT required
+
+Source-tree validation completed
+- Full Python regression suite: 90 passed
+- Dedicated v2.8.5 release tests: 17 passed (included in the 90)
+- Static UI feature tests: PASS
+- JavaScript source syntax: 38/38 PASS
+- Inline HTML JavaScript syntax: 11/11 PASS
+- PHP lint: 75/75 PASS
+- Python compilation: 33/33 PASS
+- SSH CRON reset/install script: bash syntax PASS; destructive replacement logic tested against a fake crontab implementation, never the real environment
+- Source-tree package validator: PASS
+- Validator transient-cache handling: `.pytest_cache` and `__pycache__` are excluded from package inventory checks, so validation remains order-independent after tests run.
+
+Key v2.8.5 acceptance checks
+- Every Club CRON invocation can inject a fresh 5-minute club-index discovery bucket even during a long-running Club job.
+- A lightweight authoritative roster refresh can be injected every 30 minutes independently of Player-history backlog.
+- Fresh Club work is processed before Analytics maintenance.
+- Public GET endpoints do not run schema migration or Analytics/achievement rebuilds.
+- Core generation state replaces normal COUNT/MAX source scans for Analytics freshness.
+- Profile/Achievement materialized reads, response caches, ETags and avatar demand-loading are covered.
+- Browser observations are untrusted: they can prioritize/discover canonical work, but cannot directly write canonical membership, ratings, match facts or point events.
+- Avatar/profile snapshots are server-verified, persistent and demand-driven; no bulk avatar crawler is used.
+- Authoritative finished 0-0 matches remain stored as is_void=1 but contribute zero to every public analytics/graph/achievement path covered by the regression suite.
+- Team Points Club/Player workers retain separate leases and the v2.8.4 board parser/failed-board recovery behavior.
+- Tournament achievement date Revision 2 remains integrated.
+- CRON schedule is staggered: Club 5m, Tournament 10m, Player 30m, league monitoring hourly.
+
+Final clean-extracted ZIP validation completed successfully:
+- Full Python regression suite: 90/90 PASS
+- Package validator: PASS
+- Static UI feature tests: PASS (also executed by package validator)
+- JavaScript source syntax: 38/38 PASS
+- Inline HTML JavaScript syntax: 11/11 PASS
+- PHP lint: 75/75 PASS
+- Python compilation: 33/33 PASS
+- SSH CRON script syntax: PASS

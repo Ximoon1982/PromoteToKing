@@ -1,0 +1,27 @@
+<?php
+declare(strict_types=1);
+$root=__DIR__;
+$bootstrap=$root.'/server/team-points/src/bootstrap.php';
+if(!is_file($bootstrap)){fwrite(STDERR,"Run this from the PromoteToKing v2.9.0 website root.\n");exit(2);}require $bootstrap;
+use P2K\TeamPoints\Database;use P2K\TeamPoints\Repository;
+const PREFIX='history-revalidate-v290:';const PER_SLOT=25;const SLOT_SECONDS=300;
+function stop290(string $m,int $c=1):never{fwrite(STDERR,"ERROR: {$m}\n");exit($c);} 
+$version=trim((string)@file_get_contents($root.'/VERSION'));if($version!=='2.9.0')stop290('VERSION must be 2.9.0; found '.($version?:'missing').'.');
+$config=p2k_tp_config();$club=strtolower(trim((string)($config['app']['club_slug']??'promote-to-king')));$core=Database::core();$repo=new Repository($core);
+$task=$core->query("SELECT status,pause_requested FROM p2k_control_tasks WHERE task_key='team-points-club' LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+if(!is_array($task)||(string)$task['status']!=='paused'||(int)$task['pause_requested']!==1)stop290('Pause Club Points from Scheduled Tasks and wait until it reports Paused before seeding.');
+$lockName='p2k_team_points_worker_club';$q=$core->prepare('SELECT GET_LOCK(?,0)');$q->execute([$lockName]);if((int)$q->fetchColumn()!==1)stop290('Club worker is still busy; retry after the safe pause completes.');
+try{
+ $status=$core->prepare("SELECT i.status,COUNT(*) n FROM p2k_tp_job_items i JOIN p2k_tp_jobs j ON j.id=i.job_id WHERE j.club_slug=? AND i.item_type='sync_match' AND i.item_key LIKE ? GROUP BY i.status");$status->execute([$club,PREFIX.'%']);$existing=$status->fetchAll(PDO::FETCH_KEY_PAIR)?:[];
+ if($existing){$total=array_sum(array_map('intval',$existing));echo "Historical v2.9.0 revalidation already exists ({$total} items).\n";foreach($existing as $k=>$v)echo "  {$k}: {$v}\n";echo "No duplicate items were created; resume Club Points normally.\n";return;}
+ $job=$repo->latestJob($club,'club');if(!is_array($job)||in_array((string)$job['status'],['completed','failed','cancelled'],true)){$job=$repo->createOrGetActiveJob($club,'club');$repo->markJobPaused((string)$job['id']);$job=$repo->job((string)$job['id']);}
+ if(!is_array($job)||(string)$job['status']!=='paused')stop290('Unable to obtain a paused Club Points job safely.');$jobId=(string)$job['id'];
+ $running=$core->prepare("SELECT COUNT(*) FROM p2k_tp_job_items WHERE job_id=? AND status='running'");$running->execute([$jobId]);if((int)$running->fetchColumn()!==0)stop290('The paused Club job still has a running item; retry after it finishes.');
+ $idsQ=$core->prepare('SELECT match_id FROM p2k_tp_match_summaries WHERE club_slug=? ORDER BY match_id');$idsQ->execute([$club]);$ids=array_map('intval',$idsQ->fetchAll(PDO::FETCH_COLUMN)?:[]);if(!$ids)stop290('No scored finished matches were found.');
+ $stamp=gmdate('Ymd_His');$backupDir=$root.'/_backup/'.$stamp.'_v290_history_revalidation';if(!is_dir($backupDir)&&!mkdir($backupDir,0700,true))stop290('Unable to create backup directory.');@chmod($backupDir,0700);
+ $backupPath=$backupDir.'/club-points-scoring-before.tsv';$fh=fopen($backupPath,'wb');if(!$fh)stop290('Unable to create scoring backup.');@chmod($backupPath,0600);fputcsv($fh,['match_id','status','board_count','p2k_score','opponent_score','result','competition_points','is_void','finalized_at','last_verified_at'],"\t");
+ $snap=$core->prepare('SELECT m.match_id,m.status,m.board_count,m.p2k_score,m.opponent_score,m.result,m.competition_points,m.is_void,m.finalized_at,m.last_verified_at FROM p2k_tp_match_metadata m JOIN p2k_tp_match_summaries s ON s.club_slug=m.club_slug AND s.match_id=m.match_id WHERE m.club_slug=? ORDER BY m.match_id');$snap->execute([$club]);while($r=$snap->fetch(PDO::FETCH_ASSOC))fputcsv($fh,array_values($r),"\t");fclose($fh);
+ $insert=$core->prepare("INSERT IGNORE INTO p2k_tp_job_items(job_id,item_type,item_key,payload_json,status,available_at,updated_at) VALUES(?,?,?,?, 'pending', ?, UTC_TIMESTAMP())");$now=time();$inserted=0;$core->beginTransaction();try{foreach($ids as $i=>$matchId){$slot=intdiv($i,PER_SLOT)+1;$due=gmdate('Y-m-d H:i:s',$now+$slot*SLOT_SECONDS);$payload=json_encode(['match_id'=>$matchId,'source'=>'historical_full_revalidation_v290','historical_revalidation'=>true],JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);$insert->execute([$jobId,'sync_match',PREFIX.$matchId,$payload,$due]);$inserted+=$insert->rowCount();}if($inserted){$u=$core->prepare('UPDATE p2k_tp_jobs SET total_items=total_items+?,updated_at=UTC_TIMESTAMP() WHERE id=?');$u->execute([$inserted,$jobId]);}$core->commit();}catch(Throwable $e){if($core->inTransaction())$core->rollBack();throw $e;}
+ $slots=(int)ceil(max(1,$inserted)/PER_SLOT);$last=gmdate('Y-m-d H:i:s',$now+$slots*SLOT_SECONDS);$repo->log($jobId,null,'info','history_revalidation',PREFIX.'seed','v2.9.0 full finished-match revalidation queue seeded.',['selected'=>count($ids),'inserted'=>$inserted,'per_5_minute_slot'=>PER_SLOT,'last_due_utc'=>$last,'priority'=>'below fresh/current Club work']);
+ echo "OK: {$inserted} of ".count($ids)." scored finished matches queued.\n";echo "Throttle: 25 per 5-minute slot (300/hour nominal).\n";echo "Priority: historical work yields to fresh Club discovery/matches/boards.\n";echo "Backup: {$backupPath}\nLast scheduled historical batch (UTC): {$last}\n";echo "No score/status/point data was changed by seeding. Club Points remains paused; resume it from Scheduled Tasks.\n";
+}finally{try{$r=$core->prepare('SELECT RELEASE_LOCK(?)');$r->execute([$lockName]);}catch(Throwable){}}

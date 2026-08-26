@@ -1,0 +1,36 @@
+Promote to King v2.10.5.4 — final validation report
+Build timestamp: 2026-08-18T22:20:00Z
+Baseline: canonical v2.10.5.3 source + byte-identical v2.10.5.3 image bundle
+
+CURRENT RELEASE GATES
+- v2.10.5.4 + Green cutover/fairness regression suite: 31/31 PASS
+- Static UI feature suite: PASS
+- Dynamic automatic Cron tracking expiry contract: PASS
+- PHP syntax for changed backend files: PASS
+- JavaScript syntax for changed/runtime files: PASS
+- Full package validator: PASS
+
+FUNCTIONAL CONTRACTS
+- Zoned Density Heatmap: half-size bins, light 3x3 Gaussian smoothing, six discrete density zones, log-space match-size x axis, reference lines and interactive zoom/pan retained: PASS
+- Dashboard Priority calls / Matches starting within 7 days: dedicated filtered assistant iframe, persisted assistant filter and anchor-race removal: PASS
+- Automatic league Cron tracking stops 24h after match start while manual follows/history remain intact: PASS
+- Scheduled Task Green migration card: quick_matches estimated progress, adapter/parity wording, responsive controls: PASS
+- Last completed cycle duration + average latest 10 completed cycles: PASS
+- v2.10.5.3 finite-cycle fairness/GQAC/GAB/GFFL invariants preserved: PASS
+
+UPDATER HARDENING
+- Clean v2.10.5.3 -> v2.10.5.4 exact replay: 0 missing / 0 extra / 0 changed
+- Idempotent v2.10.5.4 replay: PASS
+- Protected Green/Blue/OAuth local configs: unchanged
+- Forced post-copy failure rollback: exact v2.10.5.3 restoration
+- No file removals
+
+SAFETY
+- Database schema change: NONE
+- Database reset: NO
+- Green Core reseed: NO
+- CRON definition/cadence change: NO
+- Green worker budget change: NO (50 s soft / 55 s hard retained)
+- Public default change: NO (Blue remains default until explicit gated cutover)
+- Blue retirement: NO
+- assets/images changes: NONE

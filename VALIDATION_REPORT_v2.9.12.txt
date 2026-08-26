@@ -1,0 +1,59 @@
+Promote to King v2.9.12 validation report
+==========================================
+Base: exact verified v2.9.11 standalone
+Core schema: 12 (unchanged)
+Analytics schema: 6 (unchanged)
+Achievement catalogue: 162 (unchanged)
+External CRON cadence: unchanged (4 tasks)
+
+Pre-package source validation
+-----------------------------
+- Python regression suite: 353/353 PASS
+- Modified PHP lint: PASS
+- Modified JavaScript syntax: PASS
+- Chromium/browser matrix: 10/10 PASS
+- v2.9.12 700-match transport/cache gate: PASS
+- All known API-capable production surfaces audited for shared api-client + real-oauth: PASS
+
+Hard 50 req/s fake-upstream simulation
+---------------------------------------
+- 512/512 attempts reached upstream
+- accepted: 508
+- HTTP 429: 4
+- deliberate permanent HTTP 404: 32
+- peak rolling 1-second arrivals: 52
+- coalesced backlash episodes: 2
+- settled rate: 47.6727 req/s
+- learned unsafe boundary: 51.8181 req/s
+- max worker elapsed: 17.926 s
+- permanent 4xx did not lower rate: PASS
+
+700-match Chromium workload
+---------------------------
+- Match Creation detail requests: 700
+- gateway batches: 33
+- max concurrent gateway POSTs: 6
+- old finished cache hits: 150
+- cache network misses: 50
+- page errors: 0
+- late-run collapse: NOT OBSERVED
+
+Archive/package validation
+--------------------------
+- Clean standalone extraction: 353/353 pytest PASS
+- Clean standalone package validator: PASS
+- Clean standalone Chromium/browser matrix: 10/10 PASS
+
+Incremental updater replay
+--------------------------
+- Exact base: verified v2.9.11 standalone
+- Incremental payload: 73 files (15 added, 58 changed, 0 removed)
+- Payload hash verification before apply: PASS
+- Core 12 / Analytics 6 verification without migration: PASS
+- config.local.php preserved byte-for-byte: PASS
+- oauth.local.php preserved byte-for-byte: PASS
+- data/server-config.json preserved byte-for-byte: PASS
+- exactly four v2.9.12 P2K CRON entries installed: PASS
+- unrelated CRON entry retained: PASS
+- updater final VERSION: 2.9.12
+

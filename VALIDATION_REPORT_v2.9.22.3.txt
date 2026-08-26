@@ -1,0 +1,15 @@
+Promote to King v2.9.22.3 focused validation
+
+Scope: approved Seniority artwork integration only.
+
+- Source approval manifest/hash validation: PASS (7/7)
+- Master dimensions: PASS (7/7 at 640x640)
+- Deterministic 128px derivatives: PASS (7/7)
+- Deterministic 64px derivatives: PASS (14/14 paths)
+- Seniority catalogue raster mapping: PASS (7/7)
+- Seniority achievement names/criteria unchanged: PASS
+- Achievement catalogue count: PASS (162)
+- Core schema: unchanged at 15
+- Analytics schema: unchanged at 7
+- Focused Seniority + inherited artwork pytest: PASS
+- No unrelated full pytest regression requested for this artwork-only update

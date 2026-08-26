@@ -1,4 +1,4 @@
-/* Optional simulated Chess.com OAuth for Promote to King tools.
+/* Optional simulated Chess.com OAuth for Chess Pursuit.
  * Enabled only with ?oauth=1 (or an equivalent explicit feature flag).
  * This is deliberately a simulation: it never asks for a Chess.com password
  * and only reads the public Chess.com player profile endpoint.
@@ -21,6 +21,8 @@
 
   function flagEnabled() {
     const params = new URLSearchParams(window.location.search);
+    const page = (window.location.pathname.split("/").pop() || "index.html").toLowerCase();
+    if (page === "ui-v2.html") return true;
     const explicitValue = params.get("oauth") ?? params.get("simulatedOAuth");
     if (explicitValue !== null) {
       return TRUE_VALUES.has(String(explicitValue).trim().toLowerCase());
@@ -32,8 +34,21 @@
 
   const enabled = flagEnabled();
 
+  // A future real OAuth adapter may be loaded before this compatibility module.
+  // Never replace a verified real-OAuth identity with the simulated provider.
+  const existingAuth = window.P2K_AUTH;
+  const existingMode = String(existingAuth?.mode || existingAuth?.authMode || existingAuth?.provider || "").trim().toLowerCase();
+  const existingRealOAuth = existingAuth?.realOAuth === true || existingAuth?.oauthVerified === true ||
+    ["oauth", "real-oauth", "real_oauth", "chesscom-oauth", "chess.com-oauth"].includes(existingMode);
+  if (existingRealOAuth) {
+    window.P2K_SIMULATED_OAUTH_ENABLED = enabled;
+    return;
+  }
+
   const authAPI = Object.freeze({
     enabled,
+    mode: "simulated",
+    realOAuth: false,
     getSession: () => cloneSession(session),
     login,
     logout,
@@ -49,6 +64,7 @@
 
   window.P2K_AUTH = authAPI;
   window.P2K_SIMULATED_OAUTH_ENABLED = enabled;
+  syncApiAccessMode();
 
   if (!enabled) return;
 
@@ -135,6 +151,7 @@
     const username = safeText(profile?.username) || requestedUsername;
     return {
       version: 1,
+      authMode: "simulated",
       username,
       avatar: safeHTTPSURL(profile?.avatar),
       profileURL: safeHTTPSURL(profile?.url) ||
@@ -147,6 +164,7 @@
       followers: safeInteger(profile?.followers),
       joined: safeInteger(profile?.joined),
       lastOnline: safeInteger(profile?.last_online),
+      apiConcurrent: false,
       fetchedAt: Date.now()
     };
   }
@@ -163,6 +181,7 @@
     if (!validSession(candidate)) return null;
     return {
       version: 1,
+      authMode: safeText(candidate.authMode) || "simulated",
       username: safeText(candidate.username),
       avatar: safeHTTPSURL(candidate.avatar),
       profileURL: safeHTTPSURL(candidate.profileURL),
@@ -174,6 +193,7 @@
       followers: safeInteger(candidate.followers),
       joined: safeInteger(candidate.joined),
       lastOnline: safeInteger(candidate.lastOnline),
+      apiConcurrent: false,
       fetchedAt: safeInteger(candidate.fetchedAt) || Date.now()
     };
   }
@@ -233,8 +253,16 @@
     }));
   }
 
+  function syncApiAccessMode() {
+    // Simulated OAuth never enables concurrent Chess.com access. Real OAuth
+    // switches the shared client to the server-side Bearer gateway instead.
+    window.P2K_API_CLIENT?.setOAuthBearerMode?.(false);
+    window.P2K_API_CLIENT?.setConcurrentMode?.(false);
+  }
+
   function setSession(nextSession, options = {}) {
     session = normalizeSession(nextSession);
+    syncApiAccessMode();
 
     if (options.persist !== false) persistSession(session);
     if (options.broadcast !== false) broadcastSession(session);
@@ -251,6 +279,7 @@
     if (currentSerialized === nextSerialized) return;
 
     session = normalized;
+    syncApiAccessMode();
     notifySubscribers();
     queueRender();
   }
@@ -259,24 +288,22 @@
     if (!enabled) throw new Error("Simulated OAuth is disabled.");
     const username = validateUsername(rawUsername);
 
-    let response;
+    if (!window.P2K_API_CLIENT) throw new Error("P2K_API_CLIENT is not loaded.");
+    let profile;
     try {
-      response = await fetch(PLAYER_API + encodeURIComponent(username.toLowerCase()), {
-        cache: "no-store",
-        headers: { Accept: "application/json" }
-      });
-    } catch (_) {
+      profile = await window.P2K_API_CLIENT.json(
+        PLAYER_API + encodeURIComponent(username.toLowerCase()),
+        { attempts: 3, cacheMode: "network-only" }
+      );
+    } catch (error) {
+      if (Number(error?.status) === 404 || error?.category === "not_found") {
+        throw new Error(`Chess.com player “${username}” was not found.`);
+      }
+      if (Number(error?.status) > 0) {
+        throw new Error(`Chess.com profile request failed (HTTP ${error.status}).`);
+      }
       throw new Error("Unable to contact Chess.com. Check your connection and try again.");
     }
-
-    if (response.status === 404) {
-      throw new Error(`Chess.com player “${username}” was not found.`);
-    }
-    if (!response.ok) {
-      throw new Error(`Chess.com profile request failed (HTTP ${response.status}).`);
-    }
-
-    const profile = await response.json();
     return setSession(profileToSession(profile, username));
   }
 
@@ -618,7 +645,7 @@
 
   function formatNumber(value) {
     return Number.isFinite(value)
-      ? new Intl.NumberFormat(undefined).format(value)
+      ? new Intl.NumberFormat("en-GB").format(value)
       : "";
   }
 
@@ -626,10 +653,12 @@
     if (!Number.isFinite(value) || value <= 0) return "";
     const date = new Date(value * 1000);
     if (Number.isNaN(date.getTime())) return "";
-    return new Intl.DateTimeFormat(undefined, includeTime ? {
+    return new Intl.DateTimeFormat("en-GB", includeTime ? {
+      timeZone: "UTC",
       dateStyle: "medium",
       timeStyle: "short"
     } : {
+      timeZone: "UTC",
       dateStyle: "medium"
     }).format(date);
   }

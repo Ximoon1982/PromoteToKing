@@ -1,93 +1,90 @@
-<!doctype html>
+<!DOCTYPE html>
+
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
-  <title>Promote to King Tools</title>
-  <link rel="icon" type="image/jpeg" href="assets/images/p2k-logo.jpg">
-  <link rel="stylesheet" href="assets/css/site.css">
-  <link rel="stylesheet" href="assets/css/simulated-oauth.css">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="dark" name="color-scheme"/>
+<script src="assets/js/pages/ui-version-gate.js?v=2.10.6.11"></script>
+<meta content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self' https://api.chess.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" http-equiv="Content-Security-Policy"/><title>Promote to King</title>
+<meta name="description" content="Play together. Improve together. Promote to King."/>
+<link href="assets/images/p2k-logo.jpg" rel="icon"/>
+<link href="assets/css/site.css?v=2.10.6.11" rel="stylesheet"/>
+<link href="assets/css/simulated-oauth.css?v=2.10.6.11" rel="stylesheet"/>
+<link href="assets/css/detailed-analysis-host.css?v=2.10.6.11" rel="stylesheet"/>
+<link href="assets/css/admin-features.css?v=2.10.6.11" rel="stylesheet"/>
+<link href="assets/css/v2-4-17-integrated.css?v=2.10.6.11" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/css/admin-embedded.css?v=2.10.6.11">
+<script src="assets/js/shared/embedded-page.js?v=2.10.6.11"></script>
+<link href="assets/css/responsive-unification.css?v=2.10.6.11" rel="stylesheet"/>
 </head>
 <body>
-  <main class="site-shell">
-    <header class="site-header">
-      <img
-        src="assets/images/p2k-logo.jpg"
-        alt="Promote to King club logo"
-      >
-      <div>
-        <h1>Promote to King Tools</h1>
-        <p class="site-subtitle">
-          Match selection, upcoming-match management, match creation,
-          and open team-match analysis.
-        </p>
-      </div>
-    </header>
-
-    <nav class="site-tabs" role="tablist" aria-label="Promote to King tools">
-      <button
-        class="site-tab"
-        id="tab-find"
-        type="button"
-        role="tab"
-        aria-selected="true"
-        aria-controls="tool-content"
-        data-key="find"
-        data-route="FindMatch.htm"
-      >Match Assistant</button>
-
-      <button
-        class="site-tab"
-        id="tab-upcoming"
-        type="button"
-        role="tab"
-        aria-selected="false"
-        aria-controls="tool-content"
-        data-key="upcoming"
-        data-route="AnalyzeMatches.htm"
-        tabindex="-1"
-      >Upcoming Matches</button>
-
-      <button
-        class="site-tab"
-        id="tab-creation"
-        type="button"
-        role="tab"
-        aria-selected="false"
-        aria-controls="tool-content"
-        data-key="creation"
-        data-route="MatchCreationAnalyzer.htm"
-        tabindex="-1"
-      >Match Creation</button>
-
-      <button
-        class="site-tab"
-        id="tab-open"
-        type="button"
-        role="tab"
-        aria-selected="false"
-        aria-controls="tool-content"
-        data-key="open"
-        data-route="AnalyzeMatch.html"
-        tabindex="-1"
-      >Open Match Analyzer</button>
-    </nav>
-
-    <section
-      class="tool-content"
-      id="tool-content"
-      role="tabpanel"
-      aria-labelledby="tab-find"
-      aria-live="polite"
-    >
-      <div class="tool-loading" id="tool-loading">
+<main class="site-shell">
+<header class="site-header">
+<a aria-label="Open Promote to King on Chess.com" class="site-logo-link" href="https://www.chess.com/club/promote-to-king" id="siteClubLink" rel="noopener noreferrer" target="_blank"><img alt="Promote to King club logo" src="assets/images/p2k-logo.jpg"/></a>
+<div>
+<h1>Promote to King</h1>
+<p class="site-subtitle">Play together. Improve together. Promote to King.</p>
+</div>
+<button class="site-diagnostics-button" data-admin-only hidden id="adminOpen" type="button">Administration</button></header>
+<nav aria-label="Promote to King tools" class="site-tabs" role="tablist">
+<button aria-controls="tool-content" aria-selected="true" class="site-tab" data-key="find" data-route="FindMatch.htm" id="tab-find" role="tab" type="button">Match Assistant</button>
+<button aria-controls="tool-content" aria-selected="false" class="site-tab" data-admin-only hidden data-key="upcoming" data-route="AnalyzeMatches.htm" id="tab-upcoming" role="tab" tabindex="-1" type="button">Upcoming Matches</button>
+<button aria-controls="tool-content" aria-selected="false" class="site-tab" data-admin-only hidden data-key="creation" data-route="MatchCreationAnalyzer.htm" id="tab-creation" role="tab" tabindex="-1" type="button">Match Creation</button>
+<button aria-controls="tool-content" aria-selected="false" class="site-tab" data-admin-only hidden data-key="open" data-route="AnalyzeMatch.html" id="tab-open" role="tab" tabindex="-1" type="button">Open Match Analyzer</button>
+<button aria-controls="tool-content" aria-selected="false" class="site-tab" data-admin-only hidden data-key="recruit" data-route="RecruitMatch.html" id="tab-recruit" role="tab" tabindex="-1" type="button">Match recruitment assistant</button>
+<button aria-controls="tool-content" aria-selected="false" class="site-tab" data-admin-only hidden data-key="challenges" data-route="ChallengeListAssistant.html" id="tab-challenges" role="tab" tabindex="-1" type="button">Challenge Assistant</button>
+<button aria-controls="tool-content" aria-selected="false" class="site-tab" data-admin-only hidden data-key="teamPoints" data-route="TeamPointsAdmin.html" id="tab-teamPoints" role="tab" tabindex="-1" type="button">Team Points</button>
+</nav>
+<section aria-labelledby="tab-find" aria-live="polite" class="tool-content" id="tool-content" role="tabpanel">
+<div class="tool-loading" id="tool-loading">
         Loading Match Assistant…
       </div>
-    </section>
-  </main>
+</section>
+</main>
+<div aria-hidden="true" class="admin-backdrop" hidden id="adminModal">
+<div aria-labelledby="adminTitle" aria-modal="true" class="admin-dialog" role="dialog">
+<div class="admin-head"><h2 id="adminTitle">Administration</h2><button class="button" id="adminClose" type="button">Close</button></div>
+<nav aria-label="Administration sections" class="admin-tabs" role="tablist">
+<button aria-selected="true" class="admin-tab" data-admin-tab="logs" role="tab" type="button">Logs</button>
+<button aria-selected="false" class="admin-tab" data-admin-tab="diagnostics" role="tab" tabindex="-1" type="button">Diagnostics</button>
+<button aria-selected="false" class="admin-tab" data-admin-tab="management" role="tab" tabindex="-1" type="button">Match data management</button>
+<button aria-selected="false" class="admin-tab" data-admin-tab="tournaments" role="tab" tabindex="-1" type="button">Tournament management</button>
+</nav>
+<section class="admin-panel" data-admin-panel="logs">
+<nav aria-label="Log categories" class="subtabs" role="tablist">
+<button aria-selected="true" class="subtab" data-log-tab="match" role="tab" type="button">Match Assistant</button>
+<button aria-selected="false" class="subtab" data-log-tab="scheduled" role="tab" tabindex="-1" type="button">Scheduled tasks</button>
+</nav>
+<div class="subpanel" data-log-panel="match">
+<section class="card"><div class="admin-head log-section-head"><h3>Match Assistant usage logs <span class="pill">UTC</span></h3><button class="button" id="matchLogRefresh" type="button">Refresh</button></div>
+<div class="filters"><label>From<input id="matchLogFrom" type="date"/></label><label>To<input id="matchLogTo" type="date"/></label><label>Username<input id="matchLogUser" placeholder="Search username" type="search"/></label><button class="button" id="matchLogApply" type="button">Apply</button><button class="button" id="matchLogReset" type="button">Last 7 days</button><button class="button" id="matchLogMore" type="button">Load 7 more days</button></div>
+<div class="summary-grid" id="matchLogSummary"></div>
+<div class="grid2"><div><h4>Daily totals</h4><div class="table-wrap"><table class="table"><thead><tr><th>Date</th><th class="num">Analyses</th><th class="num">Matches</th><th class="num">Users</th></tr></thead><tbody id="matchLogDaily"></tbody></table></div></div><div><h4>User totals</h4><div class="table-wrap"><table class="table"><thead><tr><th>User</th><th class="num">Runs</th><th class="num">Matches</th></tr></thead><tbody id="matchLogUsers"></tbody></table></div></div></div>
+<div><h4>Matching entries</h4><div class="table-wrap"><table class="table"><thead><tr><th>Timestamp</th><th>Username</th><th class="num">Matches</th></tr></thead><tbody id="matchLogEntries"></tbody></table></div></div>
+<div aria-live="polite" class="feedback" id="matchLogFeedback"></div></section>
+</div>
+<div class="subpanel" data-log-panel="scheduled" hidden>
+<section class="card"><div class="admin-head"><div><h3>Scheduled task execution logs <span class="pill">UTC</span></h3><p class="note">Scheduled cron executions and manual recordings are listed here.</p></div><div class="header-actions"><button class="button" id="taskLogRefresh" type="button">Refresh</button><button class="button" id="recordNow" type="button">Record data now</button></div></div>
+<div class="progress-track" hidden id="manualProgressTrack"><div class="progress-bar" id="manualProgressBar"></div></div><div aria-live="polite" class="feedback" id="manualProgressText"></div>
+<div class="filters"><label>From<input id="taskLogFrom" type="date"/></label><label>To<input id="taskLogTo" type="date"/></label><label>Result<select id="taskLogStatus"><option value="">All entries</option><option value="errors">Entries with errors</option><option value="success">Success only</option><option value="partial">Partial only</option><option value="failed">Failed only</option></select></label><label>Trigger<select id="taskLogSource"><option value="">All triggers</option><option value="scheduled">Scheduled cron</option><option value="manual">Manual recording</option></select></label><label>Task type<select id="taskLogTaskType"><option value="">All task types</option><option value="match-update">Match update</option><option value="database-update">Database update</option><option value="tournaments-update">Tournaments update</option><option value="match-tracking">Legacy match tracking</option><option value="legacy-tracking">Legacy tracking</option></select></label><button class="button" id="taskLogApply" type="button">Apply</button><button class="button" id="taskLogReset" type="button">Last 7 days</button><button class="button" id="taskLogMore" type="button">Load 7 more days</button></div>
+<div class="summary-grid" id="taskLogSummary"></div><div class="table-wrap"><table class="table"><thead><tr><th>Timestamp</th><th>Task</th><th>Run ID</th><th>Trigger</th><th>Status</th><th class="num">Processed</th><th class="num">Updated</th><th class="num">Failed</th><th class="num">Duration</th></tr></thead><tbody id="taskLogEntries"></tbody></table></div><div aria-live="polite" class="feedback" id="taskLogFeedback"></div></section>
+</div>
+</section>
+<section class="admin-panel" data-admin-panel="diagnostics" hidden><section class="card"><div class="admin-head"><div><h3>Runtime diagnostics</h3><p class="note">The original v2.1.2 client, cache, coordination, and model diagnostics are retained.</p></div><div><button class="button" id="refreshDiagnostics" type="button">Refresh</button> <button class="button" id="clearDiagnosticsCache" type="button">Clear cache</button> <button class="button" id="copyDiagnostics" type="button">Copy diagnostics</button></div></div><div class="site-diagnostics-grid" id="runtimeDiagnosticsGrid"></div><pre class="site-diagnostics-log" id="runtimeDiagnosticsLog"></pre><div aria-live="polite" class="feedback" id="diagnosticFeedback"></div></section></section>
+<section class="admin-panel" data-admin-panel="management" hidden>
+<section class="card"><div class="admin-head"><div><h3>Tracked match data</h3><p class="note">One snapshot file is stored for each tracked UTC timestamp. Follow a match by ID, URL, or slug; adding it immediately records its current data.</p></div><div class="header-actions"><button class="button" id="managementRecordNow" type="button">Record data now</button><button class="button" id="managementRefresh" type="button">Refresh</button></div></div><div class="progress-track" hidden id="managementProgressTrack"><div class="progress-bar" id="managementProgressBar"></div></div><div aria-live="polite" class="feedback" id="managementProgressText"></div>
+<div class="follow-form"><label for="managementAddInput">Match ID, URL, or slug</label><div class="follow-form-row"><input autocomplete="off" class="search-input" id="managementAddInput" placeholder="Example: 1969434 or https://www.chess.com/club/matches/1969434" type="text"/><button class="button primary" id="managementAddButton" type="button">Follow and record</button></div><div aria-live="polite" class="feedback" id="managementAddFeedback"></div></div>
+<div class="summary-grid" id="managementSummary"></div><div aria-live="polite" class="feedback" id="managementMigration"></div>
+<div class="management-toolbar" role="search"><label class="sr-only" for="managementSearch">Search matches</label><input class="search-input" id="managementSearch" placeholder="Search match name, team, ID or league…" type="search"/><label class="sr-only" for="managementStatus">Filter by status</label><select class="search-input" id="managementStatus"><option value="">All statuses</option><option value="registration">Registration</option><option value="ongoing">Ongoing</option><option value="finished">Finished</option></select><label class="sr-only" for="managementFollowState">Filter by follow state</label><select class="search-input" id="managementFollowState"><option value="">Followed and unfollowed</option><option value="followed">Followed only</option><option value="unfollowed">Unfollowed only</option></select><label class="sr-only" for="managementSort">Sort matches</label><select class="search-input" id="managementSort"><option value="date-new">Start date: newer first</option><option value="date-old">Start date: older first</option><option value="size-large">Size: largest first</option><option value="size-small">Size: smallest first</option><option value="name">Name</option></select><button class="button" id="managementClear" type="button">Clear</button><span class="note" id="managementVisible"></span></div>
+<div class="management-bulk-actions"><button class="button danger" id="removeFinishedData" type="button">Remove data for all finished matches</button></div>
+<div class="table-wrap"><table class="table management-table"><thead><tr><th>Match</th><th>Status</th><th class="num">Size</th><th>Follow</th><th class="num">Snapshots</th><th>Start date</th><th>Latest snapshot</th><th>Next sample</th><th>Actions</th></tr></thead><tbody id="managementRows"></tbody></table></div><div aria-live="polite" class="feedback" id="managementFeedback"></div></section>
+</section>
+<section class="admin-panel" data-admin-panel="tournaments" hidden>
+  <section class="card tournament-admin-card"><iframe class="admin-integrated-frame" id="tournamentManagementFrame" title="Tournament management" src="TournamentManagement.html?embedded=1&amp;v=2.8.11"></iframe></section>
+</section>
 
-  <script src="assets/js/shared/simulated-oauth.js"></script>
-  <script src="assets/js/pages/site-tabs.js"></script>
-</body>
+</div></div>
+<div class="history-backdrop" hidden id="historyModal"><div aria-labelledby="historyTitle" aria-modal="true" class="history-dialog" role="dialog"><div class="admin-head"><div><h2 id="historyTitle">Tracking graph</h2><p class="note" id="historySubtitle"></p></div><button class="button danger" id="historyClose" type="button">Close</button></div><div class="history-legend" id="historyLegend"></div><svg aria-label="Match tracking graph" class="history-chart" id="historyChart" viewBox="0 0 840 330"></svg><p class="note">Click a graph point to open lineup evolution. Use Previous and Next to move between recordings.</p><div class="history-backdrop snapshot-backdrop" hidden id="snapshotChangesModal"><div aria-labelledby="snapshotChangesTitle" aria-modal="false" class="snapshot-dialog" role="dialog"><div class="admin-head"><div><h2 id="snapshotChangesTitle">Lineup evolution</h2><p class="note" id="snapshotChangesSubtitle"></p></div><div class="header-actions"><button class="button compact" id="snapshotChangesPrevious" type="button">Previous</button><button class="button compact" id="snapshotChangesNext" type="button">Next</button><button class="button danger compact" id="snapshotChangesClose" type="button">Close</button></div></div><div class="snapshot-columns" id="snapshotChangesColumns"></div><p class="note snapshot-note">Ratings and timeout rates are read from the archived match sheet for the selected snapshot.</p></div></div><div class="feedback" id="historyFeedback"></div></div></div>
+<script src="config/site-branding.js?v=2.10.6.11"></script><script src="assets/js/site-config.js?v=2.10.6.11"></script><script src="assets/js/shared/api-cache.js?v=2.10.6.11"></script><script src="assets/js/shared/match-priority.js?v=2.10.6.11"></script><script src="assets/js/shared/api-client.js?v=2.10.6.11"></script><script src="assets/js/shared/analysis-coordinator.js?v=2.10.6.11"></script><script defer src="assets/js/shared/real-oauth.js?v=2.10.6.11"></script><script src="assets/js/shared/simulated-oauth.js?v=2.10.6.11"></script><script defer src="assets/js/shared/authenticated-member-refresh.js?v=2.10.6.11"></script><script src="assets/js/shared/team-points-client.js?v=2.10.6.11"></script><script src="assets/js/shared/detailed-analysis-host.js?v=2.10.6.11"></script><script src="assets/js/pages/site-tabs.js?v=2.10.6.11"></script><script src="assets/js/pages/admin-features.js?v=2.10.6.11"></script><script src="assets/js/shared/control-hints.js?v=2.10.6.11"></script></body>
 </html>

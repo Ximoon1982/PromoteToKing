@@ -1,0 +1,32 @@
+Promote to King v2.10.1.1 validation
+=====================================
+Date: 2026-08-16
+Blue baseline: 2.9.22.10
+Target migration release: 2.10.1.1
+
+Regression fixed
+----------------
+Blue task-state telemetry no longer selects optional timestamp columns that are
+absent from the installed Blue p2k_control_tasks schema. The query now requests
+only task_key, status, and pause_requested.
+
+Validation
+----------
+- PHP syntax: PASS (12 Green PHP files)
+- Migration page JavaScript syntax: PASS
+- Migration installer JavaScript syntax: PASS
+- Incremental updater bash syntax: PASS
+- Payload SHA-256 verification: PASS
+- Upgrade from pristine v2.10.1: PASS
+- Upgrade from v2.10.1 + Panel Resilience Hotfix 1: PASS
+- Idempotent v2.10.1.1 rerun: PASS
+- Runtime-file convergence between both starting states: PASS
+- No DB migration/reseed/repair operation in updater: CONFIRMED
+- No Green routing/stage/cycle mutation in updater: CONFIRMED
+- No Blue task-state write in updater: CONFIRMED
+
+Expected post-update panel
+--------------------------
+Release / client build: 2.10.1.1
+Blue task-state telemetry should load without the last_start_at SQL error. If
+status and comparison are otherwise healthy, the page-level state becomes Loaded.

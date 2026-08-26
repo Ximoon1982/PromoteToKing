@@ -1,0 +1,66 @@
+Promote to King v2.9.8 validation report
+========================================
+Status: PASS
+Validated: 2026-08-11
+Baseline: exact verified PromoteToKing_Standalone_v2.9.7.zip
+Integration inputs: reconciled post-v2.9.7 observation/provenance + continuous-refresh staging; OAuth POC11 production flow/transport mechanisms
+
+Release contract
+----------------
+- Package / site config / manifest: 2.9.8
+- Core DB schema: 11 (additive migration from 10)
+- Analytics DB schema: 6 (unchanged)
+- Achievement catalogue: 162 definitions
+- No destructive reset or reseed
+- v2.9.7 fair Player scheduling and false-completion recovery preserved
+- Existing protected config.local.php, oauth.local.php and server-config.json are excluded from the incremental payload and preserved by the updater
+- CRON cadence unchanged; numbered dispatcher/installer advanced to v2.9.8
+
+Requested feature validation
+----------------------------
+- Members Monthly active members delimiter is placed on the previous month, leaving the current incomplete month on the future side.
+- Team Club Points score progression includes Daily Club Points on an independent right axis through today only; daily values do not enter the forecast region.
+- Team Daily boards chart is renamed Daily boards and current active boards and plots current active boards on its own axis.
+- Opponent heatmap exposes paired-rating match coverage and explains that historical coverage grows with authoritative sync_match CRON/worker revalidation.
+- Hall unified player search uses the returned player profile directly and reports the real achievement count/catalogue total.
+- Real ?oauth=2 login/logout is integrated into the normal website avatar/profile UI with no graphical concurrency control.
+- Logged-out and simulated ?oauth=1 Chess.com traffic remains serial.
+- Real OAuth PubAPI transport uses a same-origin server endpoint, server-held Bearer token and PHP cURL-multi; adaptive concurrency grows while healthy and backs off on 429/error/latency pressure.
+- Administration contains a rolling 10-minute OAuth Bearer throughput graph with average and peak requests/second.
+- Claim-bound ACAMR observation/provenance and continuous client refresh are integrated without replacing canonical server authority.
+
+OAuth security/validation scope
+-------------------------------
+- Authorization Code + PKCE S256 and state validation retained.
+- Exact configured redirect URI retained through authorization and token exchange.
+- Access/ID tokens are held only in the protected PHP session and never returned to browser JavaScript.
+- ID-token alg=RS256, issuer=https://oauth.chess.com, configured audience and expiration are checked.
+- PubAPI gateway only accepts allowlisted https://api.chess.com/pub/... URLs and selected safe request headers.
+- Batch and logout actions require same-origin session CSRF tokens.
+- PHP session lock is released before outbound parallel PubAPI work.
+- Independent JWT signature verification is NOT claimed by v2.9.8; no signing-key/JWKS verification mechanism is bundled. The release deliberately records this limitation rather than treating decoded claims as independently signature-verified.
+
+Executed validation
+-------------------
+- Dedicated v2.9.8 regression gate: 8/8 PASS.
+- Full pytest regression suite: 316/316 PASS.
+- tests/validate_package.py: PASS.
+- Node JavaScript syntax checks: PASS (performed by package validator).
+- PHP lint for packaged PHP sources: PASS (performed by package validator).
+- Python compilation probe: PASS (performed by package validator).
+- Headless Chromium browser gates: 6/6 PASS, zero page errors.
+- Clean standalone ZIP extraction: 316/316 pytest PASS + package validator PASS.
+
+Incremental/update safety validation
+------------------------------------
+- v2.9.7 -> v2.9.8 production incremental payload: 70 changed/new files; tests excluded.
+- No file removals are required.
+- data/, logs/, config.local.php, oauth.local.php and server-config.json are excluded from the payload.
+- Incremental payload manifest hashes are validated before production changes.
+- Clean exact-v2.9.7 updater simulation: PASS.
+- Simulated config.local.php, oauth.local.php and server-config.json preserved byte-for-byte: PASS.
+- v2.9.8 four-task CRON schedule installation/verification: PASS; cadence unchanged from v2.9.7.
+
+Known deployment acceptance item
+--------------------------------
+A live Chess.com OAuth round trip and high-throughput PubAPI run cannot be executed inside the offline packaging environment. POC11 already established the provider flow/profile token shape on the host; v2.9.8 production integration is validated structurally and locally, and should receive a live ?oauth=2 smoke test after deployment before relying on its authenticated transport in production.

@@ -1,0 +1,131 @@
+Promote to King v2.10.5 — Validation Report
+============================================
+
+Release purpose
+---------------
+Consolidate the accepted v2.10.4.x Green runtime line and deliver:
+- GQAC / Quick-cycle correctness and stale-work retirement;
+- Quick-fetch error correction for locally impossible board work;
+- Dashboard Match Assistant visibility/race correction;
+- Administration -> Production Migration integration;
+- Green scheduler + browser accelerator controls in Scheduled Task Control;
+- append-only member chronology with non-blocking departure profile checks.
+
+Source baseline
+---------------
+- Baseline: recovered and production-aligned v2.10.4.6 source tree.
+- Baseline canonical files: 1,905.
+- v2.10.5 controlled source delta before this validation report:
+  17 changed, 8 added, 0 removed.
+- v2.10.5 final canonical source count including this report: 1,914.
+- Blue engine baseline remains 2.9.22.10.
+
+Safety / authority
+------------------
+- VERSION: 2.10.5.
+- MIGRATION_VERSION: 2.10.5.
+- Public source default: BLUE / blue_hardwired.
+- The Green-public phases are represented in Production Migration but are
+  safety-gated because the complete public/API compatibility read adapter is
+  not enabled in this release. v2.10.5 therefore cannot accidentally perform
+  a partial public cutover.
+- Blue remains available as rollback authority.
+- No forced Green reseed.
+- No destructive database reset.
+- Green schema changes are additive/idempotent.
+- Protected local credentials/tokens/runtime data are not release payload.
+
+GQAC / Quick validation
+-----------------------
+- Pending GQAC work whose board/match vanished or became ineligible is retired
+  locally rather than left permanently pending.
+- Parent-match purge / board-count shrink retire admitted board work before
+  derived board rows are removed.
+- Finished authoritative two-game boards are not dirtied solely by a later
+  parent hint change.
+- Existing unsigned claim_count is upgraded to the accepted signed INT form;
+  new schemas are signed from creation.
+- Worker telemetry exposes retired-ineligible GQAC work.
+
+Member chronology validation
+-----------------------------
+- Append-only event table supports discovered, joined, left, name_changed and
+  rejoined.
+- Trusted identity mappings are checked before declaring a leave.
+- Rejoins resolve pending departure checks back to active.
+- Departure profile checks are bounded/non-blocking; 404/410 -> closed, 200 ->
+  active unless the profile explicitly reports closure/disablement; transient
+  failures remain pending.
+
+UI / administration validation
+------------------------------
+- Dashboard stores Match Assistant open/filter intent before iframe readiness;
+  Next 7 days and Priority filters are applied when the assistant becomes ready.
+- Members and Production Migration are first-class Administration subtabs.
+- Production Migration exposes phases/readiness/Green observables/comparison,
+  worker/client controls, validation and browser accelerator.
+- Scheduled Task Control exposes five Green schedules, 50 s soft / 55 s hard,
+  Green invocation/GQAC telemetry and accelerator Start/Stop controls.
+- Browser accelerator is session-scoped and has no fabricated scheduled next run.
+
+Automated validation
+--------------------
+- tests/test_v2105_release.py: 7/7 PASS.
+- Focused pytest set (v2.10.5 + Team Points/UI/admin priority): PASS.
+- Existing static UI feature suite: PASS.
+- Package/static validator: PASS.
+- JavaScript syntax validation: 58/58 PASS.
+- PHP syntax validation: 121/121 PASS.
+- Python package/compile checks: PASS.
+- Exact site-manifest file-list validation: PASS after final manifest freeze.
+
+Cumulative updater validation
+-----------------------------
+Accepted migration baselines exercised:
+- 2.10.4: PASS
+- 2.10.4.1: PASS
+- 2.10.4.2: PASS
+- 2.10.4.3: PASS
+- 2.10.4.4: PASS
+- 2.10.4.5: PASS
+- 2.10.4.6: PASS
+- idempotent 2.10.5: PASS
+
+During older-marker replay, stale source markers were injected deliberately;
+the cumulative overlay restored exact final payload bytes. Protected Blue local
+configuration hashes remained byte-identical.
+
+Forced post-copy failure test:
+- Green schema phase intentionally failed after 25 source files had changed/been
+  introduced.
+- rollback result: 0 missing, 0 extra, 0 changed pre-update files: PASS.
+- newly introduced files were removed and pre-update source bytes restored.
+
+Scheduler contract
+------------------
+reset-install-green-cron-v2.10.5.sh is syntax-valid and preserves Blue/unrelated
+CRON while installing the accepted managed Green block when configured:
+- five staggered schedules;
+- aggregate one invocation per minute;
+- worker soft/hard contract 50/55 seconds;
+- curl --max-time 58;
+- p2k_green_worker remains overlap authority.
+If Green local configuration or shell crontab is unavailable, source deployment
+continues without inventing credentials or deleting existing jobs.
+
+Packaging contract
+------------------
+The canonical project-level v2.10.5 tree contains every release file. Delivery
+is split for size only:
+1. main standalone source ZIP: everything except assets/images;
+2. synchronized assets/images ZIP: assets/images at the same project-relative path.
+Extract both into the same PromoteToKing root for a complete standalone tree.
+The cumulative incremental package does not rewrite assets/images.
+
+Browser note
+------------
+No live production/browser cutover was performed by validation. This release is
+validated statically and through source/updater replay; public production remains
+Blue until a future explicitly enabled, compatibility-complete Green read cutover.
+
+RESULT: PASS

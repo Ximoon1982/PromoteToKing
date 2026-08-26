@@ -1,0 +1,340 @@
+/* v2.8.5 Hotfix 2 — responsive containment shared by integrated tabs.
+ * Desktop dimensions are intentionally left unchanged. These rules only
+ * normalize embedded pages and narrow-screen public/admin tabs so the data
+ * viewport never grows wider than the main Promote to King header shell.
+ */
+
+html,
+body {
+  max-width: 100%;
+}
+
+/* Same-origin pages loaded as natural-height tab content. */
+html.p2k-embedded,
+html.p2k-embedded body {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+html.p2k-embedded body > main,
+html.p2k-embedded body > .page,
+html.p2k-embedded #p2kUpcomingAnalyzer,
+html.p2k-embedded #p2kCreationAnalyzer,
+html.p2k-embedded .p2k-analyzer,
+html.p2k-embedded .p2k-tp,
+html.p2k-embedded .task-control {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin-inline: 0 !important;
+}
+
+html.p2k-embedded main,
+html.p2k-embedded .page,
+html.p2k-embedded section,
+html.p2k-embedded article,
+html.p2k-embedded .card,
+html.p2k-embedded .grid,
+html.p2k-embedded .hero,
+html.p2k-embedded .filters,
+html.p2k-embedded .controls,
+html.p2k-embedded .toolbar,
+html.p2k-embedded .tablewrap,
+html.p2k-embedded .table-wrap,
+html.p2k-embedded .p2k-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Wide datasets keep their useful columns, but scrolling is local to the
+ * dataset instead of widening the whole embedded document. */
+html.p2k-embedded .tablewrap,
+html.p2k-embedded .table-wrap,
+html.p2k-embedded .p2k-table-wrap,
+html.p2k-embedded .p2k-player-table-wrap,
+html.p2k-embedded .p2k-chart-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+html.p2k-embedded img,
+html.p2k-embedded canvas,
+html.p2k-embedded svg {
+  max-width: 100%;
+}
+
+/* The parent dashboard must also be shrinkable around iframe/native data. */
+#teamInsightsPage,
+#hallOfFamePage,
+#administrationPage,
+#teamInsightsPage > *,
+#hallOfFamePage > *,
+#administrationPage > *,
+.dashboard-integrated-page,
+.dashboard-integrated-frame,
+.p2k-native-panel,
+.p2k-table-card,
+.p2k-insight-card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.dashboard-integrated-frame {
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  /* Match the main dashboard's 8 px mobile shell instead of stacking a
+   * second 12–24 px page gutter inside the selected tab. */
+  html.p2k-embedded body {
+    padding: 0 !important;
+  }
+
+  html.p2k-embedded body > main,
+  html.p2k-embedded body > .page,
+  html.p2k-embedded #p2kUpcomingAnalyzer,
+  html.p2k-embedded #p2kCreationAnalyzer,
+  html.p2k-embedded .p2k-analyzer,
+  html.p2k-embedded .p2k-tp,
+  html.p2k-embedded .task-control {
+    padding-inline: 0 !important;
+  }
+
+  /* Cards remain visually distinct, but use dashboard-scale mobile spacing. */
+  html.p2k-embedded .hero,
+  html.p2k-embedded .card,
+  html.p2k-embedded .filters,
+  html.p2k-embedded .control-card,
+  html.p2k-embedded .control-section,
+  html.p2k-embedded .p2k-tp-card,
+  html.p2k-embedded .p2k-filter-group {
+    border-radius: 9px;
+  }
+
+  html.p2k-embedded .hero,
+  html.p2k-embedded .card,
+  html.p2k-embedded .filters,
+  html.p2k-embedded .control-card,
+  html.p2k-embedded .control-section,
+  html.p2k-embedded .p2k-tp-card {
+    padding: 10px;
+  }
+
+  html.p2k-embedded h1 {
+    font-size: clamp(21px, 7vw, 26px);
+    overflow-wrap: anywhere;
+  }
+
+  html.p2k-embedded h2 {
+    overflow-wrap: anywhere;
+  }
+
+  /* Toolbars and date/filter groups must be usable with one thumb and should
+   * not force a desktop intrinsic width. */
+  html.p2k-embedded .dates,
+  html.p2k-embedded .toolbar,
+  html.p2k-embedded .controls,
+  html.p2k-embedded .actions,
+  html.p2k-embedded .control-actions,
+  html.p2k-embedded .header-actions,
+  html.p2k-embedded .p2k-actions,
+  html.p2k-embedded .p2k-tp-actions {
+    max-width: 100%;
+  }
+
+  html.p2k-embedded input,
+  html.p2k-embedded select,
+  html.p2k-embedded textarea {
+    max-width: 100%;
+  }
+
+  /* Native (non-iframe) Insights / Hall content gets the same compact mobile
+   * density as the dashboard rather than desktop-card spacing. */
+  #teamInsightsPage .p2k-native-heading,
+  #teamInsightsPage .p2k-insight-card,
+  #hallOfFamePage .dashboard-card,
+  #hallOfFamePage .p2k-native-heading,
+  #hallOfFamePage .p2k-insight-card,
+  #administrationPage .p2k-native-heading {
+    padding: 10px;
+    border-radius: 9px;
+  }
+
+  #teamInsightsPage .p2k-native-heading h2,
+  #hallOfFamePage .p2k-native-heading h2,
+  #administrationPage .p2k-native-heading h2 {
+    font-size: 21px;
+  }
+
+  .p2k-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .p2k-stat-card {
+    min-width: 0;
+    padding: 9px;
+  }
+
+  .p2k-stat-card strong {
+    font-size: 20px;
+  }
+
+  .p2k-table-toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 7px;
+    padding: 9px;
+  }
+
+  .p2k-table-toolbar label,
+  .p2k-table-toolbar input,
+  .p2k-table-toolbar select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .p2k-table-count {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .p2k-table-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 9px;
+  }
+
+  .p2k-table-pager {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  /* Nested tab bars stay one compact row and scroll themselves when needed.
+   * This avoids a tall wrapping strip and keeps the content width identical
+   * to the site header. */
+  .dashboard-integrated-subtabs,
+  .p2k-admin-subtabs {
+    width: 100%;
+    max-width: 100%;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    padding: 4px !important;
+  }
+
+  .dashboard-integrated-subtabs button,
+  .p2k-admin-subtabs button {
+    min-width: max-content !important;
+    min-height: 35px !important;
+    flex: 0 0 auto !important;
+    padding: 7px 10px !important;
+    white-space: nowrap;
+    font-size: 11px !important;
+  }
+
+  .dashboard-hall-search {
+    padding: 9px;
+  }
+
+  .dashboard-hall-search > div {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 7px;
+  }
+
+  .dashboard-hall-search input {
+    width: auto;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .dashboard-hall-search .dashboard-button {
+    width: auto;
+    min-width: 78px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* Charts use available width first; their SVG labels may overflow inside
+   * the card but never make the entire page wider. */
+  .p2k-native-chart,
+  .p2k-native-chart svg,
+  .p2k-mini-chart,
+  .p2k-mini-chart svg {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .p2k-native-chart svg {
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 430px) {
+  html.p2k-embedded .hero,
+  html.p2k-embedded .card,
+  html.p2k-embedded .filters,
+  html.p2k-embedded .control-card,
+  html.p2k-embedded .control-section,
+  html.p2k-embedded .p2k-tp-card,
+  #teamInsightsPage .p2k-native-heading,
+  #teamInsightsPage .p2k-insight-card,
+  #hallOfFamePage .dashboard-card,
+  #hallOfFamePage .p2k-native-heading,
+  #hallOfFamePage .p2k-insight-card {
+    padding: 8px;
+  }
+
+  .p2k-stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .p2k-table-page {
+    min-width: 32px;
+    min-height: 32px;
+  }
+}
+
+/* v2.9.4 Hall unified player search: the outer host is one full-width result;
+ * card columns belong to the inner grid, not to the outer result host. */
+#hallOfFamePage #hallUnifiedResults{
+  display:block!important;
+  grid-template-columns:none!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  overflow:hidden;
+}
+#hallOfFamePage #hallUnifiedResults>.p2k-hall-result-unified,
+#hallOfFamePage #hallUnifiedResults .p2k-hall-unified-grid,
+#hallOfFamePage #hallUnifiedResults .p2k-hall-result{
+  box-sizing:border-box;
+  min-width:0;
+  max-width:100%;
+}
+#hallOfFamePage #hallUnifiedResults .p2k-hall-unified-grid{
+  width:100%;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+}
+#hallOfFamePage #hallUnifiedResults .p2k-hall-result{
+  overflow:hidden;
+  overflow-wrap:anywhere;
+}
+@media(max-width:800px){
+  #hallOfFamePage #hallUnifiedResults .p2k-hall-unified-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:620px){
+  #hallOfFamePage #hallUnifiedResults .p2k-hall-unified-grid{grid-template-columns:1fr!important}
+}

@@ -1,0 +1,48 @@
+PROMOTE TO KING STANDALONE v2.8.8.1 — HOTFIX VALIDATION REPORT
+Date: 2026-08-08
+Result: PASS
+
+Hotfix scope
+- Dashboard first-paint Team Points critical request bounded at 3.5 seconds; delayed request continues in background and the automatic second wave is not blocked indefinitely.
+- Configured/local authenticated administrators are authorized immediately instead of waiting behind Chess.com club-profile verification.
+- Embedded Administration authorization tolerates parent/iframe initialization-order races.
+- Lazy Hall/Insights scripts and integrated Administration frames receive one bounded cache-busted retry after an initial load timeout/failure.
+- Unified Profile async enrichment is rooted to the Profile DOM, preserving nested Profile -> Achievement -> close -> next Achievement behavior.
+- Profile rank artwork uses an intrinsic responsive contain box so the lower part is not clipped.
+- Opponent Intelligence W/D/L uses canonical p2k_tp_match_summaries outcomes; void 0-0 matches remain excluded.
+- Analytics logic watermark opponent-outcomes-v2881 forces one normal materialized rebuild after deployment to correct previously stored opponent loss counts.
+- Team Insights adds cumulative Club Points score progression from the first stored day through today plus exactly six calendar months of Low/Medium/High projection, using the same shared 90-day forecast engine as year-over-year.
+
+Database / operations
+- Core schema: 6 (unchanged from v2.8.8).
+- Analytics schema: 5 (unchanged from v2.8.8).
+- No DB reset/reseed or SQL migration is required from v2.8.8.
+- Direct upgrades from v2.8.7 still use the additive v2.8.8 Core 5 -> 6 migration.
+- CRON cadence unchanged: Club 5m, Tournament 10m staggered, Player 30m staggered, league monitoring hourly.
+- No new hotfix/ACAMR/Intelligence CRON entry.
+
+Source-tree validation
+- pytest regression suite: 154 / 154 PASS.
+- Static UI feature tests: PASS.
+- PHP lint: 84 / 84 PASS.
+- Standalone JavaScript syntax: 44 / 44 PASS.
+- Inline root HTML/HTM JavaScript syntax: 11 / 11 PASS.
+- Python source compilation: 40 / 40 PASS.
+- JSON parsing: 4 / 4 PASS.
+- v2.8.8.1 CRON helper shell syntax: PASS.
+- v2.8.8.1 CRON helper destructive fake-crontab replacement/install: PASS; exactly four schedules installed.
+
+Packaging
+- site-manifest.json is regenerated after all hotfix files are finalized.
+- Package/static validator is run after manifest regeneration.
+- Candidate ZIP clean extraction: PASS.
+- Clean extracted pytest: 154 / 154 PASS.
+- Clean extracted package validator: PASS.
+- Clean extracted static UI tests: PASS.
+- Clean extracted PHP lint: 84 / 84 PASS.
+- Clean extracted standalone JavaScript syntax: 44 / 44 PASS.
+- Clean extracted inline root HTML/HTM JavaScript syntax: 11 / 11 PASS.
+- Clean extracted Python source compilation: 40 / 40 PASS.
+- Clean extracted JSON parsing: 4 / 4 PASS.
+- Clean extracted CRON helper shell syntax: PASS.
+- The immutable final ZIP is rebuilt from this exact validated source and independently clean-extracted/revalidated once more before handoff.

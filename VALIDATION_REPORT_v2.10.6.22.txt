@@ -1,0 +1,41 @@
+Promote to King v2.10.6.22 validation report
+Status: PASS — FINAL ACCEPTANCE
+Date: 24 Aug 2026 UTC
+
+Scope
+- GABCRF MariaDB serialization/deadlock resilience and cursor-preserving resume.
+- Automatic recovery of an already-stored transient GABCRF deadlock state.
+- Newly discovered-match modal handoff replaces the transient loading modal instead of stacking behind the detail modal.
+- Administration category label renamed from “Admin & maintenance” to “Maintenance”.
+
+Release invariants
+- No database schema change, reset or reseed.
+- No CRON definition change.
+- No Blue/Green routing change.
+- No scoring, heatmap formula, heatmap data, artwork or public-navigation change.
+
+Canonical source
+- Canonical tree: 1,022 files.
+- v2.10.6.21 -> v2.10.6.22: 15 modified + 6 added, 0 removed.
+- Cumulative v2.10.6.15 -> v2.10.6.22 payload: 65 files, 0 removals.
+
+Behavior / syntax validation
+- Focused v2.10.6.22 corrective tests: 5/5 PASS.
+- Inherited relevant behavior checks: 39 PASS; predecessor failures reviewed and limited to frozen predecessor-version / superseded-label assertions.
+- Changed PHP syntax checks: PASS.
+- Changed JavaScript syntax checks: PASS.
+- Complete package validator: PASS.
+
+Installer replay acceptance
+- v2.10.6.15 -> v2.10.6.22: 1,022/1,022 exact; 0 missing, 0 extra, 0 hash differences.
+- v2.10.6.16 -> v2.10.6.22: 1,022/1,022 exact; 0 missing, 0 extra, 0 hash differences.
+- v2.10.6.17 -> v2.10.6.22: 1,022/1,022 exact; 0 missing, 0 extra, 0 hash differences.
+- v2.10.6.18 -> v2.10.6.22: 1,022/1,022 exact; 0 missing, 0 extra, 0 hash differences.
+- v2.10.6.19 -> v2.10.6.22: 1,022/1,022 exact; 0 missing, 0 extra, 0 hash differences.
+- v2.10.6.20 -> v2.10.6.22: 1,022/1,022 exact; 0 missing, 0 extra, 0 hash differences.
+- v2.10.6.21 -> v2.10.6.22: 1,022/1,022 exact; 0 missing, 0 extra, 0 hash differences.
+
+Final freeze requirements
+- Full-source extraction must match this frozen 1,022-file tree byte-for-byte.
+- Cumulative installer must remain idempotent when v2.10.6.22 is already installed.
+- Final SHA-256 checksums are generated only after the post-freeze archive/replay gates pass.

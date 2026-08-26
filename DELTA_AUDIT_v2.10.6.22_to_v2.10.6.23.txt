@@ -1,0 +1,30 @@
+v2.10.6.22 -> v2.10.6.23
+modified=16
+added=6
+removed=0
+
+Modified before final audit/report freeze:
+CHANGELOG.md
+MIGRATION_VERSION
+RELEASE_NOTES.md
+TEST_HISTORY.md
+TaskControl.html
+TournamentManagement.html
+UPDATE_HISTORY.md
+VERSION
+assets/css/dashboard-v2.css
+assets/js/pages/dashboard-v2.js
+assets/js/site-config.js
+server/team-points-green/public/api.php
+server/team-points-green/src/GreenRepository.php
+site-manifest.json
+tests/validate_package.py
+ui-v2.html
+
+Added before final audit/report freeze:
+DELTA_AUDIT_v2.10.6.22_to_v2.10.6.23.txt
+INSTALL_v2.10.6.23.md
+MIGRATION_v2.10.6.23.md
+RELEASE_NOTES_v2.10.6.23.md
+VALIDATION_REPORT_v2.10.6.23.txt
+tests/test_v210623_admin_data_surfaces.py

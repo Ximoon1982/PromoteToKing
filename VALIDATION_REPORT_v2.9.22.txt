@@ -1,0 +1,50 @@
+Promote to King v2.9.22 validation report
+========================================
+Date: 2026-08-14 Europe/Luxembourg
+Baseline: exact frozen PromoteToKing_Standalone_v2.9.21.zip
+Target: v2.9.22 Fresh Points Reconstruction + ACDM correction
+
+Release contract
+----------------
+- VERSION 2.9.22
+- Core schema 15 (additive reconstruction staging migration)
+- Analytics schema 7
+- Achievement catalogue 162 unchanged
+- CRON topology unchanged: 4 operational + 1 weekly backup
+- Protected local/OAuth/server configuration is not shipped by the incremental payload
+
+Source validation
+-----------------
+- pytest regression suite: 469 / 469 PASS
+- v2.9.22 focused Fresh Points Reconstruction / ACDM invariants: 6 / 6 PASS
+- PHP lint: 108 / 108 PASS
+- JavaScript syntax: 55 / 55 PASS
+- Shell syntax: 107 / 107 PASS
+- Node static UI suite: PASS
+- Retained Chromium/browser matrix: 16 / 16 PASS
+- v2.9.22 reconstruction Task Control browser gate: PASS, zero page errors
+
+Fresh Points Reconstruction invariants
+--------------------------------------
+- Club/Player selection plus Start/Pause/Resume/Cancel are exposed in Scheduled Task Control.
+- Acquisition writes isolated Core-15 reconstruction staging only; canonical Core is untouched before approval.
+- Run/phase/network state is checkpointed server-side and can resume after browser suspension/reload.
+- Club pipeline performs opening discovery, fresh match-detail reconstruction, closing discovery/reconciliation and explicit approval.
+- Club blind-tail fallback starts after the true MAX known match ID, not a truncated work-list sample.
+- Finished 0-0 results are explicit void/zero-point reconstruction facts rather than unresolved blockers.
+- Player pipeline performs opening roster, every-current-member match discovery, archive fallback, board/game resolution, closing roster/match discovery and explicit approval.
+- Review exposes current vs reconstructed totals, changed facts, unresolved issues and queue supersession impact.
+- Apply uses normal worker advisory lane locks and a transaction; selected reconstructed facts override differing stored facts.
+- Queue cleanup marks only reconstruction-satisfied work superseded; unrelated/current unresolved work remains.
+
+ACDM/server drain invariants
+----------------------------
+- Club worker capacity is 100 items per invocation.
+- Club runtime policy enforces a 34-second floor / 36-second hard ceiling even with historical protected local configuration.
+- Browser ACDM authoritative pulses adapt from 16 through 64 work items according to canonical debt/productivity.
+- P0 foreground protection and existing shared OAuth adaptive rate learning are retained.
+
+Packaging/replay
+----------------
+Final standalone extraction, exact byte inventory, incremental updater replay, protected-config preservation,
+compact-backup inode fixture, Core-15 migration verification and CRON replay are recorded in the final freeze report.

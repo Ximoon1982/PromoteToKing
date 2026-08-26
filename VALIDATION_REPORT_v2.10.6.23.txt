@@ -1,0 +1,42 @@
+Promote to King v2.10.6.23 validation report
+Status: PASS — FINAL ACCEPTANCE
+Date: 25 Aug 2026 UTC
+
+Scope
+- Consolidate correlated member rename/discovery/join/left chronology into one authoritative name-change event.
+- Add Known tournaments status table to Tournament Management.
+- Distinguish unknown New matches · 24 h state (`—`) from authoritative zero.
+- Add admin-only Member lookup with identity, lifecycle, rating, activity, achievement and MCA facts.
+
+Release invariants
+- No database schema change, reset or reseed.
+- No CRON definition change.
+- No Blue/Green routing change.
+- No scoring, heatmap formula/data, artwork or public-navigation change.
+
+Canonical source
+- Canonical tree: 1,028 files.
+- v2.10.6.22 -> v2.10.6.23: 16 modified + 6 added, 0 removed.
+- Cumulative v2.10.6.15 -> v2.10.6.23 payload: 72 files, 0 removals.
+
+Behavior / syntax validation
+- Focused v2.10.6.23 tests: 5/5 PASS.
+- Inherited v2.10.6.16-.23 behavior batch: 44 PASS; 4 predecessor assertions reviewed and limited to frozen predecessor-version / superseded Admin-label expectations.
+- Changed PHP syntax checks: PASS.
+- Changed JavaScript syntax checks: PASS.
+- Complete package validator: PASS.
+
+Installer replay acceptance
+- v2.10.6.15 -> v2.10.6.23: 1,028/1,028 exact; 0 missing, 0 extra, 0 hash differences.
+- v2.10.6.16 -> v2.10.6.23: 1,028/1,028 exact; 0 missing, 0 extra, 0 hash differences.
+- v2.10.6.17 -> v2.10.6.23: 1,028/1,028 exact; 0 missing, 0 extra, 0 hash differences.
+- v2.10.6.18 -> v2.10.6.23: 1,028/1,028 exact; 0 missing, 0 extra, 0 hash differences.
+- v2.10.6.19 -> v2.10.6.23: 1,028/1,028 exact; 0 missing, 0 extra, 0 hash differences.
+- v2.10.6.20 -> v2.10.6.23: 1,028/1,028 exact; 0 missing, 0 extra, 0 hash differences.
+- v2.10.6.21 -> v2.10.6.23: 1,028/1,028 exact; 0 missing, 0 extra, 0 hash differences.
+- v2.10.6.22 -> v2.10.6.23: 1,028/1,028 exact; 0 missing, 0 extra, 0 hash differences.
+
+Final freeze requirements
+- Full-source extraction matches the frozen 1,028-file tree byte-for-byte.
+- Cumulative installer is idempotent when v2.10.6.23 is already installed.
+- Final SHA-256 checksums are generated only after the post-freeze archive/replay gates pass.

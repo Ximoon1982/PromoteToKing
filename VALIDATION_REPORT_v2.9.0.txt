@@ -1,0 +1,31 @@
+Promote to King v2.9.0 validation report
+========================================
+Baseline: verified v2.8.11 production package
+Target: 2.9.0
+
+Automated checks completed during build:
+- Python regression suite: 209 passed
+- Static UI feature suite (Node): passed
+- Package validator: passed before final archive staging
+- PHP syntax validation: passed on modified server files and package validator full scan
+- JavaScript syntax validation: passed on modified files and package validator full scan
+- Bash syntax validation: cron-dispatch-v2.9.0.sh, reset-install-cron-v2.9.0.sh and update-v2.8.11-to-v2.9.0.sh passed
+
+Release-specific regression coverage includes:
+- verified real PHP CLI detection and 55-second IONOS watchdog
+- bounded retry-safe Member Points player-history slices
+- shared Tournament/Match-Tracking token repair and analytics-secret initialization
+- 25-per-5-minute historical Club Points revalidation queue below fresh work priority
+- Core-generation-aware Analytics convergence
+- new achievement families and per-achievement artwork placeholders
+- Highlights/Leaderboard achievement view and challenge focus navigation
+- cookieless first-party Traffic analytics and Statcounter removal
+- Club Intelligence sortable tables
+- Runtime Diagnostics versions/models/schema/CRON/context data
+- chart series visibility/maximize/readability requirements
+- cumulative activity Today cut-off, board-size stats/labels, monthly Today/future treatment
+- Daily-rank bar values
+- Live Rook bottom safety margin
+- opponent loss pluralization regression guard
+
+Final ZIP hashes and file counts are calculated after staging and are reported with the release artifacts.

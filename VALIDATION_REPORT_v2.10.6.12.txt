@@ -1,0 +1,81 @@
+Promote to King v2.10.6.12 validation
+====================================
+
+Scope
+-----
+Authenticated Admin-toggle shell reorganization on top of the authoritative
+v2.10.6.11 source. Public Dashboard / Hall of Fame / Insights are regression
+locked.
+
+Focused v2.10.6.12 validation
+-----------------------------
+- tests/test_v210612_admin_shell.py: 6/6 PASS
+- Public Dashboard section SHA-256 matches v2.10.6.11 reference: PASS
+- Hall of Fame section SHA-256 matches v2.10.6.11 reference: PASS
+- Insights section SHA-256 matches v2.10.6.11 reference: PASS
+- Existing admin tool catalogue fingerprint unchanged: PASS
+- Existing admin tool catalogue size: 36 tools
+- Six agreed top-level Admin tabs present in order: PASS
+- Existing admin deep-link destinations preserved: PASS
+- Admin-only activation/gating assertions: PASS
+
+Applicable recent UI/Green regression batch
+-------------------------------------------
+Selected v2.10.6.7 through v2.10.6.11 UI/Green/Admin tests plus current shell:
+- behavioral assertions: 30 PASS
+- historical frozen release-identity assertions: 5 expected FAIL because they
+  intentionally require VERSION 2.10.6.9 / 2.10.6.10 / 2.10.6.11
+- behavioral regressions found: 0
+
+Package-wide validation
+-----------------------
+- tests/validate_package.py: PASS
+- Static UI feature tests: PASS
+- JavaScript syntax sweep: 59/59 PASS
+- PHP syntax sweep: 127/127 PASS
+- Focused Dashboard JavaScript syntax check: PASS
+- Generated pytest/cache artifacts excluded: PASS
+
+Source delta from v2.10.6.11
+---------------------------
+- predecessor source files: 956
+- v2.10.6.12 source files: 962
+- modified: 8
+- added: 6
+- removed: 0
+
+Installer replay proof
+----------------------
+Incremental payload replayed over a clean copy of the actual authoritative
+v2.10.6.11 source tree:
+- expected source files: 962
+- replayed source files: 962
+- missing: 0
+- extra: 0
+- SHA-256 content differences: 0
+- result: EXACT REPLAY PASS
+
+The installer's normal `_p2k_backups` runtime directory was excluded from the
+source-tree comparison. After removing that test-only runtime backup directory,
+tests/validate_package.py on the replayed tree: PASS.
+
+Independent SOURCE ZIP extraction proof
+---------------------------------------
+A complete v2.10.6.12 SOURCE candidate was freshly extracted and compared with
+the canonical working tree:
+- extracted source files: 962
+- missing: 0
+- extra: 0
+- SHA-256 content differences: 0
+- tests/validate_package.py on extracted source: PASS
+
+Deployment impact
+-----------------
+- No database schema migration.
+- No database reset or reseed.
+- No CRON definition change.
+- No public Green/Blue routing change.
+- No Team Points scoring change.
+- No image/artwork change.
+- Existing Scheduled Task Control implementation remains authoritative,
+  including the Green accelerator control.

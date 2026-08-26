@@ -1,0 +1,130 @@
+key	status	approval_id	source_file	source_sha256	master	mini_64	thumb_128	placeholder	rejection_reason
+first-match	rejected-placeholder	REC-0001	image-gen-1(10).png	8466f10a34b4b35a2af72965d6b0ca942565d964b6fa6abfe8d0293978a0cd84				assets/images/achievements/placeholders/first-match.svg	Recovered match/team-points artwork was rejected; placeholder-only policy restored post-v2.9.13.
+first-point	rejected-placeholder	REC-0018	image-gen-2(10).png	1550af9a0c66bc69e1bb50a19614ddb3c0bc533677cbee8a147ac5a0379529e7				assets/images/achievements/placeholders/first-point.svg	Recovered match/team-points artwork was rejected; placeholder-only policy restored post-v2.9.13.
+matches-10	rejected-placeholder	REC-0026	image-gen-3(10).png	ef7f484e59db60cb436b8ed41a3c59f268b53a0a92fc2351b642648767f710f0				assets/images/achievements/placeholders/matches-10.svg	Recovered match/team-points artwork was rejected; placeholder-only policy restored post-v2.9.13.
+matches-50	rejected-placeholder	REC-0034	image-gen-4(10).png	42502c69dc3af5580c873225631575d62f07489388856ac149b1ce3a0def05c9				assets/images/achievements/placeholders/matches-50.svg	Recovered match/team-points artwork was rejected; placeholder-only policy restored post-v2.9.13.
+matches-100	rejected-placeholder	REC-0049	image-gen-5(9).png	fb0e01f9bcd4f875185cc16c924fb6f6c48fa26bfb777ab9334706df9d63e57b				assets/images/achievements/placeholders/matches-100.svg	Recovered match/team-points artwork was rejected; placeholder-only policy restored post-v2.9.13.
+matches-250	rejected-placeholder	REC-0057	image-gen-6(9).png	c834bc4a85c3f5f1aebec9523a21ad69bdd6603843747ab37fdb4bce1109c900				assets/images/achievements/placeholders/matches-250.svg	Recovered match/team-points artwork was rejected; placeholder-only policy restored post-v2.9.13.
+matches-500	rejected-placeholder	REC-0062	image-gen-7(6).png	5398fb202249dfd469f2249754a5d4c29e51d072d5e0786e06d44843573ccf77				assets/images/achievements/placeholders/matches-500.svg	Recovered match/team-points artwork was rejected; placeholder-only policy restored post-v2.9.13.
+games-100	existing-resolved		games-100.png	3df6fbd520c969bedc807195cc9e096d2d503f57f9482931442b132a7aeb26ef	assets/images/achievements/games-100.png	assets/images/achievements/mini/64/games-100.webp	assets/images/achievements/thumbs/128/games-100.webp		
+games-500	existing-resolved		games-500.png	cbbd2d3f85d146df38c381323ab068b8968182b4ed157b10584c0a718c943ae3	assets/images/achievements/games-500.png	assets/images/achievements/mini/64/games-500.webp	assets/images/achievements/thumbs/128/games-500.webp		
+games-1000	existing-resolved		games-1000.png	93a1cb656712915d2660a54fe726841bc1007cc565cdbf1c949c587309824ce8	assets/images/achievements/games-1000.png	assets/images/achievements/mini/64/games-1000.webp	assets/images/achievements/thumbs/128/games-1000.webp		
+games-5000	existing-resolved		games-5000.png	59b8b8259b5c9dced74c658d6c3f4ccdea9448ce80de5bf9cb54b21fce518f53	assets/images/achievements/games-5000.png	assets/images/achievements/mini/64/games-5000.webp	assets/images/achievements/thumbs/128/games-5000.webp		
+games-10000	existing-resolved		games-10000.png	cb326c28a94cd80421e6c3a9a79936f731332fe9675dbad6204f6b1d1924665e	assets/images/achievements/games-10000.png	assets/images/achievements/mini/64/games-10000.webp	assets/images/achievements/thumbs/128/games-10000.webp		
+wins-50	existing-resolved		wins-50.png	fdeacb15f820de9f402cb40ec45e72798f1da4ca95a6a5344156caa12fda6dc8	assets/images/achievements/wins-50.png	assets/images/achievements/mini/64/wins-50.webp	assets/images/achievements/thumbs/128/wins-50.webp		
+wins-250	existing-resolved		wins-250.png	81ef42282ec82e718dff1046d07d020c832fc41239663437ed94b2421c5e6f16	assets/images/achievements/wins-250.png	assets/images/achievements/mini/64/wins-250.webp	assets/images/achievements/thumbs/128/wins-250.webp		
+wins-1000	existing-resolved		wins-1000.png	f6c0834b522e076f4024ed13132a5b5a12eb4e61d11c23246165166697154a4a	assets/images/achievements/wins-1000.png	assets/images/achievements/mini/64/wins-1000.webp	assets/images/achievements/thumbs/128/wins-1000.webp		
+daily-pawn	existing-resolved		01_Pawn_10_points.png	2fa5e7b61d1546880800549597d68572972aad95d8390f67490d82b1dfc3edfc	assets/images/ranks/01_Pawn_10_points.png	assets/images/achievements/mini/64/daily-pawn.webp	assets/images/achievements/thumbs/128/daily-pawn.webp		
+daily-knight	existing-resolved		02_Knight_20_points.png	0e63cb343341958ea539df1d910326fb8d0d925e2e1aacd296473628af21eab2	assets/images/ranks/02_Knight_20_points.png	assets/images/achievements/mini/64/daily-knight.webp	assets/images/achievements/thumbs/128/daily-knight.webp		
+daily-bishop	existing-resolved		03_Bishop_50_points.png	8a65a9f51f0fea3e416d24fb30ba3cd7d110d6b50b2703484b797556d0bc24c1	assets/images/ranks/03_Bishop_50_points.png	assets/images/achievements/mini/64/daily-bishop.webp	assets/images/achievements/thumbs/128/daily-bishop.webp		
+daily-rook	existing-resolved		04_Rook_100_points.png	8f773d8612eb28918b58a7f3809eaab1811d1f732b587e81fa3afe188ad9c6b4	assets/images/ranks/04_Rook_100_points.png	assets/images/achievements/mini/64/daily-rook.webp	assets/images/achievements/thumbs/128/daily-rook.webp		
+daily-queen	existing-resolved		05_Queen_150_points.png	a5a3e2f26fdc263d9f52e99007549cf36efb4010026d639cc52e972b533a8e5b	assets/images/ranks/05_Queen_150_points.png	assets/images/achievements/mini/64/daily-queen.webp	assets/images/achievements/thumbs/128/daily-queen.webp		
+daily-king	existing-resolved		06_King_250_points.png	1d7d78f0cafdbf40f66cfbb2a44131585fd0d85558ea24ed9794cd7e0b10bbf6	assets/images/ranks/06_King_250_points.png	assets/images/achievements/mini/64/daily-king.webp	assets/images/achievements/thumbs/128/daily-king.webp		
+daily-bronze-king	existing-resolved		07_Bronze_King_500_points.png	9691af270d5747eb88e9e9e35bd77653c405e2944a4ec305342f383bf5fa2df6	assets/images/ranks/07_Bronze_King_500_points.png	assets/images/achievements/mini/64/daily-bronze-king.webp	assets/images/achievements/thumbs/128/daily-bronze-king.webp		
+daily-silver-king	existing-resolved		08_Silver_King_1000_points.png	12ea607b7da5061745d68b82cccdb88157bbc54daf30ffed656e95ec497d8907	assets/images/ranks/08_Silver_King_1000_points.png	assets/images/achievements/mini/64/daily-silver-king.webp	assets/images/achievements/thumbs/128/daily-silver-king.webp		
+daily-gold-king	existing-resolved		09_Gold_King_1500_points.png	2f798c8b75395e09ec0f6478e0fde7a02436c63baddb2a3c7cda6a43c32ad298	assets/images/ranks/09_Gold_King_1500_points.png	assets/images/achievements/mini/64/daily-gold-king.webp	assets/images/achievements/thumbs/128/daily-gold-king.webp		
+daily-platinum-king	existing-resolved		10_Platinum_King_2000_points.png	c1cdb9de63b803eb34fc56ca7591d8d27dc9899a649940acf84b301ee48aa12f	assets/images/ranks/10_Platinum_King_2000_points.png	assets/images/achievements/mini/64/daily-platinum-king.webp	assets/images/achievements/thumbs/128/daily-platinum-king.webp		
+daily-amethyst-king	existing-resolved		11_Amethyst_King_3000_points.png	a2aea011f3083d7cdd745153ec13244178823edb7f10995746ca96674ce40afa	assets/images/ranks/11_Amethyst_King_3000_points.png	assets/images/achievements/mini/64/daily-amethyst-king.webp	assets/images/achievements/thumbs/128/daily-amethyst-king.webp		
+daily-topaz-king	existing-resolved		12_Topaz_King_4000_points.png	db2890b0de808620146a92a50aba1d788c969122697afc8949775dbc0de83138	assets/images/ranks/12_Topaz_King_4000_points.png	assets/images/achievements/mini/64/daily-topaz-king.webp	assets/images/achievements/thumbs/128/daily-topaz-king.webp		
+daily-emerald-king	existing-resolved		13_Emerald_King_5500_points.png	1c594a794ab7335814fcacab5ab9888c87e9c83815938875225b56df0ddbbea6	assets/images/ranks/13_Emerald_King_5500_points.png	assets/images/achievements/mini/64/daily-emerald-king.webp	assets/images/achievements/thumbs/128/daily-emerald-king.webp		
+daily-sapphire-king	existing-resolved		14_Sapphire_King_7000_points.png	12174bd4bdee332cd0574253951bef0911de11d48c3f4345b34efa9356b0ef29	assets/images/ranks/14_Sapphire_King_7000_points.png	assets/images/achievements/mini/64/daily-sapphire-king.webp	assets/images/achievements/thumbs/128/daily-sapphire-king.webp		
+daily-ruby-king	existing-resolved		15_Ruby_King_8500_points.png	16719160f7f57bb5c8d94eb2c06d145bf672f0f1f5beb3db9895ef5aca61515f	assets/images/ranks/15_Ruby_King_8500_points.png	assets/images/achievements/mini/64/daily-ruby-king.webp	assets/images/achievements/thumbs/128/daily-ruby-king.webp		
+daily-diamond-king	existing-resolved		16_Diamond_King_10000_points.png	d04df337c09f6fc9334ec7042ea830a43d41e149c91a1a20d1937f04a91733fd	assets/images/ranks/16_Diamond_King_10000_points.png	assets/images/achievements/mini/64/daily-diamond-king.webp	assets/images/achievements/thumbs/128/daily-diamond-king.webp		
+live-rank-pawn	existing-resolved		01_Live_Pawn_50_points.png	067be60ee4b107c8259a9ac430596de2a8a7cc97652fd9c4d605cf2e4889187a	assets/images/live-ranks/01_Live_Pawn_50_points.png	assets/images/achievements/mini/64/live-rank-pawn.webp	assets/images/achievements/thumbs/128/live-rank-pawn.webp		
+live-rank-knight	existing-resolved		02_Live_Knight_150_points.png	a08a22bad4d3d6f66d9a154b1943f3c0f760ca69fade1dd111b44567a8e21b7f	assets/images/live-ranks/02_Live_Knight_150_points.png	assets/images/achievements/mini/64/live-rank-knight.webp	assets/images/achievements/thumbs/128/live-rank-knight.webp		
+live-rank-bishop	existing-resolved		03_Live_Bishop_500_points.png	3ff83afbfbc63c02ba35e4641103c06eefb99aa4fd9f516ab33d2f13ef4c2476	assets/images/live-ranks/03_Live_Bishop_500_points.png	assets/images/achievements/mini/64/live-rank-bishop.webp	assets/images/achievements/thumbs/128/live-rank-bishop.webp		
+live-rank-rook	existing-resolved		04_Live_Rook_2500_points.png	373585c49f964e10b03aa0de32894414f9543ba666ce70cf8f971152e05c4ec2	assets/images/live-ranks/04_Live_Rook_2500_points.png	assets/images/achievements/mini/64/live-rank-rook.webp	assets/images/achievements/thumbs/128/live-rank-rook.webp		
+live-rank-queen	existing-resolved		05_Live_Queen_7500_points.png	7bdc0e1ec10289af12a2610627aa61af394eca0dc3815b7054ecaf3c590b95f3	assets/images/live-ranks/05_Live_Queen_7500_points.png	assets/images/achievements/mini/64/live-rank-queen.webp	assets/images/achievements/thumbs/128/live-rank-queen.webp		
+live-rank-king	existing-resolved		06_Live_King_15000_points.png	6116342b9c798a3f8198baf25b7b3559f347711556c71061b909b93a824b5216	assets/images/live-ranks/06_Live_King_15000_points.png	assets/images/achievements/mini/64/live-rank-king.webp	assets/images/achievements/thumbs/128/live-rank-king.webp		
+league-debut	existing-resolved		league-debut.png	ea10377124f1c0ab123d9f5cd14a4eac7d0d070baf039e8cf049b5a50e4e0dbc	assets/images/achievements/league-debut.png	assets/images/achievements/mini/64/league-debut.webp	assets/images/achievements/thumbs/128/league-debut.webp		
+league-regular	existing-resolved		league-regular.png	1bd056380e8ebdaf82cb24c2e7d598f331becd559225afc68f2c1bdbe8e7cb09	assets/images/achievements/league-regular.png	assets/images/achievements/mini/64/league-regular.webp	assets/images/achievements/thumbs/128/league-regular.webp		
+league-veteran	existing-resolved		league-veteran.png	deea3726801e1326a78ac62e0840d59881b6c16d5dedc1d00a21a9e80721aec0	assets/images/achievements/league-veteran.png	assets/images/achievements/mini/64/league-veteran.webp	assets/images/achievements/thumbs/128/league-veteran.webp		
+league-specialist	existing-resolved		league-specialist.png	dbc095fa9f9e22928ab3a7c59fc4825559ed9ecb25a3dc2e0efad13633c14f84	assets/images/achievements/league-specialist.png	assets/images/achievements/mini/64/league-specialist.webp	assets/images/achievements/thumbs/128/league-specialist.webp		
+league-legend	existing-resolved		league-legend.png	b9b1f6d9487ef3d39507deaf4285a7edcb9ed9daad5c56c70bb632cae48737b7	assets/images/achievements/league-legend.png	assets/images/achievements/mini/64/league-legend.webp	assets/images/achievements/thumbs/128/league-legend.webp		
+multi-league	existing-resolved		multi-league.png	7691032c6524efb8f58880240372345e7463383790dadd91f70487565feb7c77	assets/images/achievements/multi-league.png	assets/images/achievements/mini/64/multi-league.webp	assets/images/achievements/thumbs/128/multi-league.webp		
+all-league	existing-resolved		all-league.png	e8a85c8f7d7ef4b9a1626287b504e6854ed7a0e27a1d84a124ab47347df00aad	assets/images/achievements/all-league.png	assets/images/achievements/mini/64/all-league.webp	assets/images/achievements/thumbs/128/all-league.webp		
+1wl-competitor	existing-resolved		1wl-competitor.png	d6ba8fdd0fdd593aabdf43aef2d618f32533200dfa071bcb39d6fded609894d3	assets/images/achievements/1wl-competitor.png	assets/images/achievements/mini/64/1wl-competitor.webp	assets/images/achievements/thumbs/128/1wl-competitor.webp		
+1wl-veteran	existing-resolved		1wl-veteran.png	134b4e5455054446247684848ae3a081d0ac085da68f9337306ec5ffa63da27c	assets/images/achievements/1wl-veteran.png	assets/images/achievements/mini/64/1wl-veteran.webp	assets/images/achievements/thumbs/128/1wl-veteran.webp		
+1wl-legend	existing-resolved		1wl-legend.png	d34469bf758448b74622eb9ce52b48e31237aea63c2691168bab28633820eb50	assets/images/achievements/1wl-legend.png	assets/images/achievements/mini/64/1wl-legend.webp	assets/images/achievements/thumbs/128/1wl-legend.webp		
+1wl-first-point	explicit-placeholder		1wl-first-point.svg						
+1wl-scorer	explicit-placeholder		1wl-scorer.svg						
+1wl-specialist	explicit-placeholder		1wl-specialist.svg						
+1wl-master	explicit-placeholder		1wl-master.svg						
+pcl-competitor	explicit-placeholder		pcl-competitor.svg						
+pcl-veteran	explicit-placeholder		pcl-veteran.svg						
+pcl-legend	explicit-placeholder		pcl-legend.svg						
+pcl-first-point	explicit-placeholder		pcl-first-point.svg						
+pcl-scorer	explicit-placeholder		pcl-scorer.svg						
+pcl-specialist	explicit-placeholder		pcl-specialist.svg						
+pcl-master	explicit-placeholder		pcl-master.svg						
+tcmac-competitor	explicit-placeholder		tcmac-competitor.svg						
+tcmac-veteran	explicit-placeholder		tcmac-veteran.svg						
+tcmac-legend	explicit-placeholder		tcmac-legend.svg						
+tcmac-first-point	explicit-placeholder		tcmac-first-point.svg						
+tcmac-scorer	explicit-placeholder		tcmac-scorer.svg						
+tcmac-specialist	explicit-placeholder		tcmac-specialist.svg						
+tcmac-master	explicit-placeholder		tcmac-master.svg						
+tmcl-competitor	explicit-placeholder		tmcl-competitor.svg						
+tmcl-veteran	explicit-placeholder		tmcl-veteran.svg						
+tmcl-legend	existing-resolved		tmcl-legend.png	46eaa0dd2049f4c781d9c5b3939eac42e57c08efab72a2be7214f65d06096469	assets/images/achievements/tmcl-legend.png	assets/images/achievements/mini/64/tmcl-legend.webp	assets/images/achievements/thumbs/128/tmcl-legend.webp		
+tmcl-first-point	existing-resolved		tmcl-first-point.png	c7754df3f4684d86d7707c962c1f12cd363b44808cfbdbd3cba31512d7ea4987	assets/images/achievements/tmcl-first-point.png	assets/images/achievements/mini/64/tmcl-first-point.webp	assets/images/achievements/thumbs/128/tmcl-first-point.webp		
+tmcl-scorer	existing-resolved		tmcl-scorer.png	68c2b305e44963fdc88e730c320ef22c2f904d6f2076ee79d8a5987fb02d0431	assets/images/achievements/tmcl-scorer.png	assets/images/achievements/mini/64/tmcl-scorer.webp	assets/images/achievements/thumbs/128/tmcl-scorer.webp		
+tmcl-specialist	existing-resolved		tmcl-specialist.png	b39e4bfba214defc63d1c0260fc2c712026f7b08672b26bbe30440afb3caeb6e	assets/images/achievements/tmcl-specialist.png	assets/images/achievements/mini/64/tmcl-specialist.webp	assets/images/achievements/thumbs/128/tmcl-specialist.webp		
+tmcl-master	existing-resolved		tmcl-master.png	d2975793c81916902364fbf721525ef08b39e39bb0d1f03c5c860023fcc632de	assets/images/achievements/tmcl-master.png	assets/images/achievements/mini/64/tmcl-master.webp	assets/images/achievements/thumbs/128/tmcl-master.webp		
+kotml-competitor	existing-resolved		kotml-competitor.png	d77e4aa4c8b0a94ea219c62552d2097f0529eb9cf4e84c36a0fbe6faf36c810b	assets/images/achievements/kotml-competitor.png	assets/images/achievements/mini/64/kotml-competitor.webp	assets/images/achievements/thumbs/128/kotml-competitor.webp		
+kotml-veteran	existing-resolved		kotml-veteran.png	4677476da9d95bc9cf80508d0e9e3a5d2b1c23c109013ac70df90c4ac4621feb	assets/images/achievements/kotml-veteran.png	assets/images/achievements/mini/64/kotml-veteran.webp	assets/images/achievements/thumbs/128/kotml-veteran.webp		
+kotml-legend	existing-resolved		kotml-legend.png	8159bbf5c8d51a3297aab2c46dcf14c16502976f555ae4d4871919a47e8097ea	assets/images/achievements/kotml-legend.png	assets/images/achievements/mini/64/kotml-legend.webp	assets/images/achievements/thumbs/128/kotml-legend.webp		
+kotml-first-point	existing-resolved		kotml-first-point.png	85f55d0b446e051f4f3694e9950798a84f462e229540927cbc769c426dad28a3	assets/images/achievements/kotml-first-point.png	assets/images/achievements/mini/64/kotml-first-point.webp	assets/images/achievements/thumbs/128/kotml-first-point.webp		
+kotml-scorer	existing-resolved		kotml-scorer.png	e422c695c20ecc616f36a604e3eb0393470be903a75074af7076e4b05d72f61a	assets/images/achievements/kotml-scorer.png	assets/images/achievements/mini/64/kotml-scorer.webp	assets/images/achievements/thumbs/128/kotml-scorer.webp		
+kotml-specialist	explicit-placeholder		kotml-specialist.svg						
+kotml-master	explicit-placeholder		kotml-master.svg						
+seniority-1m	explicit-placeholder		seniority-1m.svg						
+seniority-3m	explicit-placeholder		seniority-3m.svg						
+seniority-6m	explicit-placeholder		seniority-6m.svg						
+seniority-1y	explicit-placeholder		seniority-1y.svg						
+seniority-2y	explicit-placeholder		seniority-2y.svg						
+seniority-3y	explicit-placeholder		seniority-3y.svg						
+seniority-5y	explicit-placeholder		seniority-5y.svg						
+mca-debut	explicit-placeholder		mca-debut.svg						
+mca-10	explicit-placeholder		mca-10.svg						
+mca-50	explicit-placeholder		mca-50.svg						
+mca-100	explicit-placeholder		mca-100.svg						
+mca-250	explicit-placeholder		mca-250.svg						
+mca-top10	explicit-placeholder		mca-top10.svg						
+mca-top10-10	explicit-placeholder		mca-top10-10.svg						
+mca-podium	explicit-placeholder		mca-podium.svg						
+mca-podium-5	explicit-placeholder		mca-podium-5.svg						
+mca-win-1	explicit-placeholder		mca-win-1.svg						
+mca-win-5	explicit-placeholder		mca-win-5.svg						
+mca-win-10	explicit-placeholder		mca-win-10.svg						
+mca-streak-3	explicit-placeholder		mca-streak-3.svg						
+mca-streak-5	explicit-placeholder		mca-streak-5.svg						
+mca-streak-10	explicit-placeholder		mca-streak-10.svg						
+mca-streak-15	explicit-placeholder		mca-streak-15.svg						
+mca-streak-20	explicit-placeholder		mca-streak-20.svg						
+mca-wins-5	explicit-placeholder		mca-wins-5.svg						
+mca-wins-10	explicit-placeholder		mca-wins-10.svg						
+mca-wins-15	explicit-placeholder		mca-wins-15.svg						
+mca-wins-20	explicit-placeholder		mca-wins-20.svg						
+mca-wins-25	existing-resolved		arena-warlord.png	eac584cc90b8bbedd5e7e2d2d1b9082c248cc0780cc1c7be14e9ca1046a93bcd	assets/images/achievements/arena-warlord.png	assets/images/achievements/mini/64/mca-wins-25.webp	assets/images/achievements/thumbs/128/mca-wins-25.webp		
+mca-wins-50	existing-resolved		arena-champion.png	4ca1d2c9f11567a1e4a77eedf35bd381b7c08705557cef671022330e689eb62a	assets/images/achievements/arena-champion.png	assets/images/achievements/mini/64/mca-wins-50.webp	assets/images/achievements/thumbs/128/mca-wins-50.webp		
+mca-wins-75	existing-resolved		arena-overlord.png	9805b8c55b96af1c2850b3111cdecb5dd3b32fdf6412baabd0467a4f158fa2eb	assets/images/achievements/arena-overlord.png	assets/images/achievements/mini/64/mca-wins-75.webp	assets/images/achievements/thumbs/128/mca-wins-75.webp		
+mca-wins-100	existing-resolved		arena-immortal.png	0168cfd5d25f4d74e94c95210dd9059bb59564dd39496b96b3007081ced90fa5	assets/images/achievements/arena-immortal.png	assets/images/achievements/mini/64/mca-wins-100.webp	assets/images/achievements/thumbs/128/mca-wins-100.webp		
+same-day-matches-2	explicit-placeholder		same-day-matches-2.svg						
+same-day-matches-3	explicit-placeholder		same-day-matches-3.svg						
+same-day-matches-4	explicit-placeholder		same-day-matches-4.svg						
+same-day-matches-5	explicit-placeholder		same-day-matches-5.svg						
+concurrent-games-5	explicit-placeholder		concurrent-games-5.svg						
+concurrent-games-10	explicit-placeholder		concurrent-games-10.svg						
+concurrent-games-25	explicit-placeholder		concurrent-games-25.svg						
+concurrent-games-50	explicit-placeholder		concurrent-games-50.svg						
+concurrent-games-100	explicit-placeholder		concurrent-games-100.svg						
+groups-1	explicit-placeholder		groups-1.svg						
+groups-5	explicit-placeholder		groups-5.svg						
+groups-10	explicit-placeholder		groups-10.svg						
+groups-15	explicit-placeholder		groups-15.svg						
+groups-20	explicit-placeholder		groups-20.svg						
+tournament-first-medal	existing-resolved		first-tournament-medal.png	c6201520ad3cb56ca81e0e5af1470bdb1a4cd9bd59d9567e70f26fe6bbd0c419	assets/images/achievements/first-tournament-medal.png	assets/images/achievements/mini/64/tournament-first-medal.webp	assets/images/achievements/thumbs/128/tournament-first-medal.webp		
+tournament-first-gold	existing-resolved		tournament-champion.png	4db62005631e7cc9f51edd3cce91249b56da949816ab72e357828aa7c1c1e4c0	assets/images/achievements/tournament-champion.png	assets/images/achievements/mini/64/tournament-first-gold.webp	assets/images/achievements/thumbs/128/tournament-first-gold.webp		
+tournament-medals-5	existing-resolved		five-tournament-medals.png	710f2ab7eec1bcf6b63854c496a6daf2d405f76b1397a8da206b421215a69e1c	assets/images/achievements/five-tournament-medals.png	assets/images/achievements/mini/64/tournament-medals-5.webp	assets/images/achievements/thumbs/128/tournament-medals-5.webp		
+tournament-medals-10	existing-resolved		ten-tournament-medals.png	f3a84ef89ac34c106b0db5156cc5ab2b30b40c305c759c5023a5ddbfb62fd4de	assets/images/achievements/ten-tournament-medals.png	assets/images/achievements/mini/64/tournament-medals-10.webp	assets/images/achievements/thumbs/128/tournament-medals-10.webp		

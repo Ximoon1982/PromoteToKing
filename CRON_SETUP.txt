@@ -1,0 +1,10 @@
+PROMOTE TO KING v2.8.5 — CRON SETUP
+
+Recommended production schedule:
+  Club Points      */5 * * * *
+  Tournaments      2-59/10 * * * *
+  Player Points    7,37 * * * *
+  Match monitoring 17 * * * *
+
+Use reset-install-cron-v2.8.5.sh to deliberately replace the ENTIRE current user's crontab.
+See CRON_SETUP_v2.8.5.md for commands, tokens, warnings and details.

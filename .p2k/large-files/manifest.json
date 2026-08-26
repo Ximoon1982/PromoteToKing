@@ -1,0 +1,94 @@
+{
+  "canonical_version": "2.10.6.23",
+  "files": [
+    {
+      "chunk_size": 4194304,
+      "chunks": [
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0001.bin",
+          "sha256": "904663d40e4bb3cab14def1b0d3072b26f13242c7ebbb13cc58e03aaffb90a73",
+          "size": 4194304
+        },
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0002.bin",
+          "sha256": "6ed2df0b8c56d19e43376ed4abdb0636ac2d194d2d6c3d7da501f3ce076931ae",
+          "size": 4194304
+        },
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0003.bin",
+          "sha256": "5c9e6669b7ee6bd5636436157ffaa5ee7a16e9eb7184f9519a385cbea59a717d",
+          "size": 4194304
+        },
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0004.bin",
+          "sha256": "58d674f96c893fa911863dc07ca196468eaefe28786748a34019749525f25e92",
+          "size": 4194304
+        },
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0005.bin",
+          "sha256": "fdbfd7f494d1de7665d29cae62643dccb13088f9424afc8eaccd5f706f60cfe7",
+          "size": 4194304
+        },
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0006.bin",
+          "sha256": "81d7892e3fad1588e1a0bc113808c2c0dbec1f04dc56fae8472092eedeaa8a26",
+          "size": 4194304
+        },
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0007.bin",
+          "sha256": "3a8c55471b2c690c007ce5f07d9e0ea84c506aa439c2e9a3660e0a117fb4f8ef",
+          "size": 4194304
+        },
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0008.bin",
+          "sha256": "5d48f1a24a2cc946f2c50dc1d6a9040f96d0f131340617c6211b6b32fca12a01",
+          "size": 4194304
+        },
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0009.bin",
+          "sha256": "fe6c3da1d21e85d73e8dca41fa6f0e3e0b4601845f5a6cb05f53b027c6c314d9",
+          "size": 4194304
+        },
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0010.bin",
+          "sha256": "6ccd9cdaa8b6aca152eabe3ec8d90d49c4c59dafa53dee81195ae5890bb35672",
+          "size": 4194304
+        },
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0011.bin",
+          "sha256": "1a6952f1f3101a61300a451c5d20be1fee4ac2bb742181cc99946c23b22b3ab4",
+          "size": 4194304
+        },
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0012.bin",
+          "sha256": "4822da69417ab65d5ca7ef8a7b57f9d870c6c99bac90e52ae93c7822d51f0e5e",
+          "size": 4194304
+        },
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0013.bin",
+          "sha256": "5becb75a56acd97779025f01f095538e528286b7fcf2dfce85cee096371e301c",
+          "size": 4194304
+        },
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0014.bin",
+          "sha256": "e76bd21fc2437987ea76d9b3e0d17eb25c1ce580282c4757d31ad643f3b6fa22",
+          "size": 4194304
+        },
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0015.bin",
+          "sha256": "7d801faabbe9619fc30ced6537011853f9b6cd7e38b9372f823694a8201d5dd1",
+          "size": 4194304
+        },
+        {
+          "path": ".p2k/large-files/resources_miac_seed.zip/part-0016.bin",
+          "sha256": "7dc55ff73f7e368ef6faf41d84b750744c05e9362a570d7a9f4f4bc2ead01e96",
+          "size": 2063438
+        }
+      ],
+      "sha256": "fbb0ad58132a65836e2a2c8c10f9f952dc727f41a668671cba69dc822f1b4310",
+      "size": 64977998,
+      "target": "resources/miac/seed.zip"
+    }
+  ],
+  "format": "p2k-large-file-chunks-v1"
+}

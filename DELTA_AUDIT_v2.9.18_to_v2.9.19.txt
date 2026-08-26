@@ -1,0 +1,30 @@
+Promote to King v2.9.18 -> v2.9.19 exact source delta
+=====================================================
+Baseline standalone SHA256: c419aae7974ffd050e0641711792aa1673a616f2e7bedc09fb115e2ce519980a
+
+Final source-tree delta (including this audit and validation report)
+------------------------------------------------------------------
+Added:   15
+Changed: 67
+Removed: 0
+Target release files: 1503
+
+Added release content includes
+------------------------------
+- v2.9.19 release/install/migration/IPDR-MIAC audit documentation
+- current v2.9.19 CRON/OAuth/MIAC-seed/weekly-backup scripts
+- verified v2.9.18 -> v2.9.19 incremental updater
+- dedicated v2.9.19 UI/IPDR pytest and browser gates
+- validation and exact-delta records
+
+Changed runtime areas
+---------------------
+- MIAC service/API + Club Intelligence alias-chain presentation
+- Analytics, Repository and Live Ranks identity propagation/substitution evidence
+- Hall/profile/dashboard achievement UX
+- Members Insights, match-history visibility and mobile/admin layout
+- active runtime/cache version markers and current release validators
+
+Removed files: none.
+
+The incremental package is derived from byte comparison against the exact frozen v2.9.18 standalone; unchanged compact backup/recovery helpers are force-staged separately as required by the verified updater transaction.

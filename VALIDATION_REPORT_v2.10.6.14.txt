@@ -1,0 +1,15 @@
+Promote to King v2.10.6.14 validation report
+
+Baseline: canonical v2.10.6.13 source archive (968 files).
+Final source tree: 974 files.
+Delta: 16 modified + 6 added + 0 removed.
+Scope: Admin detail iframe integration corrective only.
+
+Focused v2.10.6.14 tests: PASS (5/5).
+v2.10.6.13 behavioral compatibility tests: PASS (4/4 applicable checks; frozen v2.10.6.13 release-identity assertion excluded).
+Public DOM fingerprints: Dashboard / Hall of Fame / Insights unchanged from v2.10.6.13.
+Package validator: PASS, including static UI checks, JavaScript syntax sweep, PHP syntax sweep and source/resource validation.
+Final full SOURCE ZIP extraction: 974 expected / 974 extracted / 0 missing / 0 extra / 0 hash differences; extracted tree package validator PASS.
+Final incremental installer replay over canonical v2.10.6.13: 974 expected / 974 installed / 0 missing / 0 extra / 0 hash differences; replayed tree package validator PASS.
+Database schema/reset/reseed: none.
+CRON / Blue-Green routing / scoring / artwork: unchanged.

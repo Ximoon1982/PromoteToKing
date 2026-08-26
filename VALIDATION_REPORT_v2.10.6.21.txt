@@ -1,0 +1,37 @@
+Promote to King v2.10.6.21 validation report
+============================================
+
+Canonical source validation
+---------------------------
+- Canonical source tree: 1,016 files.
+- Delta from v2.10.6.20: 13 modified + 6 added, 0 removed.
+- Focused v2.10.6.21 Admin navigation parity suite: 6/6 PASS.
+- JavaScript syntax: PASS for dashboard-v2.js.
+- Package validator: PASS on canonical source.
+- Three stale predecessor assertions from v2.10.6.12/.14/.15 were confirmed to fail identically on canonical v2.10.6.20 and are not v2.10.6.21 regressions.
+
+UI acceptance
+-------------
+- Admin category menu reuses dashboard-page-tabs.
+- Six equal desktop category columns.
+- Six matching dashboard-tab-icon SVG icons.
+- Same 620 px public breakpoint and two-column mobile collapse.
+- Administration / Administrator dashboard visible intro copy removed.
+- OAuth/local admin and Refresh live cards sit directly below the category menu.
+- Public four-item navigation remains unchanged.
+
+Installer/full-source acceptance
+--------------------------------
+- Cumulative incremental payload from v2.10.6.15-.20: 59 files, 0 removals.
+- Full-source extraction: exact 1,016/1,016; 0 missing, 0 extra, 0 hash differences.
+- v2.10.6.15 -> v2.10.6.21 replay: exact 1,016/1,016.
+- v2.10.6.16 -> v2.10.6.21 replay: exact 1,016/1,016.
+- v2.10.6.17 -> v2.10.6.21 replay: exact 1,016/1,016.
+- v2.10.6.18 -> v2.10.6.21 replay: exact 1,016/1,016.
+- v2.10.6.19 -> v2.10.6.21 replay: exact 1,016/1,016.
+- v2.10.6.20 -> v2.10.6.21 replay: exact 1,016/1,016.
+- Package validator: PASS on canonical source and exact full-source extraction.
+- Installer idempotence: PASS; an already-installed v2.10.6.21 tree is left unchanged.
+
+No DB schema/reset/reseed, CRON-definition, Blue/Green routing, scoring,
+heatmap-formula, Green runtime, or artwork change is included.

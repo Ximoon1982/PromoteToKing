@@ -1,0 +1,95 @@
+Promote to King v2.10.6.13 — validation report
+================================================
+Baseline: v2.10.6.12 complete canonical source tree
+Target:   v2.10.6.13 complete canonical source tree
+Date:     2026-08-20 UTC
+
+RELEASE SCOPE
+-------------
+- Authenticated Admin cards open detail content inside the six-tab Admin shell.
+- Canonical URL/state routing covers public pages, Admin categories/details and supported embedded subtabs.
+- Browser Back/Forward/Refresh reconstruct route state.
+- Direct Admin deep links survive asynchronous OAuth/admin resolution.
+- Legacy Administration `members` and `migration` direct URLs are accepted.
+- Dashboard Match Assistant expansion uses a dedicated full iframe and reveals atomically after ready.
+- Timestamp display is restored to UTC across audited operational/public date-time formatters.
+- Public Dashboard / Hall of Fame / Insights layout is unchanged except the explicitly allowed analyzer behavior and UTC display changes.
+
+SOURCE DELTA
+------------
+Baseline source files: 962
+Target source files:   968
+Modified:               31
+Added:                    6
+Removed:                  0
+
+FOCUSED v2.10.6.13 TESTS
+------------------------
+tests/test_v210613_admin_routing_utc_assistant.py
+Result: 5 passed / 0 failed
+
+Coverage:
+- release identity and public visual fingerprints
+- Admin detail/canonical URL routing
+- embedded Admin-tool tab propagation/restoration
+- dedicated/atomic Match Assistant reveal and browser history
+- UTC DateTimeFormat audit
+
+PACKAGE VALIDATOR
+-----------------
+tests/validate_package.py
+Result: PASS
+- static UI feature tests: PASS
+- JavaScript syntax checks: PASS
+- PHP syntax/source checks: PASS
+- release/package identity: PASS
+
+PUBLIC VISUAL REGRESSION LOCK
+-----------------------------
+Normalized v2.10.6.12 == v2.10.6.13 hashes:
+- publicDashboardPanel: a18bc0f9b470edcfd8572e2eb5498e30f37c53ac22dc89ac4c7a3dc94ae4ee6b
+- hallOfFamePage:       8cba68b3b0aa8f697ffd838f6358d4b424b41700eda8c5609df17148ef881c36
+- teamInsightsPage:     33f953f29211016d922718cb30e8c7b7991ec8943a7048ffd0bcbc9813b7750f
+- pre-v2.10.6.13 Dashboard CSS: a0d2ad10508314a969ee62d30fe67c5b9d0829180b7c54c8ca81554218d8f677
+
+The only new Dashboard CSS is under the explicit v2.10.6.13 Admin-detail marker and therefore does not alter public surfaces.
+
+UTC AUDIT
+---------
+Production DateTimeFormat/toLocale date-time formatting was audited after implementation.
+All direct Intl.DateTimeFormat calls in the audited production JS/HTML use an explicit UTC timezone (or equivalent options carrying timeZone: "UTC").
+Recruitment/start-time logic that previously used local Date getters was converted to UTC getters.
+
+HISTORICAL v2.10.x TEST COMPARISON
+----------------------------------
+Untouched v2.10.6.12 tree: 94 passed / 50 failed
+v2.10.6.13 tree:          96 passed / 53 failed
+
+The 50 common failures are pre-existing frozen/obsolete historical assertions already failing on v2.10.6.12 (principally old release identities and superseded MCA architectures).
+The 3 additional historical failures are expected static assertions superseded by this release:
+1. v2.10.6.12 release identity must no longer equal 2.10.6.12.
+2. v2.10.6.12 Admin cards are expected to call the old integratedAdminHref launcher; v2.10.6.13 intentionally replaces this with in-shell Admin detail routing.
+3. An older Match Assistant test expects the recommendation iframe promotion/hydration structure; v2.10.6.13 intentionally replaces that structure with a dedicated full analyzer frame.
+The current v2.10.6.13 focused tests validate the replacement behaviors directly.
+
+EXPLICIT NON-CHANGES
+--------------------
+- no database schema migration/reset/reseed
+- no CRON change
+- no Blue/Green routing change
+- no scoring change
+- no API acquisition-policy change
+- no artwork/image change
+- no source-file deletion
+
+PACKAGE/INSTALLER REPLAY GATE
+-----------------------------
+Pre-final canonical installer replay over a clean v2.10.6.12 tree:
+- expected target files: 968
+- replayed target files: 968
+- missing: 0
+- extra: 0
+- SHA-256 hash differences: 0
+- replayed-tree package validator: PASS
+
+The delivered final incremental and full-source archives are accepted only after repeating the same exact-tree/hash and package-validation gates without modifying the canonical source afterward.

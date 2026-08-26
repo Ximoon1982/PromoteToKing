@@ -1,0 +1,110 @@
+/* Promote to King v2.7.3 integration */
+.p2k-v2415-no-motion,
+.p2k-v2415-no-motion * {
+  animation: none !important;
+  scroll-behavior: auto !important;
+  transition: none !important;
+}
+.p2k-v2415-embedded-hidden { display: none !important; }
+.p2k-v2415-public-panel {
+  width: 100%;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.p2k-v2415-subtabs {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 4px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 10px;
+  background: rgba(0,0,0,.18);
+}
+.p2k-v2415-subtab {
+  flex: 1;
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #aaa198;
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+}
+.p2k-v2415-subtab.active {
+  background: #d98d18;
+  color: #fff;
+}
+.p2k-v2415-subtab[disabled] {
+  cursor: default;
+  opacity: .52;
+}
+.p2k-v2415-frame {
+  display: block;
+  width: 100%;
+  min-height: 720px;
+  border: 0;
+  background: transparent;
+}
+.p2k-v2415-admin-frame { min-height: 640px; }
+.p2k-v2415-admin-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+#p2k-v2415-tournament-log {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid rgba(246,183,60,.22);
+  border-radius: 10px;
+  background: rgba(217,141,24,.055);
+}
+#p2k-v2415-tournament-log .p2k-v2415-log-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+#p2k-v2415-tournament-log h3 { margin: 0; color: #f0e4cf; }
+#p2k-v2415-tournament-log p { margin: 4px 0 0; color: #aaa198; font-size: 12px; }
+#p2k-v2415-tournament-log button {
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 7px;
+  background: rgba(255,255,255,.045);
+  color: #eee;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+#p2k-v2415-tournament-log .p2k-v2415-log-wrap {
+  overflow: auto;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 8px;
+}
+#p2k-v2415-tournament-log table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+#p2k-v2415-tournament-log th,
+#p2k-v2415-tournament-log td {
+  padding: 8px 9px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  text-align: left;
+}
+#p2k-v2415-tournament-log th { color: #ffd078; }
+@media (max-width: 720px) {
+  .p2k-v2415-frame { min-height: 900px; }
+  .p2k-v2415-subtabs { position: static; }
+}
+
+/* Native v2.7.3 page integration */
+.dashboard-integrated-page{display:grid;gap:10px}.dashboard-integrated-page[hidden]{display:none!important}.dashboard-integrated-frame,.admin-integrated-frame{display:block;width:100%;min-height:560px;border:0;background:transparent}.dashboard-integrated-subtabs{display:flex;gap:6px;padding:5px;border:1px solid rgba(255,255,255,.09);border-radius:10px;background:rgba(0,0,0,.18)}.dashboard-integrated-subtabs button{min-height:38px;padding:8px 18px;border:0;border-radius:8px;background:transparent;color:#aaa198;font:inherit;font-weight:850}.dashboard-integrated-subtabs button.is-active{background:#d98d18;color:#fff}.dashboard-integrated-subtabs button:disabled{opacity:.45}.dashboard-no-transition,.dashboard-no-transition *{scroll-behavior:auto!important;transition:none!important;animation:none!important}.tournament-admin-card{padding:0!important;overflow:hidden}.admin-integrated-frame{min-height:760px}.dashboard-assistant-frame{scroll-margin-top:0}

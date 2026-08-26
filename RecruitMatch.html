@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="dark" name="color-scheme"/>
+<meta content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self' https://api.chess.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" http-equiv="Content-Security-Policy"/><title>Match Recruitment Assistant</title>
+<link href="assets/images/p2k-logo.jpg" rel="icon" type="image/jpeg"/>
+<!-- RecruitMatch.html - Version 2 · current integrated release -->
+<link href="assets/css/analyze-match.css?v=2.10.6" rel="stylesheet"/>
+<link href="assets/css/recruit-match.css?v=2.10.6" rel="stylesheet"/>
+<script src="config/site-branding.js?v=2.10.6"></script><script src="assets/js/site-config.js?v=2.10.6"></script><script defer src="assets/js/shared/real-oauth.js?v=2.10.6"></script><script src="assets/js/shared/simulated-oauth.js?v=2.10.6"></script><script defer src="assets/js/shared/authenticated-member-refresh.js?v=2.10.6"></script><script src="assets/js/shared/admin-page-guard.js?v=2.10.6"></script><style>html.admin-access-pending body{visibility:hidden}</style>
+<script src="assets/js/shared/embedded-page.js?v=2.10.6"></script>
+<link href="assets/css/responsive-unification.css?v=2.10.6" rel="stylesheet"/>
+</head>
+<body>
+<div class="p2k-analyzer" id="p2kUpcomingAnalyzer">
+<div class="p2k-header">
+<h2>Match Recruitment Assistant</h2>
+<div class="p2k-header-logos">
+<img alt="Promote to King club logo" class="p2k-direct-club-logo" id="p2kDirectClubLogo" src="assets/images/p2k-logo.jpg" title="Promote to King"/>
+<img alt="" hidden="" id="p2kSelectedTeamLogo"/>
+</div>
+</div>
+<form class="p2k-reference-form" id="p2kMatchForm">
+<label class="p2k-reference-label" for="p2kMatchReference">Chess.com team match ID or URL</label>
+<div class="p2k-reference-row">
+<input autocomplete="off" class="p2k-reference-input" id="p2kMatchReference" inputmode="url" placeholder="Example: 1234567 or https://www.chess.com/club/matches/club-name/1234567" spellcheck="false" type="text"/>
+<button class="p2k-main-button" id="p2kLoadButton" type="submit">Load match</button>
+</div>
+<div class="p2k-reference-help">
+        Integration parameters: <code>?match=1234567&amp;team=team1</code>, or use a club slug/full club URL for <code>team</code>. Add <code>&amp;embedded=1</code> for an internal page or modal, and <code>&amp;autorun=1</code> to start the scan automatically.
+      </div>
+</form>
+<section class="p2k-settings-panel" hidden="" id="p2kSettingsPanel">
+<fieldset class="p2k-team-selector" id="p2kTeamSelector">
+<legend>Recruit for</legend>
+<div class="p2k-choices" id="p2kTeamChoices"></div>
+</fieldset>
+<form id="p2kRecruitmentForm">
+<div class="p2k-filter-title">Stored-rating recruitment analysis</div>
+<div class="p2k-recruit-method">
+<strong>Top-player strategy.</strong> The assistant uses the match's Classical or Chess960 rating category automatically. It reads current P2K members from the stored rating snapshot, excludes already registered and unrated members, applies the match rating range and the opponent's lowest registered rating as a floor, excludes members of the opponent club, then tests the strongest remaining players first until a significant lineup advantage is reached.
+</div>
+<div class="p2k-scan-actions">
+<button class="p2k-main-button" id="p2kScanButton" type="submit">Analyze recruitment need</button>
+</div>
+</form>
+</section>
+<div aria-live="polite" class="p2k-status" id="p2kStatus" style="display:none">
+<div class="p2k-status-row">
+<div class="p2k-status-text" id="p2kStatusText"></div>
+<div class="p2k-processing-actions" id="p2kProcessingActions">
+<button class="p2k-cancel-button" id="p2kCancelButton" type="button">Cancel</button>
+</div>
+</div>
+<div aria-hidden="true" class="p2k-progress-track" id="p2kProgressTrack">
+<div class="p2k-progress-bar" id="p2kProgressBar"></div>
+</div>
+</div>
+<div class="p2k-results" id="p2kResults">
+<div class="p2k-empty-prompt">Enter a Chess.com team match number or URL to prepare a recruitment scan.</div>
+</div>
+</div>
+<script src="assets/js/site-config.js?v=2.10.6"></script><script src="assets/js/shared/tab-activity.js?v=2.10.6"></script><script src="assets/js/shared/api-cache.js?v=2.10.6"></script><script src="assets/js/shared/match-priority.js?v=2.10.6"></script><script src="assets/js/shared/api-client.js?v=2.10.6"></script><script src="assets/js/shared/analysis-coordinator.js?v=2.10.6"></script><script src="assets/js/pages/recruit-match.js?v=2.10.6"></script><script src="assets/js/shared/control-hints.js?v=2.10.6"></script></body>
+</html>

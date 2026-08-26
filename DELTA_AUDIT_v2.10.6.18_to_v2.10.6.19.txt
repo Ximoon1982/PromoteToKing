@@ -1,0 +1,44 @@
+Promote to King v2.10.6.18 -> v2.10.6.19 delta audit
+======================================================
+
+Scope
+-----
+Correct the accelerated historical Opponent Insights heatmap backfill and restore
+P0/admin responsiveness while the Green Accelerator is running.
+
+Root causes corrected
+---------------------
+1. Historical /pub/match/{id} payloads do not expose player ratings, so the
+   v2.10.6.18 heatmap match-detail work could complete without producing any
+   paired-rating provenance.
+2. Accelerator Chess.com calls omitted trafficClass=background, bypassing the
+   OAuth gateway's IONOS/PHP-FCGI background admission protection.
+3. Promise.all queued a whole 48-task accelerator batch at once, allowing large
+   homogeneous gateway waves and correlated failures.
+4. OAuth/gateway failures fell back to JSONP, creating many browser script
+   requests and hiding the real transport error.
+5. Task Control displayed logical feeder fields as transport telemetry and
+   rebuilt the live log for every individual failure event.
+6. Independent heatmap work was included in GAB external pending totals.
+
+Corrective behavior
+-------------------
+- Recover paired board ratings from already-stored Green game rows first.
+- Use strict same-board paired ratings for both team averages and rated_board_count.
+- GABCRF revisits matches that already contain rated Green games but lack
+  compatibility heatmap metadata.
+- Residual network work queues historical board URLs, not match-detail URLs.
+- Skip external board requests when Green already stores a game with both ratings.
+- Use a bounded 16-request logical feeder through the shared OAuth gateway.
+- Classify accelerator traffic as background so P0/admin work can preempt it.
+- Disable JSONP fallback for accelerator work; expose actual gateway/HTTP failures.
+- Throttle accelerator log rendering and sample repetitive per-request errors.
+- Show actual OAuth gateway POST/queue/target/safe-rate telemetry.
+- Count only gab_opponent_profile work in GAB external counters.
+
+Data safety
+-----------
+No Green/Blue database reset, reseed, schema change, scoring change, routing
+change, CRON definition change, or artwork change. The obsolete
+heatmap_match_detail work ledger is transient queue state and is retired when the
+corrected backfill is prepared; historical Green matches/boards/games are retained.

@@ -1,0 +1,21 @@
+Promote to King v2.9.22.4 focused validation
+
+Scope:
+- Fresh Club Points Reconstruction endpoint-only board count
+- W/D/L Club Points computation and finished 0-0 exclusion
+- ready-run staged recalculation / issue retry / issue inspection
+- track-specific approval blocking
+- retained OAuth reconstruction feeder/transport contract
+- package and updater integrity
+
+Focused pytest: 22/22 PASS
+Affected PHP lint: PASS
+Affected JS syntax: PASS
+Updater shell syntax: PASS
+Package validator: PASS
+Browser binary unavailable in this runtime; no browser download was performed for this focused minor release.
+Unrelated feature regression matrices intentionally not run.
+
+Core schema: 15 unchanged
+Analytics schema: 7 unchanged
+CRON: existing 4 operational + 1 weekly v2.9.22 contract unchanged

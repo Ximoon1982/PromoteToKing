@@ -1,0 +1,63 @@
+PROMOTE TO KING STANDALONE v2.8.8.2 — STARTUP HOTFIX VALIDATION REPORT
+Date: 2026-08-08
+Result: PASS
+
+Regression investigation
+- Compared the shipped v2.8.6, v2.8.7 and v2.8.8.1 startup/read paths.
+- First server-side regression boundary identified in v2.8.7.
+- v2.8.7 replaced the one-row materialized Analytics Dashboard totals read with a live aggregate over historical Core match metadata.
+- v2.8.7 public freshness metadata also routed through Repository::state(), whose normal state path calls ensureState() and can INSERT IGNORE the Core state row.
+- Public Dashboard/read-metadata GETs could therefore wait behind worker DB locks and consume PHP workers.
+
+v2.8.8.2 correction
+- Public Core-state metadata uses a SELECT-only readState() helper.
+- Worker/admin state() retains ensureState() for legitimate write paths.
+- First Dashboard historical totals use materialized Analytics p2k_tp_club_totals again.
+- Authoritative current member count still overlays the indexed Core roster.
+- Initial Team Points database request is detached from the automatic current/Live second wave and cannot gate it.
+- All v2.8.8.1 fixes are retained.
+
+Database / operations
+- Core schema: 6.
+- Analytics schema: 5.
+- No DB reset/reseed or schema migration required from v2.8.8/v2.8.8.1.
+- CRON cadence unchanged: Club 5m, Tournament 10m staggered, Player 30m staggered, league monitoring hourly.
+- No new hotfix/ACAMR/Intelligence CRON entry.
+
+Source-tree validation
+- pytest regression suite: 159 / 159 PASS.
+- Static UI feature tests: PASS.
+- Package validator: PASS.
+- PHP lint: 84 / 84 PASS.
+- Standalone JavaScript syntax: 44 / 44 PASS.
+- Inline root HTML/HTM JavaScript syntax: 11 / 11 PASS.
+- Python source parse/compile validation: 41 / 41 PASS.
+- JSON parsing: 4 / 4 PASS.
+- v2.8.8.2 CRON helper shell syntax: PASS.
+- v2.8.8.2 CRON helper destructive fake-crontab replacement/install: PASS; exactly four schedules installed.
+
+Candidate ZIP clean-extraction validation
+- pytest regression suite: 159 / 159 PASS.
+- Static UI feature tests: PASS.
+- Package validator: PASS.
+- PHP lint: 84 / 84 PASS.
+- Standalone JavaScript syntax: 44 / 44 PASS.
+- Inline root HTML/HTM JavaScript syntax: 11 / 11 PASS.
+- Python source parse/compile validation: 41 / 41 PASS.
+- JSON parsing: 4 / 4 PASS.
+- CRON helper shell syntax: PASS.
+- CRON helper destructive fake-crontab replacement/install: PASS; exactly four schedules installed.
+
+Final immutable ZIP clean-extraction validation
+- pytest regression suite: 159 / 159 PASS.
+- Static UI feature tests: PASS.
+- Package validator: PASS.
+- PHP lint: 84 / 84 PASS.
+- Standalone JavaScript syntax: 44 / 44 PASS.
+- Inline root HTML/HTM JavaScript syntax: 11 / 11 PASS.
+- Python source parse/compile validation: 41 / 41 PASS.
+- JSON parsing: 4 / 4 PASS.
+- CRON helper shell syntax: PASS.
+- Packaging hygiene: PASS (no __pycache__, .pytest_cache or .pyc files).
+
+The final ZIP is built from this exact report-bearing source and independently revalidated after clean extraction before handoff.

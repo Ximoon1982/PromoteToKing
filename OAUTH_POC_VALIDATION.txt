@@ -1,0 +1,30 @@
+Promote to King · Chess.com OAuth proof of concept POC1
+Baseline: v2.9.3
+Date: 2026-08-10
+
+Static/PHP checks
+- OAuthTest.php: PHP lint PASS
+- config/oauth-test.php: PHP lint PASS
+- tests/test_v294_oauth_poc.py: 6/6 PASS
+
+Runtime gate checks
+- GET /OAuthTest.php => HTTP 404 PASS
+- GET /OAuthTest.php?oauth=2 => HTTP 200 PASS
+- Page without credentials => Configuration required PASS
+
+Mock OAuth end-to-end check
+- Login POST with CSRF token PASS
+- Authorization redirect PASS
+- PKCE authorization-code callback PASS
+- Server-side token exchange PASS
+- ID-token audience/expiry/nonce checks PASS
+- Success message PASS
+- Authenticated username displayed (@Ximoon mock identity) PASS
+- Mock access token absent from rendered HTML PASS
+- Logout PASS
+- Post-logout state = Not logged in PASS
+
+Isolation
+- Does not write/replace window.P2K_AUTH PASS
+- Does not grant P2K admin privileges PASS
+- Raw OAuth tokens are not persisted after callback PASS

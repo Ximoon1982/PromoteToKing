@@ -1,0 +1,29 @@
+Promote to King — online Apache/PHP deployment
+
+1. Extract the complete ZIP.
+2. Upload the complete contents, preserving hidden .htaccess files and the api/, data/, logs/, assets/, and docs/ directories.
+3. Enable PHP 8.1 or newer for the domain.
+4. Ensure the PHP process can write to:
+
+   data/
+   data/match-tracking/
+   logs/match-assistant/
+
+   On shared hosting, directory mode 775 is commonly appropriate.
+
+5. Verify the backend:
+
+   https://YOUR-DOMAIN/YOUR-PATH/api/challenge-club-list/
+
+   It must return JSON, not HTTP 404 or PHP source.
+
+6. Configure the IONOS HTTP GET cron using the private token in data/server-config.json. See CRON_SETUP.txt.
+7. Open index.html normally, or index.html?admin=1 for Administration, Match recruitment assistant, and Challenge Assistant. Administration → Logs → Scheduled tasks can record snapshots with progress. Match data management handles follow state, search, filters, sorting, graphs, and cleanup.
+
+The admin URL flag is only a visibility switch. Protect administration pages and write/delete endpoints with IONOS directory protection or HTTP authentication on a public deployment.
+
+Raw files under data/ and logs/ are denied by the packaged .htaccess rules. Keep the cron URL private and use HTTPS.
+
+Legacy v2.1.2 migration
+-----------------------
+You may copy an existing data/match-history directory into the uploaded package. On the first tracking API access it is converted into data/match-tracking/matches. Converted source files and the old directory are removed only after the new files are verified. Ensure PHP can write to both locations during that first access.

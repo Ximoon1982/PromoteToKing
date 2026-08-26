@@ -1,0 +1,109 @@
+PROMOTE TO KING STANDALONE v2.8.10 — VALIDATION / DEEP AUDIT REPORT
+Date: 2026-08-09
+Status: PASS
+
+Release boundary
+- Physical baseline: production-confirmed working v2.8.9.
+- Stable Dashboard/auth startup graph deliberately unchanged.
+- Core schema: 7 (additive from 6).
+- Analytics schema: 5 (unchanged).
+- No database reset or reseed.
+- Standard CRON schedules unchanged: Club 5m, Tournament 10m, Player 30m, Match Tracking hourly.
+
+Correctness repairs
+- Finished non-void match result derives from authoritative stored team scores.
+- Historical Core match result/competition-point labels are repaired by the Core 7 migration.
+- Finished authoritative 0–0 remains is_void=1 and analytically excluded.
+- Analytics logic watermark forces normal rebuild after Core outcome repair.
+- Opponent/Club/Match W-D-L tests use executable win/draw/loss/void fixtures.
+- Dashboard Core member count and all-history Finished KPIs cannot be overwritten by bounded Chess.com current responses.
+
+Tournament / Match Tracking / CRON repairs
+- Shared admin request helper sends X-Club-Tools-Request action kinds.
+- Tournament Management refresh and Task Control protected mutations are browser-tested.
+- Match Tracking Task Control uses canonical match-tracking key; match-monitoring remains a compatibility alias.
+- Tournament archive can recover conservatively from non-empty .bak/timestamped backup/BrowseIndex cache.
+- BrowseIndex signature includes recovery-candidate metadata.
+- Match Tracking can recover/persist a newer non-empty registry backup/history.
+- Mutable production files (server-config.json, tournament archive, tracking registry) are not shipped.
+- Zero-argument CRON installer is atomic, recovers an old shared token when possible, otherwise generates a protected 256-bit token.
+- Installed crontab contains no secrets; dispatcher reads current tokens at invocation time and sends X-P2K-Cron-Token.
+- Shell heartbeat + HTTP result diagnostics distinguish cron-daemon absence from endpoint/auth/network failure.
+- Tournament status maintenance executes on every 10-minute invocation; discovery/podium remain staged extras.
+- Tournament freshness correctly interprets structured status metadata and recovered archive state.
+
+Intelligence / completeness repairs
+- ACAMR effectiveness naming/tool exposure corrected; active/distinct session and claimed-member telemetry added.
+- Freshness uses 5m Club / 30m roster / 10m Tournament operational contracts and separates finished-board verification from active backlog.
+- Member activity distinguishes overall, Standard/Daily and Chess960.
+- Contribution adds points/board, league points, Standard/960 points, transparent rating-strength adjustment and six-month consistency.
+- Opponent Intelligence adds average boards/rating, league/friendly mix, 90d frequency and score margin, with canonical W/D/L.
+- Snapshots add W/D/L, Standard/960 activity, finished-board coverage and period comparisons.
+- Personalized home adds recent-vs-previous-week points/W-D-L and current match counts.
+- Runtime telemetry adds payload/revalidation metrics; direct PDO query time is not invented.
+
+Redundancy / maintainability repairs
+- Concurrent personalized-home member-intelligence requests are coalesced.
+- Single-player intelligence uses a keyed DB lookup instead of rebuilding/scanning the full member table.
+- Bulk member intelligence is request-cached for aggregate views.
+- Outer site router recognizes configured/local admins before remote Chess.com verification, aligned with Dashboard/Admin guard.
+- Startup-owned integrated-frame discovery remains DOM/main-controller owned; lazy modules cannot block Dashboard/auth startup.
+
+Source-tree gates
+- pytest regression/semantic suite: 182 / 182 PASS.
+- Focused v2.8.10 release suite: 13 / 13 PASS.
+- Package/static UI validator: PASS.
+- Chromium semantic execution gate: PASS; zero page errors.
+  - Dashboard DB values and canonical KPIs render.
+  - Configured simulated administrator recognized; Administration opens.
+  - ACAMR simulated-auth activation/scope passes.
+  - Tournament Management stored display/logs/manual refresh pass with request-kind header.
+  - Match Tracking panel/recovered row/display and CRON HTTP diagnostic pass.
+- PHP lint: 84 / 84 PASS.
+- Standalone assets JavaScript syntax: 42 / 42 PASS.
+- Root inline HTML/HTM JavaScript pages: 11 / 11 PASS.
+- Python AST/compile source set: 46 / 46 PASS.
+- JSON parse: 2 / 2 PASS.
+- reset-install-cron-v2.8.10.sh / cron-dispatch-v2.8.10.sh bash syntax: PASS.
+- Fake crontab semantic tests (legacy-token recovery, clean-token generation, secretless four schedules): PASS within pytest.
+- Package forbidden mutable runtime state check: PASS.
+
+Exact v2.8.5 -> v2.8.10 code/package audit
+- v2.8.5 project files: 582.
+- v2.8.10 project files before this validation report: 668.
+- Added: 91; modified: 79; removed: 5 (175 changed paths).
+- Removed paths are intentional: data/server-config.json, data/tournaments/archive.json, data/match-tracking/index.json, testwrite, testwrite2.
+- No active v2.8.9 cache/version token remains in current runtime code; historical docs/manifest references are traceability only.
+- Only direct Chess.com JS fetch outside the shared API client is the intentional unknown-admin public club verification path; known configured/local admins bypass it.
+
+Honest limitations (not release failures)
+- Exact historical MCA/arena achievement trigger URLs cannot be reconstructed because old aggregate source data did not retain them.
+- Historical recruitment conversion probability cannot be calibrated because recommendation->registration outcomes were not historically labelled/stored.
+- Detailed member-level time travel before Intelligence snapshot collection cannot be reconstructed.
+- Opponent registration acceleration/late-registration behavior requires sufficiently dense historical lineup snapshots.
+- Direct per-endpoint PDO query time is not separately instrumented; total latency/memory/payload/revalidation are measured instead.
+
+See AUDIT_v2.8.5_TO_v2.8.10.md for the feature/request-by-request audit and rationale.
+
+Candidate ZIP clean-extraction gate
+- pytest: 182 / 182 PASS.
+- Package/static validator: PASS.
+- Chromium Dashboard/admin/ACAMR/Tournament Management/Match Tracking execution: PASS; 0 page errors.
+- PHP lint: 84 / 84 PASS.
+- Standalone assets JavaScript: 42 / 42 PASS.
+- Python AST source validation: 46 / 46 PASS.
+- Root inline HTML/HTM JavaScript pages: 11 / 11 PASS.
+- JSON: 2 / 2 PASS.
+- CRON installer/dispatcher shell syntax: PASS.
+
+Final immutable ZIP clean-extraction gate
+- pytest: 182 / 182 PASS.
+- Package/static validator: PASS.
+- Chromium Dashboard/admin/ACAMR/Tournament Management/Match Tracking execution: PASS; 0 page errors.
+- PHP lint: 84 / 84 PASS.
+- Standalone assets JavaScript: 42 / 42 PASS.
+- Python AST source validation: 46 / 46 PASS.
+- Root inline HTML/HTM JavaScript pages: 11 / 11 PASS.
+- JSON: 2 / 2 PASS.
+- CRON installer/dispatcher shell syntax: PASS.
+- Packaging hygiene / forbidden mutable runtime state: PASS.

@@ -1,0 +1,44 @@
+Promote to King v2.10.6.15 validation report
+==============================================
+Baseline: v2.10.6.14
+Target:   v2.10.6.15
+
+Scope
+-----
+Green Scheduled Task Control reachability corrective only.
+
+Source delta
+------------
+Modified: 9
+Added:    6
+Removed:  0
+Target source-tree files: 980
+
+Focused release tests
+---------------------
+tests/test_v210615_green_task_control_reachability.py: 5/5 PASS
+
+Applicable compatibility tests
+------------------------------
+6/6 PASS across v2.10.6.13/v2.10.6.14 routing, analyzer, UTC,
+Admin dynamic-height/activity and MCA-detail behavior.
+
+Package validator
+-----------------
+PASS (static UI tests, source/resource checks, run-tests.js, JS syntax,
+Python compile probe, RetryableException probe, PHP syntax sweep).
+
+Public regression lock
+----------------------
+Dashboard / Hall of Fame / Insights DOM fingerprints match v2.10.6.14.
+UTC behavior retained.
+
+Incremental installer replay
+----------------------------
+980 expected / 980 installed
+0 missing / 0 extra / 0 hash differences
+Replayed tree package validator: PASS
+
+Database / CRON / routing / scoring / artwork
+----------------------------------------------
+No changes.

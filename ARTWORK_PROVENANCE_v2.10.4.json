@@ -1,0 +1,95 @@
+{
+  "release": "2.10.4",
+  "status": "released-with-placeholders",
+  "policy": "v2.10.4 intentionally ships the existing seven SVG placeholders. Exact recovered Aug-6 source hashes are retained for a later artwork-only integration; no substitute artwork is generated.",
+  "pipeline": {
+    "runtime": "assets/images/achievements/placeholders/<key>.svg via AchievementCatalog::placeholder()",
+    "deferredApprovedArtwork": "When exact recovered source bytes are available, verify source SHA-256, then create 640x640 PNG master, 64x64 WebP miniatures, and 128x128 WebP thumb."
+  },
+  "entries": [
+    {
+      "key": "first-match",
+      "label": "First Match",
+      "source": "image-gen-1(10).png",
+      "source_dimensions": [
+        1254,
+        1254
+      ],
+      "source_sha256": "8466f10a34b4b35a2af72965d6b0ca942565d964b6fa6abfe8d0293978a0cd84",
+      "release_asset": "assets/images/achievements/placeholders/first-match.svg",
+      "release_state": "placeholder"
+    },
+    {
+      "key": "first-point",
+      "label": "First Step",
+      "source": "image-gen-2(10).png",
+      "source_dimensions": [
+        1254,
+        1254
+      ],
+      "source_sha256": "1550af9a0c66bc69e1bb50a19614ddb3c0bc533677cbee8a147ac5a0379529e7",
+      "release_asset": "assets/images/achievements/placeholders/first-point.svg",
+      "release_state": "placeholder"
+    },
+    {
+      "key": "matches-10",
+      "label": "Rising Star",
+      "source": "image-gen-3(10).png",
+      "source_dimensions": [
+        1254,
+        1254
+      ],
+      "source_sha256": "ef7f484e59db60cb436b8ed41a3c59f268b53a0a92fc2351b642648767f710f0",
+      "release_asset": "assets/images/achievements/placeholders/matches-10.svg",
+      "release_state": "placeholder"
+    },
+    {
+      "key": "matches-50",
+      "label": "Clutch Player",
+      "source": "image-gen-4(10).png",
+      "source_dimensions": [
+        1254,
+        1254
+      ],
+      "source_sha256": "42502c69dc3af5580c873225631575d62f07489388856ac149b1ce3a0def05c9",
+      "release_asset": "assets/images/achievements/placeholders/matches-50.svg",
+      "release_state": "placeholder"
+    },
+    {
+      "key": "matches-100",
+      "label": "Great Strategist",
+      "source": "image-gen-5(9).png",
+      "source_dimensions": [
+        1254,
+        1254
+      ],
+      "source_sha256": "fb0e01f9bcd4f875185cc16c924fb6f6c48fa26bfb777ab9334706df9d63e57b",
+      "release_asset": "assets/images/achievements/placeholders/matches-100.svg",
+      "release_state": "placeholder"
+    },
+    {
+      "key": "matches-250",
+      "label": "Match Veteran",
+      "source": "image-gen-6(9).png",
+      "source_dimensions": [
+        1254,
+        1254
+      ],
+      "source_sha256": "c834bc4a85c3f5f1aebec9523a21ad69bdd6603843747ab37fdb4bce1109c900",
+      "release_asset": "assets/images/achievements/placeholders/matches-250.svg",
+      "release_state": "placeholder"
+    },
+    {
+      "key": "matches-500",
+      "label": "Match Legend",
+      "source": "image-gen-7(6).png",
+      "source_dimensions": [
+        1254,
+        1254
+      ],
+      "source_sha256": "5398fb202249dfd469f2249754a5d4c29e51d072d5e0786e06d44843573ccf77",
+      "release_asset": "assets/images/achievements/placeholders/matches-500.svg",
+      "release_state": "placeholder"
+    }
+  ]
+}

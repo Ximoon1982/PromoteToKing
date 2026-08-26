@@ -1,0 +1,37 @@
+PROMOTE TO KING STANDALONE v2.8.7 — VALIDATION REPORT
+Date: 2026-08-08
+Result: PASS
+
+Scope
+- Final v2.8.6 progressive-loading baseline retained.
+- Post-v2.8.6 architecture/performance/correctness audit integrated.
+- ACAMR — Authenticated Client-Assisted Member Refresh integrated.
+- ACAMR activation: real OAuth always; simulated authentication only with the OAuth flag.
+- ACAMR scope includes Club/Member Points support, member archives, relevant board discovery, ratings and roster freshness.
+- ACAMR excludes tournaments and match-registration/recruitment monitoring.
+- Browser observations remain non-authoritative; canonical facts require server-side Chess.com verification.
+
+Source-tree validation
+- Full pytest regression suite: 135 / 135 PASS.
+- Focused v2.8.7 + ACAMR + post-v2.8.6 audit tests: 30 / 30 PASS.
+- Static UI feature suite: PASS.
+- Package validator: PASS.
+- JavaScript source syntax: 43 / 43 PASS.
+- PHP lint: 79 / 79 PASS.
+- Python compilation: 38 / 38 PASS.
+- v2.8.7 argument-less CRON helper: bash syntax PASS.
+- v2.8.7 CRON helper fake-crontab destructive replacement/install test: PASS.
+
+Database / operations
+- Core schema: 5 (unchanged from v2.8.6).
+- Analytics schema: 5 (unchanged from v2.8.6).
+- No SQL migration, database reset or re-seed required.
+- Server CRON cadence unchanged: Club 5m, Tournament 10m, Player 30m, league monitoring hourly.
+
+Candidate clean-extracted ZIP validation
+- Full pytest regression suite: 135 / 135 PASS.
+- Package validator: PASS.
+- CRON helper shell syntax: PASS.
+- Manifest inventory: 608 files.
+
+Final package is rebuilt with this completed report and independently re-extracted/revalidated before handoff.

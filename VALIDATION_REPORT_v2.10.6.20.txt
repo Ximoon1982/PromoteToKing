@@ -1,0 +1,38 @@
+Promote to King v2.10.6.20 validation report
+============================================
+
+Canonical source validation
+---------------------------
+- Canonical source tree: 1,010 files.
+- Delta from v2.10.6.19: 12 modified + 6 added, 0 removed.
+- Cumulative incremental payload from v2.10.6.15-.19: 50 files, 0 removals.
+- Focused v2.10.6.20 GFFL terminal-debt suite: 8/8 PASS.
+- Applicable v2.10.6.16-.19 behavior regressions: 22/22 PASS.
+  Frozen predecessor release-identity assertions are intentionally excluded.
+- PHP syntax: PASS for GreenRepository.php, GreenWorker.php, observe.php.
+- JavaScript syntax: PASS for Green Accelerator and Task Control.
+- Package validator: PASS on canonical source.
+
+Installer/full-source acceptance
+--------------------------------
+- Full-source extraction: exact 1,010/1,010; 0 missing, 0 extra, 0 hash differences.
+- v2.10.6.15 -> v2.10.6.20 replay: exact 1,010/1,010.
+- v2.10.6.16 -> v2.10.6.20 replay: exact 1,010/1,010.
+- v2.10.6.17 -> v2.10.6.20 replay: exact 1,010/1,010.
+- v2.10.6.18 -> v2.10.6.20 replay: exact 1,010/1,010.
+- v2.10.6.19 -> v2.10.6.20 replay: exact 1,010/1,010.
+- Package validator: PASS on all five replayed installation trees.
+- Installer idempotence: PASS; an already-installed v2.10.6.20 tree is left unchanged.
+
+Corrective acceptance
+---------------------
+- HTTP 200 closes GFFL debt from CRON and browser accelerator ingestion.
+- HTTP 404/410 closes current GFFL debt from CRON and browser paths.
+- Registration cancellation -> 404/410 is accepted as a legitimate terminal case.
+- Trusted legacy facts remain preserved while terminal freshness debt closes.
+- Automatic re-arming is suppressed until authoritative club-index reappearance.
+- Existing terminal/ineligible pending debt self-heals during plan/snapshot.
+- Task Control exposes terminal-closed GFFL obligations.
+
+No DB schema/reset/reseed, CRON-definition, Blue/Green routing, scoring,
+heatmap-formula, or artwork change is included.

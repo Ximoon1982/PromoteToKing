@@ -1,0 +1,33 @@
+Options -Indexes
+DirectoryIndex index.html index.php
+
+# BEGIN P2K OAUTH CALLBACK
+<IfModule mod_alias.c>
+  # Chess.com is registered to this exact extensionless redirect URI.
+  # RedirectMatch preserves the authorization code/state query string.
+  RedirectMatch 302 ^/auth/callback$ /auth/callback.php
+</IfModule>
+# END P2K OAUTH CALLBACK
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Backward-compatible internal routing for old slashless API URLs.
+  RewriteRule ^api/(challenge-club-list|match-assistant-log|match-assistant-logs|track-upcoming-league-matches|match-history|tracked-match-data|scheduled-task-logs)$ api/index.php [END,QSA]
+  # Never serve the JSON storage or raw JSONL logs directly.
+  RewriteRule ^(?:data|logs)(?:/|$) - [R=404,END]
+</IfModule>
+
+# Keep HTML release shells fresh while allowing versioned static assets to be cached safely.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(?:html?|json)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+  <FilesMatch "\.(?:js|css)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "\.(?:png|jpe?g|webp|gif|svg|ico)$">
+    Header set Cache-Control "public, max-age=2592000, stale-while-revalidate=604800"
+  </FilesMatch>
+</IfModule>

@@ -1,0 +1,83 @@
+Promote to King v2.9.9 validation report
+========================================
+Status: PASS
+Validated: 2026-08-11
+Baseline: exact verified Promote to King v2.9.8 standalone
+Target: v2.9.9 authenticated-throughput correction
+
+Release invariants
+------------------
+- Package/site-config/manifest target: 2.9.9
+- Core DB schema: 11 (unchanged from v2.9.8)
+- Analytics DB schema: 6 (unchanged)
+- Achievement catalogue: 162 (unchanged)
+- No destructive migration, reset or reseed
+- CRON cadence unchanged: four dispatcher entries
+- Logged-out and simulated OAuth (?oauth=1) Chess.com acquisition remains serial
+- Real OAuth (?oauth=2) uses the server-held Bearer token; the browser never receives the token
+- CLI/CRON does not acquire or persist a user's OAuth session token
+- Protected DB/OAuth/server configuration, data and logs are excluded from the incremental payload
+
+Authenticated-throughput audit
+------------------------------
+The site-wide audit removed caller-side throttles that could prevent real OAuth
+from feeding the shared adaptive server cURL-multi transport. Coverage includes:
+- exact oauth=2 propagation through the main router, embedded tools and standalone tools;
+- a startup readiness gate so auto-running tools wait for the real OAuth session decision;
+- shared browser scheduler initial target 8, logical ceiling 256, server batch reservoir up to 512;
+- four-wave work feeding and retained per-session tuning;
+- adaptive upward probing while healthy;
+- immediate pressure reduction on HTTP 429 / Retry-After;
+- reduction on transport/5xx pressure and stopping upward probes on latency inflation / throughput plateau;
+- CRON Control continuous speed-fetch reservoir up to 256 due tasks under real OAuth;
+- accelerated ACAMR claim/scan policy under real OAuth only;
+- Find Match, Upcoming Match analysis, Match Creation Analyzer, Challenge Assistant,
+  Recruitment Demand Planner and Tournament Management routed through the shared scheduler;
+- Live Ranks and opponent-club web-admin maintenance can use the authenticated server-side
+  Bearer batch engine after admin authorization, while CLI/CRON remains anonymous/serial.
+
+Executed validation
+-------------------
+- Full pytest suite on numbered source tree: 329/329 PASS.
+- Focused v2.9.8/v2.9.9 release compatibility contract: 21/21 PASS.
+- tests/validate_package.py: PASS.
+- Static UI feature tests: PASS.
+- All standalone JavaScript syntax checks: PASS.
+- PHP package lint: PASS (93 PHP files in the audited source sweep).
+- Python compilation/package checks: PASS.
+- Shell syntax for v2.9.9 updater/CRON/OAuth installers: PASS.
+- Existing Chromium compatibility gates: 6/6 PASS with zero page errors.
+- New OAuth throughput Chromium gate: PASS with zero page errors.
+
+Runtime throughput browser gate
+-------------------------------
+A mocked real-OAuth browser run queued 256 Chess.com calls through the actual shared
+scheduler/gateway interface. Observed server-bound probe batches were:
+- 32 requests at target concurrency 8
+- 48 requests at target concurrency 12
+- 64 requests at target concurrency 16
+- 96 requests at target concurrency 24
+- remaining 16 requests at target concurrency 36
+No Chess.com request bypassed the Bearer gateway. A synthetic 429 pressure signal at
+target 36 immediately reduced the learned target to 18.
+
+Incremental updater simulation
+------------------------------
+A provisional v2.9.8 -> v2.9.9 production delta was applied to a clean exact v2.9.8
+standalone extraction with synthetic protected host configuration.
+- Production payload: 57 files; no removals.
+- Payload hash validation before apply: PASS.
+- Installed-file hash validation: PASS.
+- VERSION/site config/manifest/Core-11 post-apply checks: PASS.
+- v2.9.9 CRON installation: exactly 4 dispatcher entries PASS.
+- Unrelated pre-existing crontab entry preserved: PASS.
+- config.local.php preserved byte-for-byte: PASS.
+- oauth.local.php preserved byte-for-byte: PASS.
+- data/server-config.json preserved byte-for-byte: PASS.
+- Production root GET gate was exercised through the isolated test harness: PASS.
+
+Final packaging acceptance
+--------------------------
+The final release artifacts are rebuilt after this report and then revalidated from
+clean extraction. Final archive hashes are recorded in SHA256SUMS_v2.9.9.txt and the
+exact source/payload delta is recorded in DELTA_AUDIT_v2.9.8_to_v2.9.9.txt.

@@ -1,0 +1,30 @@
+Promote to King v2.10.6.15 -> v2.10.6.16 delta audit
+
+Modified: 11
+Added: 6
+Removed: 0
+Target source files: 986
+
+MODIFIED
+MIGRATION_VERSION
+TaskControl.html
+VERSION
+assets/js/pages/dashboard-v2.js
+assets/js/pages/task-control.js
+assets/js/site-config.js
+server/team-points-green/src/GreenRepository.php
+server/team-points-green/src/GreenWorker.php
+site-manifest.json
+tests/validate_package.py
+ui-v2.html
+
+ADDED
+DELTA_AUDIT_v2.10.6.15_to_v2.10.6.16.txt
+INSTALL_v2.10.6.16.md
+MIGRATION_v2.10.6.16.md
+RELEASE_NOTES_v2.10.6.16.md
+VALIDATION_REPORT_v2.10.6.16.txt
+tests/test_v210616_green_cycle_boundary.py
+
+REMOVED
+(none)

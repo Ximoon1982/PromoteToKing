@@ -1,0 +1,9 @@
+PROMOTE TO KING v2.7.3 — TEAM POINTS LOCAL SIMULATION
+
+1. Extract the complete v2.7.3 package.
+2. Configure server/team-points/config/config.local.php for a disposable local MariaDB database.
+3. Run the local server described in INSTALL_v2.7.3.md.
+4. Open TeamPointsAdmin.html through HTTP, never as a file:// URL.
+5. Schema 13 is installed or upgraded automatically by an authenticated administrator session.
+
+Do not point a local simulation at the production database.

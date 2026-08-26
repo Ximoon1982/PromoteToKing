@@ -1,0 +1,325 @@
+<!doctype html>
+<html class="admin-access-pending" lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Promote to King — Scheduled Task Control</title>
+  <link rel="icon" href="assets/images/p2k-logo.jpg">
+  <link rel="stylesheet" href="assets/css/task-control.css?v=2.10.6">
+  <link rel="stylesheet" href="assets/css/match-history.css?v=2.10.6">
+  <style>html.admin-access-pending body{visibility:hidden}</style>
+  <script src="config/site-branding.js?v=2.10.6"></script>
+  <script src="assets/js/site-config.js?v=2.10.6.23"></script>
+  <script src="assets/js/shared/api-cache.js?v=2.10.6"></script>
+  <script src="assets/js/shared/api-client.js?v=2.10.6"></script>
+  <script defer src="assets/js/shared/real-oauth.js?v=2.10.6"></script><script src="assets/js/shared/simulated-oauth.js?v=2.10.6"></script><script defer src="assets/js/shared/authenticated-member-refresh.js?v=2.10.6"></script>
+  <script src="assets/js/shared/team-points-client.js?v=2.10.6"></script><script src="assets/js/shared/admin-page-guard.js?v=2.10.6"></script>
+  <script src="assets/js/shared/green-accelerator.js?v=2.10.6.20"></script>
+  <script src="assets/js/shared/active-convergence-refresh.js?v=2.10.6"></script>
+  
+<link rel="stylesheet" href="assets/css/admin-embedded.css?v=2.10.6.16">
+<script src="assets/js/shared/embedded-page.js?v=2.10.6"></script>
+<script src="assets/js/shared/upcoming-analysis-core.js?v=2.10.6"></script>
+<script src="assets/js/shared/match-history-ui.js?v=2.10.6"></script>
+<style>.p2k-task-log-wrap{max-height:420px;overflow:auto}.p2k-log-more-actions{justify-content:center;margin-top:12px}</style><link href="assets/css/responsive-unification.css?v=2.10.6" rel="stylesheet"/>
+</head>
+<body>
+<main class="task-control" id="p2kTaskControl">
+  <header class="task-control-header">
+    <div>
+      <p class="eyebrow">Administration</p>
+      <h1>Scheduled Task Control</h1>
+      <p>One control surface for every CRON-compatible task, the shared Chess.com gateway, health thresholds, work reports and execution logs.</p>
+    </div>
+    <img src="assets/images/p2k-logo.jpg" alt="Promote to King club logo">
+  </header>
+
+  <section class="control-card connection-card">
+    <div>
+      <h2>Task-data connection</h2>
+      <p id="taskControlConnection">Administrator page access is available. Connecting to task data and MariaDB-backed status…</p>
+    </div>
+    <div class="control-actions">
+      <span class="status-pill is-loading" id="taskControlConnectionBadge">Connecting</span>
+      <button class="control-button" id="taskControlReconnect" type="button">Reconnect</button>
+    </div>
+  </section>
+
+  <nav class="task-surface-tabs" aria-label="Scheduled Task Control sections">
+    <button class="task-surface-tab is-active" type="button" data-task-tab="scheduled" aria-selected="true">Scheduled tasks</button>
+    <button class="task-surface-tab" type="button" data-task-tab="green" aria-selected="false">Green Team Points</button>
+  </nav>
+
+  <section class="control-card gateway-card" id="gateway">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Shared service</p>
+        <h2>Chess.com API gateway</h2>
+        <p>All server-side consumers share one MariaDB cache, one outbound request lock, one rate limiter and abnormal-404 protection.</p>
+      </div>
+      <div class="control-actions">
+        <span class="status-pill is-loading" id="gatewayHealthBadge">Unknown</span>
+        <button class="control-button" id="gatewayProbe" type="button">Run health probe</button>
+        <button class="control-button" id="refreshAllTasks" type="button">Refresh all</button>
+      </div>
+    </div>
+    <div class="metric-grid" id="gatewayMetrics"></div>
+    <p class="control-feedback" id="gatewayMessage" aria-live="polite"></p>
+  </section>
+
+
+  <section class="green-control-surface" id="greenSchedulerControl" hidden>
+    <section class="control-card green-overview-card">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Green production runtime</p>
+          <h2>Green Team Points control</h2>
+          <p>All Green migration, worker, GAB, GFFL and browser-accelerator controls are available here. Five staggered Green CRON entries provide an aggregate one invocation per minute with the 50 s soft / 55 s hard worker budget. The standalone migration page is no longer required for routine operation.</p>
+        </div>
+        <div class="control-actions">
+          <span class="status-pill is-loading" id="greenSchedulerBadge">Loading</span>
+          <button class="control-button" id="greenSchedulerRefresh" type="button">Refresh Green</button>
+          <button class="control-button" id="greenRunNow" type="button">Run one Green slice</button>
+          <button class="control-button" id="greenValidate" type="button">Validate Green</button>
+        </div>
+      </div>
+      <div class="metric-grid" id="greenSchedulerMetrics"></div>
+      <p class="control-feedback" id="greenSchedulerMessage" aria-live="polite">Green scheduler status is loading.</p>
+    </section>
+
+    <div class="green-control-grid">
+      <section class="control-card green-cutover-card">
+        <div class="section-head">
+          <div><p class="eyebrow">Cutover</p><h2>Green production switch</h2><p>Operational queues keep cycling and no longer block migration. Use the simple actions below; convergence, GFFL and compatibility findings remain visible as advisories while Green runs.</p></div>
+        </div>
+        <div class="metric-grid green-mini-grid" id="greenCutoverMetrics"></div>
+        <p class="control-feedback" id="greenCutoverBlockers" aria-live="polite">Cutover health is loading.</p>
+        <div class="task-controls green-cutover-actions">
+          <button class="control-button primary" id="greenSwitchReads" type="button">Switch reads to Green</button>
+          <button class="control-button" id="greenMakePrimary" type="button">Make Green primary</button>
+          <button class="control-button danger" id="greenRollbackReads" type="button">Rollback reads to Blue</button>
+        </div>
+        <p class="green-safety-note">Switch reads to Green keeps Blue + Green workers and browser ingest active. Make Green primary routes maintenance to Green and pauses Blue Team Points tasks. Rollback restores Blue reads with both paths maintained. No action deletes either database.</p>
+        <details class="green-advanced-routing">
+          <summary>Advanced routing controls</summary>
+          <div class="green-field-grid" style="margin-top:10px">
+            <label>Migration phase<select class="control-input" id="greenMigrationPhase">
+              <option value="blue_primary">Blue primary</option>
+              <option value="shadow_writing">Shadow writing</option>
+              <option value="green_validated">Green validated</option>
+              <option value="green_reads_both_writing">Green reads · both maintained</option>
+              <option value="green_primary">Green primary</option>
+            </select></label>
+            <label>Worker routing<select class="control-input" id="greenWorkerTarget">
+              <option value="blue">Blue</option><option value="both">Both</option><option value="green">Green</option><option value="paused">Paused</option>
+            </select></label>
+            <label>Browser ingest<select class="control-input" id="greenClientTarget">
+              <option value="blue">Blue</option><option value="both">Both</option><option value="green">Green</option><option value="off">Off</option>
+            </select></label>
+            <label>Green maintenance mode<select class="control-input" id="greenForceMode">
+              <option value="auto">Auto</option><option value="seeding">Seeding</option><option value="quick">Quick</option><option value="deep">Deep</option>
+            </select></label>
+          </div>
+          <div class="task-controls" style="margin-top:10px">
+            <button class="control-button" id="greenApplyMigrationPhase" type="button">Apply phase</button>
+            <button class="control-button" id="greenApplyWorkerTarget" type="button">Apply workers</button>
+            <button class="control-button" id="greenApplyClientTarget" type="button">Apply ingest</button>
+            <button class="control-button" id="greenApplyForceMode" type="button">Apply mode</button>
+          </div>
+        </details>
+      </section>
+
+      <section class="control-card">
+        <div class="section-head"><div><p class="eyebrow">Green Analytics Bootstrap</p><h2>GAB</h2><p>Resumable analytics/reference bootstrap. While GAB is running, the Green Accelerator services GAB ahead of ordinary Green background work; P0 interactive traffic remains first.</p></div></div>
+        <div class="metric-grid green-mini-grid" id="greenGabMetrics"></div>
+        <div class="task-controls">
+          <button class="control-button primary" id="greenGabStart" type="button">Start / resume GAB</button>
+          <button class="control-button" id="greenGabRun" type="button">Run GAB slice</button>
+        </div>
+        <div class="green-progress-stack" id="greenGabPhases"></div>
+      </section>
+
+      <section class="control-card">
+        <div class="section-head"><div><p class="eyebrow">Green Factorized Freshness Lane</p><h2>GFFL</h2><p>Coalesces overlapping match-freshness obligations so one authoritative match fetch satisfies every dependent Green obligation. Hot changes are serviced before bulk background work.</p></div></div>
+        <div class="metric-grid green-mini-grid" id="greenGfflMetrics"></div>
+        <div class="green-inline-control">
+          <label>Freshness target<select class="control-input" id="greenGfflTarget">
+            <option value="300">5 minutes</option><option value="600">10 minutes</option><option value="1200">20 minutes</option><option value="1800">30 minutes</option><option value="3600">60 minutes</option>
+          </select></label>
+          <button class="control-button" id="greenGfflApplyTarget" type="button">Apply target</button>
+        </div>
+        <div class="task-controls">
+          <button class="control-button primary" id="greenGfflEnable" type="button">Enable GFFL</button>
+          <button class="control-button" id="greenGfflDisable" type="button">Disable GFFL</button>
+        </div>
+      </section>
+
+      <section class="control-card">
+        <div class="section-head"><div><p class="eyebrow">Opponent Insights historical coverage</p><h2>Historical heatmap backfill</h2><p>Uses already-stored Green game ratings first, then queues only historical board details still missing paired-rating evidence. No Deep ID discovery is used. After preparing the queue, run the Green Accelerator for the remaining board fetches in bounded parallel OAuth batches.</p></div></div>
+        <div class="metric-grid green-mini-grid" id="greenHeatmapMetrics"></div>
+        <div class="task-controls">
+          <button class="control-button primary" id="greenHeatmapStart" type="button">Prepare / resume backfill</button>
+          <button class="control-button" id="greenHeatmapRestart" type="button">Requeue missing coverage</button>
+        </div>
+        <p class="task-note">Once pending work appears, start the Green Accelerator below. Historical board work is background traffic, uses a bounded 16-request logical feeder, and yields to interactive/admin requests while the finite Quick cycle retains capacity.</p>
+      </section>
+
+      <section class="control-card green-accelerator-card">
+        <div class="section-head">
+          <div><p class="eyebrow">Browser background transport</p><h2>Green Accelerator</h2><p>Session-scoped OAuth acceleration with no scheduled next-run time. P0 interactive traffic stays first; GAB is the highest-priority background lane while bootstrap is incomplete, followed by historical heatmap backfill, GFFL hot/due work and ordinary Green work.</p></div>
+          <span class="status-pill is-paused" id="greenAcceleratorBadge">Stopped</span>
+        </div>
+        <div class="metric-grid green-mini-grid" id="greenAcceleratorMetrics"></div>
+        <div class="task-controls">
+          <button class="control-button primary" id="greenAcceleratorStart" type="button">Start accelerator</button>
+          <button class="control-button" id="greenAcceleratorOnce" type="button">Run one batch</button>
+          <button class="control-button" id="greenAcceleratorStop" type="button">Stop accelerator</button>
+        </div>
+        <div class="table-wrap green-log-wrap">
+          <table><thead><tr><th>Timestamp</th><th>Level</th><th>Accelerator log</th></tr></thead><tbody id="greenAcceleratorLogRows"><tr><td colspan="3">No accelerator log entry.</td></tr></tbody></table>
+        </div>
+      </section>
+    </div>
+
+    <section class="control-card">
+      <div class="section-head"><div><p class="eyebrow">Cycle observability</p><h2>Current cycle &amp; phase progress</h2><p>Cycle number, current-phase progress and each phase of the current Green cycle. Timestamps are displayed in UTC.</p></div></div>
+      <div class="green-progress-stack" id="greenCycleProgress"><p>No Green cycle loaded.</p></div>
+    </section>
+
+    <section class="control-card">
+      <div class="section-head"><div><p class="eyebrow">Invocation history</p><h2>Recent Green worker runs</h2><p>Timestamped server-side Green invocations with cycle, phase transition, core-lock runtime, total runtime and request count. Times are displayed in UTC.</p></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Started</th><th>Cycle</th><th>Phase</th><th>Status</th><th class="num">Runtime</th><th class="num">Requests</th><th>Work / timing split</th></tr></thead><tbody id="greenInvocationRows"><tr><td colspan="7">No Green invocation loaded.</td></tr></tbody></table></div>
+    </section>
+  </section>
+  <section class="control-section">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Server-controlled work</p>
+        <h2>CRON-compatible tasks</h2>
+        <p>Existing CRON URLs remain valid. Start and resume queue work server-side; pause is safe and durable; refresh never starts a worker.</p>
+      </div>
+    </div>
+    <div class="task-grid" id="scheduledTaskGrid"></div>
+  </section>
+
+  <section class="control-card" id="task-detail">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Selected task</p>
+        <h2 id="taskDetailTitle">Work details</h2>
+        <p id="taskDetailSubtitle">Select a scheduled task to inspect its queue and latest work.</p>
+      </div>
+      <span class="status-pill is-loading" id="taskDetailHealth">Unknown</span>
+    </div>
+    <div class="metric-grid" id="taskDetailMetrics"></div>
+    <div class="report-grid">
+      <article>
+        <h3>Work report</h3>
+        <p id="taskWorkReport">No work report loaded.</p>
+      </article>
+      <article>
+        <h3>Compatibility entry point</h3>
+        <code id="taskLegacyEndpoint">—</code>
+        <p id="taskCadence">—</p>
+      </article>
+    </div>
+    <div class="table-wrap" id="taskActivityWrap" hidden>
+      <table>
+        <thead><tr><th>Player work type</th><th>Last started</th><th>Last success</th></tr></thead>
+        <tbody id="taskActivityRows"></tbody>
+      </table>
+    </div>
+    <div class="table-wrap" id="taskQueueWrap" hidden>
+      <table>
+        <thead><tr><th>Queue type</th><th class="num">Total</th><th class="num">Pending</th><th class="num">Running</th><th class="num">Retry</th><th class="num">Done</th><th class="num">Skipped</th><th class="num">Failed</th></tr></thead>
+        <tbody id="taskQueueRows"></tbody>
+      </table>
+    </div>
+    <div id="reconstructionDetail" class="reconstruction-detail" hidden>
+      <div class="reconstruction-note">
+        <strong>Fresh reconstruction is isolated from Core until approval.</strong>
+        <span>Every Chess.com result is acquired fresh and checkpointed in reconstruction staging. Pause/Resume survives page suspension. Apply takes the normal worker lane lock, promotes the selected reconstruction, refreshes Analytics, then supersedes only queue work made obsolete by that reconstruction.</span>
+      </div>
+      <div class="reconstruction-track-grid">
+        <article class="reconstruction-track">
+          <div class="reconstruction-track-head"><h3>Club Points</h3><strong id="reconstructionClubProgress">0%</strong></div>
+          <div class="task-progress"><span id="reconstructionClubBar" style="width:0%"></span></div>
+          <div class="reconstruction-mini-metrics" id="reconstructionClubMetrics"></div>
+        </article>
+        <article class="reconstruction-track">
+          <div class="reconstruction-track-head"><h3>Player Points</h3><strong id="reconstructionPlayerProgress">0%</strong></div>
+          <div class="task-progress"><span id="reconstructionPlayerBar" style="width:0%"></span></div>
+          <div class="reconstruction-mini-metrics" id="reconstructionPlayerMetrics"></div>
+        </article>
+      </div>
+      <div class="reconstruction-phase-head"><h3>Reconstruction pipeline</h3><span id="reconstructionCheckpoint">No checkpoint</span></div>
+      <div class="table-wrap reconstruction-phase-wrap">
+        <table>
+          <thead><tr><th>Phase</th><th>State</th><th class="num">Found</th><th class="num">Pending</th><th class="num">Processed</th><th class="num">Issues</th><th class="num">Progress</th></tr></thead>
+          <tbody id="reconstructionPhaseRows"><tr><td colspan="7">No reconstruction run.</td></tr></tbody>
+        </table>
+      </div>
+      <div id="reconstructionReview" class="reconstruction-review" hidden>
+        <div class="section-head"><div><h3>Live reconciliation</h3><p id="reconstructionIntegrityText">Fresh findings are compared with Core as they become available. Apply only the differences you accept; acquisition errors do not block unrelated corrections.</p></div><span class="status-pill is-loading" id="reconstructionIntegrityBadge">Scanning</span></div>
+        <div class="reconstruction-review-grid" id="reconstructionReviewGrid"></div>
+
+        <section class="reconstruction-reconcile-scope" id="reconstructionClubReconcileScope">
+          <div class="section-head"><div><h4>Club Points differences</h4><p>Only missing matches, final-result differences or stored-point differences are actionable. Endpoint <code>boards</code> and final team scores are the fresh authority.</p><p id="reconstructionClubDeltaSummary" class="reconciliation-delta-summary">Point impact loads with the difference list.</p></div><div class="control-actions"><label class="reconciliation-filter">Impact <select id="reconstructionClubDeltaFilter"><option value="all">All</option><option value="adds">Adds points</option><option value="removes">Removes points</option><option value="zero">Zero-point changes</option></select></label><button class="control-button" id="reconstructionRefreshClubDifferences" type="button">Refresh differences</button><button class="control-button" id="reconstructionRecalculateClub" type="button">Reclassify staged Club data</button><button class="control-button" id="reconstructionRetryClubIssues" type="button">Retry fetch issues</button><button class="control-button" id="reconstructionViewClubIssues" type="button">View fetch issues</button><button class="control-button primary" id="reconstructionFinalizeClub" type="button">Finalize Club reconciliation</button></div></div>
+          <div class="table-wrap"><table><thead><tr><th aria-sort="none"><button class="reconciliation-sort" type="button" data-reconciliation-sort="club" data-sort-key="match">Match <span aria-hidden="true">↕</span></button></th><th aria-sort="none"><button class="reconciliation-sort" type="button" data-reconciliation-sort="club" data-sort-key="difference">Difference <span aria-hidden="true">↕</span></button></th><th aria-sort="none"><button class="reconciliation-sort" type="button" data-reconciliation-sort="club" data-sort-key="fresh">Fresh finding <span aria-hidden="true">↕</span></button></th><th aria-sort="none"><button class="reconciliation-sort" type="button" data-reconciliation-sort="club" data-sort-key="core">Core <span aria-hidden="true">↕</span></button></th><th class="num" aria-sort="descending"><button class="reconciliation-sort is-active" type="button" data-reconciliation-sort="club" data-sort-key="point_delta">Point Δ <span aria-hidden="true">▼</span></button></th><th>Action</th></tr></thead><tbody id="reconstructionClubDifferenceRows"><tr><td colspan="6">No Club differences loaded yet.</td></tr></tbody></table></div>
+          <div class="table-wrap" id="reconstructionClubIssuesWrap" hidden><table><thead><tr><th>Match ID</th><th>State</th><th>Status</th><th>Boards</th><th>P2K score</th><th>Opponent</th><th>Source / issue</th></tr></thead><tbody id="reconstructionClubIssueRows"><tr><td colspan="7">No Club reconstruction issues.</td></tr></tbody></table></div>
+        </section>
+
+        <section class="reconstruction-reconcile-scope" id="reconstructionPlayerReconcileScope">
+          <div class="section-head"><div><h4>Player Points differences</h4><p>Each current member is reconciled independently after that member's fresh match/board/game set is complete. Ongoing games are valid and do not block synchronization.</p></div><div class="control-actions"><button class="control-button" id="reconstructionRefreshPlayerDifferences" type="button">Refresh differences</button><button class="control-button primary" id="reconstructionFinalizePlayer" type="button">Finalize Player reconciliation</button></div></div>
+          <div class="table-wrap"><table><thead><tr><th aria-sort="none"><button class="reconciliation-sort" type="button" data-reconciliation-sort="player" data-sort-key="member">Member <span aria-hidden="true">↕</span></button></th><th aria-sort="none"><button class="reconciliation-sort" type="button" data-reconciliation-sort="player" data-sort-key="fresh">Fresh <span aria-hidden="true">↕</span></button></th><th aria-sort="none"><button class="reconciliation-sort" type="button" data-reconciliation-sort="player" data-sort-key="core">Core <span aria-hidden="true">↕</span></button></th><th class="num" aria-sort="descending"><button class="reconciliation-sort is-active" type="button" data-reconciliation-sort="player" data-sort-key="point_delta">Point Δ <span aria-hidden="true">▼</span></button></th><th>Action</th></tr></thead><tbody id="reconstructionPlayerDifferenceRows"><tr><td colspan="5">No Player differences loaded yet.</td></tr></tbody></table></div>
+          <div class="table-wrap" id="reconstructionPlayerIssuesWrap" hidden><table><thead><tr><th>Member</th><th>State</th><th>Board issues</th><th>Details</th></tr></thead><tbody id="reconstructionPlayerIssueRows"><tr><td colspan="4">No Player acquisition issues.</td></tr></tbody></table></div>
+        </section>
+
+        <section class="reconstruction-reconcile-scope">
+          <div class="section-head"><div><h4>Applied corrections</h4><p>Applied rows remain in the audit history instead of disappearing without trace.</p></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Time</th><th>Scope</th><th>Entity</th><th>Action</th><th class="num">Queue superseded</th><th>Admin</th></tr></thead><tbody id="reconstructionAppliedRows"><tr><td colspan="6">No correction has been applied in this run.</td></tr></tbody></table></div>
+        </section>
+      </div>
+      <div class="client-refresh-log-head"><h3>Reconstruction client log</h3></div>
+      <div class="table-wrap client-refresh-log-wrap"><table><thead><tr><th>Local time</th><th>Level</th><th>Message</th></tr></thead><tbody id="reconstructionLogRows"><tr><td colspan="3">No reconstruction log entry.</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section class="control-card" id="manual-tournament"><div class="section-head"><div><p class="eyebrow">Tournament management</p><h2>Add a tournament manually</h2><p>Enter a Chess.com tournament URL or slug. Existing entries are refreshed rather than duplicated.</p></div></div><div class="control-actions"><input id="manualTournamentInput" class="control-input" placeholder="Tournament URL or slug"><button class="control-button primary" id="manualTournamentAdd" type="button">Add tournament</button><button class="control-button" id="manualTournamentUpdate" type="button">Update tournaments</button></div><p class="control-feedback" id="manualTournamentFeedback"></p></section>
+<section class="control-card" id="match-monitoring"><div class="section-head"><div><p class="eyebrow">Match monitoring</p><h2>Tracked matches explorer</h2><p>Follow matches, capture snapshots, inspect lineup history and clean stored tracking data.</p></div><div class="control-actions"><button class="control-button primary" id="trackedRecordNow" type="button">Record data now</button><button class="control-button" id="trackedRefresh" type="button">Refresh list</button></div></div>
+<div class="control-actions"><input id="trackedMatchInput" class="control-input" placeholder="Match ID, URL or slug"><button class="control-button primary" id="trackedMatchAdd" type="button">Follow and record</button></div>
+<div class="metric-grid" id="trackedSummary"></div>
+<div class="control-actions tracked-filters"><input id="trackedSearch" class="control-input" type="search" placeholder="Search match, team or league"><select id="trackedStatus" class="control-input"><option value="">All statuses</option><option value="registration">Registration</option><option value="ongoing">Ongoing</option><option value="finished">Finished</option></select><select id="trackedFollowState" class="control-input"><option value="">All tracking</option><option value="followed">Followed</option><option value="unfollowed">Unfollowed</option></select><select id="trackedSort" class="control-input"><option value="date-new">Newest start</option><option value="date-old">Oldest start</option><option value="size-large">Largest match</option><option value="size-small">Smallest match</option><option value="name">Name</option></select><button class="control-button" id="trackedClear" type="button">Clear</button><button class="control-button danger" id="trackedRemoveFinished" type="button">Remove finished data</button></div>
+<p class="control-feedback" id="trackedFeedback"></p><div class="table-wrap"><table><thead><tr><th>Match</th><th>Status</th><th>Boards</th><th>Tracking</th><th>Snapshots</th><th>Start</th><th>Last captured</th><th>Next capture</th><th>Actions</th></tr></thead><tbody id="trackedRows"><tr><td colspan="9">Loading tracked matches…</td></tr></tbody></table></div></section>
+<div class="tracked-history-modal" id="trackedHistoryModal" hidden><section class="control-card tracked-history-dialog" role="dialog" aria-modal="true" aria-labelledby="trackedHistoryTitle"><div class="section-head"><div><p class="eyebrow">Match monitoring</p><h2 id="trackedHistoryTitle">Tracking history</h2></div><button class="control-button" id="trackedHistoryClose" type="button">Close</button></div><div id="trackedHistoryBody"></div></section></div>
+<section class="control-card" id="task-logs">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Unified history</p>
+        <h2>Task log</h2>
+        <p>Controller, worker and gateway events written by the unified task registry.</p>
+      </div>
+      <div class="control-actions">
+        <select id="taskLogTask" aria-label="Filter logs by task"><option value="">All tasks</option></select>
+        <select id="taskLogLevel" aria-label="Filter logs by severity">
+          <option value="">All levels</option><option value="success">Success</option><option value="info">Info</option><option value="warning">Warning</option><option value="error">Error</option>
+        </select>
+        <button class="control-button" id="refreshTaskLogs" type="button">Refresh logs</button>
+      </div>
+    </div>
+    <div class="table-wrap p2k-task-log-wrap">
+      <table>
+        <thead><tr><th>UTC time</th><th>Task</th><th>Level</th><th>Component</th><th>Message</th><th>Run</th></tr></thead>
+        <tbody id="unifiedTaskLogs"><tr><td colspan="6">No log loaded.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="control-actions p2k-log-more-actions"><button class="control-button" id="loadMoreTaskLogs" type="button" hidden>Load more</button></div>
+    <p class="control-feedback" id="taskLogFeedback" aria-live="polite"></p>
+  </section>
+</main>
+<script src="assets/js/pages/fresh-points-reconstruction.js?v=2.10.6"></script>
+<script src="assets/js/pages/task-control.js?v=2.10.6.20"></script>
+</body>
+</html>

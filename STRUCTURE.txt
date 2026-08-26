@@ -1,32 +1,28 @@
-P2KStandardizedWebsite/
-├── assets
-│   ├── css
-│   │   ├── analyze-match-modal.css
-│   │   ├── analyze-match.css
-│   │   ├── legacy-loader.css
-│   │   ├── site.css
-│   │   └── upcoming-matches-analyzer.css
-│   ├── images
-│   │   └── p2k-logo.jpg
-│   └── js
-│       ├── pages
-│       │   ├── analyze-match-modal.js
-│       │   ├── analyze-match.js
-│       │   ├── find-match.js
-│       │   ├── match-creation-analyzer.js
-│       │   └── upcoming-matches-analyzer.js
-│       ├── shared
-│       │   └── api-cache.js
-│       └── site-config.js
-├── docs
-│   └── ARCHITECTURE.md
-├── AnalyzeMatch.html
-├── AnalyzeMatches.htm
-├── AnalyzeMatchModal.html
-├── FindMatch.htm
-├── index.html
-├── MatchCreationAnalyzer.htm
-├── p2k-logo.jpg
-├── README.md
-├── site-manifest.json
-└── STRUCTURE.txt
+Promote to King v2.8.0 storage structure
+========================================
+
+Core MariaDB
+  server/team-points/sql/core-schema.sql
+  Canonical members, opponents, matches, boards, games, worker/CRON/repair state.
+
+Analytics MariaDB
+  server/team-points/sql/analytics-schema.sql
+  Rebuildable player/match/month/day/opponent aggregates, Insights, Live ranks, storage history.
+
+Filesystem runtime
+  data/runtime-v280/cache/chesscom/   compressed bounded API cache
+  data/runtime-v280/logs/             retained runtime logs
+  data/runtime-v280/fresh-init/       signed initializer state/nonces
+  data/runtime-v280/analytics/        refresh throttle state
+  data/archive-v280/                  optional archive
+
+Fresh initialization
+  server/team-points/public/fresh-init.php
+  companion local P2K_v2.8.0_Fresh_DB_Initializer_v1.0.0.pyz
+
+Administration storage metrics
+  server/team-points/public/storage-metrics.php
+  TeamPointsAdmin.html?admin=1&tab=storage
+
+Legacy seed endpoint
+  server/team-points/public/seed-import.php (HTTP 410 retirement stub)

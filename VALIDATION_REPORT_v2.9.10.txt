@@ -1,0 +1,62 @@
+Promote to King v2.9.10 validation report
+Date: 2026-08-11 Europe/Luxembourg
+Baseline: exact internal v2.9.9 release tree
+
+Release contract
+- VERSION: 2.9.10
+- Core schema: 12
+- Analytics schema: 6
+- Achievement catalogue: 162 (unchanged)
+- External CRON cadence: unchanged four-task schedule
+- Logged-out traffic: serial
+- simulated oauth=1 traffic: serial
+- real OAuth Bearer token: server-side only
+- CRON/CLI uses user OAuth token: no
+
+Automated source validation
+- pytest: 339/339 PASS
+- package validator: PASS
+- JavaScript syntax: PASS (package validator)
+- PHP lint: PASS (package validator)
+- Python compile: PASS (package validator)
+
+Browser validation
+- legacy Team Insights/browser layout gate: PASS, 0 page errors
+- Opponent Balance v2.9.2 gate: PASS, 0 page errors
+- Opponent Balance provenance v2.9.3 gate: PASS, 0 page errors
+- Hall responsive gate: PASS
+- v2.8.10 startup gate: PASS, 0 page errors
+- v2.8.9 startup gate: PASS, 0 page errors
+- v2.9.9 OAuth throughput gate: PASS; target 8 -> 12 -> 16 -> 24 -> 36, simulated 429 backoff to 18
+- v2.9.10 persisted-clean-URL OAuth gate: PASS; configured concurrency 256; first gateway batch 32 @ target 8; observation flushes 48 + 22; 0 direct browser Chess.com calls; 0 page errors
+- v2.9.10 Challenge Assistant context gate: PASS; four simultaneous analyzed team names visible; 0 page errors
+
+v2.9.10-specific invariants
+- valid persisted OAuth session can reactivate on a clean URL without oauth=2: PASS
+- explicit oauth=1 remains simulated/serial: PASS
+- every HTML/HTM surface loading api-client also loads real-oauth adapter: PASS
+- useful interface Chess.com fetches flow to universal observation ingest: PASS
+- stale/cache reuse does not falsely earn new observation freshness: PASS
+- browser roster observation cannot reset canonical membership: PASS
+- browser match-index observation can discover match IDs but cannot promote canonical status/results: PASS
+- browser profile/stats/player-match observations remain shadow/passive unless claim/server verified: PASS
+- Core 11 -> 12 additive migration present: PASS
+- authoritative roster and club-index clocks are separate from observed clocks: PASS
+- hourly freshness deadline tasks outrank backlog and cannot permanently fail: PASS
+- deadline retry preserves Retry-After/exponential backoff: PASS
+- Challenge Assistant active-team context restored under parallel analysis: PASS
+
+Packaging/updater validation is recorded separately after final archive construction and replay.
+
+Final candidate archive validation
+- standalone ZIP clean extraction: 339/339 pytest PASS
+- standalone ZIP package validator: PASS
+- standalone ZIP nine Chromium/browser gates: PASS
+- incremental payload: 83 files (12 added, 71 changed, 0 removed)
+- v2.9.9 -> v2.9.10 updater replay: PASS
+- updater Core 12 / Analytics 6 migration verification: PASS
+- protected config.local.php preserved byte-for-byte: PASS
+- protected oauth.local.php preserved byte-for-byte: PASS
+- protected data/server-config.json preserved byte-for-byte: PASS
+- unrelated CRON entry preserved: PASS
+- exactly four v2.9.10 P2K CRON entries installed: PASS

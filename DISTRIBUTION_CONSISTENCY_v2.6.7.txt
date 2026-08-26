@@ -1,0 +1,13 @@
+PROMOTE TO KING v2.7.1 CORRECTED DISTRIBUTION — CONSISTENCY REPORT
+========================================================================
+
+RESULT: PASS
+
+Validated:
+- VERSION, site configuration and manifest all identify v2.7.1.
+- Consolidated release metadata identifies v2.7.1.
+- Active top-level HTML/HTM files contain no stale v2.6.3/v2.6.5/v2.6.6 cache keys.
+- Integrated iframe document URLs include release=2.7.1.
+- Administration frames participate in dynamic height handling.
+- Current installation, CRON and corrected release-note documents are present.
+- Python bytecode and __pycache__ directories are absent.

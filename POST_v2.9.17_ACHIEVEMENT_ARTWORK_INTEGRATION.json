@@ -1,0 +1,302 @@
+{
+  "baseline": "v2.9.17",
+  "new_approved_count": 43,
+  "league_derivatives_regenerated": 35,
+  "records": [
+    {
+      "key": "mca-streak-3",
+      "source_pack": "P2K_APPROVED_MCA_Streaks_EventVictories_Artwork_FutureIntegration.zip",
+      "source_key": "mca-streak-3",
+      "master_sha256": "63900afb01e02e14efd9e451e50f7e14ac8e628e50549ca01d002181b9f3e951"
+    },
+    {
+      "key": "mca-streak-5",
+      "source_pack": "P2K_APPROVED_MCA_Streaks_EventVictories_Artwork_FutureIntegration.zip",
+      "source_key": "mca-streak-5",
+      "master_sha256": "88e3753c4f5c4898327b0392029fe31fbe8379aa6f2671e0d4c8e4e74cb990f3"
+    },
+    {
+      "key": "mca-streak-10",
+      "source_pack": "P2K_APPROVED_MCA_Streaks_EventVictories_Artwork_FutureIntegration.zip",
+      "source_key": "mca-streak-10",
+      "master_sha256": "309d46c314ab8a8ab89d29e117a1597a3966bfe63b70da7279d700e1cc316c97"
+    },
+    {
+      "key": "mca-streak-15",
+      "source_pack": "P2K_APPROVED_MCA_Streaks_EventVictories_Artwork_FutureIntegration.zip",
+      "source_key": "mca-streak-15",
+      "master_sha256": "4c897ffec45fdc23773755efeb0cc4a3da2f3fbe7776b404a0d16faaccf31d87"
+    },
+    {
+      "key": "mca-streak-20",
+      "source_pack": "P2K_APPROVED_MCA_Streaks_EventVictories_Artwork_FutureIntegration.zip",
+      "source_key": "mca-streak-20",
+      "master_sha256": "31e590c634edb6d369ca3557bb57863cbf30a586cdf6b6b90e7bf5d4d3002245"
+    },
+    {
+      "key": "mca-win-1",
+      "source_pack": "P2K_APPROVED_MCA_Streaks_EventVictories_Artwork_FutureIntegration.zip",
+      "source_key": "mca-win-1",
+      "master_sha256": "886fa45d6a064f53cda1dfaff3ede0e27280628365d3633c765a842296cf99dc"
+    },
+    {
+      "key": "mca-win-5",
+      "source_pack": "P2K_APPROVED_MCA_Streaks_EventVictories_Artwork_FutureIntegration.zip",
+      "source_key": "mca-win-5",
+      "master_sha256": "66beffe58f66168c3cfd55919262a764ac89cac4fa77328647824cbf52af9f0f"
+    },
+    {
+      "key": "mca-win-10",
+      "source_pack": "P2K_APPROVED_MCA_Streaks_EventVictories_Artwork_FutureIntegration.zip",
+      "source_key": "mca-win-10",
+      "master_sha256": "9f8a2b306b723950b68660cf6b9151bd9a0de08058951e7e267bab48a102581b"
+    },
+    {
+      "key": "mca-wins-5",
+      "source_pack": "P2K_APPROVED_MCA_WinsInOneArena_SameDayMatchStarts_Artwork_FutureIntegration.zip",
+      "source_key": "mca-wins-5",
+      "master_sha256": "1f1e572db3c4066a0f1c02f321b8658cb514a24dbb22a842189d3731a633b2a5"
+    },
+    {
+      "key": "mca-wins-10",
+      "source_pack": "P2K_APPROVED_MCA_WinsInOneArena_SameDayMatchStarts_Artwork_FutureIntegration.zip",
+      "source_key": "mca-wins-10",
+      "master_sha256": "199a25b22e0ddf25a28c8a36698cbcfa41824531e56ed68963fd5007b42a2c98"
+    },
+    {
+      "key": "mca-wins-15",
+      "source_pack": "P2K_APPROVED_MCA_WinsInOneArena_SameDayMatchStarts_Artwork_FutureIntegration.zip",
+      "source_key": "mca-wins-15",
+      "master_sha256": "8fb0e40b61385e684b132fad17482d087bad3ee5193268ed20ac603ad122e080"
+    },
+    {
+      "key": "mca-wins-20",
+      "source_pack": "P2K_APPROVED_MCA_WinsInOneArena_SameDayMatchStarts_Artwork_FutureIntegration.zip",
+      "source_key": "mca-wins-20",
+      "master_sha256": "a409fc29eef17e1655242d28f216a156ae3b2e662214d1b564b77c9e96af42bf"
+    },
+    {
+      "key": "same-day-matches-2",
+      "source_pack": "P2K_APPROVED_MCA_WinsInOneArena_SameDayMatchStarts_Artwork_FutureIntegration.zip",
+      "source_key": "same-day-matches-2",
+      "master_sha256": "90a057ee460d1fb1ef98a539810e8ff77300969d337834769067009c73d08cc6"
+    },
+    {
+      "key": "same-day-matches-3",
+      "source_pack": "P2K_APPROVED_MCA_WinsInOneArena_SameDayMatchStarts_Artwork_FutureIntegration.zip",
+      "source_key": "same-day-matches-3",
+      "master_sha256": "7217025b541c7958ef712a605716bb9102dfa74256fe045d0b34b4ffbebea5c7"
+    },
+    {
+      "key": "same-day-matches-4",
+      "source_pack": "P2K_APPROVED_MCA_WinsInOneArena_SameDayMatchStarts_Artwork_FutureIntegration.zip",
+      "source_key": "same-day-matches-4",
+      "master_sha256": "0e70eef40aa1c62e5cde19dc2da296f9c32061499b3ab26742a7236d4a8807b4"
+    },
+    {
+      "key": "same-day-matches-5",
+      "source_pack": "P2K_APPROVED_MCA_WinsInOneArena_SameDayMatchStarts_Artwork_FutureIntegration.zip",
+      "source_key": "same-day-matches-5",
+      "master_sha256": "99e2c365ddd5b8bbf59ce647925845b8c15e9f9efa6dbe9d811d188bbf162c6e"
+    },
+    {
+      "key": "groups-5",
+      "source_pack": "P2K_APPROVED_LegacyBreadth_DistinctGroupBreadth_Artwork_FutureIntegration.zip",
+      "source_key": "groups-5",
+      "master_sha256": "ef648ae1dab68f0b6d9b77002a22ae5aa17fb96dfffc8c5865c543fdd6337602"
+    },
+    {
+      "key": "groups-10",
+      "source_pack": "P2K_APPROVED_LegacyBreadth_DistinctGroupBreadth_Artwork_FutureIntegration.zip",
+      "source_key": "groups-10",
+      "master_sha256": "7e005fff3736a9fb5260b523c518666b6a9f093e3742018f03c1b6d381d8fa3d"
+    },
+    {
+      "key": "groups-15",
+      "source_pack": "P2K_APPROVED_LegacyBreadth_DistinctGroupBreadth_Artwork_FutureIntegration.zip",
+      "source_key": "groups-15",
+      "master_sha256": "8eaa3ee297846a791b8e40518d065fc70094d7db44e3269682c3cb8344ffe7c1"
+    },
+    {
+      "key": "groups-all",
+      "source_pack": "P2K_APPROVED_LegacyBreadth_DistinctGroupBreadth_Artwork_FutureIntegration.zip",
+      "source_key": "groups-all",
+      "master_sha256": "69243c38ec4ac7dfcdda048879b1dd2748c93f1f4705790421c937c78929d23e"
+    },
+    {
+      "key": "breadth-groups-1",
+      "source_pack": "P2K_APPROVED_LegacyBreadth_DistinctGroupBreadth_Artwork_FutureIntegration.zip",
+      "source_key": "breadth-groups-1",
+      "master_sha256": "093e28a17abd828d7d7f7514da93881cc8b570f8836a8f5bfa278e97bc7516be"
+    },
+    {
+      "key": "breadth-groups-5",
+      "source_pack": "P2K_APPROVED_LegacyBreadth_DistinctGroupBreadth_Artwork_FutureIntegration.zip",
+      "source_key": "breadth-groups-5",
+      "master_sha256": "6f38cee3b14b4a8cf049e8885d706982055ced12f1157b264c7512e877e2eac4"
+    },
+    {
+      "key": "breadth-groups-10",
+      "source_pack": "P2K_APPROVED_LegacyBreadth_DistinctGroupBreadth_Artwork_FutureIntegration.zip",
+      "source_key": "breadth-groups-10",
+      "master_sha256": "80ad01be8b56a6ec22d5c5ea879dbfa821e1875c5919f50d0b7a60e5813ecf41"
+    },
+    {
+      "key": "breadth-groups-15",
+      "source_pack": "P2K_APPROVED_LegacyBreadth_DistinctGroupBreadth_Artwork_FutureIntegration.zip",
+      "source_key": "breadth-groups-15",
+      "master_sha256": "1ef77d6036faa10def01e7ed065491d3143a021d07518b73df893483b9d2ee44"
+    },
+    {
+      "key": "breadth-groups-20",
+      "source_pack": "P2K_APPROVED_LegacyBreadth_DistinctGroupBreadth_Artwork_FutureIntegration.zip",
+      "source_key": "breadth-groups-20",
+      "master_sha256": "386ffa2a431a77c608e70fbf911203cbf46efa437b53f2902aced3878376ed9d"
+    },
+    {
+      "key": "mca-debut",
+      "source_pack": "P2K_APPROVED_MCA_Participation_Placement_Artwork_FutureIntegration.zip",
+      "source_key": "mca-debut",
+      "master_sha256": "166d348f112b5cdc36119dea71f754ad4f0abd4772c3f2e1e0ed38678bc07cfb"
+    },
+    {
+      "key": "mca-10",
+      "source_pack": "P2K_APPROVED_MCA_Participation_Placement_Artwork_FutureIntegration.zip",
+      "source_key": "mca-10",
+      "master_sha256": "d9bc401e5280a69c8984ce307af47d77ad21cade0e85cbbacd35b0d695e22784"
+    },
+    {
+      "key": "mca-50",
+      "source_pack": "P2K_APPROVED_MCA_Participation_Placement_Artwork_FutureIntegration.zip",
+      "source_key": "mca-50",
+      "master_sha256": "270a4e71bc5a74621ce28a3f9707584dbcc77be4d100262d8899260d12fdd4f3"
+    },
+    {
+      "key": "mca-100",
+      "source_pack": "P2K_APPROVED_MCA_Participation_Placement_Artwork_FutureIntegration.zip",
+      "source_key": "mca-100",
+      "master_sha256": "e888e7c34ab48a8e2fe1690d9283b9e14a67c368dbd6ad05acc09b5a77f6c8d8"
+    },
+    {
+      "key": "mca-250",
+      "source_pack": "P2K_APPROVED_MCA_Participation_Placement_Artwork_FutureIntegration.zip",
+      "source_key": "mca-250",
+      "master_sha256": "c53984f2232fe74240159d82d650943e8450f8b222e24b727146db3e5ddf37dc"
+    },
+    {
+      "key": "mca-top10",
+      "source_pack": "P2K_APPROVED_MCA_Participation_Placement_Artwork_FutureIntegration.zip",
+      "source_key": "mca-top10",
+      "master_sha256": "d64debd9a73ab813f3b7ca88f809fb6c14f8b422c22c83923b9b2a03a735566d"
+    },
+    {
+      "key": "mca-top10-10",
+      "source_pack": "P2K_APPROVED_MCA_Participation_Placement_Artwork_FutureIntegration.zip",
+      "source_key": "mca-top10-10",
+      "master_sha256": "9a89dd67ea97712e63ca699320bdf9405d53ad81eb11079072ebcf84f783287c"
+    },
+    {
+      "key": "mca-podium",
+      "source_pack": "P2K_APPROVED_MCA_Participation_Placement_Artwork_FutureIntegration.zip",
+      "source_key": "mca-podium",
+      "master_sha256": "922889038f430b2a3488968c2906eebf662896c73cf46daea26b27cd2edef977"
+    },
+    {
+      "key": "mca-podium-5",
+      "source_pack": "P2K_APPROVED_MCA_Participation_Placement_Artwork_FutureIntegration.zip",
+      "source_key": "mca-podium-5",
+      "master_sha256": "598515a2b7f46feb3e960a4129cc5f0f3bed4f1cddac114a3a5d4c607198a9d3"
+    },
+    {
+      "key": "collector-25",
+      "source_pack": "P2K_APPROVED_AchievementCollector_Rivalries_Artwork_FutureIntegration.zip",
+      "source_key": "collector-25",
+      "master_sha256": "e60936b7c87dd8356b55240e99bf9a8e2381557b5fa4af687f746a599e5c493a"
+    },
+    {
+      "key": "collector-50",
+      "source_pack": "P2K_APPROVED_AchievementCollector_Rivalries_Artwork_FutureIntegration.zip",
+      "source_key": "collector-50",
+      "master_sha256": "77a1b2dc851793465311ad4320b01766439c9aaedb15bfabc4fb9677cb6318f8"
+    },
+    {
+      "key": "collector-75",
+      "source_pack": "P2K_APPROVED_AchievementCollector_Rivalries_Artwork_FutureIntegration.zip",
+      "source_key": "collector-75",
+      "master_sha256": "6642ed6c5fe6b874065b0dfb85db85ff1d704ec36ca59af80003a1d20f774d6e"
+    },
+    {
+      "key": "collector-100",
+      "source_pack": "P2K_APPROVED_AchievementCollector_Rivalries_Artwork_FutureIntegration.zip",
+      "source_key": "collector-100",
+      "master_sha256": "32e96c3bc4952720fa2f8f6013ca678bb0cc26881cc9535672fd53d009f3bc79"
+    },
+    {
+      "key": "collector-125",
+      "source_pack": "P2K_APPROVED_AchievementCollector_Rivalries_Artwork_FutureIntegration.zip",
+      "source_key": "collector-125",
+      "master_sha256": "b9e0de2f53683326407bcd18c0404f531f26ee8963d238ab0c0b29198b98788e"
+    },
+    {
+      "key": "rivalry-5",
+      "source_pack": "P2K_APPROVED_AchievementCollector_Rivalries_Artwork_FutureIntegration.zip",
+      "source_key": "rivalries-5",
+      "master_sha256": "aea8f7441caa0ca7714980f1bb36eb088c9d222d485631124a3adad81e17bfd8"
+    },
+    {
+      "key": "rivalry-10",
+      "source_pack": "P2K_APPROVED_AchievementCollector_Rivalries_Artwork_FutureIntegration.zip",
+      "source_key": "rivalries-10",
+      "master_sha256": "b66357987226d92d5082980be286d1787a0cd9f2a021a34a253489ac7bb6ac95"
+    },
+    {
+      "key": "rivalry-25",
+      "source_pack": "P2K_APPROVED_AchievementCollector_Rivalries_Artwork_FutureIntegration.zip",
+      "source_key": "rivalries-25",
+      "master_sha256": "d615b65f47dc7f68045cc89493dbbb7f0fc0b1d8e8e72e3dd88632405aeb34e0"
+    },
+    {
+      "key": "rivalry-50",
+      "source_pack": "P2K_APPROVED_AchievementCollector_Rivalries_Artwork_FutureIntegration.zip",
+      "source_key": "rivalries-50",
+      "master_sha256": "241273cc19a5d25aa016109a904d9990a325df96ff721f76555b4794aa750db8"
+    }
+  ],
+  "league_keys": [
+    "1wl-competitor",
+    "1wl-veteran",
+    "1wl-legend",
+    "1wl-first-point",
+    "1wl-scorer",
+    "1wl-specialist",
+    "1wl-master",
+    "pcl-competitor",
+    "pcl-veteran",
+    "pcl-legend",
+    "pcl-first-point",
+    "pcl-scorer",
+    "pcl-specialist",
+    "pcl-master",
+    "tcmac-competitor",
+    "tcmac-veteran",
+    "tcmac-legend",
+    "tcmac-first-point",
+    "tcmac-scorer",
+    "tcmac-specialist",
+    "tcmac-master",
+    "tmcl-competitor",
+    "tmcl-veteran",
+    "tmcl-legend",
+    "tmcl-first-point",
+    "tmcl-scorer",
+    "tmcl-specialist",
+    "tmcl-master",
+    "kotml-competitor",
+    "kotml-veteran",
+    "kotml-legend",
+    "kotml-first-point",
+    "kotml-scorer",
+    "kotml-specialist",
+    "kotml-master"
+  ]
+}

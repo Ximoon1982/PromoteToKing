@@ -1,0 +1,95 @@
+Promote to King v2.9.14 -> v2.9.15 delta audit
+================================================
+Canonical baseline SHA256: bc9aca3b18f14b594b6bcbe9266088f2c6c2e07f03ebba6d663f74c361df64ab
+Added files: 11
+Changed files: 63
+Removed files: 0
+Forced unchanged staging helpers: 3
+Incremental payload files: 77
+
+Added:
+  ACSR_AUDIT_v2.9.15.md
+  DELTA_AUDIT_v2.9.14_to_v2.9.15.txt
+  INSTALL_v2.9.15.md
+  MIGRATION_v2.9.15.md
+  RELEASE_NOTES_v2.9.15.md
+  VALIDATION_REPORT_v2.9.15.txt
+  cron-dispatch-v2.9.15.sh
+  install-oauth-v2.9.15.sh
+  reset-install-cron-v2.9.15.sh
+  tests/test_v2915_latest_telemetry_corrections.py
+  update-v2.9.14-to-v2.9.15.sh
+
+Changed:
+  AnalyzeMatch.html
+  AnalyzeMatchModal.html
+  AnalyzeMatches.htm
+  CHANGELOG.md
+  ChallengeListAssistant.html
+  ClubIntelligence.html
+  DataReconciliation.html
+  FindMatch.htm
+  InsightsHealth.html
+  LeagueSeasonCenter.html
+  LiveRanks.html
+  MatchCreationAnalyzer.htm
+  Opponents.html
+  RELEASE_NOTES.md
+  RecruitMatch.html
+  RecruitmentDemandPlanner.html
+  TEST_HISTORY.md
+  TaskControl.html
+  TaskLogs.html
+  TeamInsights.html
+  TeamPointsAdmin.html
+  TournamentAchievementBadgesDemo.html
+  TournamentManagement.html
+  Tournaments.html
+  UPDATE_HISTORY.md
+  VERSION
+  assets/js/pages/task-control.js
+  assets/js/shared/active-convergence-refresh.js
+  assets/js/shared/api-client.js
+  assets/js/shared/client-continuous-refresh.js
+  assets/js/shared/team-points-client.js
+  assets/js/site-config.js
+  index.html
+  server/control/public/api.php
+  server/team-points/config/config.example.php
+  server/team-points/public/acamr-plan.php
+  server/team-points/public/cron.php
+  server/team-points/src/AcamrClaimStore.php
+  server/team-points/src/CronLoop.php
+  server/team-points/src/OAuthSession.php
+  site-manifest.json
+  tests/run-tests.js
+  tests/test_post_v2913_acsr_ui.py
+  tests/test_post_v2913_filesystem_hardening.py
+  tests/test_post_v297_client_continuous_refresh.py
+  tests/test_v2810_release.py
+  tests/test_v281_release.py
+  tests/test_v282_release.py
+  tests/test_v283_release.py
+  tests/test_v285_release.py
+  tests/test_v286_release.py
+  tests/test_v2881_hotfix.py
+  tests/test_v288_release.py
+  tests/test_v289_release.py
+  tests/test_v290_release.py
+  tests/test_v291_release.py
+  tests/test_v292_corrective_release.py
+  tests/test_v293_user_corrections.py
+  tests/test_v297_corrective_release.py
+  tests/test_v298_release.py
+  tests/test_v299_oauth_throughput.py
+  tests/validate_package.py
+  ui-v2.html
+
+Removed:
+  (none)
+
+Forced unchanged staging helpers:
+  tools/release/p2k-state-backup.sh
+  tools/release/p2k-state-restore.sh
+  tools/release/p2k-consolidate-legacy-backups.sh
+

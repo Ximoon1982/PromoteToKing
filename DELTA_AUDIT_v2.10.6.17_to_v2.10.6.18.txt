@@ -1,0 +1,36 @@
+Promote to King v2.10.6.17 -> v2.10.6.18 delta audit
+
+Baseline source files: 992
+Target source files: 998
+Modified: 17
+Added: 6
+Removed: 0
+
+Modified:
+- MIGRATION_VERSION
+- TaskControl.html
+- VERSION
+- assets/js/pages/dashboard-insights.js
+- assets/js/pages/dashboard-v2.js
+- assets/js/pages/opponent-balance-analyzer.js
+- assets/js/pages/task-control.js
+- assets/js/shared/green-accelerator.js
+- assets/js/site-config.js
+- server/team-points-green/public/api.php
+- server/team-points-green/public/observe.php
+- server/team-points-green/src/GreenAnalyticsBootstrap.php
+- server/team-points-green/src/GreenCompatibility.php
+- server/team-points-green/src/GreenRepository.php
+- site-manifest.json
+- tests/validate_package.py
+- ui-v2.html
+
+Added:
+- DELTA_AUDIT_v2.10.6.17_to_v2.10.6.18.txt
+- INSTALL_v2.10.6.18.md
+- MIGRATION_v2.10.6.18.md
+- RELEASE_NOTES_v2.10.6.18.md
+- VALIDATION_REPORT_v2.10.6.18.txt
+- tests/test_v210618_registration_heatmap_backfill.py
+
+No files removed. No DB schema-version/reset/reseed, CRON definition, Blue/Green routing, scoring or artwork change.

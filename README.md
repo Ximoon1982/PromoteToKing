@@ -1,47 +1,35 @@
-# Promote to King standardized website
+# Green profile/stats stage stall hotfix — v2.10.1.2
 
-This folder is ready to publish at the root of the GitHub Pages repository.
-No bundler or build command is required.
+Root cause:
+- `nextProfileDue()` selects `current_member=1 AND profile_checked_at IS NULL`.
+- The worker only checkpointed HTTP 200.
+- A 404/410 therefore remained NULL and was selected again indefinitely.
+- `seed_stats` had the identical defect for `stats_checked_at`.
+- Transient responses could also be hammered repeatedly during one worker invocation.
 
-## Public entry points
+Fix:
+- 404/410 is terminal for the current initial seed attempt and advances the checkpoint without inventing profile/rating data.
+- transient/network/429/5xx responses remain due but stop the current tight loop so a later invocation retries them.
+- browser planner diagnostics now expose real profile/stats `due_unhydrated` / `eligible_now` counts instead of misleading 0/0/0.
+- no schema change.
+- migration version remains 2.10.1.2.
 
-- `FindMatch.htm` — Match Assistant
-- `AnalyzeMatches.htm` — Upcoming Matches Analyzer
-- `MatchCreationAnalyzer.htm` — Match Creation Analyzer
-- `AnalyzeMatch.html` — Open Match Analyzer
+Deploy from the PromoteToKing root:
+```bash
+chmod +x update-v2.10.1.2-green-profile-stall-hotfix.sh
+./update-v2.10.1.2-green-profile-stall-hotfix.sh
+```
 
-Internal helper:
-
-- `AnalyzeMatchModal.html` — loaded lazily by the Match Assistant only when a detailed-analysis button is clicked
-
-All deployable page names are unversioned. Historical versioned aliases are intentionally excluded from this package.
-
-## Shared structure
-
-- `assets/js/shared/api-cache.js` contains the shared IndexedDB cache, request de-duplication, conditional revalidation, and priority helpers.
-- `assets/js/site-config.js` centralizes routes and compatibility source URLs.
-- `assets/js/pages/` contains one page controller per tool.
-- `assets/css/upcoming-matches-analyzer.css` is shared by the Upcoming Analyzer and modal detail view.
-- `assets/css/analyze-match-modal.css` contains only modal-specific overrides.
-- `assets/css/legacy-loader.css` is shared by the Match Assistant and Match Creation compatibility bootstraps.
-
-## Deployment
-
-1. Copy the complete contents of this folder to the root of `P2KMatchFinder`.
-2. Keep the directory names and relative paths unchanged.
-3. Confirm GitHub Pages serves the repository over HTTPS.
-4. Test the four public entry-point URLs.
-
-## Compatibility note
-
-The current Match Assistant and Match Creation Analyzer remain compatibility loaders around pinned historical source files. Their local custom logic and styling are externalized, and the pinned source URLs are centralized in `assets/js/site-config.js`. The Upcoming Analyzer, standalone match analyzer, and modal helper are fully local standalone pages.
-
-A future cleanup can vendor those two historical base files without changing any public URL: place local copies in the site and update only the two `legacySources` values in `assets/js/site-config.js`.
-
-## Optional simulated Chess.com OAuth
-
-Add `?oauth=1` to `index.html` to enable the simulated login UI. For example:
-
-`https://www.promotetoking.org/?oauth=1`
-
-The feature uses only the public Chess.com player profile endpoint. It never requests a Chess.com password or OAuth token. The selected user is stored locally in the browser and is automatically supplied to the Match Assistant. Without the flag, the website behaves exactly as before.
+Optional read-only confirmation before/after:
+```bash
+php8.5-cli -r '
+require getcwd()."/server/team-points-green/src/bootstrap.php";
+$r=\P2K\Green\GreenRepository::open();
+$s=$r->state();
+$q=$r->core->query("SELECT
+  SUM(current_member=1 AND profile_checked_at IS NULL) profiles_pending,
+  SUM(current_member=1 AND stats_checked_at IS NULL) stats_pending
+  FROM p2k_g_players");
+print_r(["stage"=>$s["stage"],"pending"=>$q->fetch(PDO::FETCH_ASSOC)]);
+'
+```

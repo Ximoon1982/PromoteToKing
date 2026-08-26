@@ -1,0 +1,54 @@
+Promote to King v2.10.6.12 -> v2.10.6.13 delta audit
+=====================================================
+
+Expected source delta:
+- Modified: 31
+- Added:     6
+- Removed:   0
+
+Added files
+-----------
+DELTA_AUDIT_v2.10.6.12_to_v2.10.6.13.txt
+INSTALL_v2.10.6.13.md
+MIGRATION_v2.10.6.13.md
+RELEASE_NOTES_v2.10.6.13.md
+VALIDATION_REPORT_v2.10.6.13.txt
+tests/test_v210613_admin_routing_utc_assistant.py
+
+Modified files
+--------------
+LeagueSeasonCenter.html
+MIGRATION_VERSION
+RecruitmentDemandPlanner.html
+TeamInsights.html
+TournamentAchievementBadgesDemo.html
+TournamentManagement.html
+VERSION
+assets/css/dashboard-v2.css
+assets/js/pages/admin-features.js
+assets/js/pages/analyze-match.js
+assets/js/pages/challenge-list-assistant.js
+assets/js/pages/club-intelligence.js
+assets/js/pages/dashboard-insights.js
+assets/js/pages/dashboard-v2.js
+assets/js/pages/find-match.js
+assets/js/pages/match-creation-analyzer.js
+assets/js/pages/match-creation-charts.js
+assets/js/pages/migration-installer.js
+assets/js/pages/recruit-match.js
+assets/js/pages/runtime-diagnostics.js
+assets/js/pages/task-control.js
+assets/js/pages/team-points-admin.js
+assets/js/pages/team-points-migration.js
+assets/js/shared/match-history-ui.js
+assets/js/shared/real-oauth.js
+assets/js/shared/simulated-oauth.js
+assets/js/shared/upcoming-analysis-core.js
+assets/js/site-config.js
+site-manifest.json
+tests/validate_package.py
+ui-v2.html
+
+Removed files
+-------------
+None.

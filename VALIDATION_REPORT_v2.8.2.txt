@@ -1,0 +1,73 @@
+PROMOTE TO KING v2.8.2 — VALIDATION REPORT
+===========================================
+Date: 2026-08-07
+Baseline: v2.8.1 Hotfix 2 Integrated
+Release: 2.8.2
+Core schema: 4
+Analytics schema: 4
+Result: PASS
+
+24-POINT ACCEPTANCE CHECKLIST
+-----------------------------
+1. PASS — Admin dashboard adds New matches · 24 h, persisted by first_discovered_at, newest-first; card opens match-detail modal.
+2. PASS — The four pre-existing admin metric cards are clickable and open relevant detail modals.
+3. PASS — Highest-priority actions are compact; color-coded win forecast is immediately left of the action; Match Analyzer eligible-lineup probability model is reused; below-minimum eligible boards force 0%.
+4. PASS — System health shows elapsed time since the last completed MCA import and links to integrated Live-ranks/MCA import.
+5. PASS — Dashboard label is Matches starting within 7 days; it and Priority calls open the embedded Match Assistant with date/priority presets.
+6. PASS — Dashboard Team metrics navigate to relevant Insights / Live Hall views.
+7. PASS — Member card exposes Open unified profile from both Daily and Live modes.
+8. PASS — All 56 shipped 1254×1254 achievement/rank PNG originals were replaced in place at 640×640 with identical filenames; no 1254×1254 PNG remains.
+9. PASS — Missing/orphan image audit is clean; daily-king, live-ranked and points-1000 are wired; no explicit achievement asset reference is missing.
+10. PASS — Lineup-history win probability is full width above side-by-side team comparisons; text spacing is structural; lineup-history zoom implementation is removed.
+11. PASS — Integrated Live-ranks computation has no nested card border.
+12. PASS — Scheduled Tasks / Match monitoring contains the historical tracked-match explorer functions: add/follow, record now, search, status/follow filters, sort, open match, follow/unfollow, history and cleanup.
+13. PASS — Open Match Analyzer exposes a visible standalone link in Administration and the analyzer itself propagates match/POV.
+14. PASS — Tournament medal accent is restricted to medal-count cells with medal-colored top/bottom borders; whole rows are not medal-colored; stored fair-play/abuse exclusions are filtered and manual validation remains enabled by default.
+15. PASS — Monthly active members and Daily-rank distribution are full width.
+16. PASS — Monthly match activity graphics are clipped to their chart container and do not spill below it.
+17. PASS — Result by match size uses a stacked W/D/L bar representation instead of the pie; bar totals are displayed above bars.
+18. PASS — Duration distribution shows bar values plus average and median reference markers.
+19. PASS — Most played opponents is Top 25 only; aggregated Others is removed.
+20. PASS — Opponent intelligence uses Win rate by max rating, backed by stored authoritative match max_rating.
+21. PASS — Opponent table typography is increased for readability.
+22. PASS — Achievement ownership counts current club members only and reports both “xxx club members” and percentage of current membership.
+23. PASS — Profile Team Points progression uses independent monthly and cumulative-total scales.
+24. PASS — Hall-of-Fame player search returns one unified card; Open profile is first; Daily, Live, tournament/podium and achievement information/actions are retained.
+
+RETAINED INTEGRATED WORK
+------------------------
+- v2.8.1 tracked-match, Administration, Insights, opponent-intelligence, unified-profile and achievement-history improvements remain present.
+- RecoveryFix7 opportunistic Daily/Chess960 ratings, split last-game activity dates, RM-2 stored-rating recruitment, Team Insights projections and artwork recovery remain present.
+- Cross-tab mobile harmonization from Hotfix 2 remains present: page width follows the dashboard/header gutters, wide tables scroll locally, nested tabs remain compact on mobile, desktop layout is preserved.
+
+DATABASE / MIGRATION
+--------------------
+- Core/Analytics revision 4 is additive and converges supported v2.8.x databases in place.
+- Core adds max_rating and first_discovered_at to match metadata.
+- Analytics materializes both fields.
+- Historical rows are marked pre-upgrade rather than assigned a guessed recent discovery timestamp; New matches · 24 h is exact for discoveries after deployment.
+- No initializer or seed reload is required.
+
+AUTOMATED VALIDATION
+--------------------
+- pytest: 30 passed.
+- Retained static UI feature suite: PASS.
+- JavaScript node --check: 38 files PASS.
+- PHP lint: 69 files PASS.
+- Python compilation: 26 files PASS.
+- Achievement/rank image audit: 0 legacy 1254×1254 PNG; 56 source PNGs at 640×640; 0 missing achievement asset references; 0 orphan achievement PNGs.
+- Dedicated v2.8.2 regression suite covers all 24 requested acceptance points.
+
+PRODUCTION LIMITATION
+---------------------
+No production MariaDB mutation, live Chess.com recruitment scan, tournament account scan, or production CRON execution was performed in the build environment. The additive schema migration and live-data behavior must be verified after deployment against the hosted databases/API state.
+
+HOTFIX 1 — 2026-08-07
+- Fixed Team/Opponent Insights shared Analytics refresh SQLSTATE[21S01] / MySQL 1136.
+- p2k_an_match_facts insert now has 25 columns, 25 placeholders and 25 bound values.
+- Added dedicated regression assertion preventing placeholder-count recurrence.
+
+Hotfix 1 final checks:
+- PHP lint: 69 files PASS
+- JavaScript syntax: 38 files PASS
+- Python compilation: 26 files PASS

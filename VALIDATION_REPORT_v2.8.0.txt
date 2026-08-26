@@ -1,0 +1,77 @@
+Promote to King Standalone v2.8.0 — validation report
+=====================================================
+Release basis: PromoteToKing Standalone v2.7.3
+Date: 2026-08-07
+
+Architecture validated
+----------------------
+- Two distinct MariaDB roles: Core + Analytics.
+- Core is canonical; Analytics is rebuildable from Core.
+- Shared Chess.com HTTP cache is protected sharded gzip filesystem storage.
+- Fresh SQL schema contains no p2k_tp_http_cache or p2k_shared_http_cache table.
+- Fresh SQL schema contains no p2k_tp_seed_* staging tables.
+- Compact Core high-volume facts use member_id / board_id / game_row_id numeric keys.
+- Legacy read compatibility views do not duplicate physical board/game facts.
+- Repair writers target canonical Core tables, not compatibility views.
+- Analytics full refresh is not executed by every five-minute worker CRON.
+- Read-triggered Analytics refresh is bounded by the configured refresh interval.
+- Administrator page admission remains independent from DB/API availability.
+
+Storage monitoring validated
+----------------------------
+- Core and Analytics database size measured independently from information_schema.
+- Per-database quota configured independently; standard default 2,147,483,648 bytes.
+- Green below 80%; red at/above 80%; unavailable database reported independently.
+- Filesystem runtime/cache/log/archive usage measured independently.
+- API cache has its own byte budget (default 512 MiB).
+- One storage measurement may be persisted per UTC day in Analytics.
+- Month-end history is exposed to the admin chart.
+- Capacity projection uses monthly measured trend after two calendar months.
+- First-month daily forecast is explicitly marked daily_bootstrap.
+- 80% and 100% dates are withheld when no positive trend is measured.
+
+Fresh initializer validated
+---------------------------
+Local checksum-verified embedded snapshot:
+  Members:                       4,473
+  Findings / total matches:     17,091
+  Finished matches:             15,997
+  In-progress matches:           1,019
+  Registration matches:             74
+  Unknown metadata matches:           1
+  Member/board rows:            104,761
+  Complete two-game boards:      96,691
+  One-game boards:                4,725
+  Zero-game boards:               3,345
+  Finished game events:         198,107
+  Void finished 0-0 matches:      1,507
+  Club Points:                  371,168
+  Forced metadata repair:       match 1983076
+
+Initializer properties:
+- Requires two empty databases.
+- Installs Core schema 1 and Analytics schema 1.
+- No SQL seed staging.
+- Idempotent batch uploads into Core.
+- Exact server-side count validation before finalization.
+- Analytics rebuilt from Core.
+- Core finalization/job creation sealed in a single Core transaction.
+- Retry with the identical manifest may adopt a new transport run UUID and resume.
+- Leaves Team Points paused after successful initialization.
+
+Static/runtime validation
+-------------------------
+- PHP syntax lint: 66 files passed.
+- JavaScript syntax check: 37 files passed.
+- Python release tests: 19 scripts passed.
+- Full package validator: passed.
+- Local initializer PYZ clean-directory validation: passed.
+- No production runtime references to removed SQL HTTP-cache/seed-staging tables found.
+- No writes to compact compatibility views found.
+- Old web seed-import tool directory removed.
+
+Limitations
+-----------
+This environment does not have a live MariaDB server or PDO MySQL driver. The two SQL schemas and fresh initializer were therefore not executed against the production IONOS databases. The release performs schema creation through the hosted PHP endpoint during installation, and the initializer refuses non-empty databases and verifies exact row totals before sealing initialization.
+
+No request was made to the user's production database during release construction.

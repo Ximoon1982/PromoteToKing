@@ -448,60 +448,6 @@
     stroke-linejoin: round;
   }
 
-  #p2kUpcomingAnalyzer .p2k-info-mark {
-    position: relative;
-    display: inline-flex;
-    width: 17px;
-    height: 17px;
-    margin-left: 5px;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(246, 183, 60, .62);
-    border-radius: 50%;
-    background: rgba(217, 141, 24, .12);
-    color: #ffd078;
-    font-size: 11px;
-    font-style: normal;
-    font-weight: 700;
-    line-height: 1;
-    vertical-align: middle;
-    cursor: help;
-    outline-offset: 2px;
-    z-index: 8;
-  }
-
-  #p2kUpcomingAnalyzer .p2k-info-mark::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    left: 50%;
-    bottom: calc(100% + 8px);
-    width: max-content;
-    max-width: min(310px, 76vw);
-    padding: 8px 10px;
-    border: 1px solid rgba(246, 183, 60, .42);
-    border-radius: 6px;
-    background: #24211e;
-    color: #eee7de;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, .45);
-    font-size: 11px;
-    font-weight: 400;
-    line-height: 1.4;
-    text-align: left;
-    white-space: normal;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transform: translate(-50%, 4px);
-    transition: opacity .12s ease, transform .12s ease, visibility .12s ease;
-    z-index: 999;
-  }
-
-  #p2kUpcomingAnalyzer .p2k-info-mark:hover::after,
-  #p2kUpcomingAnalyzer .p2k-info-mark:focus::after {
-    opacity: 1;
-    visibility: visible;
-    transform: translate(-50%, 0);
-  }
 
   #p2kUpcomingAnalyzer .p2k-expanded-details {
     margin-top: 12px;
@@ -1395,3 +1341,6 @@
   display: none;
 }
 
+#p2kUpcomingAnalyzer .p2k-standalone-action{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;padding:10px 14px;border:1px solid rgba(174,224,243,.55);border-radius:7px;background:rgba(174,224,243,.08);color:#aee0f3;font-size:13px;font-weight:800;line-height:1.2;text-decoration:none;white-space:nowrap;transition:background .15s ease,border-color .15s ease}
+#p2kUpcomingAnalyzer .p2k-standalone-action:hover{background:rgba(174,224,243,.15);border-color:#aee0f3}
+@media (max-width:640px){#p2kUpcomingAnalyzer .p2k-standalone-action{width:100%}}

@@ -1,0 +1,41 @@
+Promote to King v2.10.6.19 validation report
+============================================
+
+Release scope
+-------------
+- Historical heatmap rating provenance from stored/board game data.
+- Strict paired-board average-rating invariant.
+- Residual board-detail heatmap backfill.
+- Bounded background OAuth acceleration (16-request logical feeder).
+- Accelerator JSONP fan-out removed.
+- Admin/P0 gateway protection restored.
+- OAuth gateway telemetry corrected.
+- GAB external counters separated from heatmap queue state.
+
+Focused validation
+------------------
+- v2.10.6.19 heatmap transport/provenance tests: PASS (12/12).
+- Applicable v2.10.6.18 registration/heatmap compatibility tests: PASS.
+- Applicable v2.10.6.17 and v2.10.6.16 behavioral tests: PASS; their frozen
+  release-identity assertions are intentionally not applicable to v2.10.6.19.
+- PHP syntax checks: PASS.
+- JavaScript syntax checks: PASS.
+- Full package validator on canonical source tree: PASS.
+
+Final packaging acceptance
+--------------------------
+Canonical source tree: 1004 files.
+Cumulative incremental payload: 44 files; 0 removals.
+Accepted installed source versions: 2.10.6.15, 2.10.6.16, 2.10.6.17, 2.10.6.18.
+
+Before final artifact publication, the exact installer was replayed independently
+from each accepted source archive. Full-source extraction and all four incremental
+replays produced exactly the canonical v2.10.6.19 tree: 1004/1004 files, zero
+missing files, zero extra files, and zero SHA-256 differences. The package
+validator passed on the full-source extraction and on every replayed tree.
+A second installer invocation on v2.10.6.19 was idempotent and changed no files.
+
+Data safety
+-----------
+No database reset/reseed, schema change, CRON-definition change, Blue/Green
+routing change, scoring change, or artwork change is required by this release.

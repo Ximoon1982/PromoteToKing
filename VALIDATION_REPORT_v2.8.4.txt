@@ -1,0 +1,35 @@
+Promote to King Standalone v2.8.4 — validation report
+Date: 2026-08-07
+
+Release scope
+- v2.8.3 baseline retained.
+- Tournament achievement date Revision 2 integrated.
+- Opportunistic Chess.com observation ingestion integrated.
+- Team Points board parser/recovery/coverage fixes integrated.
+- Independent Club Points / Player Points CRON lanes integrated.
+- Achievement/Hall/Tournament ordering and medal UI changes integrated.
+
+Database compatibility
+- Core schema: 4 (unchanged)
+- Analytics schema: 5 (unchanged)
+- No database reset/reseed required.
+
+Automated validation completed before packaging
+- pytest: 67 passed
+- Static UI feature tests: PASS
+- JavaScript syntax: 38 files PASS
+- PHP lint: 73 files PASS
+- Python compile: 31 files PASS
+- Dedicated v2.8.4 acceptance tests: 9 passed (included in the 67)
+
+Important recovery behavior
+- Pre-v2.8.4 failed sync_board tasks are eligible for one-time recovery and routing by urgency.
+- Recovered tasks carry the v2.8.4 recovery marker and are not repeatedly reopened forever if they later fail under the normal retry policy.
+- Queue drain with unresolved failures is not reported as a successful full synchronization.
+
+Operational requirement
+- Replace the old monolithic Team Points CRON with cron-club.php every 5 minutes and cron-player.php every 30 minutes.
+- cron.php remains a Club-lane compatibility alias and must not be scheduled in addition to cron-club.php.
+
+Source-tree package validator after release integration: PASS.
+The final ZIP is also extracted and independently revalidated before handoff.

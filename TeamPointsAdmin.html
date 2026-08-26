@@ -1,0 +1,324 @@
+<!doctype html>
+<html class="admin-access-pending" lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Promote to King - Team Points</title>
+  <link rel="icon" href="assets/images/p2k-logo.jpg">
+  <link rel="stylesheet" href="assets/css/team-points-admin.css?v=2.10.6.6">
+  <link rel="stylesheet" href="assets/css/admin-embedded.css?v=2.10.6">
+  <script src="config/site-branding.js?v=2.10.6"></script>
+  <script src="assets/js/site-config.js?v=2.10.6"></script>
+  <script src="assets/js/shared/api-cache.js?v=2.10.6"></script>
+  <script src="assets/js/shared/api-client.js?v=2.10.6"></script>
+  <script defer src="assets/js/shared/real-oauth.js?v=2.10.6"></script><script src="assets/js/shared/simulated-oauth.js?v=2.10.6"></script><script defer src="assets/js/shared/authenticated-member-refresh.js?v=2.10.6"></script>
+  <script src="assets/js/shared/team-points-client.js?v=2.10.6"></script><script src="assets/js/shared/admin-page-guard.js?v=2.10.6"></script>
+  
+  <style>html.admin-access-pending body{visibility:hidden}</style>
+<link href="assets/css/responsive-unification.css?v=2.10.6" rel="stylesheet"/>
+</head>
+<body>
+<main class="p2k-tp" id="p2kTeamPoints">
+  <header class="p2k-tp-header">
+    <div>
+      <h1>Promote to King Team Points</h1>
+      <p>Administrator-only server collection and UTC monthly scoring. Chess.com data is normalized into the compact Core database; rebuildable summaries live in the Analytics database, while API cache and logs stay on the filesystem.</p>
+    </div>
+    <img class="p2k-tp-logo" src="assets/images/p2k-logo.jpg" alt="Promote to King club logo">
+  </header>
+
+  <nav class="p2k-tp-tabs" role="tablist" aria-label="Team Points sections">
+    <button class="p2k-tp-tab" role="tab" aria-selected="true" data-tab="control">Control &amp; data</button>
+    <button class="p2k-tp-tab" role="tab" aria-selected="false" data-tab="export" tabindex="-1">Period query &amp; CSV</button>
+    <button class="p2k-tp-tab" role="tab" aria-selected="false" data-tab="maintenance" tabindex="-1">Consistency &amp; repair</button>
+    <button class="p2k-tp-tab" role="tab" aria-selected="false" data-tab="opponents" tabindex="-1">Opponents</button>
+    <button class="p2k-tp-tab" role="tab" aria-selected="false" data-tab="live-ranks" tabindex="-1">Live ranks</button>
+    <button class="p2k-tp-tab" role="tab" aria-selected="false" data-tab="members" tabindex="-1">Members</button>
+    <button class="p2k-tp-tab" role="tab" aria-selected="false" data-tab="storage" tabindex="-1">Storage &amp; capacity</button>
+  </nav>
+
+  <section data-panel="control" role="tabpanel">
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head">
+        <div>
+          <h2>Team Points data connection</h2>
+          <p>Administrator page access is independent from MariaDB. Database-backed controls connect separately through the protected Team Points server session; if MariaDB is unavailable, the page remains accessible and only those controls show an error.</p>
+        </div>
+        <span class="p2k-tp-pill">Admin restricted</span>
+      </div>
+      <div class="p2k-tp-actions">
+        <button class="p2k-tp-button primary" id="tpConnect">Reconnect Team Points</button>
+      </div>
+      <div class="p2k-tp-status" id="tpConnectionStatus">Connecting to Team Points data…</div>
+    </section>
+
+    <div class="p2k-tp-grid" id="tpMetrics"></div>
+
+    <div class="p2k-tp-two">
+      <section class="p2k-tp-card">
+        <div class="p2k-tp-card-head">
+          <div>
+            <h2>Collection job</h2>
+            <p>The durable Core queue is owned by the server and continued by the external five-minute CRON. A manual action can run one bounded compatibility segment without creating a browser loop.</p>
+          </div>
+          <span class="p2k-tp-pill" id="tpJobStatus">No job</span>
+        </div>
+        <div class="p2k-tp-actions">
+          <button class="p2k-tp-button primary" id="tpStart">Start/update all data</button>
+          <button class="p2k-tp-button blue" id="tpRun">Run one segment now</button>
+          <button class="p2k-tp-button" id="tpPrioritizeDiscovery">Prioritize fresh discovery</button>
+          <button class="p2k-tp-button danger" id="tpStop">Pause / safe stop</button>
+          <button class="p2k-tp-button" id="tpResume">Resume</button>
+          <button class="p2k-tp-button" id="tpRefresh">Refresh status</button>
+        </div>
+        <div class="p2k-tp-progress"><span id="tpProgressBar"></span></div>
+        <div class="p2k-tp-status" id="tpJobMessage">No server status loaded.</div>
+      </section>
+
+      <section class="p2k-tp-card">
+        <h2>CRON endpoint</h2>
+        <p>CRON and the manual compatibility action share the same interruption-safe queue. Each external CRON call uses a 48-second endpoint budget and a 35-second worker segment, then exits before the host timeout.</p>
+        <div class="p2k-tp-code" id="tpCronUrl">Configured server-side</div>
+        <p class="p2k-tp-note">The CRON secret stays in the protected server configuration. Configure the external Team Points URL every five minutes. Duplicate triggers are ignored safely and no browser needs to remain open.</p>
+      </section>
+    </div>
+
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head">
+        <div>
+          <h2>Process overview</h2>
+          <p>General timing, current task, next retry, and queue composition for the latest collection job.</p>
+        </div>
+      </div>
+      <div class="p2k-tp-process-grid" id="tpProcessOverview"></div>
+      <div class="p2k-tp-table-wrap compact">
+        <table>
+          <thead><tr><th>Task type</th><th>Total</th><th>Pending</th><th>Running</th><th>Retry</th><th>Done</th><th>Failed</th></tr></thead>
+          <tbody id="tpTaskBreakdown"><tr><td colspan="7">No task data loaded.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head">
+        <div>
+          <h2>Detailed process log</h2>
+          <p>Shows the type of work performed, the relevant player or board, results, retries, and invocation lifecycle.</p>
+        </div>
+      </div>
+      <div class="p2k-tp-table-wrap log-table">
+        <table>
+          <thead><tr><th>UTC time</th><th>Level</th><th>Task</th><th>Key</th><th>Message</th><th>Context</th></tr></thead>
+          <tbody id="tpProcessLogs"><tr><td colspan="6">No process log loaded.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head">
+        <div>
+          <h2>Retries and failures</h2>
+          <p>Temporary network or rate-limit errors are retried later. Permanent failures remain visible without blocking unrelated items.</p>
+        </div>
+      </div>
+      <div class="p2k-tp-table-wrap">
+        <table>
+          <thead><tr><th>Type / key</th><th>Status</th><th>Attempts</th><th>Next / updated</th><th>Error</th></tr></thead>
+          <tbody id="tpIssues"><tr><td colspan="5">No data loaded.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head">
+        <div>
+          <h2>Recent worker invocations</h2>
+          <p>Manual and CRON calls are recorded separately even though they process the same durable queue.</p>
+        </div>
+      </div>
+      <div class="p2k-tp-table-wrap">
+        <table>
+          <thead><tr><th>Trigger</th><th>Started</th><th>Finished</th><th>Items</th><th>Result</th><th>Message</th></tr></thead>
+          <tbody id="tpRuns"><tr><td colspan="6">No worker invocation loaded.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+
+  <section data-panel="maintenance" role="tabpanel" hidden>
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head">
+        <div>
+          <h2>Finished-match consistency</h2>
+          <p>A match is counted as finished only after the authoritative Chess.com match endpoint reports <code>status = finished</code>. Local board completion alone is never sufficient.</p>
+        </div>
+        <span class="p2k-tp-pill">v2.8.11</span>
+      </div>
+      <div class="p2k-tp-actions">
+        <a class="p2k-tp-button primary" href="server/team-points/public/database-repair.php" target="_blank" rel="noopener">Open resumable database repair</a>
+        <a class="p2k-tp-button" href="server/team-points/public/fast-former-member-audit.php" target="_blank" rel="noopener">Legacy former-member audit</a>
+        <a class="p2k-tp-button" href="server/team-points/public/consistency-repair.php" target="_blank" rel="noopener">Legacy complete audit</a>
+      </div>
+      <div class="p2k-tp-status">The resumable tool supports arithmetic-only, former-member and full audits. It stores only possible issues, can pause safely, continues after individual API errors, and can repair selected issues or batches of 5, 10 or 25 before the scan is complete.</div>
+    </section>
+    <section class="p2k-tp-card">
+      <h2>Which audit should be used?</h2>
+      <p><strong>Arithmetic audit:</strong> uses stored authoritative board counts, participations, game events and scores. It requires no Chess.com requests and quickly identifies summaries that are certainly inconsistent.</p>
+      <p><strong>Former-member audit:</strong> verifies only finalized summaries involving a stored participant who is no longer a current club member.</p>
+      <p><strong>Full audit:</strong> checks all finalized summaries against Chess.com. API failures are retained as review issues and do not stop the remaining scan.</p>
+    </section>
+  </section>
+
+  <section data-panel="opponents" role="tabpanel" hidden>
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head"><div><h2>Opponent names and club status</h2><p>Check every known opponent club endpoint. When an old endpoint fails, a stored match is used to detect a replacement club slug; otherwise the club is marked as possibly disabled.</p></div><span class="p2k-tp-pill">Database metadata</span></div>
+      <div class="p2k-tp-actions">
+        <button class="p2k-tp-button primary" id="opponentRefreshList" type="button">Load opponents</button>
+        <button class="p2k-tp-button blue" id="opponentScan" type="button">Refresh opponent names</button>
+        <button class="p2k-tp-button" id="opponentApply" type="button" disabled>Update all detected names</button>
+        <button class="p2k-tp-button" id="opponentExport" type="button" disabled>Export changes CSV</button>
+      </div>
+      <div class="p2k-tp-status" id="opponentAdminStatus">Load the opponent inventory to begin.</div>
+    </section>
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-table-wrap"><table><thead><tr><th>Current opponent</th><th>Matches</th><th>Endpoint result</th><th>Detected name</th><th>Detected slug</th><th>Action</th></tr></thead><tbody id="opponentAdminRows"><tr><td colspan="6">No opponent check loaded.</td></tr></tbody></table></div>
+    </section>
+  </section>
+
+  <section data-panel="live-ranks" role="tabpanel" hidden>
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head"><div><h2>MCA source data</h2><p>Chess.com MCA Results CSV files remain the administrative source data and are added manually. v2.10.6.6 no longer scans the MCA index or downloads new arena Results files. For each stored CSV, P2K derives the known arena page directly from the filename and can backfill a missing or invalid event date without changing the CSV contents.</p></div><span class="p2k-tp-pill">MCA source intake</span></div>
+      <div class="p2k-live-drop" id="liveRanksDrop" tabindex="0" role="button" aria-label="Drop MCA source CSV files or select files">
+        <strong>Drop MCA source CSV files here</strong><span>or select one or more arena exports</span>
+        <input id="liveRanksFiles" type="file" accept=".csv,text/csv" multiple>
+      </div>
+      <div class="p2k-tp-actions">
+        <button class="p2k-tp-button primary" id="liveRanksUpload" type="button">Upload selected files</button>
+        <button class="p2k-tp-button" id="liveRanksRefresh" type="button">Refresh file list</button>
+        <button class="p2k-tp-button blue" id="liveRanksProcess" type="button">Process complete MCA dataset</button>
+        <button class="p2k-tp-button" id="liveRanksExportCorrections" type="button" disabled>Export possible renames</button>
+        <button class="p2k-tp-button" id="liveRanksBlueGreen" type="button">Sync MCA Blue → Green</button>
+      </div>
+      <div class="p2k-tp-status" id="liveRanksStatus">Upload MCA source CSV files, then process the complete stored MCA dataset.</div>
+      <div class="p2k-tp-status" id="liveRanksBlueGreenStatus">Blue → Green copies only the MCA data domain and replaces the Green MCA snapshot after validation.</div>
+    </section>
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head"><div><h2>MCA Known-Source Date Backfill</h2><p>No arena discovery or Results CSV download is performed. P2K examines only CSV files already stored in MCA source data. When a stored file has no trusted event date, its arena page URL is derived from the CSV filename and fetched to recover the start date. Files that already have a valid date generate no request. Requests remain strictly serial and server-paced to no more than one per second; the same timestamp-only worker is used by this panel and the twice-daily CRON.</p></div><span class="p2k-tp-pill">v2.10.6.10 · timestamp only · serial 1 req/s</span></div>
+      <div class="p2k-tp-actions">
+        <button class="p2k-tp-button primary" id="liveRanksSyncStart" type="button">Backfill missing dates</button>
+        <button class="p2k-tp-button" id="liveRanksSyncResume" type="button">Resume date backfill</button>
+        <button class="p2k-tp-button" id="liveRanksSyncRetry" type="button" disabled>Retry failed dates</button>
+      </div>
+      <div class="p2k-tp-status" id="liveRanksSyncStatus">Loading MCA sync state…</div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.65rem;align-items:center;margin-top:.7rem">
+        <progress id="liveRanksSyncProgress" max="100" value="0" style="width:100%;height:1rem"></progress>
+        <strong id="liveRanksSyncPercent">0%</strong>
+      </div>
+      <div class="p2k-tp-grid" id="liveRanksSyncMetrics" style="margin-top:.8rem"></div>
+      <div id="liveRanksSyncErrorsWrap" hidden style="margin-top:1rem">
+        <div class="p2k-tp-card-head"><div><h3>Failed date backfills</h3><p>Stored arenas whose public event page could not provide a usable event date.</p></div></div>
+        <div class="p2k-tp-table-wrap"><table><thead><tr><th>Arena</th><th>Stage</th><th>Attempts</th><th>Error</th><th>Last attempt UTC</th></tr></thead><tbody id="liveRanksSyncErrorRows"></tbody></table></div>
+      </div>
+    </section>
+    <div class="p2k-tp-grid" id="liveRanksMetrics"></div>
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head"><div><h2>Stored MCA source CSV files</h2><p>Re-uploading the same filename always replaces that arena file, even when its contents are unchanged. Different filenames remain separate pack entries.</p></div></div>
+      <div class="p2k-tp-table-wrap"><table><thead><tr><th>Filename / event page</th><th>Event date</th><th>Size</th><th>SHA-256</th><th>Uploaded UTC</th><th>Status</th><th>Rows</th><th>P2K rows</th></tr></thead><tbody id="liveRanksFileRows"><tr><td colspan="8">No MCA source CSV files loaded.</td></tr></tbody></table></div>
+    </section>
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head"><div><h2>Computed players and post-processing</h2><p>All valid P2K scores are included immediately. A player endpoint failure does not stop computation; the MCA source username remains in the ladder and is listed as a possible rename for later correction.</p></div></div>
+      <div class="p2k-tp-table-wrap"><table><thead><tr><th>Player</th><th>Points</th><th>Arenas</th><th>Membership/account state</th><th>Source files</th><th>Verification</th></tr></thead><tbody id="liveRanksPlayerRows"><tr><td colspan="6">No Live ranks computation has been run.</td></tr></tbody></table></div>
+    </section>
+  </section>
+
+
+  <section data-panel="members" role="tabpanel" hidden>
+    <div class="p2k-tp-card">
+      <div class="p2k-tp-card-head"><div><h2>Member chronology</h2><p>Append-only Green roster chronology. Trusted identity mappings are reconciled before a departure is recorded; account-closure checks run asynchronously and never block roster convergence.</p></div><button class="p2k-tp-button" id="memberChronologyRefresh" type="button">Refresh chronology</button></div>
+      <div class="p2k-tp-status" id="memberChronologyStatus">Open this tab to load member events.</div>
+      <div class="p2k-tp-table-wrap"><table><thead><tr><th>Detected</th><th>Event</th><th>Member</th><th>Transition</th><th>Account/profile</th><th>Source</th><th>Cycle</th></tr></thead><tbody id="memberChronologyRows"><tr><td colspan="7">No chronology loaded.</td></tr></tbody></table></div>
+    </div>
+  </section>
+  <section data-panel="storage" role="tabpanel" hidden>
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head">
+        <div><h2>Storage &amp; capacity</h2><p>Measured independently for the Core database, Analytics database and protected filesystem. Capacity also tracks the hosting file-count contract so inode growth is visible before it becomes operationally dangerous.</p></div>
+        <button class="p2k-tp-button" id="storageRefresh" type="button">Refresh measurement</button>
+      </div>
+      <div class="p2k-storage-grid" id="storageCards"><div class="p2k-storage-empty">No storage measurement loaded.</div></div>
+      <div class="p2k-tp-status" id="storageStatus">Open this tab to measure storage.</div>
+    </section>
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head"><div><h2>Monthly storage evolution</h2><p>Month-end measurements are retained in Analytics. Hover or tap the plot to inspect a month; the 80% and 100% database limits are shown against configured quotas.</p></div></div>
+      <div class="p2k-storage-chart" id="storageHistoryChart" role="img" aria-label="Monthly database and filesystem size evolution"><span class="p2k-storage-empty">Storage history will appear after measurements accumulate.</span></div>
+      <div class="p2k-storage-legend"><span><i class="core"></i>Core DB</span><span><i class="analytics"></i>Analytics DB</span><span><i class="filesystem"></i>Filesystem</span></div>
+    </section>
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head"><div><h2>Capacity projection</h2><p>Projection uses the measured monthly size series once two calendar months are available. During the first month only, daily samples provide a clearly labelled bootstrap estimate; non-growing baselines are not extrapolated.</p></div></div>
+      <div class="p2k-storage-projections" id="storageProjections"></div>
+    </section>
+  </section>
+
+  <section data-panel="export" role="tabpanel" hidden>
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head">
+        <div>
+          <h2>UTC month range</h2>
+          <p>Both months are inclusive. Search, sorting, preview, and CSV export are computed from normalized database events only.</p>
+        </div>
+      </div>
+      <div class="p2k-tp-form export-form">
+        <div class="p2k-tp-field">
+          <label for="tpStartMonth">Start month</label>
+          <input class="p2k-tp-input" id="tpStartMonth" type="month">
+        </div>
+        <div class="p2k-tp-field">
+          <label for="tpEndMonth">End month</label>
+          <input class="p2k-tp-input" id="tpEndMonth" type="month">
+        </div>
+        <div class="p2k-tp-field">
+          <label for="tpShape">Output</label>
+          <select class="p2k-tp-select" id="tpShape">
+            <option value="totals">One total per member</option>
+            <option value="monthly">One row per member and month</option>
+            <option value="events">Every normalized game event</option>
+          </select>
+        </div>
+        <div class="p2k-tp-field">
+          <label for="tpMemberSearch">Member name contains</label>
+          <div class="p2k-tp-search-row">
+            <input class="p2k-tp-input" id="tpMemberSearch" type="search" placeholder="Example: Ximoon" autocomplete="off">
+          </div>
+        </div>
+        <label class="p2k-tp-check"><input type="checkbox" id="tpCurrentOnly" checked> Current members only</label>
+      </div>
+      <div class="p2k-tp-actions top-gap">
+        <button class="p2k-tp-button primary" id="tpQuery">Query database</button>
+        <button class="p2k-tp-button blue" id="tpDownload">Download CSV</button>
+      </div>
+      <div class="p2k-tp-status" id="tpExportStatus">Connect to the server, then choose a period.</div>
+    </section>
+
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head">
+        <div>
+          <h2>Preview</h2>
+          <p id="tpPreviewNote">No result loaded. Select a column heading to sort ascending or descending.</p>
+        </div>
+      </div>
+      <div class="p2k-tp-table-wrap">
+        <table>
+          <thead id="tpPreviewHead"></thead>
+          <tbody id="tpPreviewBody"><tr><td>No result loaded.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+</main>
+<script src="assets/js/pages/team-points-admin.js?v=2.10.6.10"></script>
+<script src="assets/js/pages/team-points-features.js?v=2.10.6.10"></script>
+<script src="assets/js/shared/embedded-page.js?v=2.10.6"></script>
+</body>
+</html>

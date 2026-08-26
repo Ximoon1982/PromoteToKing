@@ -1,0 +1,71 @@
+/* Parent-window host for Match Assistant detailed analysis. */
+.p2k-shell-analysis-modal[hidden] { display: none !important; }
+.p2k-shell-analysis-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(0,0,0,.80);
+  backdrop-filter: blur(2px);
+}
+.p2k-shell-analysis-dialog {
+  position: relative;
+  width: min(1180px,calc(100vw - 24px));
+  height: min(900px,calc(100dvh - 24px));
+  overflow: hidden;
+  border: 1px solid rgba(246,183,60,.65);
+  border-radius: 12px;
+  background: #171513;
+  box-shadow: 0 18px 58px rgba(0,0,0,.72);
+}
+.p2k-shell-analysis-header {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px 9px 14px;
+  border-bottom: 1px solid rgba(246,183,60,.30);
+  background: #24211e;
+}
+.p2k-shell-analysis-title { color: #ffd078; font-size: 14px; font-weight: 900; }
+.p2k-shell-analysis-close {
+  min-width: 36px;
+  min-height: 32px;
+  padding: 5px 9px;
+  border: 1px solid rgba(255,114,95,.62);
+  border-radius: 7px;
+  background: rgba(217,74,58,.14);
+  color: #ff8b79;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.p2k-shell-analysis-close:hover,
+.p2k-shell-analysis-close:focus-visible { border-color: #ff8b79; background: rgba(217,74,58,.24); outline: none; }
+.p2k-shell-analysis-frame-wrap { position: absolute; inset: 49px 0 0; background: #171513; }
+.p2k-shell-analysis-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  color: #ffd078;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+  pointer-events: none;
+}
+.p2k-shell-analysis-frame { position: relative; z-index: 2; width: 100%; height: 100%; border: 0; background: #171513; }
+body.p2k-shell-analysis-open { overflow: hidden !important; }
+@media (max-width:600px) {
+  .p2k-shell-analysis-modal { padding: 4px; }
+  .p2k-shell-analysis-dialog { width: calc(100vw - 8px); height: calc(100dvh - 8px); border-radius: 8px; }
+  .p2k-shell-analysis-header { min-height: 44px; padding-left: 10px; }
+  .p2k-shell-analysis-frame-wrap { inset: 45px 0 0; }
+}

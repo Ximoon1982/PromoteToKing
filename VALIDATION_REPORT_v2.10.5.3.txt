@@ -1,0 +1,68 @@
+Promote to King v2.10.5.3 validation report
+============================================
+Final status: PASS
+
+Authoritative baseline
+----------------------
+Baseline reconstructed from the installed v2.10.5.2 lineage:
+- clean v2.10.5.2 SOURCE archive
+- exact v2.10.5.1 -> v2.10.5.2 installed incremental overlay
+- v2.10.5.2 GABFIX1 integrated
+This avoids the stale v2.10.5.2 standalone-source discrepancy discovered during the audit.
+
+Canonical target
+----------------
+Full canonical tree: 1,936 files
+- non-image source: 885
+- assets/images: 1,051
+- images changed from v2.10.5.2: NO
+v2.10.5.2 -> v2.10.5.3 source delta: 50 files
+- changed: 44
+- added: 6
+- removed: 0
+- image delta: 0
+
+Current-release validation gates
+--------------------------------
+Green v2.10.5.2 + v2.10.5.3 focused regression: 26/26 PASS
+Dedicated finite-cycle fairness regression: included, PASS
+Static UI feature tests: PASS
+Package validator: PASS
+All server PHP syntax: PASS
+All assets/js syntax: PASS
+
+Scheduler/fairness invariants verified
+--------------------------------------
+PASS - finite Seed/Quick/Deep stage gets first ~70% of the 50 s soft worker target
+PASS - GAB/GFFL/current-match server sidecars are bounded
+PASS - GAB remains first among browser-accelerator background lanes after P0 traffic
+PASS - accelerator reserves finite-stage capacity while finite Green work is active
+PASS - ordinary planners claim only remaining output slots; no hidden 120 s over-claims
+PASS - GQAC transient current-cycle debt is bounded at 3 attempts
+PASS - exhausted transient current-cycle debt is deferred/requeued, not declared fresh
+PASS - existing stuck GQAC cohorts self-heal without reset/reseed
+PASS - GFFL remains compatible with continuous/always-on operation
+PASS - GAB/GFFL no longer appear as misleading finite 0/0 cycle phases
+PASS - invocation telemetry exposes core/GFFL/current-maintenance work split
+PASS - GAB MariaDB SHOW KEYS portability correction is integrated
+
+Updater hardening
+-----------------
+Clean v2.10.5.2+GABFIX1 -> v2.10.5.3 replay: PASS, 0 missing / 0 extra / 0 changed
+Idempotent v2.10.5.3 replay: PASS, 0 differences
+Forced post-copy failure rollback: PASS, exact v2.10.5.2+GABFIX1 restoration
+Protected Blue/OAuth/Green local configs: PASS, unchanged
+
+Historical test corpus note
+---------------------------
+The complete historical pytest corpus produced 496 PASS / 105 FAIL. The remaining failures are legacy release-specific assertions that deliberately whitelist old 2.9.x versions, old achievement catalogue sizes, or superseded OAuth/UI strings. They are retained as historical tests and were not rewritten to manufacture a green result for v2.10.5.3. The current-release gates listed above are all PASS.
+
+Safety
+------
+No Green Core reseed.
+No destructive DB reset.
+No schema migration.
+No CRON cadence change.
+Worker budget remains 50 s soft / 55 s hard.
+Public reads remain BLUE by default until explicit gated cutover.
+Blue data is not retired or deleted.

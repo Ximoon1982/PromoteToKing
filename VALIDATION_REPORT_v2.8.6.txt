@@ -1,0 +1,37 @@
+PROMOTE TO KING STANDALONE v2.8.6 — VALIDATION REPORT
+Date: 2026-08-08
+Result: PASS
+
+Scope
+- v2.8.5 baseline retained: Core schema 5 / Analytics schema 5, split Club/Player workers, generation freshness, cache/avatar hardening and 0–0 void-match analytics exclusion.
+- Dashboard first-screen materialized critical path with automatic post-paint second wave.
+- Progressive Team/Member/Match/Opponent Insights.
+- First-page-first Achievements with lazy catalogue/avatar/medal enrichment.
+- Server-paged Tournament ranking/list and click-loaded player history.
+- Server-paged Daily/Live Hall rank members and one-request Hall search.
+- Progressive player Profile and modal-specific reduced query mode.
+- Browser/ETag revalidation, session stale-while-revalidate summaries, shared viewport loader and lazy Insights chart module.
+
+Validation performed on source tree
+- Python/pytest regression suite: 105/105 PASS.
+- Dedicated v2.8.6 release + progressive UX tests: 15/15 PASS (12 progressive UX + 3 release/package assertions).
+- Static UI feature suite: PASS.
+- PHP lint: 77/77 PASS.
+- JavaScript file syntax: 40/40 PASS.
+- Inline HTML/HTM JavaScript syntax: 11/11 PASS.
+- Python compilation: 35/35 PASS.
+- v2.8.6 CRON reset helper shell syntax + fake-crontab destructive replacement/install test: PASS.
+- Package validator: PASS after final manifest regeneration.
+
+Database / operations
+- Core schema: 5 (unchanged from v2.8.5).
+- Analytics schema: 5 (unchanged from v2.8.5).
+- No SQL migration or DB reset required from v2.8.5.
+- CRON cadence unchanged from v2.8.5.
+
+Final artifact verification
+- Final ZIP extracted into a clean directory: PASS.
+- Full regression suite on clean extracted ZIP: 105/105 PASS.
+- Package validator on clean extracted ZIP: PASS.
+- Extracted manifest inventory: 593/593 files.
+- Packaging hygiene: stray testwrite/testwrite2 files removed before final archive generation.

@@ -1,0 +1,34 @@
+Promote to King v2.9.21 validation report
+=========================================
+Date: 2026-08-14 Europe/Luxembourg
+Baseline: exact frozen v2.9.20 standalone SHA256 49fdf0693cdc939dfeb4e6f7d10eb4c931e8b1a4c5bf0a3d4e9b43c3a1c819ed
+
+Corrective scope
+----------------
+- MCA Processing Request Budget Fix (MPRBF).
+- process_start client deadline 110 seconds.
+- process_step client deadline 75 seconds.
+- learned-CPS launch budget 12 seconds.
+- hard MCA OAuth profile-batch cap 32.
+- server-side independent batch cap for stale clients.
+- stored MCA CSV data remains reusable without re-upload.
+
+Schema / operations
+-------------------
+- Core schema 14 unchanged.
+- Analytics schema 7 unchanged.
+- Achievement catalogue 162 unchanged.
+- No reset/reseed/migration.
+- Four operational CRON cadences + weekly backup unchanged.
+
+Validation status
+-----------------
+- Full pytest regression suite: 463 / 463 PASS.
+- Focused v2.9.21 request-budget tests: PASS.
+- JavaScript syntax for MCA client fix: PASS.
+- PHP syntax for MCA endpoint fix: PASS.
+- v2.9.21 CRON/install helper shell syntax: PASS.
+- Package/static validator: PASS.
+- All packaged JavaScript/PHP syntax checks executed by the validator: PASS.
+
+Exact clean-archive extraction and updater replay are recorded in the external final freeze report.

@@ -1,0 +1,66 @@
+Promote to King v2.9.2 validation report
+========================================
+Date: 2026-08-10
+Baseline: actual v2.9.1 standalone package
+Target: v2.9.2 corrective release
+
+RESULT: PASS
+
+Automated regression suite
+--------------------------
+250 / 250 Python tests passed.
+Includes v2.9.2 corrective acceptance tests for:
+- Hall-before-Insights and Administration history/context
+- achievement breadth 1/5/10/15/20
+- artwork provenance and 640/64/128 derivative contract
+- chart description/current-month/maximize restore behavior
+- human match URL / health lights / 7-day warning gate
+- single aggregate all-match Opponent Balance heatmap set
+- paired-board rating provenance and coverage
+- targeted Match Creation detail acquisition
+- identical-history-run first+last retention
+- durable queue state separation
+- v2.9.2 CRON contract
+
+Package validation
+------------------
+PASS.
+- HTML IDs/resources and admin gating assertions passed.
+- Static UI feature tests passed.
+- Node project release assertions passed.
+- All JavaScript passed node --check.
+- All PHP passed php -l.
+- Python local server compile probe passed.
+- Retryable backend probe passed.
+- site-manifest file list matches actual distribution tree.
+
+Browser gates
+-------------
+PASS: v2.9.2 Opponent Balance Analyzer Playwright gate.
+- Exactly two aggregate heatmaps are rendered.
+- Shared filters rerender the same two heatmaps.
+- Default population is all included opponents/matches.
+- Top/coverage filters alter the aggregate population without creating per-opponent charts.
+- Page errors: 0.
+
+PASS: v2.8.9 startup/Administration/ACAMR compatibility browser gate.
+Page errors: 0.
+
+PASS: v2.8.10 Dashboard/Admin/Tournament/TaskControl compatibility browser gate.
+Page errors: 0.
+
+PASS: v2.8.11 Team Insights mobile containment/pinch/Opponent rendering compatibility browser gate.
+Page errors: 0.
+
+Shell validation
+----------------
+PASS: update-v2.9.1-to-v2.9.2.sh
+PASS: cron-dispatch-v2.9.2.sh
+PASS: reset-install-cron-v2.9.2.sh
+
+Database migration
+------------------
+Core schema target: 9
+Analytics schema target: 6
+Additive nullable field: rated_board_count
+No destructive reset or re-seed required.

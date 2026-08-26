@@ -1,0 +1,44 @@
+Promote to King v2.10.6.8 — validation report
+
+Release purpose
+---------------
+Operational Green production cutover. Continuous queue/GAB/GFFL convergence conditions are advisory rather than hard cutover blockers. The only hard Green-read prerequisite is technical Green database/state/schema availability. The public router no longer requires gab_status=ready.
+
+Source baseline
+---------------
+v2.10.6.7 authoritative SOURCE
+
+Source delta
+------------
+19 modified
+5 added
+0 removed
+941 total non-image source files
+1,051 image/assets paths remain reused from the retained v2.10.5.5 asset archive; no image change.
+
+Validation completed
+--------------------
+- Focused/current Green + MCA regression suite: 43 / 43 PASS.
+- New v2.10.6.8 operational-cutover regression: 6 / 6 PASS (included in the 43-test set above).
+- PHP syntax: 127 / 127 PASS.
+- JavaScript syntax: 59 / 59 PASS.
+- tests/validate_package.py: PASS.
+- Static UI feature tests invoked by package validator: PASS.
+- PublicReadDatabase no longer contains the GAB-ready routing prerequisite; fail-closed Green connection/schema behavior remains.
+- switch-green-reads preserves worker_target=both and client_ingest_target=both.
+- make-green-primary is separate and does not delete Blue data.
+- rollback-blue-reads restores Blue public reads plus both maintenance paths.
+- no DB schema migration/reset/reseed.
+- no CRON change.
+
+Incremental replay
+------------------
+The v2.10.6.7 -> v2.10.6.8 updater was executed against a pristine extracted v2.10.6.7 SOURCE tree.
+Expected target files: 941
+Replay target files:   941
+Missing:               0
+Extra:                 0
+SHA-256 differences:   0
+Result: EXACT REPLAY PASS
+
+The independently extracted v2.10.6.8 SOURCE ZIP also passed tests/validate_package.py.

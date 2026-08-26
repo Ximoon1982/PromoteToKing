@@ -1,0 +1,35 @@
+PROMOTE TO KING v2.8.3 — VALIDATION REPORT
+Date: 2026-08-07
+Baseline: v2.8.2 Hotfix 2 (Hotfix 1 + Hotfix 2 included)
+Database target: Core schema 4 / Analytics schema 5
+
+Requested acceptance scope
+1. Achievement player cards show achievement count instead of Live rank.
+2. Earned achievement detail shows date and event name/link when reconstructible.
+3. Integrated tournament medalist modal is positioned in the visible parent viewport.
+4. Tournament medal achievements use tournament finishAt derived from Chess.com finish_time.
+5. Linked dashboard metric cards share Priority Calls hover/focus styling.
+6. Club Points projection uses three recent 30-day actual-point blocks and a near-linear capped trend.
+7. Most played opponents is a contained, readable dedicated Top-15 horizontal chart.
+8. Monthly match activity no longer spills from a fixed-height legacy wrapper.
+9. Monthly average boards per finished match graph is present.
+10. Monthly active members marks Today/future; future months are not plotted as zero activity.
+
+Migration safety
+- Core schema remains 4.
+- Analytics schema 4 -> 5 is additive except for deleting rebuildable tournament achievement unlock projections so their dates/provenance can be reconstructed.
+- No initializer or seed reload is required.
+- v2.8.2 Hotfix 1 25-column/25-placeholder Analytics correction remains present.
+- v2.8.2 Hotfix 2 non-blocking single-writer Insights refresh and separated achievement refresh remain present.
+
+Validation status at release assembly
+- Pytest full regression suite: 44 passed.
+- v2.8.3 + retained Hotfix focused assertions: 37 passed.
+- Retained Node static UI suite: PASS.
+- JavaScript syntax: 38 files PASS.
+- PHP lint: 69 files PASS.
+- Full package validator on assembled release tree: PASS.
+- Clean ZIP extraction validation: PASS.
+
+Production limitation
+No production IONOS/MariaDB migration or live Chess.com tournament refresh was executed in the build environment. Historical tournament finishAt values will be backfilled by the normal tournament refresh/CRON after deployment.

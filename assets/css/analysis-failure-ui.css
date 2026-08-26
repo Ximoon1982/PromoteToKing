@@ -1,0 +1,91 @@
+/* Shared analysis failure details modal. */
+.club-analysis-failure-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  padding: 4px 8px;
+  border: 1px solid #d89420;
+  border-radius: 7px;
+  background: #3a2a13;
+  color: #ffd078;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.club-analysis-failure-trigger:hover,
+.club-analysis-failure-trigger:focus-visible { background: #4a3518; color: #fff1cf; }
+.club-analysis-failure-modal[hidden] { display: none !important; }
+.club-analysis-failure-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100200;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+  padding: 18px;
+  background: rgba(0,0,0,.76);
+  box-sizing: border-box;
+}
+.club-analysis-failure-dialog {
+  box-sizing: border-box;
+  width: min(720px, 100%);
+  max-height: min(78dvh, 650px);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #d89420;
+  border-radius: 10px;
+  background: #201d1a;
+  color: #eee;
+  box-shadow: 0 16px 42px rgba(0,0,0,.55);
+}
+.club-analysis-failure-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(216,148,32,.45);
+  background: #171513;
+}
+.club-analysis-failure-title { color: #f6b73c; font-size: 14px; font-weight: 800; }
+.club-analysis-failure-close,
+.club-analysis-failure-copy {
+  border: 1px solid #d89420;
+  border-radius: 7px;
+  background: #3a2a13;
+  color: #ffd078;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.club-analysis-failure-close:hover,
+.club-analysis-failure-close:focus-visible,
+.club-analysis-failure-copy:hover,
+.club-analysis-failure-copy:focus-visible { background: #4a3518; color: #fff1cf; }
+.club-analysis-failure-body { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 10px 12px 12px; }
+.club-analysis-failure-intro { margin: 0 0 8px; color: #c9c0b5; font-size: 11px; line-height: 1.45; }
+.club-analysis-failure-table-wrap { overflow-x: auto; border: 1px solid rgba(255,255,255,.09); border-radius: 8px; }
+.club-analysis-failure-table { width: 100%; border-collapse: collapse; min-width: 560px; font-size: 11px; }
+.club-analysis-failure-table th,
+.club-analysis-failure-table td { padding: 7px 8px; border-bottom: 1px solid rgba(255,255,255,.075); text-align: left; vertical-align: top; }
+.club-analysis-failure-table th { background: #292521; color: #f0e4cf; font-weight: 800; }
+.club-analysis-failure-table tr:last-child td { border-bottom: 0; }
+.club-analysis-failure-table a { color: #aee2fb; text-decoration: none; overflow-wrap: anywhere; }
+.club-analysis-failure-table a:hover { text-decoration: underline; }
+.club-analysis-failure-message { max-width: 300px; overflow-wrap: anywhere; }
+.club-analysis-failure-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+@media (max-width: 520px) {
+  .club-analysis-failure-modal { padding: 8px; }
+  .club-analysis-failure-dialog { max-height: 86dvh; }
+  .club-analysis-failure-header { padding: 8px 9px; }
+  .club-analysis-failure-body { padding: 8px; }
+  .club-analysis-failure-table { min-width: 500px; font-size: 10.5px; }
+  .club-analysis-failure-table th,
+  .club-analysis-failure-table td { padding: 6px; }
+}

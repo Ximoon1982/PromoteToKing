@@ -1,0 +1,23 @@
+Promote to King v2.9.22.2 validation
+
+Focused OAuth saturation gates: PASS
+- legacy two-request batch does not collapse transport capacity
+- environment transport capacity remains independent from batch size
+- logical feeder remains 256
+- gateway target reaches 32
+- five background gateway POST lanes observed in saturation gate
+- P0 foreground lane preserved
+- page errors: 0
+
+Full source regression: 485/485 PASS
+PHP lint: 108 files PASS
+JavaScript syntax: 53 files PASS
+Shell syntax: 109 files PASS
+Browser/startup gates: 20/20 PASS
+
+Core schema: 15 unchanged
+Analytics schema: 7 unchanged
+CRON: existing v2.9.22 4 operational + 1 weekly contract unchanged
+PHP CLI requirement: none for hotfix updater
+
+Final package/extraction/updater replay results are recorded in FINAL_FREEZE_REPORT_v2.9.22.2.txt.

@@ -1,0 +1,99 @@
+Promote to King v2.9.16 -> v2.9.17 exact source delta audit
+===========================================================
+Baseline SHA256: 6eb50088ae0601172c71ca99ef8d6781eca35278504ee6e75e837381a3ba337d
+Added: 12
+Changed: 70
+Removed: 0
+Target release files: 1293
+
+Added files
+-----------
+DELTA_AUDIT_v2.9.16_to_v2.9.17.txt
+INSTALL_v2.9.17.md
+MIGRATION_v2.9.17.md
+RELEASE_NOTES_v2.9.17.md
+VALIDATION_REPORT_v2.9.17.txt
+cron-dispatch-v2.9.17.sh
+install-oauth-v2.9.17.sh
+reset-install-cron-v2.9.17.sh
+tests/browser_gate_v2917_chart_maximize.py
+tests/test_post_v2916_acdc_ctar_ui.py
+tests/test_v2917_release.py
+update-v2.9.16-to-v2.9.17.sh
+
+Changed files
+-------------
+AnalyzeMatch.html
+AnalyzeMatchModal.html
+AnalyzeMatches.htm
+ChallengeListAssistant.html
+ClubIntelligence.html
+DataReconciliation.html
+FindMatch.htm
+InsightsHealth.html
+LeagueSeasonCenter.html
+LiveRanks.html
+MatchCreationAnalyzer.htm
+Opponents.html
+RecruitMatch.html
+RecruitmentDemandPlanner.html
+TaskControl.html
+TaskLogs.html
+TeamInsights.html
+TeamPointsAdmin.html
+TournamentAchievementBadgesDemo.html
+TournamentManagement.html
+Tournaments.html
+VERSION
+assets/js/shared/active-convergence-refresh.js
+assets/js/shared/api-client.js
+assets/js/shared/chart-maximize.js
+assets/js/shared/client-continuous-refresh.js
+assets/js/site-config.js
+index.html
+server/control/public/api.php
+server/shared/FilesystemCache.php
+server/shared/SharedChessGateway.php
+server/team-points/public/cron.php
+server/team-points/public/observe.php
+server/team-points/src/AnalyticsBuilder.php
+server/team-points/src/ChessApi.php
+server/team-points/src/CronLoop.php
+server/team-points/src/OAuthSession.php
+server/team-points/src/ObservationIngestor.php
+server/team-points/src/PlayerMatchesFallbackState.php
+server/team-points/src/Repository.php
+server/team-points/src/Worker.php
+site-manifest.json
+tests/run-tests.js
+tests/test_next_release_acamr.py
+tests/test_next_release_profile_achievement_performance.py
+tests/test_next_release_v286_audit_fixes.py
+tests/test_post_v2913_acsr_ui.py
+tests/test_post_v2913_filesystem_hardening.py
+tests/test_post_v297_client_continuous_refresh.py
+tests/test_post_v297_observation_provenance.py
+tests/test_v2810_release.py
+tests/test_v281_release.py
+tests/test_v282_release.py
+tests/test_v283_release.py
+tests/test_v285_release.py
+tests/test_v286_release.py
+tests/test_v2881_hotfix.py
+tests/test_v288_release.py
+tests/test_v289_release.py
+tests/test_v290_release.py
+tests/test_v2915_latest_telemetry_corrections.py
+tests/test_v2916_release.py
+tests/test_v291_release.py
+tests/test_v292_corrective_release.py
+tests/test_v293_user_corrections.py
+tests/test_v297_corrective_release.py
+tests/test_v298_release.py
+tests/test_v299_oauth_throughput.py
+tests/validate_package.py
+ui-v2.html
+
+Removed files
+-------------
+(none)

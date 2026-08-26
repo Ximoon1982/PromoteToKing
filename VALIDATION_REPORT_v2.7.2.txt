@@ -1,0 +1,57 @@
+PROMOTE TO KING STANDALONE v2.7.2 — VALIDATION REPORT
+Generated: 2026-08-06
+
+RELEASE IDENTITY
+- Website release: 2.7.2
+- Team Points schema: 13
+- Embedded Seed Importer: 1.2.0
+- CRON endpoint and cadence changes: none
+
+DATABASE INSIGHTS CONTRACTS VALIDATED
+- Team activity dates use match_metadata.start_time and match_metadata.end_time.
+- Game activity and Club Points use point_events.game_end_utc.
+- Ingestion timestamps are not used as match event dates.
+- Daily facts persist in p2k_tp_insight_daily and are invalidated by p2k_tp_insight_cache_state.
+- Missing calendar days are zero-filled before rolling calculations.
+- Rolling activity uses 30 calendar days, not 30 non-empty database rows.
+- Duration analytics exclude void 0-0 matches and invalid/non-positive ranges.
+- Match metadata permanently stores rules, time_control and is_league.
+
+INTERFACE CONTRACTS VALIDATED
+- Team charts: legends, hover details, drag-to-zoom, double-click/reset.
+- Cumulative started/finished activity with independent in-progress scale.
+- Daily boards and Club Points are both rendered.
+- League/friendly share plus explicit win/draw/loss values.
+- Match-size share and win/draw/loss distribution.
+- Duration trend and duration distribution.
+- Standard/Chess960 and time-control distributions.
+- Members monthly active-member and Daily-rank graphs.
+- Opponent desktop-fit table, most-played treemap and admin-only plain-text copy action.
+
+EMBEDDED SNAPSHOT VALIDATION
+- Members: 4,473
+- Matches: 17,091
+- Finished matches: 15,997
+- In-progress matches: 1,019
+- Registration matches: 74
+- Unknown matches queued for repair: 1 (match 1983076)
+- Member/board rows: 104,761
+- Finished game events: 198,107
+- Club competition points: 371,168
+- Stored Standard matches: 16,586
+- Stored Chess960 matches: 504
+- Stored league matches: 1,139
+- Known daily time controls: 7
+
+AUTOMATED VALIDATION COMPLETED
+- All PHP files passed php -l.
+- All JavaScript assets and inline release scripts passed node --check.
+- All Python files passed py_compile.
+- Static UI feature tests passed.
+- All retained Python regression suites passed, including v2.7.2 Insights and v2.7.1 seed/incremental compatibility tests.
+- Embedded .pyz validation reproduced all expected counts.
+- Package manifest and local-resource validation passed after clean assembly.
+- Final ZIP integrity and clean-extraction validation were performed during packaging.
+
+LIMITATION
+No production MariaDB credentials were available. The schema and SQL paths were reviewed, linted and contract-tested, but the destructive schema migration and seed Apply were not executed against the production database. Back up production before deployment and verify schema 13 plus the displayed counts after import.

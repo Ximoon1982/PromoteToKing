@@ -1,0 +1,38 @@
+Promote to King v2.10.5.5 validation
+====================================
+Date: 2026-08-19
+Baseline: canonical v2.10.5.4
+Target: v2.10.5.5
+
+Corrective scope
+----------------
+1. GAB compatibility board projection canonicalizes stale/duplicate lineup aliases before projecting one authoritative (match_id, board_no) row. The observed MariaDB duplicate-key shape at match 1779702 / board 11 is covered generically; Green Core history is not deleted.
+2. Compatibility game projection follows canonical identity mapping so old/new username aliases remain attached to the selected compatibility member/board.
+3. quick_complete is a recoverable transition marker, not a runnable cycle stage. The next safe stage quick_index_roster is persisted together with cycle completion before analytics rebuild; existing persisted quick_complete states self-heal on the next worker invocation.
+4. Zoned Density Heatmap visual parity: the exact v2.10.5.4 spatial smoothing parameters are retained (half-size bins and one 3x3 Gaussian pass using 1-2-1 / 2-4-2 / 1-2-1). The missing visual step is added: bilinear interpolation of the smoothed density field and 1.6x supersampled zoned rendering. The six zone thresholds and deep-blue/cyan/green/yellow/orange/red palette are unchanged.
+
+Validation
+----------
+- Current Green/cutover/fairness/UI/corrective regression suite: 30/30 PASS.
+- Static UI feature suite: PASS.
+- Package validator: PASS.
+- PHP syntax validation: PASS (package validator).
+- JavaScript syntax validation: PASS (package validator).
+- v2.10.5.3 -> v2.10.5.5 cumulative updater replay: 0 missing / 0 extra / 0 changed.
+- v2.10.5.4 -> v2.10.5.5 cumulative updater replay: 0 missing / 0 extra / 0 changed.
+- Idempotent replay on v2.10.5.5 from both supported source versions: 0 differences.
+- Protected Blue/OAuth/Green local configuration probes: unchanged.
+- Forced post-copy updater failure: exact rollback to the original source state for both v2.10.5.3 and v2.10.5.4.
+
+Safety
+------
+- No database schema migration.
+- No database reset.
+- No Green Core reseed.
+- No CRON definition/cadence change.
+- Green worker budget remains 50 s soft / 55 s hard.
+- Existing v2.10.5.3 finite-cycle fairness remains in place.
+- GFFL remains enabled-capable and unchanged.
+- Public reads remain BLUE by default until existing Green validation + GAB/read-contract parity gates pass.
+- Blue is not retired.
+- assets/images are unchanged.

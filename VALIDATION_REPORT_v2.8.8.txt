@@ -1,0 +1,48 @@
+PROMOTE TO KING STANDALONE v2.8.8 — VALIDATION REPORT
+Date: 2026-08-08
+Result: PASS
+
+Release scope
+- Baseline: final v2.8.7 plus the validated post-v2.8.6 audit integration already carried into v2.8.7.
+- Achievement trigger links normalized to human-facing Chess.com URLs.
+- Daily and Live Dashboard views both expose the unified player profile.
+- Mobile Daily/Live Hall rank cards are constrained to prevent text/image overlap.
+- Nested modal stack preserves DOM nodes/listeners, fixing Profile -> Achievement -> close -> next Achievement flows.
+- Hall of Fame opens on Achievements by default unless an explicit Daily/Live target is requested.
+- Club Intelligence layer adds team depth, activity/availability/contribution, freshness/coverage, anomalies/actions, historical snapshots, explainable forecasts, opponent intelligence, achievement challenges and personalized member intelligence.
+- ACAMR adds effectiveness telemetry and adaptive member work allocation while preserving its scope boundary: Club/Member Points and member freshness are included; tournaments and match-registration monitoring are excluded.
+- Recruitment Assistant adds availability/load context and an explainable confidence score.
+- Opponents Insights Top Opponents graph displays cached Chess.com club logos when available.
+- Cross-feature player actions converge on the unified profile modal.
+- Admin panel Tool collection exposes the new administrative intelligence/telemetry tools.
+
+Database / operations
+- Core schema: 6 (additive upgrade from v2.8.7 Core schema 5).
+- Analytics schema: 5 (unchanged).
+- Migration: server/team-points/sql/core-migration-v2.8.8.sql.
+- No database reset or reseed is required.
+- CRON cadence remains unchanged from v2.8.5/v2.8.7.
+- No new CRON entry is required for ACAMR, snapshots, anomaly detection, intelligence or telemetry.
+
+Source-tree validation
+- Python/pytest regression suite: 147 / 147 PASS.
+- Focused v2.8.8 + ACAMR + audit/historical acceptance block: 42 / 42 PASS.
+- Static UI/package validator: PASS.
+- PHP lint: 84 / 84 PASS.
+- Standalone JavaScript syntax: 44 / 44 PASS.
+- Inline HTML/HTM JavaScript syntax: 11 / 11 PASS across 11 pages.
+- Python compilation: 39 / 39 PASS.
+- JSON parsing: 4 / 4 PASS.
+- v2.8.8 CRON helper shell syntax: PASS.
+- v2.8.8 CRON helper destructive fake-crontab replacement/install test: PASS; exactly four existing schedules installed.
+
+Packaging verification
+- Final manifest consistency: PASS after regeneration.
+- Candidate ZIP extracted into a clean directory: PASS.
+- Clean extracted candidate regression suite: 147 / 147 PASS.
+- Clean extracted candidate package validator: PASS.
+- Clean extracted candidate PHP lint: 84 / 84 PASS.
+- Clean extracted candidate standalone JavaScript syntax: 44 / 44 PASS.
+- Clean extracted candidate inline HTML/HTM JavaScript syntax: 11 / 11 PASS.
+- Clean extracted candidate Python compilation: 39 / 39 PASS.
+- The final ZIP is rebuilt from the source carrying this report and is independently revalidated before handoff.

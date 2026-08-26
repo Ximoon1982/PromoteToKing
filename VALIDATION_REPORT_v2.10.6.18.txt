@@ -1,0 +1,43 @@
+Promote to King v2.10.6.18 validation report
+
+Scope
+- Mutable registration/current-lineup canonicalization for Green compatibility/GABCRF.
+- Accelerated historical Opponent Insights heatmap paired-rating backfill over already-known finished P2K daily matches.
+- Heatmap browser snapshot cache reduced from 6 hours to 5 minutes.
+
+Focused corrective tests
+- tests/test_v210618_registration_heatmap_backfill.py: 6 passed / 0 failed.
+
+Cumulative compatibility tests
+- v2.10.6.17 applicable GABCRF canonical-game tests: 4 passed / 0 failed (release-identity assertion deselected).
+- v2.10.6.16 applicable Green cycle/runtime tests: 6 passed / 0 failed (release-identity/public-DOM lock assertion deselected).
+
+Package validation
+- Canonical v2.10.6.18 source tree: PASS.
+- Static UI feature validation: PASS.
+- PHP syntax checks for changed Green repository/compatibility/bootstrap/API/observe sources: PASS using representative PHP.
+- JavaScript syntax checks for Task Control, Green Accelerator and Opponent Insights changed scripts: PASS.
+
+Source delta
+- v2.10.6.17 source files: 992.
+- v2.10.6.18 source files: 998.
+- Modified: 17.
+- Added: 6.
+- Removed: 0.
+- Cumulative oldest-supported incremental payload (v2.10.6.15 -> v2.10.6.18): 36 files.
+
+Exact-tree acceptance (pre-freeze; repeated after final report freeze)
+- Full-source extraction -> canonical target: 998/998 exact, 0 missing, 0 extra, 0 SHA differences.
+- Incremental replay v2.10.6.15 -> v2.10.6.18: 998/998 exact, 0 missing, 0 extra, 0 SHA differences; package validator PASS.
+- Incremental replay v2.10.6.16 -> v2.10.6.18: 998/998 exact, 0 missing, 0 extra, 0 SHA differences; package validator PASS.
+- Incremental replay v2.10.6.17 -> v2.10.6.18: 998/998 exact, 0 missing, 0 extra, 0 SHA differences; package validator PASS.
+
+Safety
+- no database schema version change;
+- no database reset or reseed;
+- no CRON definition/cadence change;
+- no Blue/Green routing change;
+- no scoring change;
+- no artwork/image change;
+- v2.10.6.16 cycle/runtime protections preserved;
+- v2.10.6.17 canonical game-sequence projection preserved.

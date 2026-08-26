@@ -1,0 +1,93 @@
+Promote to King v2.9.19 -> v2.9.20 exact source delta audit
+===============================================================
+Baseline standalone SHA256: 42074a47ca5bdd3f859199589b5c2aa9b78af7f1c2bafdb1f4621e35fad172c8
+Target files: 1519
+Added: 16
+Changed: 60
+Removed: 0
+
+Added files
+-----------
+DELTA_AUDIT_v2.9.19_to_v2.9.20.txt
+INSTALL_v2.9.20.md
+MIGRATION_v2.9.20.md
+MORCF_DMBHF_ACDM_UI_AUDIT_v2.9.20.md
+RELEASE_NOTES_v2.9.20.md
+VALIDATION_REPORT_v2.9.20.txt
+assets/js/shared/dashboard-match-board-hydration.js
+cron-dispatch-v2.9.20.sh
+install-miac-seed-v2.9.20.sh
+install-oauth-v2.9.20.sh
+reset-install-cron-v2.9.20.sh
+tests/browser_gate_v2920_alias_pagination.py
+tests/test_v2920_morcf_dmbhf_acdm_ui.py
+tests/test_v2920_release.py
+update-v2.9.19-to-v2.9.20.sh
+weekly-backup-v2.9.20.sh
+
+Changed files
+-------------
+AnalyzeMatch.html
+AnalyzeMatchModal.html
+AnalyzeMatches.htm
+ChallengeListAssistant.html
+ClubIntelligence.html
+DataReconciliation.html
+FindMatch.htm
+InsightsHealth.html
+LeagueSeasonCenter.html
+LiveRanks.html
+MatchCreationAnalyzer.htm
+Opponents.html
+RecruitMatch.html
+RecruitmentDemandPlanner.html
+TaskControl.html
+TaskLogs.html
+TeamInsights.html
+TeamPointsAdmin.html
+TournamentAchievementBadgesDemo.html
+TournamentManagement.html
+Tournaments.html
+VERSION
+assets/css/club-intelligence.css
+assets/js/pages/club-intelligence.js
+assets/js/pages/dashboard-v2.js
+assets/js/shared/active-convergence-refresh.js
+assets/js/shared/api-client.js
+assets/js/shared/client-continuous-refresh.js
+assets/js/site-config.js
+index.html
+server/control/public/api.php
+server/team-points/public/live-ranks-admin.php
+server/team-points/src/OAuthSession.php
+site-manifest.json
+tests/run-tests.js
+tests/test_post_v2913_acsr_ui.py
+tests/test_post_v2913_filesystem_hardening.py
+tests/test_post_v297_client_continuous_refresh.py
+tests/test_v2810_release.py
+tests/test_v281_release.py
+tests/test_v282_release.py
+tests/test_v283_release.py
+tests/test_v285_release.py
+tests/test_v286_release.py
+tests/test_v2881_hotfix.py
+tests/test_v288_release.py
+tests/test_v289_release.py
+tests/test_v290_release.py
+tests/test_v2915_latest_telemetry_corrections.py
+tests/test_v2916_release.py
+tests/test_v2917_release.py
+tests/test_v2919_release.py
+tests/test_v291_release.py
+tests/test_v292_corrective_release.py
+tests/test_v293_user_corrections.py
+tests/test_v297_corrective_release.py
+tests/test_v298_release.py
+tests/test_v299_oauth_throughput.py
+tests/validate_package.py
+ui-v2.html
+
+Removed files
+-------------
+(none)

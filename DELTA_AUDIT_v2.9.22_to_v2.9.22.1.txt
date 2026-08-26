@@ -1,0 +1,64 @@
+Promote to King v2.9.22 -> v2.9.22.1 exact source delta audit
+===============================================================
+Baseline standalone SHA256: 433e00e748250d2453860c63937f7e95dde27e359ae57a10a8845214cf6d14b0
+Added: 8
+Changed: 35
+Removed: 0
+Target release files: 1558
+
+Added files
+-----------
+DELTA_AUDIT_v2.9.22_to_v2.9.22.1.txt
+HOTFIX_AUDIT_v2.9.22.1.md
+INSTALL_v2.9.22.1.md
+MIGRATION_v2.9.22.1.md
+RELEASE_NOTES_v2.9.22.1.md
+VALIDATION_REPORT_v2.9.22.1.txt
+tests/test_v29221_reconstruction_throughput_hotfix.py
+update-v2.9.22-to-v2.9.22.1.sh
+
+Changed files
+-------------
+ClubIntelligence.html
+TaskControl.html
+VERSION
+assets/js/pages/fresh-points-reconstruction.js
+assets/js/pages/task-control.js
+assets/js/site-config.js
+index.html
+site-manifest.json
+tests/browser_gate_v2922_reconstruction.py
+tests/test_post_v2913_acsr_ui.py
+tests/test_post_v2913_filesystem_hardening.py
+tests/test_post_v297_client_continuous_refresh.py
+tests/test_v2810_release.py
+tests/test_v281_release.py
+tests/test_v282_release.py
+tests/test_v283_release.py
+tests/test_v285_release.py
+tests/test_v286_release.py
+tests/test_v2881_hotfix.py
+tests/test_v288_release.py
+tests/test_v289_release.py
+tests/test_v290_release.py
+tests/test_v2916_release.py
+tests/test_v2917_release.py
+tests/test_v2919_release.py
+tests/test_v291_release.py
+tests/test_v2920_release.py
+tests/test_v2921_release.py
+tests/test_v2922_fresh_reconstruction_acdm.py
+tests/test_v292_corrective_release.py
+tests/test_v297_corrective_release.py
+tests/test_v298_release.py
+tests/test_v299_oauth_throughput.py
+tests/validate_package.py
+ui-v2.html
+
+Removed files
+-------------
+(none)
+
+Hotfix scope
+------------
+Fresh Points Reconstruction acquisition/persistence decoupling; 400-row batched staging with 1,600-row high-water backpressure; 24-member Player archive fallback pool; Task Control OAuth/persistence throughput metrics. Core 15 / Analytics 7 / v2.9.22 CRON contract unchanged.

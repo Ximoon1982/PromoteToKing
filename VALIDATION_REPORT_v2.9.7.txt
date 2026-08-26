@@ -1,0 +1,46 @@
+Promote to King v2.9.7 validation report
+Status: PASS
+Validated: 2026-08-11
+Baseline: exact verified v2.9.5 standalone tree
+Discarded source: v2.9.6 is not used
+
+Release invariants
+- Package/site-config/manifest target: 2.9.7
+- Core DB schema: 10 (unchanged)
+- Analytics DB schema: 6 (unchanged)
+- Achievement catalogue: 162 (preserved)
+- No destructive migration, reset or reseed
+- Production OAuth/simulated OAuth path remains isolated from the OAuth POC
+- Private DB/token/OAuth/data/log state is excluded from the incremental payload
+
+Corrective regression coverage
+- Player-lane fair scheduling gives both sync_player and sync_player_stats guaranteed opportunities while protecting reconciliation/archive work.
+- A successful final authoritative player-match scan must write player_matches_checked_at before the queue item can commit done.
+- False-completed v2.9.5 sync_player rows are recovered by distinct priority repair items without resetting or rewriting historical queue rows.
+- Already-fresh duplicate Stats/Profile/Player work is skipped before another Chess.com request.
+- Task Control lane details include real queue/task breakdown and per-task last start/success activity.
+- Runtime Diagnostics uses per-request abort timeouts and Promise.allSettled so one stalled endpoint cannot hang the panel indefinitely.
+- CRON timing is bounded at 30s Player worker / 42s PHP endpoint / 55s shell watchdog.
+- Live Rook derivatives are regenerated from the complete source; rank/achievement cards render images with contain; the achievement Rook uses a new v2.9.7 filename for cache busting.
+- Player achievement catalogue details-group headers include achieved/total progress bars.
+- OAuth POC 2.9.7 uses a protected server/team-points/config/oauth.local.php host file, never shipped by release payloads.
+
+Executed validation
+- Targeted v2.9.7/v2.9.5/v2.9.4 regression selection: 27/27 PASS.
+- Full pytest suite: 289/289 PASS.
+- tests/validate_package.py: PASS.
+- JavaScript syntax/static feature checks: PASS.
+- PHP lint/backend probes: PASS.
+- Python compilation: PASS.
+- Browser startup/regression gates: 6/6 PASS with zero page errors, including dashboard startup, ACAMR, chart/mobile overflow, Opponent heatmaps, and Hall of Fame responsive checks.
+
+Packaging acceptance completed successfully. Final archive hashes are recorded in SHA256SUMS_v2.9.7.txt and the exact source/payload delta is recorded in DELTA_AUDIT_v2.9.5_to_v2.9.7.txt.
+Artifact / installer safety validation
+- Production incremental delta: 61 files, generated from exact v2.9.5; no file removals.
+- Clean v2.9.5 -> v2.9.7 updater simulation: PASS; all 61 installed payload hashes matched.
+- Protected config.local.php, oauth.local.php, healthy server-config token/secrets, arbitrary data/ and logs/ sentinels: preserved byte-for-byte in the clean install simulation.
+- Corrupted incremental payload: rejected by SHA-256 manifest validation before production files changed.
+- Forced post-apply HTTP validation failure: rollback restored v2.9.5 release files, prior CRON state and protected runtime state, and removed newly delivered v2.9.7 files.
+- OAuth credential installer: creates mode-0600 protected oauth.local.php and refuses to overwrite it on subsequent runs.
+- Standalone ZIP extraction: full regression suite and package validator PASS after extraction.
+

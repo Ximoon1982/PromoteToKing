@@ -1,0 +1,71 @@
+Promote to King v2.10.6.9 — Validation Report
+Generated: 2026-08-20 UTC
+Baseline: v2.10.6.8
+Purpose: Green authoritative live reads
+
+RESULT: PASS
+
+Release delta
+-------------
+Baseline source files: 941
+Target source files:   946
+Modified:              22
+Added:                 5
+Removed:               0
+Database schema change: no
+Database reset:         no
+Reseed:                 no
+CRON change:            no
+Image change:           no
+
+Functional/static regression
+----------------------------
+Applicable current release regression suite: 35/35 PASS
+Includes v2.10.5.4/v2.10.5.5 Green invariants, MCA timestamp-only,
+v2.10.6.7 cutover observability, v2.10.6.8 operational cutover, and
+v2.10.6.9 Green-native/live-read regressions.
+
+v2.10.6.9 focused coverage verifies:
+- Green worker projections run while GAB is incomplete.
+- Browser observations return match/board/player identity required for immediate projection.
+- Browser compatibility projection is not GAB-gated.
+- Compatibility Analytics rebuild is not GAB-gated.
+- Dashboard Club Points uses Green Core when public source is Green.
+- Signed-in player Team Points uses Green Core point events when public source is Green.
+- Scheduled Task Control exposes GREEN NATIVE + LIVE provenance.
+- Dashboard production health follows Green runtime after Green cutover rather than paused Blue Team Points tasks.
+
+Historical test note
+--------------------
+The repository retains historical release tests whose assertions are deliberately version-pinned
+or test behavior retired by later releases (including pre-2.10.6.6 MCA auto-discovery and the
+pre-2.10.6.8 strict GAB cutover gate). Split artwork binaries are also distributed separately from
+the SOURCE archive. Those superseded/split-artifact tests are not part of this release gate.
+
+Syntax / package validation
+---------------------------
+PHP lint:             127/127 PASS
+JavaScript syntax:     59/59 PASS
+Static/package policy: PASS
+No generated Python cache artifacts shipped.
+No GitHub-backed runtime/source reference detected by package validator.
+
+Installer replay
+----------------
+The v2.10.6.8 SOURCE archive was extracted, the v2.10.6.8 -> v2.10.6.9
+incremental updater was executed with the selected modern PHP CLI, and the resulting tree
+was compared byte-for-byte to the v2.10.6.9 source tree.
+
+Replay source files: 946 / 946 exact
+Missing files:       0
+Extra files:         0
+Hash differences:    0
+
+Operational guarantees
+----------------------
+- Installer preserves persisted public-read, worker-routing and browser-ingest state.
+- A production instance already serving GREEN remains GREEN after installation.
+- Blue is not deleted and remains available for rollback while both-maintained mode is selected.
+- GAB/GABCRF continues as historical convergence/backfill, not as a live-freshness prerequisite.
+- Native Green Dashboard/player totals are immediate after deployment.
+- Compatibility analytics become eligible for refresh on the normal Green worker cadence even while GAB is running.

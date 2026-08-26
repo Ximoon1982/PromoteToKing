@@ -1,0 +1,37 @@
+Promote to King — local startup (Python only)
+
+1. Extract the complete ZIP.
+2. Open a terminal in the extracted folder.
+3. Run:
+
+   py serve_local.py
+
+   If `py` is unavailable:
+
+   python serve_local.py
+
+4. Open:
+
+   http://127.0.0.1:8000/
+
+   Administrative tools:
+
+   http://127.0.0.1:8000/?admin=1
+
+5. Keep the terminal open. Press Ctrl+C to stop.
+
+The launcher uses only the Python standard library. It serves the static site and implements Challenge List storage, Match Assistant usage logs, scheduled and manual league-match history recording, history reads, scheduled-task execution logs, and tracked-data management.
+
+On startup it prints a local tracking URL containing the private cron token from data/server-config.json. Open that URL manually to test the cron path, or use Administration → Match data management → Record data now without exposing the token.
+
+Do not open index.html directly and do not use `py -m http.server` when testing server-backed features.
+
+Created runtime data:
+- data/challenge-club-list.json
+- logs/match-assistant/YYYY-MM-DD.jsonl
+- data/match-tracking/matches/<match-id>/<UTC timestamp>.json
+
+Raw data and logs are not served as static files.
+
+Legacy v2.1.2 migration:
+Copy the old data/match-history directory beside data/match-tracking before starting the server. The first tracking access converts and verifies the snapshots, reconstructs followed status, and removes the old files.

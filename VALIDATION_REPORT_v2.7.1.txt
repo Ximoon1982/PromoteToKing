@@ -1,0 +1,67 @@
+PROMOTE TO KING v2.7.1 — VALIDATION REPORT
+============================================
+Date: 2026-08-06
+Source baseline: PromoteToKing_Standalone_v2.7.0.zip
+
+Implemented scope
+-----------------
+PASS — Complete v2.7.0 website retained and runtime metadata advanced to v2.7.1.
+PASS — Team Points additive schema advanced to version 12.
+PASS — Separate Python 3.10+ seed utility embeds all six updated source files; no runtime CSV input is required.
+PASS — Embedded raw and compressed resources are SHA-256 checked before parsing.
+PASS — Local validation checks members, findings, matches, boards, references, timestamps, result codes, duplicates and club-point arithmetic.
+PASS — Signed gzip seed staging uses HMAC-SHA256, five-minute timestamps and one-use nonces.
+PASS — Production Team Points rows remain unchanged before the exact Apply confirmation.
+PASS — Apply requires the unified Team Points task to be paused and obtains the existing worker advisory lock.
+PASS — Final Team Points replacement is one MariaDB transaction with rollback on failure.
+PASS — Obsolete Team Points jobs, queue items, scheduler leases and Team Points task-run/log history are cleared during Apply.
+PASS — Tournament, Live-rank/MCA, shared-gateway and protected configuration domains are excluded from replacement.
+PASS — One paused incremental catch-up job is created after seeding.
+PASS — Findings-only match 1983076 is preserved as unknown and queued for authoritative metadata repair.
+PASS — Routine roster synchronization no longer queues every member’s complete team-match endpoint.
+PASS — Routine match synchronization queues only new, changed or due match details from the club index.
+PASS — Current/previous monthly player archives run before due board fallbacks.
+PASS — Complete two-game boards remain immutable and skip later board API requests.
+PASS — Full member-history and raw global-ID scans are explicit confirmed repair actions only.
+PASS — Scheduled Tasks Control exposes incremental, full-member-repair and raw-range repair actions.
+PASS — Administrator dashboard/task reports expose algorithm and latest seed status.
+PASS — Team Points and tournaments use five-minute scheduler ticks; match monitoring remains hourly.
+PASS — Detailed CRON pause, deletion, installation, verification and emergency-stop instructions are included.
+
+Embedded snapshot validation
+----------------------------
+Current members:                       4,473
+Authoritative discovered match IDs:   17,091
+Finished matches:                     15,997
+In-progress matches:                   1,019
+Registration matches:                     74
+Unknown findings-only matches:             1
+Member/board rows:                   104,761
+Complete two-game boards:             96,691
+One-game boards:                       4,725
+Zero-game boards:                      3,345
+Finished game events:                198,107
+Void finished 0–0 matches:             1,507
+Recomputed club competition points:  371,168
+Participating players:                 3,233
+
+The standalone .pyz was executed in validation-only mode from an otherwise empty directory. It produced the exact figures above and made no network request. Pending/tbd placeholders were normalized and reported; they were not fabricated as losses.
+
+Automated validation
+--------------------
+PASS — All PHP files pass php -l.
+PASS — All JavaScript files pass node --check.
+PASS — Python modules compile.
+PASS — Static UI feature suite.
+PASS — Team Points API/local worker regression suite.
+PASS — Server storage and match-tracking regression suites.
+PASS — UI v2, Insights, profiles, achievements, Live-rank and tournament regression suites.
+PASS — Shared gateway, task registry, hosting-deadline and adaptive monitoring suites.
+PASS — v2.7.1 seed/incremental unit test with generated CSV fixtures.
+PASS — Embedded .pyz clean-directory validation.
+PASS — Manifest inventory and complete package validation.
+PASS — Standalone tool ZIP integrity test.
+
+Environment limitation
+----------------------
+No production database credentials or live production MariaDB service were available in the build environment. Therefore the destructive Apply action was not executed against production. Its SQL, authentication, locking, validation and transaction paths were statically reviewed and syntax-tested. Use the validation-only command, a full production backup and the documented paused-task procedure before the real Apply.

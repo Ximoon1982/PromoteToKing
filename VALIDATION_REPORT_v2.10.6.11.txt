@@ -1,0 +1,69 @@
+Promote to King v2.10.6.11 validation
+====================================
+
+Scope
+-----
+Green live freshness corrective on top of v2.10.6.10.
+
+Functional validation
+---------------------
+Focused v2.10.6.11 regression suite:
+- tests/test_v210611_green_live_freshness.py: 6/6 PASS
+
+Applicable recent Green/UI regression suite:
+- v2.10.6.7 through v2.10.6.11 behavior checks
+- superseded release-identity assertions excluded
+- 24/24 PASS
+
+Package-wide validation
+-----------------------
+- tests/validate_package.py: PASS
+- Static UI feature tests: PASS
+- PHP syntax: 127/127 PASS
+- JavaScript syntax: 59/59 PASS
+- Python/local package checks: PASS
+- No generated pytest/cache artifacts included
+
+Source delta from v2.10.6.10
+---------------------------
+- predecessor source files: 951
+- v2.10.6.11 source files: 956
+- modified: 18
+- added: 5
+- removed: 0
+
+Installer replay proof
+----------------------
+Final published incremental candidate replayed over the actual extracted
+PromoteToKing_Standalone_v2.10.6.10_SOURCE.zip:
+- expected source files: 956
+- replayed source files: 956
+- missing: 0
+- extra: 0
+- SHA-256 content differences: 0
+- result: EXACT REPLAY PASS
+
+Independent final SOURCE ZIP extraction:
+- tests/validate_package.py: PASS
+- result: FINAL SOURCE PACKAGE PASS
+
+Behavioral assertions
+---------------------
+- Dashboard Green headline totals query native p2k_g_* Core tables.
+- Dashboard registered/ongoing/finished lists use the Green database endpoint and do not overwrite with Chess.com club-matches data.
+- Green-native player current-match activity is used when available.
+- Team Points public requests are browser no-store; Team Points public endpoints bypass Dashboard browser-memory TTL caching.
+- Migration Green headline totals and Green Top players read live Green Core; periodic analytics totals remain diagnostic only.
+- Green native/compatibility analytics minimum rebuild cadence is 30 seconds rather than 300 seconds.
+- MatchCreationAnalyzer.htm and its Administration iframe use the v2.10.6.11 cache generation.
+- FindMatch.htm uses the v2.10.6.11 cache generation.
+- Assistant shell-ready no longer sets assistantFullReady; only the full-ready event does.
+
+Deployment impact
+-----------------
+- No database schema migration.
+- No database reset or reseed.
+- No CRON definition change.
+- No public Green/Blue routing change.
+- No Team Points scoring change.
+- No image/artwork change.

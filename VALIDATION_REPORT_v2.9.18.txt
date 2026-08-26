@@ -1,0 +1,57 @@
+Promote to King v2.9.18 validation report
+=========================================
+Date: 2026-08-13
+Baseline: exact frozen v2.9.17 standalone SHA256 b3153b30b74855fca8e6598fff607642afea8101ac412a83a6effeaccd2b6763
+Source policy: internal source/package history only; GitHub not used.
+
+Release contract
+----------------
+- VERSION: 2.9.18
+- Core schema: 14 (additive from 13)
+- Analytics schema: 7 (additive from 6)
+- Achievement catalogue: 162 definitions
+- Operational CRON cadence unchanged: Club 5m; Tournaments 10m offset 2; Player 10m offset 4; Match Tracking hourly minute 17
+- Additional managed CRON: weekly long-life backup Sunday 03:37
+- OAuth tuning namespace / ACDC / CTAR / P0 Interactive Survival retained
+- No destructive reset or reseed
+
+Requested scope
+---------------
+- 43 approved new achievement masters integrated with 128px and 64px derivatives.
+- All 35 league-specific achievement derivatives regenerated from their canonical master, eliminating stale thumbnail/miniature lineage.
+- CMDI: canonical worker first; optional maintenance isolated by local wall-clock/database-statement deadlines and hard response reserve.
+- PIR: bounded durable integrity findings; repair only by forced authoritative match/board verification, never local canonical point/result overwrite.
+- MIAC: supplied seed archive + compact deterministic seed; candidate-only heuristics, confirmed/player_id canonical chains, hard conflicting-player_id protection, generation-numbered canonical map and admin review UI.
+- MIRA: raw MCA source rows retained, per-row raw-to-canonical attribution, confirmed-alias aggregation, event-level dedupe, generation invalidation and CMDI-bounded transactional rebuild.
+- Weekly single-archive long-life filesystem backup directly under _backup with retention and rebuildable-cache exclusions.
+
+Source validation
+-----------------
+- Full pytest: 431 / 431 PASS
+- v2.9.18 focused artwork/CMDI/PIR/MIAC/MIRA/backup regression: 8 / 8 PASS (included above)
+- PHP syntax: 107 / 107 PASS
+- JavaScript syntax: 53 / 53 PASS
+- Top-level shell syntax: 80 / 80 PASS
+- Retained Chromium matrix: 13 / 13 PASS
+- v2.9.17 chart-maximize Chromium gate retained: PASS
+- New v2.9.18 MIAC review Chromium gate: PASS
+- Browser page errors: 0 in all gates reporting page-error telemetry
+- Package/static validator: PASS
+
+Release-package validation
+--------------------------
+- Candidate standalone ZIP integrity: PASS
+- Candidate standalone extraction: 1,488 / 1,488 release files byte-exact
+- Candidate extracted pytest: 431 / 431 PASS
+- Candidate extracted package/static validator: PASS
+- Candidate extracted critical Chromium gates: Interactive Survival, transport/cache, persisted OAuth, chart maximize and MIAC review PASS; 0 page errors
+- Candidate v2.9.17 -> v2.9.18 incremental manifest: 272 payload files, 0 removals; 3 unchanged compact backup/recovery helpers deliberately force-staged
+- Candidate exact updater replay: PASS
+- Replay target release files: 1,488 / 1,488 byte-exact
+- Protected config.local.php / oauth.local.php / data/server-config.json: byte-identical
+- Disposable Chess.com cache fixture: 5,000 retained / 0 copied into backup
+- Compact updater _backup: exactly 4 files / 0 directories
+- MIAC seed installed under data/miac/seed with source archive SHA256 fbb0ad58132a65836e2a2c8c10f9f952dc727f41a668671cba69dc822f1b4310
+- CRON after replay: 4 v2.9.18 operational dispatcher entries + 1 weekly backup; 0 v2.9.17 managed entries; unrelated CRON retained
+
+Final immutable-byte validation is repeated after this report is embedded; see FINAL_FREEZE_REPORT_v2.9.18.txt alongside the release artifacts.

@@ -1,0 +1,73 @@
+Promote to King v2.10.5.2 validation report
+Status: PASS — release candidate validated for packaging
+Date: 2026-08-18
+
+Canonical project tree
+- Files: 1930
+- VERSION: 2.10.5.2
+- MIGRATION_VERSION: 2.10.5.2
+- Blue baseline retained: 2.9.22.10
+- Public source default: Blue
+- Green public cutover: explicit, validation + GAB parity gated
+- Images changed from v2.10.5.1: no
+
+Release-specific regression
+- 21 / 21 PASS
+  - Green production read/write router and fail-closed cutover
+  - ordered migration-phase write / validation gate
+  - GAB lanes and accelerator priority
+  - GFFL factorization / hot lane / 20-minute default
+  - Green compatibility projection upkeep
+  - Green-primary legacy Blue browser-writer suppression
+  - Green Scheduled Task Control surface
+  - Dashboard Match Assistant visibility/open-intent persistence
+  - no Green Core reseed/destructive reset
+
+Static/UI validation
+- tests/run-tests.js: PASS
+- Scheduled Task Control exposes all migration, worker, ingest, mode, GAB, GFFL, Green Accelerator, cycle/phase progress and invocation-log controls directly.
+- Old Blue Team Points maintenance card removed from Scheduled Task Control.
+- Client Continuous Refresh loader removed from Scheduled Task Control; Green Accelerator loaded instead.
+
+Package validator
+- PASS
+- JavaScript syntax checked across 59 .js files
+- PHP lint checked across 124 .php files
+- Python package probes: PASS
+- runtime/cache version consistency: PASS
+- site-manifest membership/identity: PASS
+- no generated pytest/__pycache__/pyc artifacts: PASS
+- no protected deployment configuration in release source: PASS
+
+GFFL hardening
+- completed debt re-arm uses a fresh target due time instead of an old completed due timestamp
+- pending obligations still coalesce to earliest due time
+- board-change obligations use hot priority
+- current-match fallback maintenance shares GFFL target freshness rather than an independent 300-second refresh cadence
+- successful authoritative match fetch retires all coalesced GFFL debt for the match
+
+Updater rehearsal
+- Exact v2.10.5.1 -> v2.10.5.2 replay: PASS
+  missing canonical files: 0
+  changed canonical files: 0
+  unexpected canonical files: 0
+- Idempotent v2.10.5.2 replay: PASS, 0 canonical differences
+- Protected Blue config/OAuth sentinel hashes unchanged: PASS
+- Forced post-copy Green schema failure rollback: PASS
+  baseline missing: 0
+  baseline changed: 0
+  unexpected source files after rollback: 0
+- Green schema action is additive/idempotent; GAB is not auto-started.
+
+Operational safety
+- No Green Core reseed.
+- No destructive DB reset/drop.
+- Existing five staggered Green CRON entries retained.
+- Green worker remains 50 s soft / 55 s hard.
+- Public reads remain at stored/default Blue target until explicit admin phase transition.
+- Green-read phases require Green validation and GAB/read-contract parity.
+- Once Green is explicitly selected, public routing fails closed rather than silently depending on Blue.
+- Blue remains available as rollback/frozen source; physical retirement is not performed by this release.
+
+Full historical pytest note
+- The repository contains many old release tests with hard-coded 2.8/2.9 VERSION allowlists. They are not used as a v2.10.5.2 release gate because they reject later release identities even when the historical source under test is unchanged. Current-release targeted tests, the static UI suite, and the full package validator are PASS.

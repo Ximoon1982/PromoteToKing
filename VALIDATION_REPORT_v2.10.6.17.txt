@@ -1,0 +1,33 @@
+Promote to King v2.10.6.17 validation report
+
+Scope: GABCRF game-sequence canonicalization / alias point-event duplicate corrective.
+
+Focused corrective tests:
+- tests/test_v210617_gabcrf_game_canonicalization.py: 5 passed / 0 failed.
+
+Package validation:
+- canonical v2.10.6.17 tree: PASS.
+- incremental replay from v2.10.6.15: PASS.
+- incremental replay from v2.10.6.16: PASS.
+- independently extracted full source archive: PASS.
+
+Exact-tree acceptance (pre-freeze replay, repeated after final artifact build):
+- canonical source tree: 992 files.
+- replay from v2.10.6.15: 992/992 exact; 0 missing; 0 extra; 0 SHA differences.
+- replay from v2.10.6.16: 992/992 exact; 0 missing; 0 extra; 0 SHA differences.
+- full source extraction: 992/992 exact; 0 missing; 0 extra; 0 SHA differences.
+
+Release delta from v2.10.6.16:
+- 7 modified.
+- 6 added.
+- 0 removed.
+
+Cumulative installer payload from v2.10.6.15 or v2.10.6.16: 24 files.
+
+Safety:
+- no database schema change/reset/reseed;
+- no CRON change;
+- no Blue/Green routing change;
+- no scoring change;
+- no artwork/image change;
+- v2.10.6.16 Green cycle/runtime corrective preserved.

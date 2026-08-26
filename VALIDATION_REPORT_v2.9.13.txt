@@ -1,0 +1,54 @@
+Promote to King v2.9.13 validation report
+==========================================
+Base release: exact verified v2.9.12 standalone
+Core schema: 13 (additive migration from 12)
+Analytics schema: 6 (unchanged)
+Achievement catalogue: 162 (unchanged)
+External CRON cadence: unchanged (4 tasks)
+
+Source validation
+-----------------
+- Python regression suite: 364/364 PASS
+- Package validator: PASS
+- Chromium/browser gates: 12/12 PASS
+- PHP lint / JavaScript syntax / release shell syntax: PASS via package validator and explicit release-script checks
+- Core 13 migration static safety: PASS; additive, no DROP TABLE/TRUNCATE
+
+Queue-specific validation
+-------------------------
+- Dedicated v2.9.13 queue tests: 11/11 PASS
+- Synthetic mixed backlog input: 150,002 requests
+- Canonical outstanding work: 25,001
+- Duplicate requests coalesced: 125,001
+- Outstanding-work reduction: 83.33%
+- First scheduler work after compaction: club match-index deadline, club-members deadline
+- Running-item duplicate flood: 100,000 requests -> one continuation generation
+- Terminal queue history preserved by design and tests
+- Deadline-bearing membership work forces authoritative network acquisition
+
+Transport/cache regression
+--------------------------
+- v2.9.12 transport/cache browser stress gate: PASS
+- 700 Match Creation detail requests completed without late-run collapse
+- 150 old finished-match cache hits / 50 network misses
+- Max six active OAuth gateway posts
+- No direct Chess.com browser bypass / page errors in validated gates
+
+Packaging/updater replay
+------------------------
+- Final standalone extraction: 364/364 pytest PASS
+- Final standalone package validator: PASS
+- Candidate standalone transport-critical browser gates: PASS
+- Exact v2.9.12 -> v2.9.13 candidate updater replay: PASS
+- Incremental payload files: 75 (12 added, 63 changed, 0 removed)
+- Protected config.local.php: byte-identical after replay
+- Protected oauth.local.php: byte-identical after replay
+- Protected data/server-config.json: byte-identical after replay
+- Core-13 migration/compaction hook invocation: PASS (live PDO connection substituted by validation harness)
+- Exactly four v2.9.13 P2K CRON entries installed
+- Unrelated CRON entry retained
+- Final rebuilt-byte updater replay: PASS
+
+Environment note
+----------------
+The validation container has PHP PDO but no installed PDO database driver. The final updater replay therefore exercises the real updater, payload hashes, backups, protected files, CRON handling and migration-hook invocation while substituting only the live database connection call. Core-13 SQL structure and repository compaction behavior are validated independently by static tests and deterministic queue simulations.

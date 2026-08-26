@@ -1,0 +1,47 @@
+Promote to King v2.10.6 validation report
+=========================================
+Result: PASS
+Baseline: v2.10.5.5 canonical split source/assets release
+
+Source-tree integrity
+---------------------
+- v2.10.5.5 source baseline: 897 files.
+- v2.10.6 source tree: 909 files before packaging metadata external to the source archive.
+- Reused unchanged assets/images component: 1,051 declared paths.
+- Complete logical release tree: 1,960 paths.
+- Source paths deleted from v2.10.5.5: 0.
+- v2.10.5.5 predecessor archive was not modified or deleted.
+
+Implementation validation
+-------------------------
+- Release identity: 2.10.6 / migration identity 2.10.6.
+- Core schema contract: 17.
+- Analytics schema contract: 9.
+- GABCRF compatibility reconciliation lane present and resumable.
+- GAB parity projection drift reopens reconciliation instead of terminal failure.
+- Opponent username is captured in Blue and Green compatibility board projections.
+- Opponent Insights exposes player summary and player rows.
+- New-24h admin match clicks use the network-first refresh endpoint; other match detail clicks remain cached/database-first.
+- MCA durable source sync state/queue, all-index missing-CSV detection, recent overlap refresh, possible-rename refresh, date extraction/backfill, and >=1-second serialized request pacing are present.
+- Existing MCA manual upload/process actions remain present.
+- Twice-daily MCA CRON installer is present and preserves unrelated CRON entries.
+
+Regression / syntax validation
+------------------------------
+- Dedicated v2.10.6 regression suite: 6/6 PASS.
+- v2.10.6 + inherited v2.10.5.5/v2.10.5.4 selected regression suite: 17/17 PASS.
+- Inherited v2.10.5.5 non-identity regression suite: 5/5 PASS.
+- Inherited v2.10.5.4 regression suite: 5/5 PASS.
+- PHP lint: all 126 PHP files PASS.
+- Modified JavaScript Node syntax checks: PASS.
+- MCA PHP parser fixture: PASS (arena ID ordering + Aug 18, 2026 date parsing).
+- tests/validate_package.py: PASS using the canonical split-assets validation mode.
+- Static UI feature tests invoked by package validator: PASS.
+
+Data safety
+-----------
+- Schema changes are additive only.
+- No DB reset.
+- No Blue or Green reseed.
+- Existing MCA source files/data are preserved.
+- Incremental updater backs up every replaced existing file.

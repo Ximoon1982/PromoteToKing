@@ -1,0 +1,35 @@
+CREATE TABLE IF NOT EXISTS p2k_g_analytics_meta (
+  club_slug VARCHAR(120) NOT NULL PRIMARY KEY,
+  source_cycle_no BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  rebuilt_at DATETIME NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS p2k_g_club_totals (
+  club_slug VARCHAR(120) NOT NULL PRIMARY KEY,
+  current_members INT UNSIGNED NOT NULL DEFAULT 0,
+  players_with_points INT UNSIGNED NOT NULL DEFAULT 0,
+  known_matches INT UNSIGNED NOT NULL DEFAULT 0,
+  registered_matches INT UNSIGNED NOT NULL DEFAULT 0,
+  in_progress_matches INT UNSIGNED NOT NULL DEFAULT 0,
+  finished_matches INT UNSIGNED NOT NULL DEFAULT 0,
+  cancelled_matches INT UNSIGNED NOT NULL DEFAULT 0,
+  unknown_matches INT UNSIGNED NOT NULL DEFAULT 0,
+  total_boards INT UNSIGNED NOT NULL DEFAULT 0,
+  finished_boards INT UNSIGNED NOT NULL DEFAULT 0,
+  unknown_boards INT UNSIGNED NOT NULL DEFAULT 0,
+  club_points DECIMAL(14,2) NOT NULL DEFAULT 0,
+  source_cycle_no BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS p2k_g_player_totals (
+  username_key VARCHAR(120) NOT NULL PRIMARY KEY,
+  username VARCHAR(120) NOT NULL,
+  points DECIMAL(14,2) NOT NULL DEFAULT 0,
+  finished_games INT UNSIGNED NOT NULL DEFAULT 0,
+  latest_event_epoch BIGINT NULL,
+  source_cycle_no BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL,
+  KEY idx_g_player_points (points,username_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="dark" name="color-scheme"/>
+<meta content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self' https://api.chess.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" http-equiv="Content-Security-Policy"/>
+<script src="assets/js/pages/ui-version-gate.js?v=2.10.6.14"></script>
+<title>Promote to King</title>
+<meta name="description" content="Play together. Improve together. Promote to King."/>
+<link href="assets/images/p2k-logo.jpg" rel="icon"/>
+<link href="assets/css/site.css?v=2.10.6.14" rel="stylesheet"/>
+<link href="assets/css/simulated-oauth.css?v=2.10.6.14" rel="stylesheet"/>
+<link href="assets/css/detailed-analysis-host.css?v=2.10.6.14" rel="stylesheet"/>
+<link href="assets/css/info-popover.css?v=2.10.6.14" rel="stylesheet"/>
+<link href="assets/css/dashboard-v2.css?v=2.10.6.23" rel="stylesheet"/>
+<link href="assets/css/data-table.css?v=2.10.6.14" rel="stylesheet"/>
+<link href="assets/css/v2-4-17-integrated.css?v=2.10.6.14" rel="stylesheet"/>
+<script defer src="config/site-branding.js?v=2.10.6.14"></script>
+<script defer src="assets/js/site-config.js?v=2.10.6.23"></script>
+<script defer src="assets/js/shared/api-cache.js?v=2.10.6.14"></script>
+<script defer src="assets/js/shared/api-client.js?v=2.10.6.14"></script>
+<script defer src="assets/js/shared/real-oauth.js?v=2.10.6.14"></script><script defer src="assets/js/shared/simulated-oauth.js?v=2.10.6.14"></script><script defer src="assets/js/shared/authenticated-member-refresh.js?v=2.10.6.14"></script>
+<script defer src="assets/js/shared/team-points-client.js?v=2.10.6.14"></script>
+<script defer src="assets/js/shared/data-table.js?v=2.10.6.14"></script>
+<script defer src="assets/js/shared/rank-ladder.js?v=2.10.6.14"></script>
+<script defer src="assets/js/shared/detailed-analysis-host.js?v=2.10.6.14"></script>
+<script defer src="assets/js/shared/info-popover.js?v=2.10.6.14"></script>
+<script defer src="assets/js/shared/progressive-loader.js?v=2.10.6.14"></script>
+<script defer src="assets/js/shared/active-convergence-refresh.js?v=2.10.6.14"></script>
+<script defer src="assets/js/pages/opponent-balance-analyzer.js?v=2.10.6.20"></script>
+<script defer src="assets/js/shared/dashboard-match-board-hydration.js?v=2.10.6.14"></script>
+<script defer src="assets/js/pages/dashboard-v2.js?v=2.10.6.23"></script>
+<link href="assets/css/responsive-unification.css?v=2.10.6.14" rel="stylesheet"/>
+</head>
+<body>
+<main class="site-shell dashboard-v2-shell">
+<header class="site-header">
+<a aria-label="Open Promote to King on Chess.com" class="site-logo-link" href="https://www.chess.com/club/promote-to-king" id="siteClubLink" rel="noopener noreferrer" target="_blank"><img alt="Promote to King club logo" src="assets/images/p2k-logo.jpg"/></a>
+<div class="site-title-copy">
+<h1>Promote to King</h1>
+<p class="site-subtitle">Play together. Improve together. Promote to King.</p>
+</div>
+<div class="dashboard-header-actions">
+<div id="dashboardAdminToggleHost"></div>
+<div aria-live="polite" class="p2k-auth-host" id="p2kAuthHost"></div>
+</div>
+</header>
+
+<section class="dashboard-v2" id="dashboardV2">
+
+<nav aria-label="Public sections" class="dashboard-page-tabs" id="dashboardPublicTabs">
+<button aria-current="page" class="is-active" data-public-page="dashboard" type="button"><svg aria-hidden="true" class="dashboard-tab-icon" focusable="false" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Dashboard</span></button>
+<button data-public-page="hall" type="button"><svg aria-hidden="true" class="dashboard-tab-icon" focusable="false" viewBox="0 0 24 24"><path d="m12 2.8 2.8 5.7 6.3.9-4.6 4.4 1.1 6.3-5.6-3-5.6 3 1.1-6.3-4.6-4.4 6.3-.9L12 2.8Z"/></svg><span>Hall of Fame</span></button>
+<button data-public-page="insights" type="button"><svg aria-hidden="true" class="dashboard-tab-icon" focusable="false" viewBox="0 0 24 24"><path d="M4 20V10h4v10M10 20V4h4v16M16 20v-7h4v7"/><path d="M3 20h18"/></svg><span>Insights</span></button>
+<button data-public-page="administration" id="dashboardAdministrationTab" type="button" hidden><svg aria-hidden="true" class="dashboard-tab-icon" focusable="false" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6l-8-3Z"/><path d="M8 12h8M12 8v8"/></svg><span>Administration</span></button></nav>
+
+<section class="dashboard-panel" id="publicDashboardPanel">
+<div class="dashboard-primary-grid">
+<section aria-labelledby="personalStatsTitle" class="dashboard-card dashboard-personal-card">
+<div class="dashboard-card-head">
+<div class="dashboard-personal-title-block"><div class="dashboard-personal-title-row"><h3 id="personalStatsTitle">Member</h3><button class="dashboard-rank-link dashboard-profile-link" id="openUnifiedProfile" type="button">profile →</button></div><small class="dashboard-join-date" hidden id="personalJoinDate"></small></div>
+<div class="dashboard-personal-head-actions"><span class="dashboard-live-badge" id="personalStatusBadge">Login required</span></div>
+</div>
+<div class="dashboard-guest" id="personalGuest">
+<div class="dashboard-guest-piece">♔</div>
+<div><strong>Log in to personalize this area</strong><p id="personalGuestMessage">Log in with Chess.com to load authenticated player information.</p></div>
+</div>
+<div hidden id="personalMember">
+<div class="dashboard-player-overview">
+  <img alt="Team rank" class="dashboard-rank-image" id="personalRankImage" src="assets/images/ranks/thumbs/320/01_Pawn.webp" width="320" height="320" decoding="async">
+  <div class="dashboard-team-points-copy">
+    <div class="dashboard-points-title-row"><span class="dashboard-label-with-info"><span id="personalPointsLabel">Team Points</span> <button aria-expanded="false" aria-label="About player points" class="p2k-info-button p2k-info-mark" data-p2k-info-message="Team Points are earned from finished team games: one point for a win and half a point for a draw." id="personalPointsInfo" type="button">i</button></span><div class="dashboard-player-mode-toggle" id="personalModeToggle" role="group" aria-label="Player statistics source" hidden><button class="is-active" data-player-mode="daily" type="button" aria-pressed="true">Daily</button><button data-player-mode="live" type="button" aria-pressed="false">Live</button></div></div><strong id="personalTeamPoints">—</strong><small id="personalRankName">Rank loading…</small>
+    <div class="dashboard-rank-actions"><button class="dashboard-rank-link" id="openHallOfFame" type="button">View Daily Ranks →</button><button class="dashboard-rank-link dashboard-player-games-link" id="explorePlayerGames" type="button">Games →</button></div>
+    <div aria-label="Team Points game results" class="dashboard-result-counters">
+      <span class="is-win"><b id="personalWins">—</b><small id="personalStat1Label">Wins</small></span>
+      <span class="is-draw"><b id="personalDraws">—</b><small id="personalStat2Label">Draws</small></span>
+      <span class="is-loss"><b id="personalLosses">—</b><small id="personalStat3Label">Losses</small></span>
+    </div>
+  </div>
+</div>
+<div class="dashboard-player-activity" id="personalDailyActivity" aria-label="Player team-match activity">
+  <div><span>Currently playing</span><strong id="personalCurrentGames">— games</strong><small id="personalCurrentMatches">in — matches</small></div>
+  <div><span>Registered</span><strong id="personalRegisteredMatches">— matches</strong><small>Awaiting match start</small></div>
+  <div><span>Games played</span><strong id="personalPlayedGames">— games</strong><small id="personalPlayedMatches">in — matches</small></div>
+</div>
+<div class="dashboard-player-activity dashboard-player-live-activity" id="personalLiveActivity" aria-label="Player Live arena activity" hidden>
+  <div><span>Best score</span><strong id="personalLiveBestScore">—</strong><small>Highest arena score</small></div>
+  <div><span>Total wins</span><strong id="personalLiveTotalWins">—</strong><small>Across all uploaded arenas</small></div>
+  <div><span>Most wins</span><strong id="personalLiveMaxWins">—</strong><small>In one arena</small></div>
+  <div><span>Best streak</span><strong id="personalLiveBestStreak">—</strong><small>Longest arena streak</small></div>
+</div>
+<div class="dashboard-personal-intelligence" id="personalizedHome" hidden aria-live="polite"></div>
+</div>
+</section>
+
+<section aria-labelledby="teamStatsTitle" class="dashboard-card dashboard-team-card">
+<div class="dashboard-card-head">
+<div><h3 id="teamStatsTitle">Promote to King</h3></div>
+<span class="dashboard-live-badge" id="teamStatusBadge">Loading</span>
+</div>
+<div id="teamDailyContent"><div class="dashboard-metric-grid dashboard-team-metrics">
+<div class="dashboard-metric dashboard-metric-accent" data-team-insight="members" role="link" tabindex="0"><span>Members</span><strong id="teamMembers">—</strong><small>Open Members Insights</small></div>
+<div class="dashboard-metric" data-team-insight="team" role="link" tabindex="0"><span class="dashboard-label-with-info">Club points <button aria-expanded="false" aria-label="About club points" class="p2k-info-button p2k-info-mark" data-p2k-info-message="Club competition points are rebuilt from authoritatively verified finished matches: five times the board count for a match win, twice the board count for a draw, and zero for a loss." type="button">i</button></span><strong id="teamClubPoints">—</strong><small id="teamClubPointsNote">Team Points database</small></div>
+<div class="dashboard-metric dashboard-match-metric" data-team-insight="matches" role="link" tabindex="0"><span>Registered matches</span><strong id="teamOpenRegistrations">—</strong><small id="teamRegisteredBoards">— boards · — games</small><button class="dashboard-metric-view" data-match-list="registered" type="button">View</button></div>
+<div class="dashboard-metric dashboard-match-metric" data-team-insight="matches" role="link" tabindex="0"><span>Ongoing matches</span><strong id="teamActiveMatches">—</strong><small id="teamOngoingBoards">— boards · — games</small><button class="dashboard-metric-view" data-match-list="ongoing" type="button">View</button></div>
+<div class="dashboard-metric dashboard-match-metric" data-team-insight="matches" role="link" tabindex="0"><span class="dashboard-label-with-info">Finished matches <button aria-expanded="false" aria-label="About finished matches" class="p2k-info-button p2k-info-mark" data-p2k-info-message="A match is counted only after Chess.com authoritatively reports status finished. Stored board counts and scores are then cross-checked before the verified summary and cached totals are updated." type="button">i</button></span><strong id="teamFinishedMatches">—</strong><small id="teamFinishedBoards">— boards · — games</small><button class="dashboard-metric-view" data-match-list="finished" type="button">View</button></div>
+</div>
+<div class="dashboard-team-indicators">
+  <div class="dashboard-gauge-card">
+    <div class="dashboard-gauge-copy"><span class="dashboard-label-with-info">League lineup readiness <button aria-expanded="false" aria-label="About lineup readiness" class="p2k-info-button p2k-info-mark" data-p2k-info-message="Average eligible Promote to King lineup coverage across current priority league registrations." type="button">i</button></span><strong id="teamLineupReadinessValue">—</strong></div>
+    <div class="dashboard-gauge-track"><span id="teamLineupReadinessGauge"></span></div>
+    <small id="teamLineupReadinessNote">Waiting for Match Assistant data</small>
+  </div>
+  <div class="dashboard-gauge-card">
+    <div class="dashboard-gauge-copy"><span class="dashboard-label-with-info">Registration targets <button aria-expanded="false" aria-label="About registration targets" class="p2k-info-button p2k-info-mark" data-p2k-info-message="Average registration progress compared with the Match Assistant target lineup for each open match." type="button">i</button></span><strong id="teamRegistrationTargetsValue">—</strong></div>
+    <div class="dashboard-gauge-track"><span id="teamRegistrationTargetsGauge"></span></div>
+    <small id="teamRegistrationTargetsNote">Waiting for Match Assistant data</small>
+  </div>
+  <button type="button" class="dashboard-call-card" data-assistant-filter="next7"><span>Matches starting within 7 days</span><strong id="teamStartingSoon">—</strong><small>Open Match Assistant filtered by date</small></button>
+  <button type="button" class="dashboard-call-card" data-assistant-filter="priority"><span>Priority calls</span><strong id="teamPriorityCalls">—</strong><small>Open Match Assistant filtered by priority</small></button>
+</div></div>
+<div id="teamLiveContent" hidden>
+<div class="dashboard-metric-grid dashboard-team-metrics dashboard-team-live-metrics">
+<div class="dashboard-metric dashboard-metric-accent" data-team-page="hall-live" role="link" tabindex="0"><span>Arenas played</span><strong id="teamLiveArenas">—</strong><small>Multi-club arenas included</small></div>
+
+<div class="dashboard-metric" data-team-page="hall-live" role="link" tabindex="0"><span>Unique players</span><strong id="teamLiveCurrentPlayers">—</strong><small>Current P2K members across MCAs</small></div>
+<div class="dashboard-metric" data-team-page="hall-live" role="link" tabindex="0"><span>Most participants</span><strong id="teamLiveMostParticipants">—</strong><small id="teamLiveMostParticipantsArena">In one arena</small></div>
+<div class="dashboard-metric" data-team-page="hall-live" role="link" tabindex="0"><span>Most points</span><strong id="teamLiveMostPoints">—</strong><small id="teamLiveMostPointsArena">In one arena</small></div>
+</div>
+<div class="dashboard-team-indicators dashboard-team-live-indicators">
+<div class="dashboard-call-card" data-team-page="hall-live" role="link" tabindex="0"><span>1st places</span><strong id="teamLiveFirstPlaces">—</strong><small>Across all arenas</small></div>
+<div class="dashboard-call-card" data-team-page="hall-live" role="link" tabindex="0"><span>2nd places</span><strong id="teamLiveSecondPlaces">—</strong><small>Across all arenas</small></div>
+<div class="dashboard-call-card" data-team-page="hall-live" role="link" tabindex="0"><span>3rd places</span><strong id="teamLiveThirdPlaces">—</strong><small>Across all arenas</small></div>
+<div class="dashboard-call-card" data-team-page="hall-live" role="link" tabindex="0"><span>Total arena points</span><strong id="teamLiveAggregatePoints">—</strong><small>All P2K scores across MCAs</small></div>
+</div>
+</div>
+</section>
+</div>
+
+<section aria-labelledby="recommendationsTitle" class="dashboard-card dashboard-recommendations-card" id="recommendationsCard">
+<div id="recommendationsDefaultView">
+<div class="dashboard-card-head dashboard-recommendations-head">
+<div><h3 id="recommendationsTitle">Recommended matches</h3><p id="recommendationsSubtitle">Log in to load personalized recommendations.</p></div>
+<button class="dashboard-button dashboard-button-primary" id="findMoreMatchesLink" type="button">Find more matches</button>
+</div>
+<div aria-live="polite" class="dashboard-loading-list" id="recommendationsLoading"><span></span><span></span><span></span></div>
+<div class="dashboard-recommendations" id="recommendationsList"></div>
+<div class="dashboard-empty" hidden id="recommendationsEmpty">Log in to load personalized recommendations.</div>
+</div>
+<div class="dashboard-assistant-panel" hidden id="dashboardMatchAssistant">
+<div class="dashboard-assistant-actions"><button class="dashboard-button" id="backToRecommendations" type="button">← Back to recommendations</button></div>
+<div class="dashboard-assistant-preparing" id="dashboardMatchAssistantPreparing" hidden>Preparing the full Match Assistant…</div>
+<div class="dashboard-assistant-host" id="dashboardMatchAssistantHost"></div>
+</div>
+</section>
+
+</section>
+
+<section class="dashboard-panel dashboard-integrated-page" hidden id="teamInsightsPage">
+  <div class="dashboard-integrated-subtabs" role="tablist" aria-label="Insights sections">
+    <button class="is-active" data-insights-subtab="team" type="button" role="tab" aria-selected="true">Team</button>
+    <button data-insights-subtab="members" type="button" role="tab" aria-selected="false">Members</button>
+    <button data-insights-subtab="matches" type="button" role="tab" aria-selected="false">Matches</button>
+    <button data-insights-subtab="opponents" type="button" role="tab" aria-selected="false">Opponents</button>
+  </div>
+  <div data-insights-panel="team" role="tabpanel">
+    <iframe class="dashboard-integrated-frame" id="teamInsightsFrame" title="Team insights" data-src="TeamInsights.html?embedded=1&release=2.10.5"></iframe>
+  </div>
+  <div class="p2k-native-panel" data-insights-panel="members" role="tabpanel" hidden>
+    <section class="p2k-native-heading"><div><h2>Insights · Members</h2><p>Database-backed member activity, Team Points, current workload, Daily rank and MCA performance.</p></div><span class="p2k-native-badge" id="membersDatabaseBadge">Database</span></section>
+    <section class="p2k-stat-grid" aria-label="Member summary">
+      <div class="p2k-stat-card"><span>Current members</span><strong id="membersStatCurrent">—</strong></div>
+      <div class="p2k-stat-card"><span>Active in period</span><strong id="membersStatActive">—</strong></div>
+      <div class="p2k-stat-card"><span>Currently playing</span><strong id="membersStatPlaying">—</strong></div>
+    </section>
+    <section class="p2k-insights-grid p2k-insights-grid-large">
+      <article class="p2k-insight-card is-full-width"><h3>Monthly active members</h3><p>Distinct players with at least one finished team-match game.</p><div id="membersActivityAnalytics" class="p2k-native-chart" aria-label="Monthly active members chart"></div><div class="p2k-chart-legend"><span data-chart-color="blue">Active members</span><small>Hover or tap for games and Team Points</small></div></article>
+      <article class="p2k-insight-card is-full-width"><h3>Daily-rank distribution</h3><p>Members grouped by Team Points rank in the selected period.</p><div id="membersRankAnalytics" class="p2k-native-chart" aria-label="Daily rank distribution chart"></div><div class="p2k-chart-legend"><span data-chart-color="gold">Members</span><small>Hover or tap for rank totals</small></div></article>
+    </section>
+    <section class="p2k-table-card">
+      <div class="p2k-table-toolbar"><label>Search<input id="membersTableSearch" type="search" placeholder="Player name…"></label><label>Members<select id="membersTableFilter"><option value="current">Current members</option><option value="all">All recorded members</option><option value="former">Former members</option><option value="active">Active in selected period</option><option value="playing">Currently playing</option><option value="new">First seen in 30 days</option></select></label><fieldset class="p2k-activity-status-filter" id="membersActivityStatusFilter"><legend>Activity status</legend><label><input type="checkbox" value="active" checked>Active</label><label><input type="checkbox" value="cooling" checked>Cooling</label><label><input type="checkbox" value="inactive" checked>Inactive</label><label><input type="checkbox" value="dormant" checked>Dormant</label><label><input type="checkbox" value="unknown" checked>Unknown</label></fieldset><span class="p2k-table-count" id="membersTableCount"></span></div>
+      <div class="p2k-table-wrap"><table class="p2k-table" id="membersDataTable"><thead><tr><th data-key="username">Member</th><th>Activity</th><th data-key="daily_rank">Daily rank</th><th class="is-right" data-key="points">Team Points</th><th class="is-right" data-key="matches">Matches</th><th class="is-right" data-key="games">Games</th><th class="is-right" data-key="wins">Wins</th><th class="is-right" data-key="draws">Draws</th><th class="is-right" data-key="losses">Losses</th><th class="is-right" data-key="win_rate">Win rate</th><th class="is-right" data-key="points_per_game">Pts/game</th><th class="is-right" data-key="current_matches">Current</th><th class="is-right" data-key="live_points">MCA points</th><th data-key="last_activity">Last activity</th></tr></thead><tbody></tbody></table></div>
+      <div class="p2k-table-footer"><span class="p2k-table-status" id="membersTableStatus">Loading member insights…</span><div class="p2k-table-pager" id="membersTablePager"></div></div>
+    </section>
+  </div>
+  <div class="p2k-native-panel" data-insights-panel="matches" role="tabpanel" hidden>
+    <section class="p2k-native-heading"><div><h2>Insights · Matches</h2><p>Database-backed match volumes, outcomes, board sizes, duration and recent match details.</p></div><span class="p2k-native-badge">Native UI v2</span></section>
+    <section class="p2k-stat-grid" aria-label="Match summary">
+      <div class="p2k-stat-card"><span>Stored matches</span><strong id="matchesStatTotal">—</strong></div>
+      <div class="p2k-stat-card"><span>In registration</span><strong id="matchesStatRegistered">—</strong></div>
+      <div class="p2k-stat-card"><span>In progress</span><strong id="matchesStatOngoing">—</strong></div>
+      <div class="p2k-stat-card"><span>Finished</span><strong id="matchesStatFinished">—</strong></div>
+      <div class="p2k-stat-card"><span>W / D / L</span><strong id="matchesStatResults">—</strong></div>
+      <div class="p2k-stat-card"><span>Club Points</span><strong id="matchesStatPoints">—</strong></div>
+      <div class="p2k-stat-card"><span>Average boards</span><strong id="matchesStatBoards">—</strong></div>
+      <div class="p2k-stat-card"><span>Average duration</span><strong id="matchesStatDuration">—</strong></div>
+      <div class="p2k-stat-card"><span>Median duration</span><strong id="matchesStatMedian">—</strong></div><div class="p2k-stat-card"><span>Club points / finished match</span><strong id="matchesStatPointsPerMatch">—</strong></div>
+    </section>
+    <section class="p2k-mini-chart p2k-mini-chart-native"><div class="p2k-chart-heading"><div><h3>Monthly match activity</h3><p>Stored matches grouped by authoritative start month. Drag across the chart to zoom.</p></div><button type="button" class="p2k-chart-reset" data-chart-reset="matchesTrendChart">Reset zoom</button></div><div id="matchesTrendChart" class="p2k-native-chart" aria-label="Monthly match activity chart"></div><div class="p2k-chart-legend"><span data-chart-color="blue">Registration</span><span data-chart-color="purple">In progress</span><span data-chart-color="green">Finished</span></div></section>
+    <section class="p2k-mini-chart p2k-mini-chart-native"><div class="p2k-chart-heading"><div><h3>Average boards per match</h3><p>Monthly evolution of the average board count for finished matches.</p></div></div><div id="matchesAverageBoardsChart" class="p2k-native-chart" aria-label="Monthly average boards per match chart"></div></section>
+    <section class="p2k-insights-grid p2k-insights-grid-full">
+      <article class="p2k-insight-card"><h3>Results by match size</h3><p>Stacked wins, draws and losses by board-size range. Totals are labelled above each bar, including the smaller tiers.</p><div id="matchesSizeDistribution" class="p2k-native-chart"></div><div id="matchesSizeAnalytics" class="p2k-compact-list"></div><div class="p2k-chart-legend"><span data-chart-color="green">Wins</span><span data-chart-color="gold">Draws</span><span data-chart-color="red">Losses</span></div></article>
+      <article class="p2k-insight-card"><h3>League vs friendly</h3><p>The pie shows match share. Listed result numbers are wins / draws / losses.</p><div id="matchesCategoryPie" class="p2k-native-chart p2k-native-chart-pie"></div><div id="matchesCategoryAnalytics" class="p2k-compact-list"></div><div class="p2k-chart-legend"><span data-chart-color="green">Wins</span><span data-chart-color="gold">Draws</span><span data-chart-color="red">Losses</span></div></article>
+      <article class="p2k-insight-card"><h3>Duration trend</h3><p>Average duration of valid finished matches by end month. Void 0–0 matches and invalid timestamps are excluded.</p><button type="button" class="p2k-chart-reset" data-chart-reset="matchesDurationTrendChart">Reset zoom</button><div id="matchesDurationTrendChart" class="p2k-native-chart"></div><div id="matchesDurationAnalytics" class="p2k-compact-list"></div></article>
+      <article class="p2k-insight-card"><h3>Duration distribution</h3><p>Valid finished matches grouped by elapsed calendar days. Average and median are plotted as reference markers.</p><div id="matchesDurationDistribution" class="p2k-native-chart"></div></article>
+      <article class="p2k-insight-card"><h3>Match type</h3><p>Standard versus Chess960 when the stored match rules are available.</p><div id="matchesRulesDistribution" class="p2k-native-chart p2k-native-chart-pie"></div></article>
+      <article class="p2k-insight-card"><h3>Time control</h3><p>Stored daily time-control distribution. Unknown means the historic row has not yet been enriched.</p><div id="matchesTimeControlDistribution" class="p2k-native-chart"></div></article>
+      <article class="p2k-insight-card"><h3>Notable matches</h3><div id="matchesHighlights" class="p2k-compact-list"></div></article>
+    </section>
+    <section class="p2k-table-card">
+      <div class="p2k-table-toolbar"><label>Search<input id="matchesTableSearch" type="search" placeholder="Match or opponent…"></label><label>Status<select id="matchesTableFilter"><option value="all">All statuses</option><option value="registered">Registered</option><option value="in_progress">In progress</option><option value="finished">Finished</option><option value="win">Finished wins</option><option value="draw">Finished draws</option><option value="loss">Finished losses</option></select></label><span class="p2k-table-count" id="matchesTableCount"></span></div>
+      <div class="p2k-table-wrap"><table class="p2k-table" id="matchesDataTable"><thead><tr><th data-key="name">Match</th><th data-key="opponent_name">Opponent</th><th data-key="status">Status</th><th data-key="start_time">Start</th><th class="is-right" data-key="boards">Boards</th><th class="is-right" data-key="our_score">P2K</th><th class="is-right" data-key="their_score">Opponent</th><th data-key="result">Result</th><th class="is-right" data-key="competition_points">Club points</th><th class="is-right" data-key="duration_days">Duration</th></tr></thead><tbody></tbody></table></div>
+      <div class="p2k-table-footer"><span class="p2k-table-status" id="matchesTableStatus">Loading match insights…</span><div class="p2k-table-pager" id="matchesTablePager"></div></div>
+    </section>
+  </div>
+  <div class="p2k-native-panel" data-insights-panel="opponents" role="tabpanel" hidden>
+    <section class="p2k-native-heading"><div><h2>Insights · Opponents</h2><p>Every club Promote to King currently plays or has played, aggregated through canonical opponent aliases.</p></div><span class="p2k-native-badge">Native UI v2</span></section>
+    <section class="p2k-stat-grid" aria-label="Opponent summary">
+      <div class="p2k-stat-card"><span>Different opponents</span><strong id="opponentsStatTotal">—</strong></div>
+      <div class="p2k-stat-card"><span>Played historically</span><strong id="opponentsStatPlayed">—</strong></div>
+      <div class="p2k-stat-card"><span>Currently playing</span><strong id="opponentsStatCurrent">—</strong></div>
+      <div class="p2k-stat-card"><span>In registration</span><strong id="opponentsStatRegistration">—</strong></div>
+      <div class="p2k-stat-card"><span>Finished matches</span><strong id="opponentsStatFinished">—</strong></div>
+    </section>
+    <section class="p2k-mini-chart"><div class="p2k-chart-heading"><div><h3>Most played opponents</h3><p>Top 15 opponents by stored match count. Hover or tap for W / D / L and ongoing counts.</p></div></div><div id="opponentsTopChart" class="p2k-native-chart p2k-native-chart-tall" aria-label="Most played opponents chart"></div></section>
+    <section class="p2k-opponent-balance-host" id="opponentsBalanceAnalyzer" aria-label="Opponent balance heatmaps"><p class="p2k-table-status">Loading all-match opponent heatmaps…</p></section>
+    <section class="p2k-table-card p2k-opponents-table-card">
+      <div class="p2k-table-toolbar"><label>Search<input id="opponentsTableSearch" type="search" placeholder="Opponent club…"></label><label>Status<select id="opponentsTableFilter"><option value="all">All opponents</option><option value="active">Currently playing</option><option value="registered">In registration</option><option value="finished">With finished matches</option><option value="disabled">Disabled clubs</option></select></label><span class="p2k-table-count" id="opponentsTableCount"></span></div>
+      <div class="p2k-table-wrap"><table class="p2k-table p2k-opponents-table" id="opponentsDataTable"><thead><tr><th data-key="name">Opponent</th><th class="is-right" data-key="total" title="Total">Total</th><th class="is-right" data-key="ongoing" title="Ongoing">Ong.</th><th class="is-right" data-key="registered" title="Registered">Reg.</th><th class="is-right" data-key="finished" title="Finished">Fin.</th><th class="is-right" data-key="wins" title="Wins">W</th><th class="is-right" data-key="draws" title="Draws">D</th><th class="is-right" data-key="losses" title="Losses">L</th><th class="is-right" data-key="our_points" title="Our score">P2K</th><th class="is-right" data-key="their_points" title="Their score">Opp.</th><th class="is-right" data-key="balance" title="Balance">Δ</th><th class="is-right" data-key="win_rate" title="Win rate">Win %</th></tr></thead><tbody></tbody></table></div>
+      <div class="p2k-table-footer"><span class="p2k-table-status" id="opponentsTableStatus">Loading opponent insights…</span><div class="p2k-table-pager" id="opponentsTablePager"></div></div>
+    </section>
+  </div>
+</section>
+
+<div class="p2k-profile-modal" id="insightsDetailModal" hidden role="dialog" aria-modal="true" aria-labelledby="insightsDetailTitle">
+  <div class="p2k-profile-modal-card">
+    <header><div><p class="dashboard-eyebrow" id="insightsDetailEyebrow">Insights</p><h2 id="insightsDetailTitle">Details</h2><p id="insightsDetailSubtitle"></p></div><button type="button" id="insightsDetailClose" aria-label="Close details">×</button></header>
+    <div class="p2k-profile-modal-body" id="insightsDetailBody"></div>
+  </div>
+</div>
+<div hidden id="adminDashboardHost"></div>
+<section aria-labelledby="hallOfFameTitle" class="dashboard-panel dashboard-hall-page" hidden id="hallOfFamePage">
+<div class="dashboard-integrated-subtabs dashboard-hall-subtabs" role="tablist" aria-label="Hall of Fame sections">
+  <button class="is-active" data-hall-subtab="achievements" type="button" role="tab" aria-selected="true">Achievements</button>
+  <button data-hall-subtab="daily" type="button" role="tab" aria-selected="false">Daily ranks</button>
+  <button data-hall-subtab="live" type="button" role="tab" aria-selected="false">Live ranks</button>
+  <button data-hall-subtab="tournaments" type="button" role="tab" aria-selected="false">Tournaments</button>
+</div>
+<form class="dashboard-hall-search dashboard-hall-unified-search" id="hallMemberSearchForm">
+<label for="hallMemberSearch"><span>Find a player across the Hall of Fame</span></label>
+<div><input autocomplete="off" id="hallMemberSearch" maxlength="80" placeholder="Daily ranks, Live ranks, tournament medals and achievements" type="search"><button class="dashboard-button dashboard-button-primary" type="submit">Search</button><button aria-hidden="true" class="dashboard-button" hidden id="hallResetSearch" tabindex="-1" type="button">Clear</button></div>
+</form>
+<div class="p2k-hall-unified-results" id="hallUnifiedResults" hidden aria-live="polite"></div>
+<div class="dashboard-hall-panel-stack" data-hall-panel="daily" role="tabpanel">
+<div class="dashboard-hall-summary">
+<div><span>Current members</span><strong id="hallTotalMembers">—</strong></div>
+<div><span class="dashboard-label-with-info">Ranked members <button aria-expanded="false" aria-label="About ranked members" class="p2k-info-button p2k-info-mark" data-p2k-info-message="Current club members with at least 10 Team Points and therefore a place in one of the sixteen ranks." type="button">i</button></span><strong id="hallRankedMembers">—</strong></div>
+<div><span>Team leader</span><strong id="hallLeader">—</strong></div>
+<div><span>Your position</span><strong id="hallPersonalPosition">—</strong></div>
+</div>
+<div class="dashboard-card dashboard-hall-page-card">
+<div aria-live="polite" class="dashboard-hall-status" id="hallStatus">Loading Hall of Fame…</div>
+<div class="dashboard-hall-ranks" id="hallRankGrid"></div>
+</div>
+</div>
+<div class="dashboard-hall-panel-stack" data-hall-panel="live" role="tabpanel" hidden>
+<div class="dashboard-hall-summary">
+<div><span>Current members</span><strong id="liveRanksCurrentMembers">—</strong></div>
+<div><span class="dashboard-label-with-info">Ranked members <button aria-expanded="false" aria-label="About Live ranked members" class="p2k-info-button p2k-info-mark" data-p2k-info-message="Current Promote to King members with at least 50 Live arena points and therefore a place in one of the six Live ranks." type="button">i</button></span><strong id="liveRanksRankedMembers">—</strong></div>
+<div><span>Team leader</span><strong id="liveRanksLeader">—</strong></div>
+<div><span>Your position</span><strong id="liveRanksPersonalPosition">—</strong></div>
+</div>
+<div class="dashboard-card dashboard-hall-page-card">
+<div class="dashboard-hall-status" id="liveRanksNativeStatus">Loading Live ranks…</div>
+<div class="dashboard-hall-ranks" id="liveRanksNativeGrid"></div>
+</div>
+</div>
+<div class="dashboard-integrated-page" data-hall-panel="tournaments" role="tabpanel" hidden>
+  <iframe class="dashboard-integrated-frame" id="tournamentsFrame" title="Tournament history" data-src="Tournaments.html?embedded=1&release=2.10.5"></iframe>
+</div>
+<div class="dashboard-integrated-page" data-hall-panel="achievements" role="tabpanel">
+  <iframe class="dashboard-integrated-frame" id="achievementsFrame" title="Player achievements" data-src="TournamentAchievementBadgesDemo.html?embedded=1&release=2.10.5"></iframe>
+</div>
+</section>
+</section>
+
+<section class="dashboard-panel p2k-administration-page" id="administrationPage" hidden>
+<nav class="dashboard-integrated-subtabs dashboard-hall-subtabs p2k-admin-subtabs" aria-label="Administration sections" role="tablist">
+  <button class="is-active" data-admin-group="daily" type="button">Daily matches</button>
+  <button data-admin-group="live" type="button">Live ranks</button>
+  <button data-admin-group="tools" type="button">Administration tools</button>
+</nav>
+<section data-admin-group-panel="daily">
+  <nav class="dashboard-integrated-subtabs dashboard-hall-subtabs p2k-admin-tool-subtabs" aria-label="Daily match tools" role="tablist">
+    <button class="is-active" data-admin-subtab="upcoming" type="button">Upcoming Matches</button>
+    <button data-admin-subtab="creation" type="button">Match Creation</button>
+    <button data-admin-subtab="challenge" type="button">Challenge Assistant</button>
+    <button data-admin-subtab="open" type="button">Open Match Analyzer</button>
+  </nav>
+</section>
+<section data-admin-group-panel="live" hidden>
+  <nav class="dashboard-integrated-subtabs dashboard-hall-subtabs p2k-admin-tool-subtabs" aria-label="Live ranks tools" role="tablist">
+    <button data-admin-subtab="live-ranks" type="button">Live Ranks computation</button>
+  </nav>
+</section>
+<section data-admin-group-panel="tools" hidden>
+  <nav class="dashboard-integrated-subtabs dashboard-hall-subtabs p2k-admin-tool-subtabs" aria-label="Administration utilities" role="tablist">
+    <button data-admin-subtab="tasks" type="button">Scheduled Tasks Control</button>
+    <button data-admin-subtab="logs" type="button">Task Logs</button>
+    <button data-admin-subtab="diagnostics" type="button">Runtime Diagnostics</button>
+    <button data-admin-subtab="storage" type="button">Storage &amp; Capacity</button>
+    <button data-admin-subtab="intelligence" type="button">Club Intelligence</button>
+    <button data-admin-subtab="reconciliation" type="button">Data Reconciliation</button>
+    <button data-admin-subtab="members" type="button">Members</button>
+    <button data-admin-subtab="migration" type="button">Production Migration</button>
+  </nav>
+  <article class="p2k-admin-throughput-card" id="adminApiThroughputCard">
+    <div class="p2k-admin-throughput-head">
+      <div><span>Chess.com API transport</span><h3>OAuth Bearer throughput · rolling 10 minutes</h3><p>Server-side authenticated gateway completions. Average and peak requests/second are aggregated by minute.</p></div>
+      <div class="p2k-admin-throughput-metrics"><span>Latest avg <strong id="adminApiThroughputAverage">—</strong></span><span>10 min peak <strong id="adminApiThroughputPeak">—</strong></span></div>
+    </div>
+    <div class="p2k-admin-throughput-chart" id="adminApiThroughputChart" role="img" aria-label="Average and peak Chess.com API requests per second over the last ten minutes"></div>
+    <div class="p2k-admin-throughput-legend"><span><i class="is-average"></i>Average req/s</span><span><i class="is-peak"></i>Peak req/s</span><small id="adminApiThroughputStatus">Waiting for throughput telemetry…</small></div>
+  </article>
+</section>
+<div class="dashboard-integrated-page" data-admin-panel="upcoming"><iframe class="dashboard-integrated-frame" id="adminUpcomingFrame" title="Upcoming Matches" data-src="AnalyzeMatches.htm?embedded=1&release=2.10.5"></iframe></div>
+<div class="dashboard-integrated-page" data-admin-panel="creation" hidden><iframe class="dashboard-integrated-frame" id="adminCreationFrame" title="Match Creation" data-src="MatchCreationAnalyzer.htm?embedded=1&release=2.10.6.11"></iframe></div>
+<div class="dashboard-integrated-page" data-admin-panel="challenge" hidden><iframe class="dashboard-integrated-frame" id="adminChallengeFrame" title="Challenge Assistant" data-src="ChallengeListAssistant.html?embedded=1&release=2.10.5"></iframe></div>
+<div class="dashboard-integrated-page" data-admin-panel="open" hidden><div class="p2k-admin-standalone-row"><a class="dashboard-button" href="AnalyzeMatch.html" target="_blank" rel="noopener noreferrer">Open Match Analyzer standalone ↗</a></div><iframe class="dashboard-integrated-frame" id="adminOpenFrame" title="Open Match Analyzer" data-src="AnalyzeMatch.html?embedded=1&release=2.10.5"></iframe></div>
+<div class="dashboard-integrated-page" data-admin-panel="live-ranks" hidden><iframe class="dashboard-integrated-frame" id="adminLiveRanksFrame" title="Live Ranks computation" data-src="TeamPointsAdmin.html?embedded=1&tab=live-ranks&release=2.10.6.11"></iframe></div>
+<div class="dashboard-integrated-page" data-admin-panel="tasks" hidden><iframe class="dashboard-integrated-frame" id="adminTasksFrame" title="Scheduled Task Control" data-src="TaskControl.html?embedded=1&release=2.10.5"></iframe></div>
+<div class="dashboard-integrated-page" data-admin-panel="logs" hidden><iframe class="dashboard-integrated-frame" id="adminLogsFrame" title="Task Logs" data-src="TaskLogs.html?embedded=1&release=2.10.5"></iframe></div>
+<div class="dashboard-integrated-page" data-admin-panel="diagnostics" hidden><iframe class="dashboard-integrated-frame" id="adminDiagnosticsFrame" title="Runtime Diagnostics and Insights API health" data-src="InsightsHealth.html?embedded=1&release=2.10.5"></iframe></div>
+<div class="dashboard-integrated-page" data-admin-panel="storage" hidden><iframe class="dashboard-integrated-frame" id="adminStorageFrame" title="Storage and Capacity" data-src="TeamPointsAdmin.html?embedded=1&tab=storage&release=2.10.6.11"></iframe></div>
+<div class="dashboard-integrated-page" data-admin-panel="intelligence" hidden><iframe class="dashboard-integrated-frame" id="adminIntelligenceFrame" title="Club Intelligence" data-src="ClubIntelligence.html?embedded=1&tab=overview&release=2.10.5"></iframe></div>
+<div class="dashboard-integrated-page" data-admin-panel="reconciliation" hidden><iframe class="dashboard-integrated-frame" id="adminReconciliationFrame" title="Data Reconciliation" data-src="DataReconciliation.html?embedded=1&release=2.10.5"></iframe></div>
+<div class="dashboard-integrated-page" data-admin-panel="members" hidden><iframe class="dashboard-integrated-frame" id="adminMembersFrame" title="Member chronology" data-src="TeamPointsAdmin.html?embedded=1&tab=members&release=2.10.6.11"></iframe></div>
+<div class="dashboard-integrated-page" data-admin-panel="migration" hidden><iframe class="dashboard-integrated-frame" id="adminMigrationFrame" title="Production Migration" data-src="TeamPointsMigration.html?embedded=1&release=2.10.5"></iframe></div>
+</section>
+</main>
+
+<div class="dashboard-modal-backdrop" hidden id="dashboardMatchListModal">
+<div aria-labelledby="dashboardMatchListTitle" aria-modal="true" class="dashboard-match-list-modal" role="dialog">
+<div class="dashboard-modal-head"><div><p class="dashboard-kicker">Team matches</p><h2 id="dashboardMatchListTitle">Match list</h2><p id="dashboardMatchListSummary">Loading matches…</p></div><button aria-label="Close match list" class="dashboard-modal-close" id="closeDashboardMatchList" type="button">×</button></div>
+<div class="dashboard-match-list" id="dashboardMatchList"></div>
+</div>
+</div>
+
+
+<div class="dashboard-modal-backdrop" hidden id="playerGamesModal">
+<section aria-labelledby="playerGamesTitle" aria-modal="true" class="dashboard-player-games-modal" role="dialog">
+<div class="dashboard-modal-head"><div><p class="dashboard-kicker">Player activity</p><h2 id="playerGamesTitle">Team games</h2><p id="playerGamesSummary">Loading player match activity…</p></div><button aria-label="Close player games" class="dashboard-modal-close" id="closePlayerGames" type="button">×</button></div>
+<div class="dashboard-player-games-list" id="playerGamesList"></div>
+</section>
+</div>
+
+
+<div class="dashboard-modal-backdrop" hidden id="opponentDetailModal">
+<section aria-labelledby="opponentDetailTitle" aria-modal="true" class="dashboard-player-games-modal" role="dialog">
+<div class="dashboard-modal-head"><div><p class="dashboard-kicker">Opponent record</p><h2 id="opponentDetailTitle">Opponent</h2><p id="opponentDetailSummary"></p></div><button aria-label="Close opponent details" class="dashboard-modal-close" id="closeOpponentDetail" type="button">×</button></div>
+<div class="dashboard-opponent-detail" id="opponentDetailBody"></div>
+</section></div>
+
+<div aria-live="polite" class="dashboard-toast" hidden id="dashboardToast" role="status"></div>
+<noscript><div class="dashboard-noscript">JavaScript is required for the dashboard.</div></noscript>
+</body>
+</html>
