@@ -1,7 +1,8 @@
 name: Probe P2K source archives
 on:
   push:
-    branches: [import-v2.10.6.23-canonical]
+    branches:
+      - import-v2.10.6.23-canonical
 permissions:
   contents: read
 jobs:
@@ -9,23 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Validate deployed v2.10.6.19 source
-        shell: bash
         run: |
           set -euo pipefail
-          url='https://www.promotetoking.org/PromoteToKing_Standalone_v2.10.6.19_SOURCE.zip'
-          curl -fL --retry 3 -o /tmp/v19.zip "$url"
-          echo "SIZE=$(wc -c </tmp/v19.zip)"
-          echo "SHA256=$(sha256sum /tmp/v19.zip | awk '{print $1}')"
+          curl -fL --retry 3 -o /tmp/v19.zip https://www.promotetoking.org/PromoteToKing_Standalone_v2.10.6.19_SOURCE.zip
+          echo SIZE=$(wc -c </tmp/v19.zip)
+          echo SHA256=$(sha256sum /tmp/v19.zip | cut -d' ' -f1)
           unzip -tq /tmp/v19.zip
-          mkdir /tmp/v19
+          mkdir -p /tmp/v19
           unzip -q /tmp/v19.zip -d /tmp/v19
-          root=$(find /tmp/v19 -name VERSION -type f -printf '%h\n' | head -1)
-          test -n "$root"
-          echo "ROOT=$root"
-          echo "VERSION=$(cat "$root/VERSION")"
-          echo "FILES=$(find "$root" -type f | wc -l)"
-          echo "MANIFEST_FILES=$(python - "$root/site-manifest.json" <<'PY'
-          import json,sys
-          print(len(json.load(open(sys.argv[1]))['files']))
-          PY
-          )"
+          echo VERSION_FILES
+          find /tmp/v19 -name VERSION -type f -print -exec cat {} \;
+          echo TOTAL_FILES=$(find /tmp/v19 -type f | wc -l)
