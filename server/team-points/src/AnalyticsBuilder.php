@@ -457,7 +457,7 @@ final class AnalyticsBuilder
                 if($sameDayCount===1){$dayTs=strtotime($day.' UTC');if($dayTs!==false){$dayIndex=(int)floor($dayTs/86400);$st['start_day_streak']=$st['last_start_day_index']!==null&&$dayIndex===$st['last_start_day_index']+1?$st['start_day_streak']+1:1;$st['last_start_day_index']=$dayIndex;$st['start_day_peak']=max((int)$st['start_day_peak'],(int)$st['start_day_streak']);foreach([[3,'match-start-streak-3'],[5,'match-start-streak-5'],[7,'match-start-streak-7'],[10,'match-start-streak-10'],[14,'match-start-streak-14']] as $m)if($st['start_day_streak']===$m[0])$record($u,$m[1],$startAt,'match-start-time','match',(string)$r['match_name'],(string)$r['match_url']);}}
             }
             if($st['matches']===1)$record($u,'first-match',$at,'match-time','match',(string)$r['match_name'],(string)$r['match_url']);
-            foreach([10,50,100,250,500] as $n)if($st['matches']===$n)$record($u,'matches-'.$n,$at,'match-time','match',(string)$r['match_name'],(string)$r['match_url']);
+            foreach([10,50,100,250,500,1000] as $n)if($st['matches']===$n)$record($u,'matches-'.$n,$at,'match-time','match',(string)$r['match_name'],(string)$r['match_url']);
             $opponentSlug=strtolower(trim((string)($r['opponent_slug']??'')));
             if($opponentSlug!==''){
                 if(isset($st['opponents'][$opponentSlug])){$st['rematches']++;foreach([[5,'old-foes-5'],[10,'old-foes-10'],[25,'old-foes-25']] as $m)if($st['rematches']===$m[0])$record($u,$m[1],$at,'match-time','match',(string)$r['match_name'],(string)$r['match_url']);}

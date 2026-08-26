@@ -3,13 +3,14 @@ declare(strict_types=1);
 namespace P2K\TeamPoints;
 final class AchievementCatalog {
  public static function all(): array { return [
-            self::item('first-match','First Match','Participate in your first recorded Promote to King team match.','matches',self::placeholder('first-match'),self::placeholder('first-match')),
+            self::item('first-match','First Match','Participate in your first recorded Promote to King team match.','matches','assets/images/achievements/first-match.png','assets/images/achievements/thumbs/128/first-match.webp'),
             self::item('first-point','First Step','Earn your first Team Point.','team-points',self::placeholder('first-point'),self::placeholder('first-point')),
-            self::item('matches-10','Rising Star','Play in 10 Promote to King team matches.','matches',self::placeholder('matches-10'),self::placeholder('matches-10')),
-            self::item('matches-50','Clutch Player','Play in 50 Promote to King team matches.','matches',self::placeholder('matches-50'),self::placeholder('matches-50')),
-            self::item('matches-100','Great Strategist','Play in 100 Promote to King team matches.','matches',self::placeholder('matches-100'),self::placeholder('matches-100')),
-            self::item('matches-250','Match Veteran','Play in 250 Promote to King team matches.','matches',self::placeholder('matches-250'),self::placeholder('matches-250')),
-            self::item('matches-500','Match Legend','Play in 500 Promote to King team matches.','matches',self::placeholder('matches-500'),self::placeholder('matches-500')),
+            self::item('matches-10','Rising Star','Play in 10 Promote to King team matches.','matches','assets/images/achievements/matches-10.png','assets/images/achievements/thumbs/128/matches-10.webp'),
+            self::item('matches-50','Clutch Player','Play in 50 Promote to King team matches.','matches','assets/images/achievements/matches-50.png','assets/images/achievements/thumbs/128/matches-50.webp'),
+            self::item('matches-100','Great Strategist','Play in 100 Promote to King team matches.','matches','assets/images/achievements/matches-100.png','assets/images/achievements/thumbs/128/matches-100.webp'),
+            self::item('matches-250','Match Veteran','Play in 250 Promote to King team matches.','matches','assets/images/achievements/matches-250.png','assets/images/achievements/thumbs/128/matches-250.webp'),
+            self::item('matches-500','Match Legend','Play in 500 Promote to King team matches.','matches','assets/images/achievements/matches-500.png','assets/images/achievements/thumbs/128/matches-500.webp'),
+            self::item('matches-1000','Match Immortal','Play in 1,000 Promote to King team matches.','matches','assets/images/achievements/matches-1000.png','assets/images/achievements/thumbs/128/matches-1000.webp'),
             self::item('games-100','Centurion','Complete 100 team games.','games','assets/images/achievements/games-100.png','assets/images/achievements/thumbs/128/games-100.webp'),
             self::item('games-500','Five Hundred Games','Complete 500 team games.','games','assets/images/achievements/games-500.png','assets/images/achievements/thumbs/128/games-500.webp'),
             self::item('games-1000','One Thousand Games','Complete 1,000 team games.','games','assets/images/achievements/games-1000.png','assets/images/achievements/thumbs/128/games-1000.webp'),

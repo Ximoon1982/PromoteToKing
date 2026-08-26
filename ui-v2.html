@@ -162,6 +162,7 @@
     <button class="is-active" data-insights-subtab="team" type="button" role="tab" aria-selected="true">Team</button>
     <button data-insights-subtab="members" type="button" role="tab" aria-selected="false">Members</button>
     <button data-insights-subtab="matches" type="button" role="tab" aria-selected="false">Matches</button>
+    <button data-insights-subtab="arenas" type="button" role="tab" aria-selected="false">Arenas</button>
     <button data-insights-subtab="opponents" type="button" role="tab" aria-selected="false">Opponents</button>
   </div>
   <div data-insights-panel="team" role="tabpanel">
@@ -229,6 +230,40 @@
       <div class="p2k-table-toolbar"><label>Search<input id="opponentsTableSearch" type="search" placeholder="Opponent club…"></label><label>Status<select id="opponentsTableFilter"><option value="all">All opponents</option><option value="active">Currently playing</option><option value="registered">In registration</option><option value="finished">With finished matches</option><option value="disabled">Disabled clubs</option></select></label><span class="p2k-table-count" id="opponentsTableCount"></span></div>
       <div class="p2k-table-wrap"><table class="p2k-table p2k-opponents-table" id="opponentsDataTable"><thead><tr><th data-key="name">Opponent</th><th class="is-right" data-key="total" title="Total">Total</th><th class="is-right" data-key="ongoing" title="Ongoing">Ong.</th><th class="is-right" data-key="registered" title="Registered">Reg.</th><th class="is-right" data-key="finished" title="Finished">Fin.</th><th class="is-right" data-key="wins" title="Wins">W</th><th class="is-right" data-key="draws" title="Draws">D</th><th class="is-right" data-key="losses" title="Losses">L</th><th class="is-right" data-key="our_points" title="Our score">P2K</th><th class="is-right" data-key="their_points" title="Their score">Opp.</th><th class="is-right" data-key="balance" title="Balance">Δ</th><th class="is-right" data-key="win_rate" title="Win rate">Win %</th></tr></thead><tbody></tbody></table></div>
       <div class="p2k-table-footer"><span class="p2k-table-status" id="opponentsTableStatus">Loading opponent insights…</span><div class="p2k-table-pager" id="opponentsTablePager"></div></div>
+    </section>
+  </div>
+  <div class="p2k-native-panel" data-insights-panel="arenas" role="tabpanel" hidden>
+    <section class="p2k-native-heading"><div><h2>Insights · Arenas</h2><p>Multi-Club Arena participation and performance from the stored Results archive, resolved through canonical player identities.</p></div><span class="p2k-native-badge" id="arenasDatabaseBadge">MCA Results</span></section>
+    <section class="p2k-stat-grid" aria-label="Arena summary">
+      <div class="p2k-stat-card"><span>Arenas played</span><strong id="arenasStatPlayed">—</strong></div>
+      <div class="p2k-stat-card"><span>P2K participations</span><strong id="arenasStatParticipations">—</strong></div>
+      <div class="p2k-stat-card"><span>Unique P2K players</span><strong id="arenasStatPlayers">—</strong></div>
+      <div class="p2k-stat-card"><span>Arena victories</span><strong id="arenasStatVictories">—</strong></div>
+      <div class="p2k-stat-card"><span>Podiums</span><strong id="arenasStatPodiums">—</strong></div>
+      <div class="p2k-stat-card"><span>Top-10 finishes</span><strong id="arenasStatTop10">—</strong></div>
+      <div class="p2k-stat-card"><span>Best finish</span><strong id="arenasStatBest">—</strong></div>
+      <div class="p2k-stat-card"><span>Avg. P2K players / arena</span><strong id="arenasStatAverage">—</strong></div>
+    </section>
+    <section class="p2k-insights-grid p2k-insights-grid-large">
+      <article class="p2k-insight-card is-full-width"><div class="p2k-chart-heading"><div><h3>P2K participation per arena</h3><p>Chronological turnout. Switch between raw P2K participants and share of the full arena field.</p></div><div class="p2k-arena-toggle" role="group" aria-label="Arena participation metric"><button class="dashboard-button is-active" id="arenasParticipationPlayers" type="button">Players</button><button class="dashboard-button" id="arenasParticipationShare" type="button">Field share</button><button type="button" class="p2k-chart-reset" data-chart-reset="arenasParticipationChart">Reset zoom</button></div></div><div id="arenasParticipationChart" class="p2k-native-chart" aria-label="P2K arena participation chart"></div></article>
+      <article class="p2k-insight-card"><div class="p2k-chart-heading"><div><h3>Best P2K placement</h3><p>Best canonical P2K finisher in each arena. Rank #1 is at the top.</p></div><button type="button" class="p2k-chart-reset" data-chart-reset="arenasPlacementChart">Reset zoom</button></div><div id="arenasPlacementChart" class="p2k-native-chart" aria-label="Best P2K placement chart"></div></article>
+      <article class="p2k-insight-card"><div class="p2k-chart-heading"><div><h3>Normalized finishing percentile</h3><p>Best finish normalized for arena field size; 100% means first place.</p></div><button type="button" class="p2k-chart-reset" data-chart-reset="arenasPercentileChart">Reset zoom</button></div><div id="arenasPercentileChart" class="p2k-native-chart" aria-label="Normalized arena finishing percentile chart"></div></article>
+      <article class="p2k-insight-card is-full-width"><div class="p2k-chart-heading"><div><h3>MCA points over time</h3><p>P2K MCA points per arena with cumulative progression.</p></div><button type="button" class="p2k-chart-reset" data-chart-reset="arenasPointsChart">Reset zoom</button></div><div id="arenasPointsChart" class="p2k-native-chart" aria-label="MCA points over time chart"></div><div class="p2k-chart-legend"><span data-chart-color="blue">Arena points</span><span data-chart-color="gold">Cumulative points</span></div></article>
+      <article class="p2k-insight-card"><div class="p2k-chart-heading"><div><h3>Win / draw / loss evolution</h3><p>Aggregated P2K game results in each arena where the Results CSV provides game counts.</p></div><button type="button" class="p2k-chart-reset" data-chart-reset="arenasResultsChart">Reset zoom</button></div><div id="arenasResultsChart" class="p2k-native-chart"></div><div class="p2k-chart-legend"><span data-chart-color="green">Wins</span><span data-chart-color="gold">Draws</span><span data-chart-color="red">Losses</span></div></article>
+      <article class="p2k-insight-card"><div class="p2k-chart-heading"><div><h3>Score percentage</h3><p>Game score percentage per arena: wins plus half of draws, divided by games.</p></div><button type="button" class="p2k-chart-reset" data-chart-reset="arenasScoreChart">Reset zoom</button></div><div id="arenasScoreChart" class="p2k-native-chart"></div></article>
+      <article class="p2k-insight-card is-full-width"><h3>Arena records</h3><p>Results-derived participation and performance records across the stored MCA history.</p><div id="arenasRecords" class="p2k-compact-list"><p class="p2k-table-status">Loading arena records…</p></div></article>
+    </section>
+    <section class="p2k-table-card">
+      <div class="p2k-chart-heading"><div><h3>Arena leaders</h3><p>Canonical players ranked across participation, placements and MCA points. Click a player to open the unified profile.</p></div></div>
+      <div class="p2k-table-toolbar"><label>Search<input id="arenasLeadersSearch" type="search" placeholder="Player name…"></label><span class="p2k-table-count" id="arenasLeadersCount"></span></div>
+      <div class="p2k-table-wrap"><table class="p2k-table" id="arenasLeadersTable"><thead><tr><th data-key="username">Player</th><th class="is-right" data-key="arenas">Arenas</th><th class="is-right" data-key="wins">Wins</th><th class="is-right" data-key="podiums">Podiums</th><th class="is-right" data-key="top10s">Top 10</th><th class="is-right" data-key="points">MCA points</th><th class="is-right" data-key="game_wins">W</th><th class="is-right" data-key="draws">D</th><th class="is-right" data-key="losses">L</th><th class="is-right" data-key="best_finish">Best</th><th data-key="live_rank_name">Live rank</th></tr></thead><tbody></tbody></table></div>
+      <div class="p2k-table-footer"><span class="p2k-table-status" id="arenasLeadersStatus">Loading arena leaders…</span><div class="p2k-table-pager" id="arenasLeadersPager"></div></div>
+    </section>
+    <section class="p2k-table-card">
+      <div class="p2k-chart-heading"><div><h3>All arenas</h3><p>Search and sort the stored arena archive. Select an arena name to inspect its P2K results.</p></div></div>
+      <div class="p2k-table-toolbar"><label>Search<input id="arenasTableSearch" type="search" placeholder="Arena or player…"></label><span class="p2k-table-count" id="arenasTableCount"></span></div>
+      <div class="p2k-table-wrap"><table class="p2k-table" id="arenasDataTable"><thead><tr><th data-key="event_date">Date</th><th data-key="arena_name">Arena</th><th class="is-right" data-key="total_players">Field</th><th class="is-right" data-key="p2k_players">P2K</th><th class="is-right" data-key="p2k_share_percent">Share</th><th data-key="best_rank">Best P2K</th><th class="is-right" data-key="top10_count">Top 10</th><th class="is-right" data-key="podium_count">Podiums</th><th class="is-right" data-key="p2k_points">MCA points</th><th class="is-right" data-key="score_percent">Score %</th></tr></thead><tbody></tbody></table></div>
+      <div class="p2k-table-footer"><span class="p2k-table-status" id="arenasTableStatus">Loading arena archive…</span><div class="p2k-table-pager" id="arenasTablePager"></div></div>
     </section>
   </div>
 </section>

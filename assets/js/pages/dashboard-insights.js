@@ -50,7 +50,7 @@ function membersTableColumns() {
       };
       if (window.P2K_CREATE_INSIGHTS_CHARTS) return finish();
       const script = document.createElement("script");
-      script.src = "assets/js/pages/dashboard-insights-charts.js?v=2.10.4";
+      script.src = "assets/js/pages/dashboard-insights-charts.js?v=2.10.6.24";
       script.defer = true; script.onload = finish; script.onerror = () => reject(new Error("Unable to load Insights chart module."));
       document.head.appendChild(script);
     });
@@ -300,6 +300,141 @@ function membersTableColumns() {
     }catch(error){if(status){status.classList.add("is-error");status.textContent=`Unable to load match insights: ${error.message||error}`;}}
   }
 
+  function arenaInsightsURL(tableState = state.arenasTableState, { section = "all", fileId = 0 } = {}) {
+    const url = new URL("server/team-points/public/arenas-insights.php", window.location.href);
+    if (section && section !== "all") url.searchParams.set("section", section);
+    if (fileId) url.searchParams.set("file_id", String(fileId));
+    if (section === "table" || section === "all") {
+      url.searchParams.set("page", String(Math.max(1, Number(tableState?.page) || 1)));
+      url.searchParams.set("page_size", "25");
+      if (tableState?.query) url.searchParams.set("search", tableState.query);
+      if (tableState?.sort) url.searchParams.set("sort", tableState.sort);
+      url.searchParams.set("direction", tableState?.direction === "asc" ? "asc" : "desc");
+    }
+    return url.href;
+  }
+
+  function arenaDateLabel(row) {
+    const date = String(row?.event_date || "");
+    return row?.event_date_approximate ? `${date}≈` : date;
+  }
+
+  function renderArenaParticipation(rows) {
+    const metric = state.arenasParticipationMetric === "share" ? "share" : "players";
+    byId("arenasParticipationPlayers")?.classList.toggle("is-active", metric === "players");
+    byId("arenasParticipationShare")?.classList.toggle("is-active", metric === "share");
+    const mapped = rows.map(row => ({ ...row, chart_date: arenaDateLabel(row) }));
+    renderNativeLine("arenasParticipationChart", mapped, metric === "share" ? {
+      xKey: "chart_date", yMin: 0, yMax: 100, axisFormatter: value => `${Math.round(value)}%`,
+      series: [{ key: "p2k_share_percent", label: "P2K share", color: "#4aa8d8", decimals: 1 }],
+      tooltipExtra: row => `${escapeHTML(row.arena_name)}<br>Field: <b>${number(row.total_players)}</b> · P2K: <b>${number(row.p2k_players)}</b>`
+    } : {
+      xKey: "chart_date", series: [{ key: "p2k_players", label: "P2K players", color: "#4aa8d8", decimals: 0 }],
+      tooltipExtra: row => `${escapeHTML(row.arena_name)}<br>Full field: <b>${number(row.total_players)}</b> · Share: <b>${row.p2k_share_percent == null ? "—" : Number(row.p2k_share_percent).toFixed(1) + "%"}</b>`
+    });
+  }
+
+  function renderArenaTrend(rows) {
+    const trend = Array.isArray(rows) ? rows.map(row => ({ ...row, chart_date: arenaDateLabel(row) })) : [];
+    if (!trend.length) {
+      ["arenasParticipationChart","arenasPlacementChart","arenasPercentileChart","arenasPointsChart","arenasResultsChart","arenasScoreChart"].forEach(id => nativeChartEmpty(byId(id), "No processed MCA Results data is available."));
+      return;
+    }
+    renderArenaParticipation(trend);
+    const ranks = trend.map(row => Number(row.best_rank)).filter(Number.isFinite), rankMax = Math.max(10, ...(ranks.length ? ranks : [10]));
+    renderNativeLine("arenasPlacementChart", trend, {
+      xKey: "chart_date", yMin: 1, yMax: rankMax, invertY: true, axisFormatter: value => `#${Math.max(1, Math.round(value))}`,
+      series: [{ key: "best_rank", label: "Best finish", color: "#f6b73c", decimals: 0 }],
+      tooltipExtra: row => `${escapeHTML(row.arena_name)}<br>Best: <b>${row.best_finisher ? escapeHTML(row.best_finisher) : "—"}</b> · Field: <b>${number(row.total_players)}</b><br>P2K: <b>${number(row.p2k_players)}</b> · Top 10: <b>${number(row.top10_count)}</b>`
+    });
+    renderNativeLine("arenasPercentileChart", trend, {
+      xKey: "chart_date", yMin: 0, yMax: 100, axisFormatter: value => `${Math.round(value)}%`,
+      series: [{ key: "best_percentile", label: "Best percentile", color: "#48b8a8", decimals: 1 }],
+      tooltipExtra: row => `${escapeHTML(row.arena_name)}<br>Finish: <b>${row.best_rank ? `#${number(row.best_rank)}` : "—"}</b> of <b>${number(row.total_players)}</b>`
+    });
+    renderNativeBarLine("arenasPointsChart", trend, { xKey: "chart_date", barKey: "p2k_points", lineKey: "cumulative_points", barLabel: "Arena MCA points", lineLabel: "Cumulative MCA points" });
+    const resultRows = trend.filter(row => row.games != null);
+    renderNativeStackedBars("arenasResultsChart", resultRows, { labelKey: "chart_date", series: [
+      { key: "wins", label: "Wins", color: "#5fbf72" }, { key: "draws", label: "Draws", color: "#f6b73c" }, { key: "losses", label: "Losses", color: "#e7685a" }
+    ], showTotals: false });
+    renderNativeLine("arenasScoreChart", resultRows, { xKey: "chart_date", yMin: 0, yMax: 100, axisFormatter: value => `${Math.round(value)}%`, series: [{ key: "score_percent", label: "Score", color: "#a98ae8", decimals: 1 }], tooltipExtra: row => `${escapeHTML(row.arena_name)}<br>W / D / L: <b>${number(row.wins)} / ${number(row.draws)} / ${number(row.losses)}</b>` });
+    document.querySelectorAll('[data-chart-reset^="arenas"]').forEach(button => { const id = button.dataset.chartReset; button.onclick = () => byId(id)?._p2kResetZoom?.(); });
+  }
+
+  function arenaLeadersColumns() {
+    return [
+      { key: "username", type: "text", render: row => cellWithSub(insightAction(row.username, () => openUnifiedPlayerProfile(row.username)), row.current_member ? "Current member" : "Former member") },
+      ...["arenas","wins","podiums","top10s"].map(key => ({ key, type: "number", align: "right", render: row => number(row[key]) })),
+      { key: "points", type: "number", align: "right", render: row => Number(row.points || 0).toFixed(1).replace(/\.0$/, "") },
+      ...["game_wins","draws","losses"].map(key => ({ key, type: "number", align: "right", render: row => row[key] == null ? "—" : number(row[key]) })),
+      { key: "best_finish", type: "number", align: "right", render: row => row.best_finish ? `#${number(row.best_finish)}` : "—" },
+      { key: "live_rank_name", type: "text", render: row => row.live_rank_name || "Unranked" }
+    ];
+  }
+
+  function arenaTableColumns() {
+    return [
+      { key: "event_date", type: "text", render: row => cellWithSub(row.event_date || "—", row.event_date_approximate ? "Approximate" : "Known date") },
+      { key: "arena_name", type: "text", render: row => cellWithSub(insightAction(row.arena_name || row.arena_slug, () => openArenaDetail(row.file_id)), row.best_finisher ? `Best: ${row.best_finisher}` : row.arena_slug) },
+      ...["total_players","p2k_players"].map(key => ({ key, type: "number", align: "right", render: row => number(row[key]) })),
+      { key: "p2k_share_percent", type: "number", align: "right", render: row => row.p2k_share_percent == null ? "—" : `${Number(row.p2k_share_percent).toFixed(1)}%` },
+      { key: "best_rank", type: "number", render: row => row.best_rank ? cellWithSub(`#${number(row.best_rank)}`, row.best_finisher || "") : "—" },
+      ...["top10_count","podium_count"].map(key => ({ key, type: "number", align: "right", render: row => number(row[key]) })),
+      { key: "p2k_points", type: "number", align: "right", render: row => Number(row.p2k_points || 0).toFixed(1).replace(/\.0$/, "") },
+      { key: "score_percent", type: "number", align: "right", render: row => row.score_percent == null ? "—" : `${Number(row.score_percent).toFixed(1)}%` }
+    ];
+  }
+
+  function renderArenaRecords(records) {
+    const host = byId("arenasRecords"); if (!host) return;
+    const rows = Array.isArray(records) ? records : [];
+    host.innerHTML = rows.length ? rows.map(row => {
+      const subject = row.username ? `<button type="button" data-arena-record-player="${escapeHTML(row.username)}">${escapeHTML(row.username)}</button>` : row.file_id ? `<button type="button" data-arena-record-file="${Number(row.file_id)}">${escapeHTML(row.arena || "Arena")}</button>` : escapeHTML(row.arena || "—");
+      const value = row.key === "points" || row.key === "arena_points" ? Number(row.value || 0).toFixed(1).replace(/\.0$/, "") : number(row.value);
+      return `<div><span>${escapeHTML(row.label)}</span><strong>${subject} · ${value}</strong></div>`;
+    }).join("") : '<p class="p2k-table-status">No arena records are available.</p>';
+    host.querySelectorAll("[data-arena-record-player]").forEach(button => button.addEventListener("click", () => openUnifiedPlayerProfile(button.dataset.arenaRecordPlayer)));
+    host.querySelectorAll("[data-arena-record-file]").forEach(button => button.addEventListener("click", () => openArenaDetail(Number(button.dataset.arenaRecordFile))));
+  }
+
+  async function openArenaDetail(fileId) {
+    if (!Number.isFinite(Number(fileId)) || Number(fileId) <= 0) return;
+    showInsightsModal({ eyebrow: "Arena Insights", title: "Arena", subtitle: "Loading MCA Results detail…", html: '<p class="p2k-table-status">Loading arena detail…</p>' });
+    try {
+      const payload = await loadJSON(arenaInsightsURL(state.arenasTableState, { section: "detail", fileId }), { credentials: "same-origin" });
+      if (payload?.ok === false) throw new Error(payload?.error?.message || "Arena detail is unavailable.");
+      const arena = payload.arena || {}, participants = Array.isArray(payload.participants) ? payload.participants : [];
+      const rows = participants.map(row => `<tr><td>${escapeHTML(row.username)}</td><td class="is-right">${row.rank ? `#${number(row.rank)}` : "—"}</td><td class="is-right">${Number(row.points || 0).toFixed(1).replace(/\.0$/, "")}</td><td class="is-right">${row.games == null ? "—" : number(row.games)}</td><td class="is-right">${row.wins == null ? "—" : number(row.wins)}</td><td class="is-right">${row.draws == null ? "—" : number(row.draws)}</td><td class="is-right">${row.losses == null ? "—" : number(row.losses)}</td></tr>`).join("");
+      const source = arena.event_url ? `<p><a class="p2k-table-link" href="${escapeHTML(arena.event_url)}" target="_blank" rel="noopener">Open source arena on Chess.com ↗</a></p>` : "";
+      showInsightsModal({ eyebrow: "Arena Insights", title: arena.arena_name || arena.arena_slug || "Arena", subtitle: `${arena.event_date || "Unknown date"}${arena.event_date_approximate ? " · approximate date" : ""}`, html: `<div class="p2k-detail-kpis"><div><span>Field</span><strong>${number(arena.total_players)}</strong></div><div><span>P2K players</span><strong>${number(arena.p2k_players)}</strong></div><div><span>Best finish</span><strong>${arena.best_rank ? `#${number(arena.best_rank)}` : "—"}</strong></div><div><span>MCA points</span><strong>${Number(arena.p2k_points || 0).toFixed(1).replace(/\.0$/, "")}</strong></div><div><span>Top 10</span><strong>${number(arena.top10_count)}</strong></div><div><span>Podiums</span><strong>${number(arena.podium_count)}</strong></div></div>${source}<div class="p2k-table-wrap"><table class="p2k-table"><thead><tr><th>Player</th><th class="is-right">Rank</th><th class="is-right">Points</th><th class="is-right">Games</th><th class="is-right">W</th><th class="is-right">D</th><th class="is-right">L</th></tr></thead><tbody>${rows || '<tr><td colspan="7" class="p2k-table-empty">No canonical P2K participant rows are available.</td></tr>'}</tbody></table></div>` });
+    } catch (error) { showInsightsModal({ eyebrow: "Arena Insights", title: "Arena unavailable", subtitle: "", html: `<p class="p2k-table-status is-error">${escapeHTML(error.message || error)}</p>` }); }
+  }
+
+  function applyArenaPayload(payload) {
+    const summary = payload?.summary || {}, trend = Array.isArray(payload?.trend) ? payload.trend : [], leaders = Array.isArray(payload?.leaders) ? payload.leaders : [];
+    setText("arenasStatPlayed", number(summary.arenas)); setText("arenasStatParticipations", number(summary.participations)); setText("arenasStatPlayers", number(summary.unique_players)); setText("arenasStatVictories", number(summary.victories)); setText("arenasStatPodiums", number(summary.podiums)); setText("arenasStatTop10", number(summary.top10_finishes)); setText("arenasStatBest", summary.best_finish ? `#${number(summary.best_finish)}` : "—"); setText("arenasStatAverage", Number(summary.average_p2k_players || 0).toFixed(1)); setText("arenasDatabaseBadge", `MCA Results · schema ${number(payload?.meta?.analytics_schema_version)}`);
+    renderArenaTrend(trend); renderArenaRecords(payload?.records || []);
+    if (!state.arenasLeadersTable) state.arenasLeadersTable = new window.P2KDataTable({ root: byId("arenasLeadersTable"), columns: arenaLeadersColumns(), rows: leaders, pageSize: 25, searchInput: byId("arenasLeadersSearch"), countHost: byId("arenasLeadersCount"), pagerHost: byId("arenasLeadersPager"), state: { sort: "points", direction: "desc", page: 1 } }); else state.arenasLeadersTable.setRows(leaders);
+    setText("arenasLeadersStatus", `Canonical MCA leaders · ${number(leaders.length)} players`);
+    const totalRows = Number(payload?.pagination?.total_rows || 0);
+    if (!state.arenasTable) state.arenasTable = new window.P2KDataTable({ root: byId("arenasDataTable"), columns: arenaTableColumns(), rows: payload.rows || [], totalRows, pageSize: 25, searchInput: byId("arenasTableSearch"), countHost: byId("arenasTableCount"), pagerHost: byId("arenasTablePager"), state: state.arenasTableState, remoteLoader: async tableState => { const remote = await loadJSON(arenaInsightsURL(tableState, { section: "table" }), { credentials: "same-origin" }); return { rows: remote.rows || [], totalRows: Number(remote.pagination?.total_rows || 0), pagination: remote.pagination }; }, onRemoteState: event => { const status = byId("arenasTableStatus"); if (!status) return; status.classList.toggle("is-error", Boolean(event.error)); status.textContent = event.loading ? "Loading matching arena rows…" : event.error ? `Unable to load arena rows: ${event.error.message || event.error}` : `Arena archive ready · ${number(event.payload?.totalRows || 0)} matching arenas`; }, onStateChange: next => { state.arenasTableState = next; writeNavigationState({ replace: true }); } }); else state.arenasTable.setRemoteData(payload.rows || [], totalRows);
+    setText("arenasTableStatus", `Arena archive ready · ${number(totalRows)} stored arenas`);
+  }
+
+  async function loadArenaInsights({ force = false } = {}) {
+    if (state.arenasLoaded && !force) return;
+    const status = byId("arenasTableStatus"); if (status) { status.classList.remove("is-error"); status.textContent = "Loading Arena Insights…"; }
+    const playersButton = byId("arenasParticipationPlayers"), shareButton = byId("arenasParticipationShare");
+    if (playersButton && !playersButton.dataset.bound) { playersButton.dataset.bound = "1"; playersButton.addEventListener("click", () => { state.arenasParticipationMetric = "players"; if (state.arenasTrend) renderArenaParticipation(state.arenasTrend); }); }
+    if (shareButton && !shareButton.dataset.bound) { shareButton.dataset.bound = "1"; shareButton.addEventListener("click", () => { state.arenasParticipationMetric = "share"; if (state.arenasTrend) renderArenaParticipation(state.arenasTrend); }); }
+    const cached = window.P2K_PROGRESSIVE?.snapshotGet?.("arenas-insights-v1", 6 * 3600000); if (cached?.payload) { state.arenasTrend = cached.payload.trend || []; applyArenaPayload(cached.payload); if (status) status.textContent = "Cached Arena Insights · refreshing…"; }
+    try {
+      const payload = await loadJSON(arenaInsightsURL(state.arenasTableState), { credentials: "same-origin" });
+      if (payload?.ok === false) throw new Error(payload?.error?.message || "Arena Insights are unavailable.");
+      state.arenasTrend = payload.trend || []; applyArenaPayload(payload); window.P2K_PROGRESSIVE?.snapshotSet?.("arenas-insights-v1", payload); state.arenasLoaded = true;
+    } catch (error) { if (status) { status.classList.add("is-error"); status.textContent = `Unable to load Arena Insights: ${error.message || error}`; } }
+  }
+
   function opponentsTableColumns() {
     return [
       { key: "name", type: "text", render: row => cellWithSub(insightAction(row.name || row.slug, () => openOpponentProfile(row.slug)), row.disabled ? "Disabled club" : row.slug) },
@@ -346,6 +481,6 @@ function membersTableColumns() {
     try{const payload=await loadJSON(opponentInsightsURL(state.opponentsTableState,{section:"summary"}),{credentials:"same-origin"});if(payload?.ok===false)throw new Error(payload?.error?.message||"Opponent insights are unavailable.");applyOpponentSummaryPayload(payload);window.P2K_PROGRESSIVE?.snapshotSet?.("opponents-insights-summary",payload);state.opponentsLoaded=true;if(status)status.textContent="Opponent summary ready · heatmaps use all matches · table loads as you scroll";const observe=window.P2K_PROGRESSIVE?.observe||((_,fn)=>{setTimeout(fn,0);return()=>{}});state.opponentsProgressiveStops.push(observe(byId("opponentsDataTable"),loadTable,{rootMargin:"600px 0px"}));}catch(error){if(status){status.classList.add("is-error");status.textContent=`Unable to load opponent insights: ${error.message||error}`;}}
   }
 
-    return Object.freeze({ loadMemberInsights, loadMatchInsights, loadOpponentInsights, openMatchDetail, renderNativeBarLine });
+    return Object.freeze({ loadMemberInsights, loadMatchInsights, loadArenaInsights, loadOpponentInsights, openMatchDetail, openArenaDetail, renderNativeBarLine });
   };
 })();

@@ -773,6 +773,200 @@ final class LiveRanksService
         ];
     }
 
+    /** Public MCA/Arena Insights derived only from processed Results CSV evidence and canonical MIRA attribution. */
+    public function publicArenasInsights(string $section = 'all', array $options = []): array
+    {
+        $section = strtolower(trim($section));
+        $allowed = ['all','summary','trend','leaders','records','table','detail'];
+        if (!in_array($section, $allowed, true)) throw new ApiException('Unknown Arena Insights section.', 400, 'UNKNOWN_ARENA_INSIGHTS_SECTION');
+
+        $arenas = $this->arenaInsightsRows();
+        $resultsByFile = $this->arenaCanonicalResults();
+        $trend = [];
+        $cumulative = 0.0;
+        foreach ($arenas as $arena) {
+            $fileId = (int)$arena['file_id'];
+            $results = $resultsByFile[$fileId] ?? [];
+            $best = null;
+            $top10 = 0;
+            $podiums = 0;
+            $games = 0;
+            $wins = 0;
+            $draws = 0;
+            $losses = 0;
+            $hasGames = false;
+            foreach ($results as $player) {
+                $rank = $player['rank'] === null ? null : (int)$player['rank'];
+                if ($rank !== null && $rank > 0) {
+                    if ($best === null || $rank < (int)$best['rank'] || ($rank === (int)$best['rank'] && strcasecmp((string)$player['username'], (string)$best['username']) < 0)) $best = $player;
+                    if ($rank <= 10) $top10++;
+                    if ($rank <= 3) $podiums++;
+                }
+                foreach (['games','wins','draws','losses'] as $metric) {
+                    if ($player[$metric] !== null) $hasGames = true;
+                }
+                $games += (int)($player['games'] ?? 0);
+                $wins += (int)($player['wins'] ?? 0);
+                $draws += (int)($player['draws'] ?? 0);
+                $losses += (int)($player['losses'] ?? 0);
+            }
+            $points = round((float)$arena['p2k_points'], 2);
+            $cumulative = round($cumulative + $points, 2);
+            $fieldSize = max(0, (int)$arena['total_players']);
+            $p2kPlayers = max(0, (int)$arena['p2k_players']);
+            $bestRank = $best === null ? null : (int)$best['rank'];
+            $percentile = null;
+            if ($bestRank !== null && $fieldSize > 0) {
+                $percentile = $fieldSize <= 1 ? 100.0 : round(100 * max(0, $fieldSize - $bestRank) / max(1, $fieldSize - 1), 1);
+            }
+            $scorePercent = $hasGames && $games > 0 ? round(100 * ($wins + 0.5 * $draws) / $games, 1) : null;
+            $trend[] = $arena + [
+                'p2k_share_percent' => $fieldSize > 0 ? round(100 * $p2kPlayers / $fieldSize, 1) : null,
+                'best_rank' => $bestRank,
+                'best_finisher' => $best === null ? null : (string)$best['username'],
+                'top10_count' => $top10,
+                'podium_count' => $podiums,
+                'games' => $hasGames ? $games : null,
+                'wins' => $hasGames ? $wins : null,
+                'draws' => $hasGames ? $draws : null,
+                'losses' => $hasGames ? $losses : null,
+                'score_percent' => $scorePercent,
+                'best_percentile' => $percentile,
+                'cumulative_points' => $cumulative,
+            ];
+        }
+
+        $summary = $this->arenaInsightsSummary($trend);
+        if ($section === 'summary') return ['summary' => $summary];
+        if ($section === 'trend') return ['trend' => $trend];
+
+        $leaders = $this->arenaInsightsLeaders($arenas);
+        if ($section === 'leaders') return ['leaders' => $leaders];
+        $records = $this->arenaInsightsRecords($leaders, $arenas);
+        if ($section === 'records') return ['records' => $records];
+
+        if ($section === 'detail') {
+            $fileId = max(0, (int)($options['file_id'] ?? 0));
+            if ($fileId <= 0) throw new ApiException('A valid arena file id is required.', 400, 'ARENA_FILE_ID_REQUIRED');
+            $arena = null;
+            foreach ($trend as $row) if ((int)$row['file_id'] === $fileId) { $arena = $row; break; }
+            if ($arena === null) throw new ApiException('Arena not found.', 404, 'ARENA_NOT_FOUND');
+            $participants = array_values($resultsByFile[$fileId] ?? []);
+            usort($participants, static function(array $a,array $b):int {
+                $ar = $a['rank'] === null ? PHP_INT_MAX : (int)$a['rank'];
+                $br = $b['rank'] === null ? PHP_INT_MAX : (int)$b['rank'];
+                return $ar === $br ? ((float)$b['points'] <=> (float)$a['points']) ?: strcasecmp((string)$a['username'],(string)$b['username']) : $ar <=> $br;
+            });
+            return ['arena' => $arena, 'participants' => $participants];
+        }
+
+        $table = $this->arenaInsightsTable($trend, $options);
+        if ($section === 'table') return $table;
+        return ['summary'=>$summary,'trend'=>$trend,'leaders'=>$leaders,'records'=>$records] + $table;
+    }
+
+    private function arenaInsightsRows(): array
+    {
+        $q = $this->pdo->prepare(
+            "SELECT s.file_id,s.original_name,s.participant_count AS p2k_players,s.total_points AS p2k_points,
+                    s.first_places,s.second_places,s.third_places,
+                    f.arena_id,f.arena_slug,f.event_url,f.actual_event_date,f.effective_event_date,f.event_date_precision,
+                    f.row_count AS total_players,f.p2k_row_count,f.uploaded_at,f.processed_at
+             FROM p2k_lr_arena_stats s
+             JOIN p2k_lr_files f ON f.club_slug=s.club_slug AND f.id=s.file_id
+             WHERE s.club_slug=? AND f.status='processed'
+             ORDER BY COALESCE(f.effective_event_date,DATE(f.uploaded_at)) ASC,COALESCE(f.arena_id,0) ASC,s.file_id ASC"
+        );
+        $q->execute([$this->clubSlug]);
+        return array_map(function(array $row):array {
+            $slug=trim((string)($row['arena_slug']??''));
+            if($slug==='')$slug=preg_replace('/\.csv$/i','',(string)$row['original_name'])??(string)$row['original_name'];
+            $arenaId=is_numeric($row['arena_id']??null)?(int)$row['arena_id']:null;
+            $name=preg_replace('/-\d+$/','',$slug)??$slug;
+            $name=trim(preg_replace('/[-_]+/',' ',$name)??$name);
+            $display=$name!==''?ucwords($name):(string)$row['original_name'];
+            $date=(string)($row['effective_event_date']??'');
+            if($date==='')$date=substr((string)$row['uploaded_at'],0,10);
+            $url=trim((string)($row['event_url']??''));
+            if($url===''&&$slug!=='')$url='https://www.chess.com/tournament/live/arena/'.$slug;
+            return [
+                'file_id'=>(int)$row['file_id'],'arena_id'=>$arenaId,'arena_slug'=>$slug,'arena_name'=>$display,
+                'source_name'=>(string)$row['original_name'],'event_url'=>$url,'event_date'=>$date,
+                'event_date_precision'=>(string)($row['event_date_precision']??'upload-fallback'),
+                'event_date_approximate'=>(string)($row['event_date_precision']??'upload-fallback')!=='known',
+                'total_players'=>(int)$row['total_players'],'p2k_players'=>(int)$row['p2k_players'],
+                'p2k_points'=>(float)$row['p2k_points'],'first_places'=>(int)$row['first_places'],
+                'second_places'=>(int)$row['second_places'],'third_places'=>(int)$row['third_places'],
+                'processed_at'=>$row['processed_at']!==null?(string)$row['processed_at']:null,
+            ];
+        },$q->fetchAll(PDO::FETCH_ASSOC)?:[]);
+    }
+
+    /** Canonical per-arena Results rows. Multiple historical aliases are merged exactly as in MIRA processing. */
+    private function arenaCanonicalResults(): array
+    {
+        $q=$this->pdo->prepare(
+            "SELECT r.file_id,a.canonical_username_key,a.canonical_username,r.score,r.games,r.wins,r.draws,r.losses,r.streak,r.max_wins,r.max_games,r.rank_value
+             FROM p2k_lr_source_rows r
+             JOIN p2k_lr_attributions a ON a.club_slug=r.club_slug AND a.file_id=r.file_id AND a.source_row_no=r.source_row_no
+             WHERE r.club_slug=?
+             ORDER BY r.file_id,r.source_row_no"
+        );
+        $q->execute([$this->clubSlug]);$out=[];
+        foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){
+            $file=(int)$row['file_id'];$key=(string)$row['canonical_username_key'];
+            if(!isset($out[$file][$key]))$out[$file][$key]=['username_key'=>$key,'username'=>(string)$row['canonical_username'],'points'=>0.0,'games'=>null,'wins'=>null,'draws'=>null,'losses'=>null,'streak'=>null,'max_wins'=>null,'max_games'=>null,'rank'=>null];
+            $p=&$out[$file][$key];$p['points']=round((float)$p['points']+(float)$row['score'],2);
+            foreach(['games','wins','draws','losses'] as $metric)if($row[$metric]!==null)$p[$metric]=(int)($p[$metric]??0)+(int)$row[$metric];
+            foreach(['streak','max_wins','max_games'] as $metric)if($row[$metric]!==null)$p[$metric]=max((int)($p[$metric]??0),(int)$row[$metric]);
+            if($row['rank_value']!==null&&(int)$row['rank_value']>0)$p['rank']=$p['rank']===null?(int)$row['rank_value']:min((int)$p['rank'],(int)$row['rank_value']);
+            unset($p);
+        }
+        return $out;
+    }
+
+    private function arenaInsightsSummary(array $trend): array
+    {
+        $uniqueQ=$this->pdo->prepare('SELECT COUNT(*) FROM p2k_lr_players WHERE club_slug=?');$uniqueQ->execute([$this->clubSlug]);
+        $participations=0;$victories=0;$podiums=0;$top10=0;$best=null;
+        foreach($trend as $row){$participations+=(int)$row['p2k_players'];if((int)($row['best_rank']??0)===1)$victories++;$podiums+=(int)$row['podium_count'];$top10+=(int)$row['top10_count'];if($row['best_rank']!==null)$best=$best===null?(int)$row['best_rank']:min($best,(int)$row['best_rank']);}
+        $arenas=count($trend);
+        return ['arenas'=>$arenas,'participations'=>$participations,'unique_players'=>(int)$uniqueQ->fetchColumn(),'victories'=>$victories,'podiums'=>$podiums,'top10_finishes'=>$top10,'best_finish'=>$best,'average_p2k_players'=>$arenas>0?round($participations/$arenas,1):0.0];
+    }
+
+    private function arenaInsightsLeaders(array $arenas): array
+    {
+        $latestIndex=count($arenas)-1;$fileIndex=[];foreach($arenas as $index=>$arena)$fileIndex[(string)$arena['source_name']]=$index;
+        $q=$this->pdo->prepare("SELECT username,username_key,total_points,arena_count,total_games,total_wins,total_draws,total_losses,best_rank,first_place_count,top3_count,top10_count,current_member,account_state,source_files_json FROM p2k_lr_players WHERE club_slug=? ORDER BY total_points DESC,username_key ASC");$q->execute([$this->clubSlug]);$rows=[];
+        foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){
+            $indexes=[];foreach(\p2k_tp_json_decode((string)($row['source_files_json']??'[]')) as $name)if(isset($fileIndex[(string)$name]))$indexes[]=$fileIndex[(string)$name];$indexes=array_values(array_unique($indexes));sort($indexes,SORT_NUMERIC);
+            $longest=0;$current=0;$run=0;$previous=null;foreach($indexes as $idx){$run=($previous!==null&&$idx===$previous+1)?$run+1:1;$longest=max($longest,$run);$previous=$idx;}if($indexes!==[]&&end($indexes)===$latestIndex)$current=$run;
+            $points=(float)$row['total_points'];$rank=$this->rankFor($points);
+            $rows[]=['username'=>(string)$row['username'],'username_key'=>(string)$row['username_key'],'arenas'=>(int)$row['arena_count'],'wins'=>(int)$row['first_place_count'],'podiums'=>(int)$row['top3_count'],'top10s'=>(int)$row['top10_count'],'points'=>$points,'games'=>$row['total_games']===null?null:(int)$row['total_games'],'game_wins'=>$row['total_wins']===null?null:(int)$row['total_wins'],'draws'=>$row['total_draws']===null?null:(int)$row['total_draws'],'losses'=>$row['total_losses']===null?null:(int)$row['total_losses'],'best_finish'=>$row['best_rank']===null?null:(int)$row['best_rank'],'live_rank_key'=>$rank['key']??'unranked','live_rank_name'=>$rank['name']??'Unranked','current_member'=>(bool)$row['current_member'],'account_state'=>(string)$row['account_state'],'longest_participation_streak'=>$longest,'current_participation_streak'=>$current];
+        }
+        return $rows;
+    }
+
+    private function arenaInsightsRecords(array $leaders,array $arenas): array
+    {
+        $spec=[['arenas','Most arena participations'],['wins','Most arena victories'],['podiums','Most podium finishes'],['top10s','Most Top-10 finishes'],['points','Most MCA points'],['longest_participation_streak','Longest participation streak'],['current_participation_streak','Current participation streak']];$records=[];
+        foreach($spec as [$key,$label]){$best=null;foreach($leaders as $row){$value=(float)($row[$key]??0);if($best===null||$value>(float)($best[$key]??0)||($value===(float)($best[$key]??0)&&strcasecmp((string)$row['username'],(string)$best['username'])<0))$best=$row;}if($best!==null)$records[]=['key'=>$key,'label'=>$label,'username'=>(string)$best['username'],'value'=>$best[$key]??0];}
+        $largest=null;$highestPoints=null;foreach($arenas as $arena){if($largest===null||(int)$arena['p2k_players']>(int)$largest['p2k_players'])$largest=$arena;if($highestPoints===null||(float)$arena['p2k_points']>(float)$highestPoints['p2k_points'])$highestPoints=$arena;}
+        if($largest)$records[]=['key'=>'arena_participants','label'=>'Largest P2K arena turnout','arena'=>(string)$largest['arena_name'],'value'=>(int)$largest['p2k_players'],'file_id'=>(int)$largest['file_id']];
+        if($highestPoints)$records[]=['key'=>'arena_points','label'=>'Most P2K points in one arena','arena'=>(string)$highestPoints['arena_name'],'value'=>(float)$highestPoints['p2k_points'],'file_id'=>(int)$highestPoints['file_id']];
+        return $records;
+    }
+
+    private function arenaInsightsTable(array $trend,array $options): array
+    {
+        $rows=$trend;$search=strtolower(trim((string)($options['search']??'')));if($search!=='')$rows=array_values(array_filter($rows,static fn(array $row):bool=>str_contains(strtolower((string)$row['arena_name'].' '.(string)$row['arena_slug'].' '.(string)($row['best_finisher']??'')),$search)));
+        $sort=strtolower(trim((string)($options['sort']??'event_date')));$valid=['event_date','arena_name','total_players','p2k_players','p2k_share_percent','best_rank','top10_count','podium_count','p2k_points','score_percent'];if(!in_array($sort,$valid,true))$sort='event_date';$direction=strtolower((string)($options['direction']??'desc'))==='asc'?1:-1;
+        usort($rows,static function(array $a,array $b)use($sort,$direction):int{$av=$a[$sort]??null;$bv=$b[$sort]??null;if($av===null&&$bv!==null)return 1;if($bv===null&&$av!==null)return -1;$cmp=is_numeric($av)&&is_numeric($bv)?((float)$av<=>(float)$bv):strcasecmp((string)$av,(string)$bv);if($cmp===0)$cmp=(int)$a['file_id']<=>(int)$b['file_id'];return $direction*$cmp;});
+        $page=max(1,(int)($options['page']??1));$pageSize=max(10,min(100,(int)($options['page_size']??25)));$total=count($rows);$pages=max(1,(int)ceil($total/$pageSize));$page=min($page,$pages);$slice=array_slice($rows,($page-1)*$pageSize,$pageSize);
+        return ['rows'=>$slice,'pagination'=>['page'=>$page,'page_size'=>$pageSize,'total_rows'=>$total,'total_pages'=>$pages]];
+    }
+
+
     public function exportCorrectionsCsv(): void
     {
         $query = $this->pdo->prepare(
