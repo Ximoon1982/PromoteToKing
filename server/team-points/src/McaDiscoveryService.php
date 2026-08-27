@@ -344,8 +344,15 @@ final class McaDiscoveryService
                 $id = (int)$matches[3][$i][0];
                 $slug = $matches[2][$i][0] . '-' . $matches[3][$i][0];
                 $offset = (int)$hit[1];
-                $near = substr($decoded, max(0, $offset - 1200), 2400);
-                $items[$id] = ['arena_id'=>$id,'arena_slug'=>$slug] + $this->extractDateFromText(strip_tags($near));
+                $after = substr($decoded, $offset, 1200);
+                $dateText = preg_replace('~<[^>]+>~', ' ', $after) ?? $after;
+                $date = $this->extractDateFromText($dateText);
+                if ($date['event_date'] === null) {
+                    $near = substr($decoded, max(0, $offset - 600), 1800);
+                    $dateText = preg_replace('~<[^>]+>~', ' ', $near) ?? $near;
+                    $date = $this->extractDateFromText($dateText);
+                }
+                $items[$id] = ['arena_id'=>$id,'arena_slug'=>$slug] + $date;
             }
         }
         krsort($items, SORT_NUMERIC);
@@ -374,7 +381,8 @@ final class McaDiscoveryService
     private function extractEventDate(string $html): array
     {
         $text = html_entity_decode(str_replace('\\/', '/', $html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $visible = $this->extractDateFromText(strip_tags($text));
+        $visibleText = preg_replace('~<[^>]+>~', ' ', $text) ?? $text;
+        $visible = $this->extractDateFromText($visibleText);
         if ($visible['event_date'] !== null) return $visible;
         $candidates = [];
         if (preg_match_all('~"(?:startTime|start_time|startDate|start_date)"\s*:\s*"([^"]+)"~i', $text, $m)) $candidates = array_merge($candidates, $m[1]);
