@@ -25,8 +25,8 @@
   });
 
   window.P2K_SITE_CONFIG = Object.freeze({
-    version: "2.10.6.23",
-    builtAt: "2026-08-25T14:57:00Z",
+    version: "2.10.6.24",
+    builtAt: "2026-08-26T23:06:16Z",
     schemaVersion: 6,
     siteName: existing.siteName || branding.title || "Promote to King",
     siteDescription: existing.siteDescription || branding.subtitle || "Play together. Improve together. Promote to King.",
@@ -141,11 +141,11 @@
 (() => {
   if (window.P2K_SITE_CONFIG?.features?.trafficAnalytics === false) return;
   if (document.querySelector('script[data-p2k-traffic-analytics]')) return;
-  const script=document.createElement('script');script.src='assets/js/shared/traffic-analytics.js?v=2.10.6.23';script.defer=true;script.dataset.p2kTrafficAnalytics='1';const mount=()=>document.head.appendChild(script);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+  const script=document.createElement('script');script.src='assets/js/shared/traffic-analytics.js?v=2.10.6.24';script.defer=true;script.dataset.p2kTrafficAnalytics='1';const mount=()=>document.head.appendChild(script);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
 
 // Shared live-chart maximize/restore controller.
 (() => {
   if (document.querySelector('script[data-p2k-chart-maximize]')) return;
-  const script=document.createElement('script');script.src='assets/js/shared/chart-maximize.js?v=2.10.6.23';script.defer=true;script.dataset.p2kChartMaximize='1';const mount=()=>document.head.appendChild(script);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+  const script=document.createElement('script');script.src='assets/js/shared/chart-maximize.js?v=2.10.6.24';script.defer=true;script.dataset.p2kChartMaximize='1';const mount=()=>document.head.appendChild(script);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
