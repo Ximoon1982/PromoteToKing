@@ -9,6 +9,7 @@ use P2K\TeamPoints\PublicReadDatabase;
 use P2K\TeamPoints\Http;
 use P2K\TeamPoints\LiveRanksService;
 use P2K\TeamPoints\McaBlueGreenSync;
+use P2K\TeamPoints\McaDiscoveryService;
 use P2K\TeamPoints\OAuthSession;
 use P2K\TeamPoints\Repository;
 try {
@@ -18,11 +19,19 @@ try {
     $repo = new Repository($pdo, $analytics);
     if (!$repo->schemaInstalled()) $repo->upgradeExistingSchema(__DIR__ . '/../sql/schema.sql');
     if (!$repo->schemaInstalled()) throw new ApiException('The Team Points database schema could not be upgraded.', 503, 'SCHEMA_NOT_INSTALLED');
-    $service = new LiveRanksService($analytics, $repo, new ChessApi($repo));
+    $api = new ChessApi($repo);
+    $service = new LiveRanksService($analytics, $repo, $api);
+    $syncService = new McaDiscoveryService($analytics, $repo, $api);
+    $clubSlug = strtolower((string)(p2k_tp_config()['app']['club_slug'] ?? 'promote-to-king'));
+    $statusPayload = static function() use ($service, $syncService): array {
+        $payload = $service->statusPayload();
+        $payload['sync'] = $syncService->status();
+        return $payload;
+    };
     $action = strtolower(trim((string)($_GET['action'] ?? 'status')));
     if ($action === 'status') {
         Http::method('GET');
-        Http::json(['ok' => true] + $service->statusPayload());
+        Http::json(['ok' => true] + $statusPayload());
     }
     if ($action === 'upload') {
         Http::method('POST');
@@ -31,24 +40,36 @@ try {
     }
     if ($action === 'sync_start') {
         Http::method('POST');
-        $body=Http::body();
-        Http::json(['ok'=>true,'sync'=>$service->startAutoSync(!empty($body['force']))] + $service->statusPayload());
+        $current = $syncService->status();
+        if (($current['status'] ?? '') !== 'running') {
+            $analytics->prepare('UPDATE p2k_lr_sync_state SET next_scan_at=NULL WHERE club_slug=?')->execute([$clubSlug]);
+        }
+        $sync = $syncService->runDiscoveryCron(45);
+        Http::json(['ok'=>true,'sync'=>$sync] + $statusPayload());
     }
     if ($action === 'sync_step') {
         Http::method('POST');
-        Http::json(['ok'=>true,'sync'=>$service->autoSyncStep()] + $service->statusPayload());
+        $current = $syncService->status();
+        $phase = (string)($current['phase'] ?? '');
+        $sync = match ($phase) {
+            'discover' => $syncService->runDiscoveryCron(45),
+            'hydrate' => $syncService->runHydrationCron(45),
+            'rebuild' => $syncService->runRebuildCron(240),
+            default => $current,
+        };
+        Http::json(['ok'=>true,'sync'=>$sync] + $statusPayload());
     }
     if ($action === 'sync_ack_rebuild') {
         Http::method('POST');
-        Http::json(['ok'=>true,'sync'=>$service->acknowledgeAutoSyncRebuild()] + $service->statusPayload());
+        Http::json(['ok'=>true,'sync'=>$syncService->runRebuildCron(240)] + $statusPayload());
     }
     if ($action === 'sync_retry_errors') {
         Http::method('POST');
-        Http::json(['ok'=>true,'sync'=>$service->retryAutoSyncErrors()] + $service->statusPayload());
+        Http::json(['ok'=>true,'sync'=>$syncService->runHydrationCron(120)] + $statusPayload());
     }
     if ($action === 'sync_blue_to_green') {
         Http::method('POST');
-        Http::json(['ok'=>true,'blue_to_green'=>McaBlueGreenSync::run()] + $service->statusPayload());
+        Http::json(['ok'=>true,'blue_to_green'=>McaBlueGreenSync::run()] + $statusPayload());
     }
     if ($action === 'process_start') {
         Http::method('POST');
