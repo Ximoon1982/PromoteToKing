@@ -1,0 +1,4 @@
+v1 http=200 size=13416 sha256=69aec967b581e267a1b21e0d07b72c0f2c9f5343ca5355b7afb0c5b494113c6c type=JPEG image data, Exif standard: [TIFF image data, little-endian, direntries=6, orientation=upper-left, xresolution=86, yresolution=94, resolutionunit=2], baseline, precision 8, 200x200, components 3
+v2 http=403 size=17 sha256=06227f24505ffa91c2c93fd249b237fa27d9cdb31645c30b6aa8528a6432df23 type=ASCII text, with no line terminators
+v3 http=403 size=17 sha256=06227f24505ffa91c2c93fd249b237fa27d9cdb31645c30b6aa8528a6432df23 type=ASCII text, with no line terminators
+v4 http=403 size=17 sha256=06227f24505ffa91c2c93fd249b237fa27d9cdb31645c30b6aa8528a6432df23 type=ASCII text, with no line terminators
