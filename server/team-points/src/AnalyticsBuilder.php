@@ -47,7 +47,7 @@ final class AnalyticsBuilder
     public function achievementSourceWatermark(string $clubSlug): string
     {
         $clubSlug = strtolower(trim($clubSlug));
-        $parts = ['logic:achievement-v21043-acif2', 'logic:mca-event-date-v1', 'logic:tournament-achievement-date-v3', 'core:' . $this->sourceWatermark($clubSlug)];
+        $parts = ['logic:achievement-v2108-canonical-counts', 'logic:mca-event-date-v1', 'logic:tournament-achievement-date-v3', 'core:' . $this->sourceWatermark($clubSlug)];
         try {
             $q = $this->analytics->prepare("SELECT CONCAT(COUNT(*),'|',COALESCE(MAX(updated_at),'1970-01-01 00:00:00')) FROM p2k_lr_players WHERE club_slug=?");
             $q->execute([$clubSlug]);
@@ -391,6 +391,15 @@ final class AnalyticsBuilder
                 "UPDATE p2k_an_achievement_unlocks
                  SET earned_at=NULL, earned_at_precision='tournament-pending', last_verified_at=UTC_TIMESTAMP()
                  WHERE club_slug=? AND source_type='tournament' AND earned_at_precision='tournament-period'"
+            );
+            $cleanup->execute([$clubSlug]);
+        } catch (\Throwable) {}
+
+        // v2.10.8: remove only the two proven transient v2.9.3 breadth identities.
+        // Never delete arbitrary unknown achievement keys: historical identities remain durable.
+        try {
+            $cleanup = $this->analytics->prepare(
+                "DELETE FROM p2k_an_achievement_unlocks WHERE club_slug=? AND achievement_key IN ('groups-1','groups-20')"
             );
             $cleanup->execute([$clubSlug]);
         } catch (\Throwable) {}

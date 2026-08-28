@@ -1,0 +1,40 @@
+Promote to King v2.10.8 validation report
+Generated UTC: 2026-08-28T10:04:36Z
+Baseline: canonical v2.10.7 source archive
+
+SOURCE CORRECTIVE GATES
+- v2.10.8 regression gates: PASS 16/16
+- PHP syntax: AnalyticsBuilder.php PASS
+- PHP syntax: CronMaintenanceCoordinator.php PASS
+- PHP syntax: Repository.php PASS
+- JavaScript syntax: site-config.js PASS
+- JavaScript syntax: runtime-diagnostics.js PASS
+- JavaScript syntax: dashboard-v2.js PASS
+- Active site-config cache keys: 21/21 at v2.10.8
+- site-manifest: version 2.10.8, schema 8
+
+ACHIEVEMENTS
+- scheduler slice: max 15.0s / minimum start 11.0s PASS
+- AnalyticsBuilder start safety remains 10.0s PASS
+- achievement logic watermark: logic:achievement-v2108-canonical-counts PASS
+- targeted transient cleanup: groups-1, groups-20 only PASS
+- Hall of Fame aggregate count: current catalogue filtered PASS
+- Members Insights non-materialized aggregate count: current catalogue filtered PASS
+- Members Insights materialized aggregate count: current catalogue filtered PASS
+- player profile current-catalogue filtering retained PASS
+
+INSTALLER
+- embedded complete-file payload: 35 files
+- clean v2.10.7 -> v2.10.8 install: PASS
+- installed payload hashes: 35/35 PASS
+- idempotent v2.10.8 replay: PASS
+- forced failure rollback: PASS
+- rollback payload boundary restored: 35/35 PASS
+- database schema changes: none
+- runtime data reset: none
+- local config/secrets replacement: none
+- CRON entry modification: none
+
+ARTIFACT HASHES
+- PromoteToKing_v2.10.8_INCREMENTAL_INSTALLER.run  e65667bbdc1db9b6020e2c5779bae098ce1c4af10556eab4e4683883803a786f
+- install-promote-to-king-2.10.8.sh  23278e519de9bd0a44aeda08388e1331b0fb152b481e2e351a9be05e996d784a

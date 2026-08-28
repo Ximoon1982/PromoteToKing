@@ -56,7 +56,7 @@ final class CronMaintenanceCoordinator
                 return (new PointIntegrityService($this->core, $this->repository, $this->clubSlug))->runStep(30, $deadline);
             });
         } else {
-            $out['classes']['achievements'] = $this->runClass('achievements', 7.0, 3.0, function(float $deadline): array {
+            $out['classes']['achievements'] = $this->runClass('achievements', 15.0, 11.0, function(float $deadline): array {
                 $builder = new AnalyticsBuilder($this->core, $this->analytics);
                 return $builder->refreshAchievementsIfDue($this->clubSlug, 1800, $deadline) + ['maintenance_class'=>'achievements'];
             });

@@ -2993,7 +2993,7 @@ final class Repository
 
     public function publicOpponentStats(string $clubSlug, array $options = []): array
     {
-        $clubSlug=$this->resolveDataClubSlug($clubSlug);$analytics=$this->analytics();
+        $clubSlug=$this->resolveDataClubSlug($clubSlug);$analytics=$this->analytics();$validAchievementKeys=$this->achievementCatalogSqlList();
         $page=max(1,(int)($options['page']??1));$pageSize=max(10,min(100,(int)($options['page_size']??25)));
         $search=substr(trim((string)($options['search']??'')),0,120);$filter=strtolower(trim((string)($options['filter']??'all')));
         if(!in_array($filter,['all','active','registered','finished','disabled'],true))$filter='all';
@@ -3228,10 +3228,19 @@ final class Repository
         return $rank??['key'=>'unranked','name'=>'Unranked','minimum'=>0];
     }
 
+    /** SQL literal list for the authoritative current achievement catalogue. */
+    private function achievementCatalogSqlList(): string
+    {
+        $pdo=$this->analytics();$keys=[];
+        foreach(AchievementCatalog::all() as $item){$key=(string)($item['key']??'');if($key!=='')$keys[$key]=true;}
+        if($keys===[])return "''";
+        return implode(',',array_map(static fn(string $key):string=>(string)$pdo->quote($key),array_keys($keys)));
+    }
+
     /** Lightweight Achievement wall query; pagination and sorting happen in MariaDB. */
     public function publicAchievementPlayers(string $clubSlug, array $options = []): array
     {
-        $clubSlug=$this->resolveDataClubSlug($clubSlug);$analytics=$this->analytics();
+        $clubSlug=$this->resolveDataClubSlug($clubSlug);$analytics=$this->analytics();$validAchievementKeys=$this->achievementCatalogSqlList();
         $page=max(1,(int)($options['page']??1));$pageSize=max(6,min(60,(int)($options['page_size']??12)));
         $filter=strtolower(trim((string)($options['filter']??'current')));if(!in_array($filter,['current','milestones'],true))$filter='current';
         $wanted=array_values(array_unique(array_filter(array_map(static fn(string $v):string=>\p2k_tp_username_key($v),explode(',',(string)($options['usernames']??''))))));if(count($wanted)>250)$wanted=array_slice($wanted,0,250);
@@ -3239,7 +3248,7 @@ final class Repository
         if($wanted!==[]){$where[]='p.username_key IN ('.implode(',',array_fill(0,count($wanted),'?')).')';array_push($params,...$wanted);}
         if($filter==='milestones')$where[]='(COALESCE(a.achievement_count,0)>0 OR p.points>0 OR COALESCE(l.total_points,0)>0)';
         $whereSql=' WHERE '.implode(' AND ',$where);
-        $from=" FROM p2k_an_player_totals p LEFT JOIN (SELECT club_slug,username_key,COUNT(*) achievement_count FROM p2k_an_achievement_unlocks WHERE club_slug=? GROUP BY club_slug,username_key) a ON a.club_slug=p.club_slug AND a.username_key=p.username_key LEFT JOIN p2k_lr_players l ON l.club_slug=p.club_slug AND l.username_key=p.username_key";
+        $from=" FROM p2k_an_player_totals p LEFT JOIN (SELECT club_slug,username_key,COUNT(*) achievement_count FROM p2k_an_achievement_unlocks WHERE club_slug=? AND achievement_key IN ({$validAchievementKeys}) GROUP BY club_slug,username_key) a ON a.club_slug=p.club_slug AND a.username_key=p.username_key LEFT JOIN p2k_lr_players l ON l.club_slug=p.club_slug AND l.username_key=p.username_key";
         $joinParams=array_merge([$clubSlug],$params);
         $count=$analytics->prepare('SELECT COUNT(*)'.$from.$whereSql);$count->execute($joinParams);$totalRows=(int)$count->fetchColumn();$pages=max(1,(int)ceil($totalRows/$pageSize));$page=min($page,$pages);$offset=($page-1)*$pageSize;
         $sql='SELECT p.username_key,p.username,p.points,p.matches,p.games,p.wins,p.draws,p.losses,p.daily_rating,p.chess960_rating,p.last_standard_game_at,p.last_chess960_game_at,COALESCE(a.achievement_count,0) achievement_count,COALESCE(l.total_points,0) live_points,COALESCE(l.arena_count,0) live_arenas,l.best_rank live_best_rank'.$from.$whereSql." ORDER BY COALESCE(a.achievement_count,0) DESC,p.username ASC LIMIT {$pageSize} OFFSET {$offset}";
@@ -3292,7 +3301,7 @@ final class Repository
         $q=$this->pdo->prepare($base);$q->execute(array_merge($eventParams,[$clubSlug,$clubSlug]));$all=$q->fetchAll()?:[];
         $live=[];try{$aq=$this->analytics()->prepare('SELECT username_key,total_points,arena_count,best_rank FROM p2k_lr_players WHERE club_slug=?');$aq->execute([$clubSlug]);foreach($aq->fetchAll()?:[] as $r)$live[(string)$r['username_key']]=$r;}catch(\Throwable){}
         $activitySnapshot=[];try{$aq=$this->analytics()->prepare('SELECT username_key,last_game_at,last_standard_game_at,last_chess960_game_at FROM p2k_an_player_totals WHERE club_slug=?');$aq->execute([$clubSlug]);foreach($aq->fetchAll()?:[] as $r)$activitySnapshot[(string)$r['username_key']]=$r;}catch(\Throwable){}
-        $achievementCounts=[];try{$aq=$this->analytics()->prepare('SELECT username_key,COUNT(*) achievement_count FROM p2k_an_achievement_unlocks WHERE club_slug=? GROUP BY username_key');$aq->execute([$clubSlug]);foreach($aq->fetchAll()?:[] as $r)$achievementCounts[(string)$r['username_key']]=(int)$r['achievement_count'];}catch(\Throwable){}
+        $achievementCounts=[];$validAchievementKeys=$this->achievementCatalogSqlList();try{$aq=$this->analytics()->prepare("SELECT username_key,COUNT(*) achievement_count FROM p2k_an_achievement_unlocks WHERE club_slug=? AND achievement_key IN ({$validAchievementKeys}) GROUP BY username_key");$aq->execute([$clubSlug]);foreach($aq->fetchAll()?:[] as $r)$achievementCounts[(string)$r['username_key']]=(int)$r['achievement_count'];}catch(\Throwable){}
         $summary=['total_members'=>count($all),'current_members'=>0,'former_members'=>0,'active_members'=>0,'currently_playing'=>0,'team_points'=>0.0];$rows=[];
         foreach($all as $r){$key=(string)$r['username_key'];$l=$live[$key]??[];$a=$activitySnapshot[$key]??[];$points=(float)$r['points'];$games=(int)$r['games'];$row=[
             'username_key'=>$key,'username'=>(string)$r['username'],'current_member'=>(bool)$r['current_member'],'first_seen_at'=>$r['first_seen_at'],'last_seen_at'=>$r['last_seen_at'],
@@ -3320,12 +3329,12 @@ final class Repository
     /** Fast all-time Members Insights path using materialized Analytics and SQL pagination. */
     private function publicMemberInsightsMaterialized(string $clubSlug,int $page,int $pageSize,string $search,string $filter,array $wanted,string $sort,int $direction,bool $includeSecondary=true,array $activityStatuses=[]): array
     {
-        $a=$this->analytics();$where=['p.club_slug=?'];$params=[$clubSlug];
+        $a=$this->analytics();$validAchievementKeys=$this->achievementCatalogSqlList();$where=['p.club_slug=?'];$params=[$clubSlug];
         if($search!==''){$where[]='p.username LIKE ?';$params[]='%'.$search.'%';}
         if($wanted!==[]){$where[]='p.username_key IN ('.implode(',',array_fill(0,count($wanted),'?')).')';array_push($params,...$wanted);}
         if($filter==='current')$where[]='p.current_member=1';elseif($filter==='former')$where[]='p.current_member=0';elseif($filter==='active')$where[]='p.games>0';elseif($filter==='milestones')$where[]='(p.points>0 OR COALESCE(l.total_points,0)>0 OR COALESCE(ac.achievement_count,0)>0)';
         if($activityStatuses!==[]){$activityClauses=[];foreach($activityStatuses as $status){if($status==='active')$activityClauses[]='p.last_game_at>=UTC_TIMESTAMP()-INTERVAL 30 DAY';elseif($status==='cooling')$activityClauses[]='(p.last_game_at<UTC_TIMESTAMP()-INTERVAL 30 DAY AND p.last_game_at>=UTC_TIMESTAMP()-INTERVAL 90 DAY)';elseif($status==='inactive')$activityClauses[]='(p.last_game_at<UTC_TIMESTAMP()-INTERVAL 90 DAY AND p.last_game_at>=UTC_TIMESTAMP()-INTERVAL 180 DAY)';elseif($status==='dormant')$activityClauses[]='p.last_game_at<UTC_TIMESTAMP()-INTERVAL 180 DAY';elseif($status==='unknown')$activityClauses[]='p.last_game_at IS NULL';}if($activityClauses!==[])$where[]='('.implode(' OR ',$activityClauses).')';}
-        $from=" FROM p2k_an_player_totals p LEFT JOIN p2k_lr_players l ON l.club_slug=p.club_slug AND l.username_key=p.username_key LEFT JOIN (SELECT club_slug,username_key,COUNT(*) achievement_count FROM p2k_an_achievement_unlocks GROUP BY club_slug,username_key) ac ON ac.club_slug=p.club_slug AND ac.username_key=p.username_key";
+        $from=" FROM p2k_an_player_totals p LEFT JOIN p2k_lr_players l ON l.club_slug=p.club_slug AND l.username_key=p.username_key LEFT JOIN (SELECT club_slug,username_key,COUNT(*) achievement_count FROM p2k_an_achievement_unlocks WHERE achievement_key IN ({$validAchievementKeys}) GROUP BY club_slug,username_key) ac ON ac.club_slug=p.club_slug AND ac.username_key=p.username_key";
         $whereSql=' WHERE '.implode(' AND ',$where);$count=$a->prepare('SELECT COUNT(*)'.$from.$whereSql);$count->execute($params);$totalRows=(int)$count->fetchColumn();$totalPages=max(1,(int)ceil($totalRows/$pageSize));$page=min($page,$totalPages);$offset=($page-1)*$pageSize;
         $sortMap=['username'=>'p.username','points'=>'p.points','matches'=>'p.matches','games'=>'p.games','wins'=>'p.wins','draws'=>'p.draws','losses'=>'p.losses','win_rate'=>'CASE WHEN p.games>0 THEN p.wins/p.games ELSE 0 END','points_per_game'=>'CASE WHEN p.games>0 THEN p.points/p.games ELSE 0 END','first_activity'=>'p.first_game_at','last_activity'=>'p.last_game_at','live_points'=>'COALESCE(l.total_points,0)','achievement_count'=>'COALESCE(ac.achievement_count,0)','daily_rating'=>'p.daily_rating','chess960_rating'=>'p.chess960_rating','last_standard_game_at'=>'p.last_standard_game_at','last_chess960_game_at'=>'p.last_chess960_game_at'];$sortSql=$sortMap[$sort]??'p.points';$dir=$direction===1?'ASC':'DESC';
         $q=$a->prepare('SELECT p.*,COALESCE(l.total_points,0) live_points,COALESCE(l.arena_count,0) live_arenas,l.best_rank live_best_rank,COALESCE(ac.achievement_count,0) achievement_count'.$from.$whereSql." ORDER BY {$sortSql} {$dir},p.username ASC LIMIT {$pageSize} OFFSET {$offset}");$q->execute($params);$raw=$q->fetchAll(PDO::FETCH_ASSOC)?:[];$keys=array_map(static fn(array $r):string=>(string)$r['username_key'],$raw);

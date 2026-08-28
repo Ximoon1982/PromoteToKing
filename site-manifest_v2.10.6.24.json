@@ -1,0 +1,38 @@
+{
+  "project": "Promote to King",
+  "version": "2.10.6.24",
+  "builtAt": "2026-08-26T23:06:16Z",
+  "schemaVersion": 6,
+  "release": {
+    "metadataOnlyCanonicalization": true,
+    "functionalChangesInMetadataCommit": false,
+    "sourceBaseline": "v2.10.6.23",
+    "expandedImplementationCommit": "0bf364d4813bdf120a98117628b52b0639ef4e0a",
+    "identity": [
+      "Insights -> Arenas",
+      "Matches milestone artwork: 1, 10, 50, 100, 250, 500, 1000"
+    ]
+  },
+  "preservedPriorManifest": {
+    "path": "site-manifest_v2.10.6.23.json",
+    "gitBlobSha": "d99202fe3965cf57784b4e9e1ac6dfe0106a674d"
+  },
+  "recovery": {
+    "canonicalSourceArchiveV2_10_6_23": {
+      "sha256": "1462082218e177c9fab06aa13ea9ce0c82658a08ef9fda0eec97062f6cc1d78d"
+    },
+    "inheritedAssetsImagesArchive": {
+      "sha256": "8a31701a139a03aaeb6546c7c03a9e38e51529a407cda4326f1342a8c5327490"
+    },
+    "miacSeed": {
+      "target": "resources/miac/seed.zip",
+      "size": 64977998,
+      "sha256": "fbb0ad58132a65836e2a2c8c10f9f952dc727f41a668671cba69dc822f1b4310",
+      "storage": ".p2k/large-files/"
+    }
+  },
+  "releaseNotes": [
+    "RELEASE_NOTES.md",
+    "RELEASE_NOTES_v2.10.6.24.md"
+  ]
+}

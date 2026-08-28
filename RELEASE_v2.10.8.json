@@ -1,0 +1,12 @@
+{
+  "version": "2.10.8",
+  "baseline": "2.10.7",
+  "scope": [
+    "release diagnostics/version/cache convergence",
+    "achievement maintenance scheduling and logic watermark",
+    "catalogue-filtered achievement counts",
+    "targeted cleanup of transient groups-1/groups-20 unlock identities"
+  ],
+  "database_schema_change": false,
+  "runtime_data_reset": false
+}
