@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>v2.9.3 corrective audit | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="v2.9.3 corrective audit" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/CORRECTIVE_AUDIT_v2.9.3.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/CORRECTIVE_AUDIT_v2.9.3.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="v2.9.3 corrective audit" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"v2.9.3 corrective audit","url":"https://ximoon1982.github.io/PromoteToKing/CORRECTIVE_AUDIT_v2.9.3.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="v293-corrective-audit">v2.9.3 corrective audit</h1>
+
+<h2 id="heatmap-defect">Heatmap defect</h2>
+
+<p><strong>Observed:</strong> the v2.9.2 heatmaps could not be found under Insights · Opponents.</p>
+
+<p><strong>Cause:</strong> the renderer and backend were implemented, but the visible host was wired to Club Intelligence · Balance rather than the requested Insights · Opponents panel.</p>
+
+<p><strong>Correction:</strong> Insights · Opponents now owns the only visible heatmap host. It loads <code class="language-plaintext highlighter-rouge">section=balance</code> from the public opponents endpoint and renders one aggregate pair. The Club Intelligence Balance tab/script wiring is removed.</p>
+
+<p><strong>Population correction:</strong> the public balance query uses every stored non-void match with boards. It does not require <code class="language-plaintext highlighter-rouge">status='finished'</code>. Heatmap points still require paired-board rating provenance; omitted rating rows are reported through coverage rather than silently treated as comparable.</p>
+
+<h2 id="achievement-breadth-defect">Achievement breadth defect</h2>
+
+<p><strong>Required contract:</strong> breadth milestones are additive to all existing achievement families.</p>
+
+<p><strong>Catalogue audit:</strong> 129 active definitions = 124 non-breadth definitions + 5 breadth definitions (<code class="language-plaintext highlighter-rouge">groups-1</code>, <code class="language-plaintext highlighter-rouge">groups-5</code>, <code class="language-plaintext highlighter-rouge">groups-10</code>, <code class="language-plaintext highlighter-rouge">groups-15</code>, <code class="language-plaintext highlighter-rouge">groups-20</code>). Existing families remain present: matches, Team Points, games, wins, Daily ranks, Live ranks, leagues and league-specific achievements, seniority, MCA participation/placement/victories/streaks/single-arena wins, same-day starts, concurrent games and tournaments.</p>
+
+<p><strong>Read-path defect found:</strong> player profiles previously chose persisted unlock rows whenever at least one existed, and only used profile-derived achievements when the persisted set was completely empty. A partial/new persisted family could therefore suppress still-valid profile-derived achievements.</p>
+
+<p><strong>Correction:</strong> player profiles now union persisted unlocks and profile-derived achievements by achievement key. Persisted rows keep their authoritative dates/source metadata; fallback/profile-derived rows fill only missing keys.</p>
+
+<h2 id="regression-gates">Regression gates</h2>
+
+<p><code class="language-plaintext highlighter-rouge">tests/test_v293_user_corrections.py</code> explicitly verifies:</p>
+<ul>
+  <li>heatmap host is Insights · Opponents, not Club Intelligence;</li>
+  <li>public heatmap query covers all non-void matches and records paired-rating coverage;</li>
+  <li>breadth definitions are additive (124 + 5 = 129);</li>
+  <li>persisted and profile-derived player achievements are unioned;</li>
+  <li>public and player catalogues use the complete catalogue;</li>
+  <li>August 10 player achievement progress, ownership, recent-order and challenge-deep-link rules remain present.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/CORRECTIVE_AUDIT_v2.9.3.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

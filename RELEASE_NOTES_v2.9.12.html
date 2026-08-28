@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.12 — transport, feeder and cache correction | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.12 — transport, feeder and cache correction" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.12.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.12.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.12 — transport, feeder and cache correction" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.12 — transport, feeder and cache correction","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.12.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2912--transport-feeder-and-cache-correction">Promote to King v2.9.12 — transport, feeder and cache correction</h1>
+
+<p>v2.9.12 is a focused corrective release built from the verified v2.9.11 package. Core schema remains 12 and Analytics schema remains 6. The external four-task CRON cadence is unchanged.</p>
+
+<h2 id="shared-authenticated-transport">Shared authenticated transport</h2>
+
+<ul>
+  <li>Moves real-OAuth launch-rate authority to a server-shared coordinator keyed by an opaque hash of the server-held OAuth token. All frames, analyzers and authenticated maintenance bridges using that token therefore share one upstream launch clock.</li>
+  <li>Uses a hybrid PI/D pressure controller with a hard 429/Retry-After boundary and anti-windup behavior. A rate-limit event is coalesced rather than punished independently by PHP, each frame and each retrying request.</li>
+  <li>Learns successful endpoint-class latency baselines separately for match details, club indexes, rosters, club profiles, player profiles, stats, player matches and archives.</li>
+  <li>Permanent application 4xx responses such as 404/410 are not treated as congestion and do not create a rate boundary.</li>
+  <li>Up to six bounded OAuth gateway POSTs keep slow endpoints fed while the shared server clock, not the number of posts, controls aggregate Chess.com launch rate.</li>
+  <li>OAuth request network timeout begins when the server actually launches the upstream transfer; browser queue/gateway wait no longer consumes the request timeout.</li>
+  <li>Foreground and background traffic remain distinct through the gateway. Background stale refresh work cannot outrank active foreground analysis.</li>
+</ul>
+
+<h2 id="match-creation-and-large-run-feeder-fixes">Match Creation and large-run feeder fixes</h2>
+
+<ul>
+  <li>Replaces repeated whole-queue best-item scans with one stable priority sort and linear admission.</li>
+  <li>Match Creation stage completion uses constant-time pending counters instead of repeatedly rescanning the full plan after every completion.</li>
+  <li>Purely visual progress painting is throttled while every settled match is still recorded immediately.</li>
+  <li>Endpoint-homogeneous gateway batches prevent slow historical match details from distorting a fast club-index latency baseline.</li>
+</ul>
+
+<h2 id="cache-corrections">Cache corrections</h2>
+
+<ul>
+  <li>Confirmed finished-match details remain fresh for the configured long retention window instead of becoming daily stale-refresh traffic.</li>
+  <li>Large priority batches bulk-warm cache keys with one IndexedDB read transaction.</li>
+  <li>Cache persistence batches writes so high authenticated throughput does not create one critical-path IndexedDB transaction per response.</li>
+  <li>Cache hits bypass the network rate budget; explicit network-only/reconciliation callers can still force verification.</li>
+</ul>
+
+<h2 id="site-wide-audit">Site-wide audit</h2>
+
+<p>The shared-client/real-OAuth contract was audited across all known production API surfaces, including Find Match, Upcoming Matches, Match Creation, Challenge Assistant, Recruitment tools, Open Match analysis, Tournament Management, Task/Admin tools and dashboard/embedded variants.</p>
+
+<h2 id="50-requestssecond-cap-simulation">50 requests/second cap simulation</h2>
+
+<p>A local fake Chess.com service enforced a hard rolling one-second limit of 50 arrivals. Eight concurrent requester families issued 512 mixed requests through the exact shared PHP rate coordinator. Final run:</p>
+
+<ul>
+  <li>512/512 HTTP attempts reached the fake upstream.</li>
+  <li>508 were admitted; 4 received 429.</li>
+  <li>32 deliberate permanent 404 responses did not lower the transport rate.</li>
+  <li>Peak rolling one-second arrivals: 52.</li>
+  <li>Two coalesced backlash episodes.</li>
+  <li>Settled shared rate: 47.6727 requests/second.</li>
+  <li>Learned unsafe boundary: 51.8181 requests/second.</li>
+</ul>
+
+<p>A separate Chromium gate processed 700 Match Creation detail requests with six active gateway posts and no late-run collapse. Its cache phase served 150 old finished-match details locally and made only 50 network requests, with no stale-refresh competition.</p>
+
+<h2 id="security-and-compatibility">Security and compatibility</h2>
+
+<ul>
+  <li>Bearer access tokens remain server-side only.</li>
+  <li>Logged-out and simulated <code class="language-plaintext highlighter-rouge">oauth=1</code> operation remain serial.</li>
+  <li>CRON/CLI does not inherit a user’s OAuth token.</li>
+  <li>Core schema 12 / Analytics schema 6; no database migration.</li>
+  <li>Existing protected configuration files remain protected by the incremental updater.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.12.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

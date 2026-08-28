@@ -81,7 +81,7 @@ try{
         GreenConfig::json(['ok'=>true,'release'=>'2.10.6','panel_build'=>'2.10.6.10','public_source'=>(string)($repo->state()['public_read_target']??'blue'),'effective_public_source'=>$effective,'green_public_adapter_ready'=>(bool)$adapter['ready'],'read_cutover_ready'=>(bool)$cutover['clean'],'read_cutover_allowed'=>(bool)$cutover['allowed'],'cutover'=>$cutover,'validation'=>$validation,'adapter'=>$adapter,'green'=>$summary,'blue_tasks'=>$blueTasks,'blue_tasks_error'=>$blueTasksError]);
     }
     if($action==='comparison')GreenConfig::json(['ok'=>true,'comparison'=>$cmp->summary()]);
-    if($action==='member-events'){$limit=max(1,min(1000,(int)($_GET['limit']??250)));GreenConfig::json(['ok'=>true,'events'=>$repo->memberEvents($limit)]);}
+    if($action==='member-events'){$limit=max(1,min(1000,(int)($_GET['limit']??250)));$filters=['event_type'=>(string)($_GET['event_type']??''),'member'=>(string)($_GET['member']??''),'from'=>(string)($_GET['from']??''),'to'=>(string)($_GET['to']??'')];GreenConfig::json(['ok'=>true,'events'=>$repo->memberEvents($limit,$filters),'filters'=>$filters]);}
     if($action==='member-lookup'){$username=trim((string)($_GET['username']??''));if($username==='')GreenConfig::json(['ok'=>false,'error'=>'A username is required.'],400);GreenConfig::json(['ok'=>true,'lookup'=>$repo->memberLookup($username)]);}
     if($action==='feed-plan'){$limit=max(1,min(96,(int)($_GET['limit']??48)));$owner=trim((string)($_GET['owner']??''));GreenConfig::json(['ok'=>true,'plan'=>$repo->feedPlan($limit,$owner)]);}
     if(strtoupper((string)($_SERVER['REQUEST_METHOD']??'GET'))!=='POST')GreenConfig::json(['ok'=>false,'error'=>'Use POST for control actions.'],405);

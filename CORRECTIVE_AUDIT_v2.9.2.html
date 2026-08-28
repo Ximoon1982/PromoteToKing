@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.2 — corrective audit against actual v2.9.1 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.2 — corrective audit against actual v2.9.1" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/CORRECTIVE_AUDIT_v2.9.2.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/CORRECTIVE_AUDIT_v2.9.2.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.2 — corrective audit against actual v2.9.1" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.2 — corrective audit against actual v2.9.1","url":"https://ximoon1982.github.io/PromoteToKing/CORRECTIVE_AUDIT_v2.9.2.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v292--corrective-audit-against-actual-v291">Promote to King v2.9.2 — corrective audit against actual v2.9.1</h1>
+
+<p>Audit baseline: the extracted <code class="language-plaintext highlighter-rouge">PromoteToKing_v2.9.1_FULL_STANDALONE.zip</code>, not v2.9.1 release-note claims.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>v2.9.1 gap / requirement</th>
+      <th>v2.9.2 result</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Hall of Fame before Insights</td>
+      <td><strong>Corrected</strong> — primary public order is Hall then Insights.</td>
+    </tr>
+    <tr>
+      <td>Achievement breadth 1 / 5 / 10 / 15 / 20</td>
+      <td><strong>Corrected</strong> — exact five tiers; former all-groups tier removed.</td>
+    </tr>
+    <tr>
+      <td>Approved recovered artwork and 640 / 64 / 128 normalization</td>
+      <td><strong>Corrected with honest provenance</strong> — 7 high-confidence recovered originals mapped and normalized; resolved raster assets use normalized derivatives; unresolved items use explicit per-achievement placeholders. The false v2.9.1 “50 recovered originals” claim is not repeated.</td>
+    </tr>
+    <tr>
+      <td>Opponent Balance Analyzer rating integrity</td>
+      <td><strong>Corrected</strong> — both team averages use the same intersection of valid rated board positions; <code class="language-plaintext highlighter-rouge">rated_board_count</code> records provenance/coverage.</td>
+    </tr>
+    <tr>
+      <td>Opponent heatmap layout requested after audit</td>
+      <td><strong>Corrected</strong> — one aggregate two-heatmap set covers all included matches; filters rerender those same charts and never create per-opponent heatmap sets.</td>
+    </tr>
+    <tr>
+      <td>Daily Boards / Club Points clickable-legend description</td>
+      <td><strong>Corrected</strong>.</td>
+    </tr>
+    <tr>
+      <td>Maximized chart exact scroll restore</td>
+      <td><strong>Corrected</strong> — pre-open X/Y captured and restored.</td>
+    </tr>
+    <tr>
+      <td>Monthly Active Members whole current month incomplete/future</td>
+      <td><strong>Corrected</strong> — current-month boundary begins at day 1.</td>
+    </tr>
+    <tr>
+      <td>Admin URL state through refresh/back/forward</td>
+      <td><strong>Corrected</strong> — group/subtab/tool/context restored.</td>
+    </tr>
+    <tr>
+      <td>Dashboard Admin shortcuts exact integrated context</td>
+      <td><strong>Corrected</strong>.</td>
+    </tr>
+    <tr>
+      <td>Database Match Profile human Chess.com match URL</td>
+      <td><strong>Corrected</strong>.</td>
+    </tr>
+    <tr>
+      <td>Admin health traffic lights</td>
+      <td><strong>Corrected</strong> — consistent dot vocabulary.</td>
+    </tr>
+    <tr>
+      <td>Below-minimum Dashboard warnings only inside next 7 days</td>
+      <td><strong>Corrected</strong>.</td>
+    </tr>
+    <tr>
+      <td>Match Creation bar selectively fetch missing contributing match details</td>
+      <td><strong>Corrected</strong> — targeted/cache-aware; no archive-wide scan.</td>
+    </tr>
+    <tr>
+      <td>Lineup/Win-probability identical run retains first + last</td>
+      <td><strong>Corrected</strong>.</td>
+    </tr>
+    <tr>
+      <td>Durable Work Report queue-state separation</td>
+      <td><strong>Corrected</strong> — total, committed, remaining backlog, pending, claimed/running, retry-waiting, failed.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="retained-behavior-verified-during-corrective-work">Retained behavior verified during corrective work</h2>
+
+<p>The v2.9.1 features that were already genuinely implemented remain intact: earned achievement cards omit progress bars; Achievement Challenge focuses the selected player/achievement; achievement search remains available; corrected rank artwork mappings remain; Hall desktop search stays full-width/four-column; Team Depth excludes unrated players from the rating axis while retaining coverage cards; Members activity filtering remains server-side before pagination; opponent logo/avatar ordering remains; Traffic DNT/GPC/self-test diagnostics remain; Data Reconciliation remains protected and authoritative-queue based; and the ACAMR telemetry correction remains integrated.</p>
+
+<h2 id="release-acceptance-gates">Release acceptance gates</h2>
+
+<ul>
+  <li>Corrective source acceptance tests: pass.</li>
+  <li>Full Python suite: 250/250 pass.</li>
+  <li>Package validator: pass (resource/DOM/source assertions, Node checks, JS syntax, PHP lint, Python compile probe).</li>
+  <li>v2.9.2 aggregate heatmap Playwright gate: pass, zero page errors.</li>
+  <li>Dashboard/Admin/ACAMR startup browser gates: pass, zero page errors.</li>
+  <li>Mobile Team Insights/pinch/opponent rendering browser gate: pass, zero page errors.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/CORRECTIVE_AUDIT_v2.9.2.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

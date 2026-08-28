@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.4 → v2.9.5 migration | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.4 → v2.9.5 migration" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.9.5.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.9.5.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.4 → v2.9.5 migration" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.4 → v2.9.5 migration","url":"https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.9.5.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v294--v295-migration">Promote to King v2.9.4 → v2.9.5 migration</h1>
+
+<p>v2.9.5 upgrades Core schema 9 to Core schema 10 using <code class="language-plaintext highlighter-rouge">server/team-points/sql/core-migration-v2.9.5.sql</code>. Analytics remains schema 6.</p>
+
+<p>The migration is additive:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">p2k_tp_opponents.country_code</code> stores the normalized Chess.com opponent club country/region code when available;</li>
+  <li><code class="language-plaintext highlighter-rouge">p2k_tp_boards.p2k_rating</code> and <code class="language-plaintext highlighter-rouge">opponent_rating</code> store paired board ratings;</li>
+  <li><code class="language-plaintext highlighter-rouge">rating_source</code> records whether the evidence came from a match lineup or board game;</li>
+  <li><code class="language-plaintext highlighter-rouge">rating_captured_at</code> records when the stored pair was captured.</li>
+</ul>
+
+<p>No table is dropped, no canonical match/game rows are deleted, and no database reset/reseed is required.</p>
+
+<p>Match-lineup rating evidence has priority over board-game fallback evidence. Existing historical rows are left unknown until authoritative revalidation supplies the missing facts.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/MIGRATION_v2.9.5.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

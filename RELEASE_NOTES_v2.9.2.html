@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.2 — corrective release notes | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.2 — corrective release notes" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.2.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.2.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.2 — corrective release notes" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.2 — corrective release notes","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.2.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v292--corrective-release-notes">Promote to King v2.9.2 — corrective release notes</h1>
+
+<p>v2.9.2 is the corrective release built from the actual v2.9.1 standalone package. It audits the post-v2.9.0 requests against shipped behavior and completes or corrects the items that v2.9.1 left missing, partial, or inaccurately described.</p>
+
+<p>No database reset or re-seed is required. The only database change is an additive rating-provenance field used by Opponent Insights.</p>
+
+<h2 id="navigation-and-administration">Navigation and Administration</h2>
+
+<ul>
+  <li>Hall of Fame is now before Insights in the primary public navigation.</li>
+  <li>Administration deep links preserve the Administration group, subtab, tool and integrated context through refresh and browser Back/Forward navigation.</li>
+  <li>Dashboard Administration shortcuts open the exact integrated Administration/Admin Tools context rather than falling through to standalone tool pages.</li>
+  <li>Database Match Profile normalizes Chess.com API match URLs to the normal human match page.</li>
+  <li>Health monitoring uses traffic-light dots consistently instead of mixed checkmark/exclamation/cross symbols.</li>
+  <li>Below-minimum Dashboard warnings are restricted to matches that start within the next seven days.</li>
+</ul>
+
+<h2 id="charts-and-time-series-behavior">Charts and time-series behavior</h2>
+
+<ul>
+  <li>Daily Boards and Club Points descriptions explicitly say that legend names can be clicked to show or hide a series.</li>
+  <li>Maximized charts capture and restore the exact pre-open scroll position, lock background scrolling while open, and reflow after becoming visible.</li>
+  <li>Monthly Active Members treats the entire current calendar month as incomplete/future, beginning at day 1 rather than the current-day fraction.</li>
+  <li>Lineup Evolution and Win-probability History compress identical runs while retaining both the first and last point of each run.</li>
+</ul>
+
+<h2 id="insights--opponents--aggregate-balance-analyzer-heatmaps">Insights · Opponents — aggregate Balance Analyzer heatmaps</h2>
+
+<ul>
+  <li>Opponent Insights now presents <strong>one aggregate set of two heatmaps for all included matches</strong>. It does not create a heatmap set per opponent.</li>
+  <li>The shared filters (Friendly/League, Classical/Chess960, rating coverage, All/Top 10/Top 100 opponents, and linear/log density) re-render the same two aggregate charts.</li>
+  <li>Heatmap 1 relates logarithmic match size to P2K rating advantage.</li>
+  <li>Heatmap 2 compares P2K and opponent average rating with an equality reference line.</li>
+  <li>Opponent lists and KPIs describe the currently included aggregate population.</li>
+  <li>P2K and opponent average ratings are now computed from <strong>the exact same valid board positions</strong>. Missing/unrated boards are omitted symmetrically so one side cannot be averaged over a different lineup.</li>
+  <li><code class="language-plaintext highlighter-rouge">rated_board_count</code> is stored with match metadata and Analytics facts; the UI exposes per-match rated-board coverage and can filter on that coverage.</li>
+  <li>Historical rows without paired-board provenance are omitted from the strength heatmaps until an authoritative match revalidation supplies paired ratings. This prevents old mismatched averages from being presented as precise data.</li>
+</ul>
+
+<h2 id="achievements">Achievements</h2>
+
+<ul>
+  <li>Achievement breadth is exactly 1 / 5 / 10 / 15 / 20 eligible achievement groups; the former all-groups tier is removed.</li>
+  <li>The seven recovered originals that have high-confidence catalogue mappings are integrated and normalized to 640×640 masters, 64×64 miniatures and 128×128 thumbs.</li>
+  <li>Existing resolved artwork is normalized to the same derivative contract where applicable.</li>
+  <li>Previously generic P2K-logo fallbacks are replaced by explicit achievement-specific placeholders rather than being falsely presented as recovered artwork.</li>
+  <li>The artwork provenance manifest records which assets are existing, approved recovered, or placeholders. v2.9.2 does <strong>not</strong> repeat v2.9.1’s inaccurate claim that 50 recovered originals had been mapped.</li>
+  <li>Earned achievement cards remain progress-bar free; unearned cards with non-zero related metrics retain progress.</li>
+  <li>Achievement Challenge deep links and achievement-name search remain enabled.</li>
+  <li>King Daily Rank, Silver King Daily Rank and Live Pawn retain their corrected framed rank artwork mappings.</li>
+</ul>
+
+<h2 id="match-creation">Match Creation</h2>
+
+<ul>
+  <li>Clicking a Match Creation chart bar selectively fetches missing board detail only for matches contributing to that bar.</li>
+  <li>Already loaded/cached detail is reused.</li>
+  <li>Targeted acquisition has its own progress state and does not trigger an archive-wide scan.</li>
+</ul>
+
+<h2 id="durable-queue--work-report">Durable queue / Work Report</h2>
+
+<ul>
+  <li>Work Report separates durable queue total, committed/done, true remaining backlog, currently pending, claimed/running, waiting for retry and failed.</li>
+  <li><code class="language-plaintext highlighter-rouge">0 pending</code> therefore cannot be mistaken for <code class="language-plaintext highlighter-rouge">0 remaining</code> when items are claimed, retry-waiting or otherwise still uncommitted.</li>
+</ul>
+
+<h2 id="acamr-and-diagnostics">ACAMR and diagnostics</h2>
+
+<ul>
+  <li>The post-v2.9.0 ACAMR telemetry correction remains integrated: persistent client vs browsing-session identities, authenticated actor metrics, per-work-class accounting, corrected claim/member counts, ACAMR-only observations, and starvation/fetch/delivery warnings.</li>
+  <li>Browser fetch success remains explicitly distinct from authoritative canonical convergence.</li>
+</ul>
+
+<h2 id="schema-and-compatibility">Schema and compatibility</h2>
+
+<ul>
+  <li>Core schema: <strong>9</strong> (adds nullable <code class="language-plaintext highlighter-rouge">rated_board_count</code> to match metadata).</li>
+  <li>Analytics schema: <strong>6</strong> (adds nullable <code class="language-plaintext highlighter-rouge">rated_board_count</code> to match facts).</li>
+  <li>Migrations are additive and idempotent.</li>
+  <li>Existing data, jobs, queues, configuration and logs remain compatible.</li>
+  <li>CRON cadence remains Club 5 minutes, Tournament 10 minutes, Player 10 minutes and Match Tracking hourly, with the existing 55-second watchdog.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.2.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

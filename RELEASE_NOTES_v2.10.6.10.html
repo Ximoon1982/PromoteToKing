@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.10 — Registration/tracking/assistant corrective | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.10 — Registration/tracking/assistant corrective" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.10.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.10.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.10 — Registration/tracking/assistant corrective" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.10 — Registration/tracking/assistant corrective","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.10.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v210610--registrationtrackingassistant-corrective">Promote to King v2.10.6.10 — Registration/tracking/assistant corrective</h1>
+
+<h2 id="scope">Scope</h2>
+
+<p>v2.10.6.10 is a tightly scoped corrective release on top of v2.10.6.9. It preserves the Green-authoritative public-read architecture and fixes three production issues reported after cutover.</p>
+
+<h3 id="1-registration-matches--next-15-days">1. Registration matches — next 15 days</h3>
+
+<ul>
+  <li>The 15-day registration graph no longer reparses localized date text from the rendered table.</li>
+  <li>Both the graph and <strong>Registered matches by start date</strong> now derive from the same canonical registered-match records and UTC <code class="language-plaintext highlighter-rouge">YYYY-MM-DD</code> date keys.</li>
+  <li>This removes the <code class="language-plaintext highlighter-rouge">Sep</code> / <code class="language-plaintext highlighter-rouge">Sept</code> locale parsing defect that could omit September rows from the graph while leaving the table correct.</li>
+  <li>Match counts, board totals and unknown-board indicators use the same record population.</li>
+</ul>
+
+<h3 id="2-tracked-matches-stop-continuous-tracking-at-start--24h">2. Tracked matches stop continuous tracking at start + 24h</h3>
+
+<ul>
+  <li>Continuous tracking now expires 24 hours after the known match start for <strong>all</strong> tracking sources, including automatic, manual and legacy entries.</li>
+  <li>Expiry is applied before the Tracked Matches Explorer is returned and before scheduled tracking work is selected.</li>
+  <li>Expired entries are marked unfollowed, retain all existing snapshots/history, clear their next-capture time and record <code class="language-plaintext highlighter-rouge">autoStopReason=started-over-24h</code> for compatibility/auditability.</li>
+  <li>The monitoring scheduler independently treats start+24h entries as not due, providing a second protection against accidental CRON work.</li>
+  <li>An expired historical match can still be recorded once; doing so does not silently reactivate continuous tracking.</li>
+  <li>The standalone/local server follows the same rule as the hosted PHP API.</li>
+</ul>
+
+<h3 id="3-dashboard-match-assistant-loader-lifecycle">3. Dashboard Match Assistant loader lifecycle</h3>
+
+<ul>
+  <li>Match Assistant preparation/loading visibility is now controlled by one state synchronizer.</li>
+  <li>When the requested assistant iframe is full-ready and visible, the preparation layer and recommendation loading skeleton are forced off.</li>
+  <li>Closing/resetting the assistant clears the loading state.</li>
+  <li>Delayed readiness events remain tied to the current iframe and cannot leave a stale loader visible behind a correctly opened filtered assistant.</li>
+  <li>Existing <strong>Matches starting within 7 days</strong>, <strong>Priority calls</strong>, recommendations and normal Match Assistant entry paths are preserved.</li>
+</ul>
+
+<h2 id="deployment-impact">Deployment impact</h2>
+
+<ul>
+  <li>No database schema migration.</li>
+  <li>No database reset or reseed.</li>
+  <li>No CRON definition change.</li>
+  <li>No Green routing/cutover change.</li>
+  <li>No Team Points scoring change.</li>
+  <li>No image/artwork change.</li>
+  <li>Blue remains available as rollback according to the existing v2.10.6.9 routing state.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.10.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

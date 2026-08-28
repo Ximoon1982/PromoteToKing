@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.5 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.5" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.5.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.5.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.5" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.5","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.5.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v21065">Promote to King v2.10.6.5</h1>
+
+<h2 id="mca-discovery-boundary--deterministic-source-url-corrective">MCA discovery boundary &amp; deterministic source URL corrective</h2>
+
+<p>v2.10.6.5 simplifies the MCA source synchronization model after the v2.10.6.3/.4 pagination experiments.</p>
+
+<ul>
+  <li>The Promote to King Chess.com past-events index is used <strong>only to discover genuinely new MCA arena IDs</strong>.</li>
+  <li>Page 1 is checked first. Older index pages are explored only when the newest arena already stored in the MCA source pack is not present/reached on page 1. Exploration stops immediately when that known boundary is seen or crossed.</li>
+  <li>Arena IDs remain monotonic, so events newer than the latest stored arena can be identified without walking the entire historical index.</li>
+  <li>The event page and Results CSV URLs are derived directly from the arena slug/ID:
+    <ul>
+      <li>event: <code class="language-plaintext highlighter-rouge">https://www.chess.com/tournament/live/arena/&lt;slug&gt;-&lt;id&gt;</code></li>
+      <li>results: <code class="language-plaintext highlighter-rouge">https://www.chess.com/tournament/live/arena/&lt;slug&gt;-&lt;id&gt;.csv</code></li>
+    </ul>
+  </li>
+  <li>Index CSV-link scraping is no longer part of acquisition.</li>
+  <li>Existing stored arenas are <strong>not force-refetched merely because they are recent</strong>. A normal scan queues only new/missing arena IDs, stored files with a missing event date, and sources explicitly requested by possible-rename refresh logic.</li>
+  <li>Date backfill continues directly from the event URL reconstructed from each stored CSV filename. It is independent of index pagination.</li>
+  <li>Legacy <code class="language-plaintext highlighter-rouge">results_pages</code> queue state from v2.10.6.3/.4 self-heals to the deterministic CSV route.</li>
+  <li>Existing future-date sanity repair remains in place.</li>
+  <li>Serial source pacing remains at least one second between requests.</li>
+</ul>
+
+<p>No database schema migration, reset, reseed, asset update, or source deletion is required.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.5.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

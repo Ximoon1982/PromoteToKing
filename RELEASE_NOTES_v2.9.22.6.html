@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.22.6 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.22.6" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.22.6.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.22.6.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.22.6" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.22.6","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.22.6.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v29226">Promote to King v2.9.22.6</h1>
+
+<p>Focused Team Points reconciliation and Task Control work-detail release.</p>
+
+<h2 id="task-control-work-detail-timeout-correction">Task Control work-detail timeout correction</h2>
+
+<ul>
+  <li>Club/Player work-detail requests are now lane-local.</li>
+  <li>Opening a Team Points card no longer calls the cross-lane <code class="language-plaintext highlighter-rouge">Repository::summary()</code>, synchronization coverage, full durable-queue counts, or historical task breakdown.</li>
+  <li>Maintained job totals are reused; only active pending/running/retry/failed rows are counted through the indexed queue path.</li>
+  <li>Historical task breakdown is deferred rather than blocking the selected card.</li>
+</ul>
+
+<h2 id="incremental-fresh-points-reconciliation">Incremental Fresh Points reconciliation</h2>
+
+<p>Fresh acquisition remains isolated in reconstruction staging. The old normal workflow of approving an entire run is replaced in Task Control by incremental reconciliation.</p>
+
+<h3 id="club-points">Club Points</h3>
+
+<ul>
+  <li>Each successfully fetched match is compared with Core as soon as it is staged.</li>
+  <li>Actionable differences are limited to:
+    <ul>
+      <li>missing match;</li>
+      <li>different authoritative match result/status/endpoint board count/team scores/derived Club Points.</li>
+    </ul>
+  </li>
+  <li>Each row has <strong>Apply local</strong>, updating only that match under the Club worker lane lock.</li>
+  <li>Applied rows are retained in an audit history.</li>
+  <li>Acquisition failures remain visible and retryable but do not block unrelated corrections.</li>
+  <li>Finalization is available when actionable differences reach zero; verified rows supersede obsolete related queue work while acquisition-error jobs remain queued.</li>
+</ul>
+
+<p>Club scoring continues to use only the Chess.com match endpoint: root <code class="language-plaintext highlighter-rouge">boards</code>, P2K/opponent team scores, 0-0 finished matches excluded, win = 5 x boards, draw = 2 x boards, loss = 0.</p>
+
+<h3 id="player-points">Player Points</h3>
+
+<ul>
+  <li>Current members are reconstructed independently.</li>
+  <li>A member becomes actionable as soon as that member’s local board/game set is complete, without waiting for every other member.</li>
+  <li>Each player row compares fresh boards/games/points with Core and has <strong>Apply local</strong>.</li>
+  <li>Applying a player replaces only that current member’s Player Points history and supersedes only that member’s obsolete player/archive/board queue work.</li>
+  <li>Ongoing games are valid pending history and are not treated as acquisition issues.</li>
+  <li>Archive fallback occurs only if the player’s team-match endpoint fails.</li>
+  <li>Archive scanning never starts before 2024-01 and is additionally bounded by the member’s Chess.com account creation month.</li>
+  <li>Archive candidate team matches are verified against the match endpoint as actual P2K matches containing that member before staging; unrelated team matches are ignored.</li>
+  <li>Finalization uses the closing current roster and leaves acquisition-error work queued.</li>
+</ul>
+
+<h2 id="schema">Schema</h2>
+
+<ul>
+  <li>Core schema: <strong>16</strong> (was 15).</li>
+  <li>Analytics schema: <strong>7</strong> unchanged.</li>
+  <li>Core 16 adds only <code class="language-plaintext highlighter-rouge">p2k_tp_reconstruction_actions</code> for durable reconciliation audit history.</li>
+  <li>No existing Team Points facts are reset or reseeded.</li>
+</ul>
+
+<h2 id="unchanged">Unchanged</h2>
+
+<p>OAuth/ACSR/ACDM pacing, Club endpoint scoring rules, achievement logic/artwork, tournaments, match monitoring, CRON schedules, and protected production configuration are unchanged.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.22.6.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

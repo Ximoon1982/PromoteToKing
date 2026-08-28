@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Security and privacy | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Security and privacy" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/docs/SECURITY.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/docs/SECURITY.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Security and privacy" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Security and privacy","url":"https://ximoon1982.github.io/PromoteToKing/docs/SECURITY.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="security-and-privacy">Security and privacy</h1>
+
+<h2 id="content-security-policy">Content Security Policy</h2>
+
+<p>Every HTML page includes a Content Security Policy restricting content to local assets plus the explicitly required Chess.com API/image and optional analytics origins. <code class="language-plaintext highlighter-rouge">object-src</code> is disabled, framing is same-origin, base URLs are restricted, and forms cannot submit to another origin.</p>
+
+<p>Inline executable scripts, inline event handlers, <code class="language-plaintext highlighter-rouge">document.write</code>, and <code class="language-plaintext highlighter-rouge">unsafe-eval</code> are not used. Inline CSS remains allowed because existing pages use authored style attributes and the retained-tab shell adds an embedded presentation override.</p>
+
+<h2 id="api-origin-enforcement">API origin enforcement</h2>
+
+<p><code class="language-plaintext highlighter-rouge">P2K_API_CLIENT</code> accepts only HTTPS origins listed in <code class="language-plaintext highlighter-rouge">P2K_SITE_CONFIG.api.allowedOrigins</code>. JSONP uses the same allowlist and cannot be used for an arbitrary URL.</p>
+
+<p>JSONP executes a remote script and is therefore retained only as a compatibility fallback after conditional and ordinary CORS fetch both fail. Its usage count is visible in Diagnostics and it can be disabled with <code class="language-plaintext highlighter-rouge">jsonpFallback: false</code> after deployment evidence shows it is unnecessary.</p>
+
+<h2 id="challenge-assistant-server-storage">Challenge Assistant server storage</h2>
+
+<p>The Python launcher locally and the packaged PHP backend online expose the saved list only through <code class="language-plaintext highlighter-rouge">/api/challenge-club-list</code>; direct requests under <code class="language-plaintext highlighter-rouge">/data/</code> are denied.</p>
+
+<p>Save requests require:</p>
+
+<ul>
+  <li>HTTP <code class="language-plaintext highlighter-rouge">PUT</code> with <code class="language-plaintext highlighter-rouge">application/json</code>;</li>
+  <li>the <code class="language-plaintext highlighter-rouge">X-P2K-Request: challenge-club-list</code> header;</li>
+  <li>a same-origin <code class="language-plaintext highlighter-rouge">Origin</code>/<code class="language-plaintext highlighter-rouge">Host</code> match when the browser sends an Origin header;</li>
+  <li>a loopback client address by default;</li>
+  <li>a matching revision number.</li>
+</ul>
+
+<p>The default Python bind address is <code class="language-plaintext highlighter-rouge">127.0.0.1</code>. <code class="language-plaintext highlighter-rouge">--allow-remote-write</code> removes only the loopback restriction and should be used exclusively on a trusted network. The PHP backend permits same-origin writes so online saving works, but same-origin validation is not authentication. Protect public administration deployments with IONOS directory protection, HTTP Basic authentication, or another server-side access control.</p>
+
+<p>Payload size, club count, slug length, and slug syntax are bounded and validated server-side. Writes are atomic and retain one backup revision.</p>
+
+<h2 id="match-assistant-usage-logs">Match Assistant usage logs</h2>
+
+<p>Completed user-initiated Match Assistant analyses are sent to <code class="language-plaintext highlighter-rouge">/api/match-assistant-log</code> with same-origin JSON and a dedicated request header. The server, not the browser, supplies the UTC timestamp and daily filename. Each log record contains only the event type, normalized username, UTC timestamp, and matches-found count. Automatic synchronized refreshes, cancellations, and failed analyses are excluded.</p>
+
+<p>Daily JSONL files under <code class="language-plaintext highlighter-rouge">/logs/</code> are never served as static files. Aggregated reads use <code class="language-plaintext highlighter-rouge">/api/match-assistant-logs</code>. Python-local reads are restricted to loopback clients by default; <code class="language-plaintext highlighter-rouge">--allow-remote-log-read</code> removes that restriction. The online PHP read endpoint is same-origin and should be protected by server-side authentication when the site is public.</p>
+
+<p>Log writes are intentionally non-blocking in the browser: an unavailable logging endpoint never affects Match Assistant results. Server-side payload length, username length/control characters, and match-count bounds are validated before append.</p>
+
+<h2 id="analytics">Analytics</h2>
+
+<p>Analytics is optional and is loaded through <code class="language-plaintext highlighter-rouge">assets/js/shared/analytics.js</code> only. It is skipped when:</p>
+
+<ul>
+  <li>the central feature flag is disabled;</li>
+  <li>a page is embedded in the retained-tab shell;</li>
+  <li>the site is running on localhost;</li>
+  <li>Global Privacy Control is enabled;</li>
+  <li>Do Not Track is enabled.</li>
+</ul>
+
+<p>The tools do not depend on analytics for any calculation or control.</p>
+
+<h2 id="simulated-authentication">Simulated authentication</h2>
+
+<p>The optional login is a UI simulation based on a public Chess.com username. It never requests or stores a password, token, or private Chess.com account data. The selected username and public profile snapshot are stored locally in the browser.</p>
+
+<h2 id="deployment">Deployment</h2>
+
+<p>Use HTTPS for production. Keep all packaged paths together and avoid adding third-party scripts outside the CSP and central configuration. Run the automated verification commands before deployment.</p>
+
+<h2 id="administration-visibility-flag">Administration visibility flag</h2>
+
+<p>The <code class="language-plaintext highlighter-rouge">admin</code> URL flag reveals Diagnostics, Match Recruitment, and Challenge Assistant in the index shell. It is deliberately a presentation switch comparable to the simulated OAuth flag, not an authentication mechanism. Anyone who knows the URL can set it, and standalone page URLs remain addressable. Protect public administrative tools and server APIs with hosting-level authentication or another server-side access control.</p>
+
+<h2 id="cron-tracker-and-match-history-data">Cron tracker and match-history data</h2>
+
+<p>The tracker requires the private token from <code class="language-plaintext highlighter-rouge">data/server-config.json</code> as the <code class="language-plaintext highlighter-rouge">token</code> query parameter. A missing configuration returns HTTP 503; a mismatch returns HTTP 403. Use HTTPS because query strings may otherwise be exposed in transit, and rotate the token if the URL is disclosed. The token authorizes only snapshot collection; it does not grant access to raw files.</p>
+
+<p>Snapshots are stored under <code class="language-plaintext highlighter-rouge">data/match-tracking/matches/</code>, and execution logs under <code class="language-plaintext highlighter-rouge">logs/scheduled-tasks/</code>; both are denied as static content by both server implementations. The public analytical endpoint returns only parsed snapshot content for a numeric match ID. Administration manual recording uses same-origin POST plus <code class="language-plaintext highlighter-rouge">X-P2K-Request: track-upcoming-league-matches</code>; cleanup uses same-origin DELETE plus <code class="language-plaintext highlighter-rouge">X-P2K-Request: tracked-match-data</code>, but same-origin checks and the <code class="language-plaintext highlighter-rouge">admin</code> visibility flag are not authentication. Protect public Administration access and destructive endpoints with hosting-level authentication.</p>
+
+<h2 id="current-oauth-flag-requirement">Current OAuth flag requirement</h2>
+
+<p>Stored simulated-login data alone never enables administration. Automatic club-administrator verification requires OAuth to be explicitly enabled for the current page. Direct administration pages enforce the same rule, while the <code class="language-plaintext highlighter-rouge">admin</code> URL flag remains an explicit client-side override. These checks do not replace hosting-level authentication.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/docs/SECURITY.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

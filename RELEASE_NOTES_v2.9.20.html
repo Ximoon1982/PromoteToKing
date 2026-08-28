@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.20 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.20" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.20.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.20.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.20" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.20","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.20.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2920">Promote to King v2.9.20</h1>
+
+<h2 id="baseline">Baseline</h2>
+<p>Built directly from the exact frozen v2.9.19 standalone SHA256 <code class="language-plaintext highlighter-rouge">42074a47ca5bdd3f859199589b5c2aa9b78af7f1c2bafdb1f4621e35fad172c8</code>, using internal package history only. GitHub is not used.</p>
+
+<h2 id="mca-oauth-rate-capture-fix-morcf">MCA OAuth Rate Capture Fix (MORCF)</h2>
+<ul>
+  <li>Fixes the MCA CSV processing closure in <code class="language-plaintext highlighter-rouge">live-ranks-admin.php</code> so the requested OAuth rate is captured together with the transport and concurrency settings.</li>
+  <li>Prevents the null-to-float failure when authenticated MCA processing calls the shared OAuth batch transport.</li>
+  <li>Existing uploaded/staged MCA source data can be processed again; no re-upload is required solely because of this defect.</li>
+</ul>
+
+<h2 id="name-transition-modal-and-table-pagination">Name-transition modal and table pagination</h2>
+<ul>
+  <li>MIAC/name-transition evidence modals are positioned against the visible parent viewport when Club Intelligence runs inside the Dashboard iframe, including after parent scrolling/resizing.</li>
+  <li>Club Intelligence tables use the standard 25-row page size. The Members table is reduced from 50 to 25 rows/page; other <code class="language-plaintext highlighter-rouge">ci-table</code> tables receive Previous/Next pagination where needed.</li>
+  <li>Sorting returns a paginated table to page 1.</li>
+</ul>
+
+<h2 id="dashboard-match-board-hydration-fix-dmbhf">Dashboard Match Board Hydration Fix (DMBHF)</h2>
+<ul>
+  <li>Registered and ongoing club-match index rows are hydrated from authoritative individual Chess.com <code class="language-plaintext highlighter-rouge">/pub/match/{id}</code> detail responses through the existing shared cache/OAuth transport.</li>
+  <li>Dashboard board totals are computed only from authoritative detail <code class="language-plaintext highlighter-rouge">boards</code>; game totals are <code class="language-plaintext highlighter-rouge">boards × 2</code>.</li>
+  <li>The Dashboard displays a hydration/loading state instead of a false zero, retains unresolved diagnostics if a detail request fails, and merges details into the same match objects used by the modal.</li>
+  <li>Hydration is background traffic and remains subordinate to P0 foreground/interactive survival.</li>
+</ul>
+
+<h2 id="acsr-canonical-drain-mode-acdm">ACSR Canonical Drain Mode (ACDM)</h2>
+<ul>
+  <li>When browser-acquisition work is empty/low but authoritative canonical debt remains, ACSR switches to a bounded server-authoritative drain mode.</li>
+  <li>Server planning exposes Club vs Player debt/urgency, selects the recommended lane, and proposes adaptive quota, pulse budget and next-delay values.</li>
+  <li>The browser chains bounded worker pulses only while they remain productive, adapts quota, and stops a chain on a zero-work pulse.</li>
+  <li>ACDM yields immediately when foreground/interactive pressure appears and uses the existing authoritative Worker/queue/coalescing/P0 controls rather than creating a parallel execution path.</li>
+</ul>
+
+<h2 id="compatibility">Compatibility</h2>
+<ul>
+  <li>Core schema: <strong>14</strong> (unchanged)</li>
+  <li>Analytics schema: <strong>7</strong> (unchanged)</li>
+  <li>Achievement catalogue: <strong>162</strong> (unchanged)</li>
+  <li>CRON: <strong>4 operational + 1 weekly backup</strong>, cadences unchanged</li>
+  <li>MIAC seed: unchanged</li>
+  <li>No database reset, reseed or schema migration</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.20.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

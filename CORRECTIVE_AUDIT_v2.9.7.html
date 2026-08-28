@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Corrective audit — v2.9.7 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Corrective audit — v2.9.7" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/CORRECTIVE_AUDIT_v2.9.7.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/CORRECTIVE_AUDIT_v2.9.7.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Corrective audit — v2.9.7" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Corrective audit — v2.9.7","url":"https://ximoon1982.github.io/PromoteToKing/CORRECTIVE_AUDIT_v2.9.7.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="corrective-audit--v297">Corrective audit — v2.9.7</h1>
+
+<h2 id="production-evidence-from-v295">Production evidence from v2.9.5</h2>
+
+<p>The live Player queue showed 4,411 original <code class="language-plaintext highlighter-rouge">sync_player</code> items pending behind 3,612 <code class="language-plaintext highlighter-rouge">sync_player_stats</code> plus 65 <code class="language-plaintext highlighter-rouge">sync_player_profile</code> items while Player Matches freshness remained 0.0% and Stats freshness continued increasing. Queue selection sorted by item-type priority before age, confirming deterministic starvation.</p>
+
+<p>A second live query found 62 completed original <code class="language-plaintext highlighter-rouge">sync_player</code> items corresponding to 62 current members; all 62 still had <code class="language-plaintext highlighter-rouge">player_matches_checked_at IS NULL</code>. The v2.9.5 source gated the final freshness write behind remaining processing budget, allowing a completed queue slice to become <code class="language-plaintext highlighter-rouge">done</code> without the authoritative freshness commit.</p>
+
+<h2 id="v297-invariants">v2.9.7 invariants</h2>
+
+<ul>
+  <li>Fair Player scheduling: Matches and Stats/Profile cannot starve one another while both are runnable.</li>
+  <li>Final authoritative Player Matches completion writes freshness before optional maintenance.</li>
+  <li>If the freshness write fails, the task throws/retries instead of becoming <code class="language-plaintext highlighter-rouge">done</code>.</li>
+  <li>Already-current recurring Player/Stats/Profile rows are committed as <code class="language-plaintext highlighter-rouge">skipped</code> before outbound API access.</li>
+  <li>Task Control lane details always use a decorated job with real queue and task breakdown.</li>
+  <li>Existing durable queue is preserved; no destructive reset is needed.</li>
+</ul>
+
+<h2 id="release-safety">Release safety</h2>
+
+<p>v2.9.7 is rebuilt from the exact verified v2.9.5 standalone tree. The v2.9.6 work tree is excluded from the release lineage. Packaging validates the complete delta and protects host-specific configuration/data/log paths.</p>
+
+<h3 id="v295-false-completion-recovery">v2.9.5 false-completion recovery</h3>
+
+<p>v2.9.7 does not reset or rewrite the durable queue. On Player-worker startup it detects current members whose earlier <code class="language-plaintext highlighter-rouge">sync_player</code> row is already <code class="language-plaintext highlighter-rouge">done</code> while <code class="language-plaintext highlighter-rouge">player_matches_checked_at</code> is still NULL and no Player continuation is active. It enqueues a distinct priority <code class="language-plaintext highlighter-rouge">sync_player</code> repair row. Existing historical queue rows remain intact for diagnostics.</p>
+
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/CORRECTIVE_AUDIT_v2.9.7.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

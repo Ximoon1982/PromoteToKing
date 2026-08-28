@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.10 migration | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.10 migration" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.8.10.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.8.10.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.10 migration" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.10 migration","url":"https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.8.10.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2810-migration">Promote to King v2.8.10 migration</h1>
+
+<h2 id="database">Database</h2>
+
+<p>Core upgrades additively from schema <strong>6 → 7</strong>. Analytics remains schema <strong>5</strong>. Do <strong>not</strong> reset or reseed either database.</p>
+
+<p>The first authenticated Team Points maintenance/worker execution applies <code class="language-plaintext highlighter-rouge">server/team-points/sql/core-migration-v2.8.10.sql</code>. It repairs historical finished non-void match result/competition-point fields from authoritative stored team scores, preserves authoritative finished 0–0 rows as void, and recreates the canonical match-summary view with score-derived outcomes. The Analytics logic watermark then causes the normal materialized rebuild so Opponent/Club/Match outcome aggregates are refreshed.</p>
+
+<p>Direct upgrades from older pre-v2.8.8 builds still pass through the existing additive Core 5→6 migration before Core 6→7.</p>
+
+<h2 id="runtime-state-and-secrets">Runtime state and secrets</h2>
+
+<p>v2.8.10 intentionally does not ship mutable production files <code class="language-plaintext highlighter-rouge">data/server-config.json</code>, <code class="language-plaintext highlighter-rouge">data/tournaments/archive.json</code>, or <code class="language-plaintext highlighter-rouge">data/match-tracking/index.json</code>. Preserve existing production data directories/configuration when extracting the release.</p>
+
+<p>If an older package already replaced Tournament or Match Tracking state with an empty placeholder, the application now attempts conservative recovery from non-empty backups/history/materialized Tournament browse cache. Recovery cannot recreate information that no longer exists in any retained source.</p>
+
+<h2 id="cron">CRON</h2>
+
+<p>Run <code class="language-plaintext highlighter-rouge">./reset-install-cron-v2.8.10.sh</code> after deployment. It takes no arguments. It reads protected tokens at runtime, recovers a missing shared token from existing legacy Tournament/Match Tracking cron lines when possible, and otherwise generates a new protected 256-bit token automatically. The installed crontab never embeds secrets.</p>
+
+<p>Tournament status maintenance is executed on every 10-minute Tournament CRON invocation. Discovery/podium work remains staged so the status contract and displayed freshness agree with the configured cadence.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/MIGRATION_v2.8.10.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

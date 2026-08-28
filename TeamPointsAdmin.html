@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="assets/css/team-points-admin.css?v=2.10.6.6">
   <link rel="stylesheet" href="assets/css/admin-embedded.css?v=2.10.6">
   <script src="config/site-branding.js?v=2.10.6"></script>
-  <script src="assets/js/site-config.js?v=2.10.6"></script>
+  <script src="assets/js/site-config.js?v=2.10.6.25"></script>
   <script src="assets/js/shared/api-cache.js?v=2.10.6"></script>
   <script src="assets/js/shared/api-client.js?v=2.10.6"></script>
   <script defer src="assets/js/shared/real-oauth.js?v=2.10.6"></script><script src="assets/js/shared/simulated-oauth.js?v=2.10.6"></script><script defer src="assets/js/shared/authenticated-member-refresh.js?v=2.10.6"></script>
@@ -189,7 +189,7 @@
 
   <section data-panel="live-ranks" role="tabpanel" hidden>
     <section class="p2k-tp-card">
-      <div class="p2k-tp-card-head"><div><h2>MCA source data</h2><p>Chess.com MCA Results CSV files remain the administrative source data and are added manually. v2.10.6.6 no longer scans the MCA index or downloads new arena Results files. For each stored CSV, P2K derives the known arena page directly from the filename and can backfill a missing or invalid event date without changing the CSV contents.</p></div><span class="p2k-tp-pill">MCA source intake</span></div>
+      <div class="p2k-tp-card-head"><div><h2>MCA source data</h2><p>Manual Results CSV upload remains available. v2.10.6.25 also discovers new Promote to King arenas from the legacy Chess.com live-tournaments index, downloads only genuinely missing Results CSV files, and feeds them into the existing MCA/MIRA processing pipeline without replacing stored sources.</p></div><span class="p2k-tp-pill">manual + automated Results intake</span></div>
       <div class="p2k-live-drop" id="liveRanksDrop" tabindex="0" role="button" aria-label="Drop MCA source CSV files or select files">
         <strong>Drop MCA source CSV files here</strong><span>or select one or more arena exports</span>
         <input id="liveRanksFiles" type="file" accept=".csv,text/csv" multiple>
@@ -205,21 +205,39 @@
       <div class="p2k-tp-status" id="liveRanksBlueGreenStatus">Blue → Green copies only the MCA data domain and replaces the Green MCA snapshot after validation.</div>
     </section>
     <section class="p2k-tp-card">
-      <div class="p2k-tp-card-head"><div><h2>MCA Known-Source Date Backfill</h2><p>No arena discovery or Results CSV download is performed. P2K examines only CSV files already stored in MCA source data. When a stored file has no trusted event date, its arena page URL is derived from the CSV filename and fetched to recover the start date. Files that already have a valid date generate no request. Requests remain strictly serial and server-paced to no more than one per second; the same timestamp-only worker is used by this panel and the twice-daily CRON.</p></div><span class="p2k-tp-pill">v2.10.6.10 · timestamp only · serial 1 req/s</span></div>
+      <div class="p2k-tp-card-head"><div><h2>Synchronize MCA Results</h2><p>Scan the legacy Chess.com Promote to King live-tournaments index for arena IDs newer than the latest stored source, then fetch only missing Results CSV files. Discovery always starts on page 1, follows older pages only until the stored arena-ID boundary is reached, and is resumable. All Chess.com requests are strictly serial and server-paced at least one second apart.</p></div><span class="p2k-tp-pill">v2.10.6.25 · incremental · serial ≥1 s/request</span></div>
       <div class="p2k-tp-actions">
-        <button class="p2k-tp-button primary" id="liveRanksSyncStart" type="button">Backfill missing dates</button>
-        <button class="p2k-tp-button" id="liveRanksSyncResume" type="button">Resume date backfill</button>
-        <button class="p2k-tp-button" id="liveRanksSyncRetry" type="button" disabled>Retry failed dates</button>
+        <button class="p2k-tp-button primary" id="liveRanksSyncStart" type="button">Synchronize now</button>
+        <button class="p2k-tp-button" id="liveRanksSyncResume" type="button">Resume synchronization</button>
+        <button class="p2k-tp-button" id="liveRanksSyncRetry" type="button" disabled>Retry failed downloads</button>
       </div>
-      <div class="p2k-tp-status" id="liveRanksSyncStatus">Loading MCA sync state…</div>
+      <div class="p2k-tp-status" id="liveRanksSyncStatus">Loading MCA Results synchronization state…</div>
       <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.65rem;align-items:center;margin-top:.7rem">
         <progress id="liveRanksSyncProgress" max="100" value="0" style="width:100%;height:1rem"></progress>
         <strong id="liveRanksSyncPercent">0%</strong>
       </div>
       <div class="p2k-tp-grid" id="liveRanksSyncMetrics" style="margin-top:.8rem"></div>
       <div id="liveRanksSyncErrorsWrap" hidden style="margin-top:1rem">
-        <div class="p2k-tp-card-head"><div><h3>Failed date backfills</h3><p>Stored arenas whose public event page could not provide a usable event date.</p></div></div>
+        <div class="p2k-tp-card-head"><div><h3>Failed Results downloads</h3><p>Failures remain visible and are not retried repeatedly within the same CRON run. Use Retry failed downloads after the source or transport issue has cleared.</p></div></div>
         <div class="p2k-tp-table-wrap"><table><thead><tr><th>Arena</th><th>Stage</th><th>Attempts</th><th>Error</th><th>Last attempt UTC</th></tr></thead><tbody id="liveRanksSyncErrorRows"></tbody></table></div>
+      </div>
+    </section>
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head"><div><h2>Historical MCA date repair</h2><p>Separate from automated Results acquisition. This examines only already stored MCA CSV files whose trusted event date is missing and derives each arena page from its stored filename. It never downloads or replaces Results CSV files and is never invoked by the twice-daily MCA Results CRON.</p></div><span class="p2k-tp-pill">manual only · serial ≥1 s/request</span></div>
+      <div class="p2k-tp-actions">
+        <button class="p2k-tp-button primary" id="liveRanksDateSyncStart" type="button">Backfill missing dates</button>
+        <button class="p2k-tp-button" id="liveRanksDateSyncResume" type="button">Resume date backfill</button>
+        <button class="p2k-tp-button" id="liveRanksDateSyncRetry" type="button" disabled>Retry failed dates</button>
+      </div>
+      <div class="p2k-tp-status" id="liveRanksDateSyncStatus">Loading historical MCA date-repair state…</div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.65rem;align-items:center;margin-top:.7rem">
+        <progress id="liveRanksDateSyncProgress" max="100" value="0" style="width:100%;height:1rem"></progress>
+        <strong id="liveRanksDateSyncPercent">0%</strong>
+      </div>
+      <div class="p2k-tp-grid" id="liveRanksDateSyncMetrics" style="margin-top:.8rem"></div>
+      <div id="liveRanksDateSyncErrorsWrap" hidden style="margin-top:1rem">
+        <div class="p2k-tp-card-head"><div><h3>Failed date backfills</h3><p>Stored arenas whose public event page could not provide a usable event date.</p></div></div>
+        <div class="p2k-tp-table-wrap"><table><thead><tr><th>Arena</th><th>Stage</th><th>Attempts</th><th>Error</th><th>Last attempt UTC</th></tr></thead><tbody id="liveRanksDateSyncErrorRows"></tbody></table></div>
       </div>
     </section>
     <div class="p2k-tp-grid" id="liveRanksMetrics"></div>
@@ -236,9 +254,16 @@
 
   <section data-panel="members" role="tabpanel" hidden>
     <div class="p2k-tp-card">
-      <div class="p2k-tp-card-head"><div><h2>Member chronology</h2><p>Append-only Green roster chronology. Trusted identity mappings are reconciled before a departure is recorded; account-closure checks run asynchronously and never block roster convergence.</p></div><button class="p2k-tp-button" id="memberChronologyRefresh" type="button">Refresh chronology</button></div>
+      <div class="p2k-tp-card-head"><div><h2>Member chronology</h2><p>Green roster chronology with display-level join consolidation. Departure account checks run asynchronously against the Chess.com player API and preserve the exact reported account/closure status when available.</p></div><button class="p2k-tp-button" id="memberChronologyRefresh" type="button">Refresh chronology</button></div>
+      <div class="p2k-tp-form" style="margin:.8rem 0">
+        <div class="p2k-tp-field"><label for="memberChronologyMember">Member name</label><input class="p2k-tp-input" id="memberChronologyMember" type="search" placeholder="Current or former username" autocomplete="off"></div>
+        <div class="p2k-tp-field"><label for="memberChronologyEventType">Event type</label><select class="p2k-tp-select" id="memberChronologyEventType"><option value="">All events</option><option value="joined">Joined</option><option value="rejoined">Rejoined</option><option value="left">Left</option><option value="name_changed">Name changed</option></select></div>
+        <div class="p2k-tp-field"><label for="memberChronologyFrom">From (UTC)</label><input class="p2k-tp-input" id="memberChronologyFrom" type="date"></div>
+        <div class="p2k-tp-field"><label for="memberChronologyTo">To (UTC)</label><input class="p2k-tp-input" id="memberChronologyTo" type="date"></div>
+      </div>
+      <div class="p2k-tp-actions" style="margin-bottom:.8rem"><button class="p2k-tp-button primary" id="memberChronologyApply" type="button">Apply filters</button><button class="p2k-tp-button" id="memberChronologyClear" type="button">Clear filters</button></div>
       <div class="p2k-tp-status" id="memberChronologyStatus">Open this tab to load member events.</div>
-      <div class="p2k-tp-table-wrap"><table><thead><tr><th>Detected</th><th>Event</th><th>Member</th><th>Transition</th><th>Account/profile</th><th>Source</th><th>Cycle</th></tr></thead><tbody id="memberChronologyRows"><tr><td colspan="7">No chronology loaded.</td></tr></tbody></table></div>
+      <div class="p2k-tp-table-wrap"><table><thead><tr><th>Detected</th><th>Event</th><th>Member</th><th>Transition</th><th>Account/profile</th></tr></thead><tbody id="memberChronologyRows"><tr><td colspan="5">No chronology loaded.</td></tr></tbody></table></div>
     </div>
   </section>
   <section data-panel="storage" role="tabpanel" hidden>
@@ -317,8 +342,8 @@
     </section>
   </section>
 </main>
-<script src="assets/js/pages/team-points-admin.js?v=2.10.6.10"></script>
-<script src="assets/js/pages/team-points-features.js?v=2.10.6.10"></script>
+<script src="assets/js/pages/team-points-admin.js?v=2.10.6.25"></script>
+<script src="assets/js/pages/team-points-features.js?v=2.10.6.25"></script>
 <script src="assets/js/shared/embedded-page.js?v=2.10.6"></script>
 </body>
 </html>

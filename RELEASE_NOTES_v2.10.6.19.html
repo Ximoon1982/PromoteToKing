@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.19 — heatmap transport and provenance corrective | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.19 — heatmap transport and provenance corrective" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.19.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.19.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.19 — heatmap transport and provenance corrective" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.19 — heatmap transport and provenance corrective","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.19.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v210619--heatmap-transport-and-provenance-corrective">Promote to King v2.10.6.19 — heatmap transport and provenance corrective</h1>
+
+<p>v2.10.6.19 corrects the historical Opponent Insights heatmap backfill introduced in v2.10.6.18.</p>
+
+<h2 id="historical-rating-provenance">Historical rating provenance</h2>
+
+<p>Chess.com historical finished-match detail payloads do not expose player ratings. The backfill therefore no longer treats <code class="language-plaintext highlighter-rouge">/pub/match/{id}</code> as a sufficient heatmap source. Green compatibility now recovers paired board ratings from already-stored <code class="language-plaintext highlighter-rouge">p2k_g_games</code> game observations, using point-event and identity evidence to identify the P2K side across username aliases. Only board positions with both ratings participate in a match average, and <code class="language-plaintext highlighter-rouge">rated_board_count</code> is once again the number of paired boards rather than the number of individual rating values.</p>
+
+<p>GABCRF now explicitly revisits finished matches whose compatibility rating metadata is still empty while Green already contains rated game evidence. This lets existing Green board/game history populate heatmaps without new Chess.com traffic.</p>
+
+<h2 id="accelerated-residual-backfill">Accelerated residual backfill</h2>
+
+<p>The durable heatmap queue now uses <code class="language-plaintext highlighter-rouge">heatmap_board_detail</code> work and queues only known finished P2K board URLs that do not already have a Green game with both ratings. The obsolete v2.10.6.18 <code class="language-plaintext highlighter-rouge">heatmap_match_detail</code> ledger is retired automatically when the backfill is prepared.</p>
+
+<p>Green Accelerator transport is corrected to:</p>
+<ul>
+  <li>classify accelerator Chess.com work as background traffic so P0/admin requests retain priority;</li>
+  <li>use a bounded 16-request logical feeder into the shared OAuth gateway instead of enqueuing an entire 48-item batch at once;</li>
+  <li>disable JSONP fallback for accelerator work so an OAuth gateway failure cannot fan out into dozens of script-tag retries;</li>
+  <li>preserve server-side OAuth rate coordination and retries;</li>
+  <li>throttle live accelerator-log rendering and suppress repetitive per-request error spam after a small diagnostic sample.</li>
+</ul>
+
+<p>Task Control now reports the actual OAuth gateway active/queued POST counts, gateway target/transport cap, and learned safe rate.</p>
+
+<p>GAB external counters once again count only true GAB opponent-profile work; the independent heatmap ledger no longer appears as GAB external pending work.</p>
+
+<p>No database reset/reseed, schema change, CRON schedule change, Blue/Green routing change, scoring change, or artwork change is required.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.19.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

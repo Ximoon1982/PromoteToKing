@@ -4,7 +4,15 @@ namespace P2K\TeamPoints;
 final class AchievementCatalog {
  public static function all(): array { return [
             self::item('first-match','First Match','Participate in your first recorded Promote to King team match.','matches','assets/images/achievements/first-match.png','assets/images/achievements/thumbs/128/first-match.webp'),
-            self::item('first-point','First Step','Earn your first Team Point.','team-points',self::placeholder('first-point'),self::placeholder('first-point')),
+            self::item('first-point','First Step','Earn your first Team Point.','team-points','assets/images/achievements/first-point.png','assets/images/achievements/thumbs/128/first-point.webp'),
+            self::item('team-points-day-2','Daily Contributor','Score 2 Team Points in one UTC day.','team-points','assets/images/achievements/team-points-day-2.png','assets/images/achievements/thumbs/128/team-points-day-2.webp'),
+            self::item('team-points-day-5','Consistent Day','Score 5 Team Points in one UTC day.','team-points','assets/images/achievements/team-points-day-5.png','assets/images/achievements/thumbs/128/team-points-day-5.webp'),
+            self::item('team-points-week-10','Weekly Contributor','Score 10 Team Points in one ISO week.','team-points','assets/images/achievements/team-points-week-10.png','assets/images/achievements/thumbs/128/team-points-week-10.webp'),
+            self::item('team-points-week-20','Consistent Week','Score 20 Team Points in one ISO week.','team-points','assets/images/achievements/team-points-week-20.png','assets/images/achievements/thumbs/128/team-points-week-20.webp'),
+            self::item('team-points-month-25','Monthly Contributor','Score 25 Team Points in one UTC calendar month.','team-points','assets/images/achievements/team-points-month-25.png','assets/images/achievements/thumbs/128/team-points-month-25.webp'),
+            self::item('team-points-month-50','Consistent Month','Score 50 Team Points in one UTC calendar month.','team-points','assets/images/achievements/team-points-month-50.png','assets/images/achievements/thumbs/128/team-points-month-50.webp'),
+            self::item('team-points-year-100','Yearly Contributor','Score 100 Team Points in one UTC calendar year.','team-points','assets/images/achievements/team-points-year-100.png','assets/images/achievements/thumbs/128/team-points-year-100.webp'),
+            self::item('team-points-year-250','Consistent Year','Score 250 Team Points in one UTC calendar year.','team-points','assets/images/achievements/team-points-year-250.png','assets/images/achievements/thumbs/128/team-points-year-250.webp'),
             self::item('matches-10','Rising Star','Play in 10 Promote to King team matches.','matches','assets/images/achievements/matches-10.png','assets/images/achievements/thumbs/128/matches-10.webp'),
             self::item('matches-50','Clutch Player','Play in 50 Promote to King team matches.','matches','assets/images/achievements/matches-50.png','assets/images/achievements/thumbs/128/matches-50.webp'),
             self::item('matches-100','Great Strategist','Play in 100 Promote to King team matches.','matches','assets/images/achievements/matches-100.png','assets/images/achievements/thumbs/128/matches-100.webp'),

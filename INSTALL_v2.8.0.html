@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.0 — detailed fresh installation guide | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.0 — detailed fresh installation guide" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.8.0.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.8.0.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.0 — detailed fresh installation guide" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.0 — detailed fresh installation guide","url":"https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.8.0.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v280--detailed-fresh-installation-guide">Promote to King v2.8.0 — detailed fresh installation guide</h1>
+
+<p>v2.8.0 is a clean-break Team Points storage release. It must start with <strong>two fresh empty MariaDB databases</strong>. Do not reuse the v2.7.x Team Points database.</p>
+
+<p>The website itself remains an in-place upgrade from v2.7.3; the Team Points data layer is initialized from the supplied v2.8 initializer.</p>
+
+<h2 id="what-you-need">What you need</h2>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">PromoteToKing_Standalone_v2.8.0.zip</code></li>
+  <li><code class="language-plaintext highlighter-rouge">P2K_v2.8.0_Fresh_DB_Initializer_v1.0.0.zip</code></li>
+  <li>access to the IONOS Hosting control panel</li>
+  <li>SFTP/SSH access to the website</li>
+  <li>Python 3 on the PC that will run the initializer</li>
+  <li>two new empty IONOS MariaDB databases</li>
+</ul>
+
+<p>Expected Team Points snapshot after initialization:</p>
+
+<ul>
+  <li>4,473 current members</li>
+  <li>17,091 matches</li>
+  <li>15,997 finished matches</li>
+  <li>1,019 in-progress matches</li>
+  <li>74 registration matches</li>
+  <li>1 metadata-unknown match (<code class="language-plaintext highlighter-rouge">1983076</code>)</li>
+  <li>104,761 member/board rows</li>
+  <li>198,107 finished game events</li>
+  <li>1,507 void 0–0 finished matches</li>
+  <li>371,168 Club Points</li>
+</ul>
+
+<hr />
+
+<h1 id="phase-1--preserve-the-current-installation">Phase 1 — preserve the current installation</h1>
+
+<h2 id="1-pause-team-points">1. Pause Team Points</h2>
+
+<p>Open:</p>
+
+<p><code class="language-plaintext highlighter-rouge">https://www.promotetoking.org/TaskControl.html?admin=1</code></p>
+
+<p>Pause <strong>Team Points</strong>. Leave it paused until the new Core and Analytics databases have been initialized and checked.</p>
+
+<p>For the cleanest cutover, temporarily disable the Team Points host CRON entry as well. The match-monitoring and tournament tasks can remain enabled because their storage does not use the new Team Points Core schema.</p>
+
+<h2 id="2-back-up-the-old-database">2. Back up the old database</h2>
+
+<p>Keep a full backup of the current v2.7.x database. Do not delete the old database yet.</p>
+
+<p>The old database is your rollback source until v2.8 has been verified.</p>
+
+<h2 id="3-back-up-the-current-website">3. Back up the current website</h2>
+
+<p>At minimum preserve:</p>
+
+<ul>
+  <li>the current website files;</li>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/config/config.local.php</code>;</li>
+  <li><code class="language-plaintext highlighter-rouge">data/server-config.json</code>;</li>
+  <li><code class="language-plaintext highlighter-rouge">config/site-branding.js</code>;</li>
+  <li><code class="language-plaintext highlighter-rouge">data/tournaments/</code>;</li>
+  <li><code class="language-plaintext highlighter-rouge">data/match-tracking/</code>;</li>
+  <li><code class="language-plaintext highlighter-rouge">data/live-ranks/</code>.</li>
+</ul>
+
+<p>A full copy of the web root is preferable.</p>
+
+<p>On the current IONOS account the site root has been:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> /kunden/homepages/43/d141198007/htdocs
+</code></pre></div></div>
+
+<p>You can make a server-side code backup, space permitting, for example:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> /kunden/homepages/43/d141198007
+<span class="nb">cp</span> <span class="nt">-a</span> htdocs <span class="s2">"htdocs-before-v2.8.0-</span><span class="si">$(</span><span class="nb">date</span> +%Y%m%d-%H%M%S<span class="si">)</span><span class="s2">"</span>
+</code></pre></div></div>
+
+<p>If webspace is tight, download the site through SFTP instead of making a second server-side copy.</p>
+
+<hr />
+
+<h1 id="phase-2--create-the-two-fresh-databases">Phase 2 — create the two fresh databases</h1>
+
+<h2 id="4-create-the-core-database-in-ionos">4. Create the Core database in IONOS</h2>
+
+<p>In IONOS:</p>
+
+<ol>
+  <li>Log in.</li>
+  <li>Open <strong>Menu &gt; Hosting</strong>.</li>
+  <li>Select the hosting contract if required.</li>
+  <li>In <strong>Databases</strong>, click <strong>Create Database</strong>. If IONOS shows <strong>Manage</strong>, open it and then choose <strong>Create Database</strong>.</li>
+  <li>Select <strong>MariaDB</strong>.</li>
+  <li>Give the database a note such as <code class="language-plaintext highlighter-rouge">P2K v2.8 Core</code>.</li>
+  <li>Set a strong password.</li>
+  <li>Save.</li>
+  <li>Record the exact database details IONOS displays:
+    <ul>
+      <li>host</li>
+      <li>database name</li>
+      <li>user name</li>
+      <li>password</li>
+      <li>port, normally 3306.</li>
+    </ul>
+  </li>
+</ol>
+
+<p>Do not create tables manually. The database must remain empty.</p>
+
+<h2 id="5-create-the-analytics-database">5. Create the Analytics database</h2>
+
+<p>Repeat the same process for a second fresh database, with a note such as:</p>
+
+<p><code class="language-plaintext highlighter-rouge">P2K v2.8 Analytics</code></p>
+
+<p>Again, record host, database name, user and password and leave the database completely empty.</p>
+
+<p>A standard IONOS database currently has a 2 GB per-database quota. v2.8 defaults both capacity monitors to 2,147,483,648 bytes; change the configured quota if your specific databases have another limit.</p>
+
+<hr />
+
+<h1 id="phase-3--upload-v280">Phase 3 — upload v2.8.0</h1>
+
+<h2 id="6-extract-the-website-zip-locally">6. Extract the website ZIP locally</h2>
+
+<p>Extract:</p>
+
+<p><code class="language-plaintext highlighter-rouge">PromoteToKing_Standalone_v2.8.0.zip</code></p>
+
+<p>The archive contains the complete site, not a patch.</p>
+
+<h2 id="7-upload-the-website">7. Upload the website</h2>
+
+<p>Upload the v2.8.0 contents to the existing web root.</p>
+
+<p>Do <strong>not</strong> overwrite production secrets or data blindly. In particular, preserve:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">data/server-config.json</code></li>
+  <li><code class="language-plaintext highlighter-rouge">config/site-branding.js</code></li>
+  <li><code class="language-plaintext highlighter-rouge">data/tournaments/archive.json</code></li>
+  <li><code class="language-plaintext highlighter-rouge">data/tournaments/backups/</code></li>
+  <li><code class="language-plaintext highlighter-rouge">data/match-tracking/</code></li>
+  <li><code class="language-plaintext highlighter-rouge">data/live-ranks/</code></li>
+</ul>
+
+<p>The package intentionally does not contain <code class="language-plaintext highlighter-rouge">server/team-points/config/config.local.php</code>, so an existing file normally survives an overlay. It must nevertheless be edited in the next step because the v2.7 format only describes one database.</p>
+
+<h2 id="8-create-the-v28-team-points-configuration">8. Create the v2.8 Team Points configuration</h2>
+
+<p>SSH to the webspace and go to the site:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> /kunden/homepages/43/d141198007/htdocs
+</code></pre></div></div>
+
+<p>Create the new local config from the v2.8 template:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cp </span>server/team-points/config/config.example.php <span class="se">\</span>
+   server/team-points/config/config.local.php
+</code></pre></div></div>
+
+<p>If you need the old tokens first, copy them from your backed-up v2.7 config before replacing it.</p>
+
+<p>Edit:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nano server/team-points/config/config.local.php
+</code></pre></div></div>
+
+<p>Fill <strong>both</strong> database blocks with the values IONOS assigned. The essential shape is:</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s1">'databases'</span> <span class="o">=&gt;</span> <span class="p">[</span>
+    <span class="s1">'core'</span> <span class="o">=&gt;</span> <span class="p">[</span>
+        <span class="s1">'host'</span> <span class="o">=&gt;</span> <span class="s1">'CORE_DB_HOST'</span><span class="p">,</span>
+        <span class="s1">'port'</span> <span class="o">=&gt;</span> <span class="mi">3306</span><span class="p">,</span>
+        <span class="s1">'name'</span> <span class="o">=&gt;</span> <span class="s1">'CORE_DB_NAME'</span><span class="p">,</span>
+        <span class="s1">'user'</span> <span class="o">=&gt;</span> <span class="s1">'CORE_DB_USER'</span><span class="p">,</span>
+        <span class="s1">'password'</span> <span class="o">=&gt;</span> <span class="s1">'CORE_DB_PASSWORD'</span><span class="p">,</span>
+        <span class="s1">'charset'</span> <span class="o">=&gt;</span> <span class="s1">'utf8mb4'</span><span class="p">,</span>
+        <span class="s1">'connect_timeout_seconds'</span> <span class="o">=&gt;</span> <span class="mi">5</span><span class="p">,</span>
+        <span class="s1">'lock_timeout_seconds'</span> <span class="o">=&gt;</span> <span class="mi">5</span><span class="p">,</span>
+        <span class="s1">'quota_bytes'</span> <span class="o">=&gt;</span> <span class="mi">2147483648</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="s1">'analytics'</span> <span class="o">=&gt;</span> <span class="p">[</span>
+        <span class="s1">'host'</span> <span class="o">=&gt;</span> <span class="s1">'ANALYTICS_DB_HOST'</span><span class="p">,</span>
+        <span class="s1">'port'</span> <span class="o">=&gt;</span> <span class="mi">3306</span><span class="p">,</span>
+        <span class="s1">'name'</span> <span class="o">=&gt;</span> <span class="s1">'ANALYTICS_DB_NAME'</span><span class="p">,</span>
+        <span class="s1">'user'</span> <span class="o">=&gt;</span> <span class="s1">'ANALYTICS_DB_USER'</span><span class="p">,</span>
+        <span class="s1">'password'</span> <span class="o">=&gt;</span> <span class="s1">'ANALYTICS_DB_PASSWORD'</span><span class="p">,</span>
+        <span class="s1">'charset'</span> <span class="o">=&gt;</span> <span class="s1">'utf8mb4'</span><span class="p">,</span>
+        <span class="s1">'connect_timeout_seconds'</span> <span class="o">=&gt;</span> <span class="mi">5</span><span class="p">,</span>
+        <span class="s1">'lock_timeout_seconds'</span> <span class="o">=&gt;</span> <span class="mi">5</span><span class="p">,</span>
+        <span class="s1">'quota_bytes'</span> <span class="o">=&gt;</span> <span class="mi">2147483648</span><span class="p">,</span>
+    <span class="p">],</span>
+<span class="p">],</span>
+</code></pre></div></div>
+
+<p>Keep/re-enter your existing application secrets:</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s1">'app'</span> <span class="o">=&gt;</span> <span class="p">[</span>
+    <span class="s1">'club_slug'</span> <span class="o">=&gt;</span> <span class="s1">'promote-to-king'</span><span class="p">,</span>
+    <span class="s1">'admin_token'</span> <span class="o">=&gt;</span> <span class="s1">'YOUR_EXISTING_ADMIN_TOKEN'</span><span class="p">,</span>
+    <span class="s1">'cron_token'</span> <span class="o">=&gt;</span> <span class="s1">'YOUR_EXISTING_TEAM_POINTS_CRON_TOKEN'</span><span class="p">,</span>
+    <span class="s1">'init_token'</span> <span class="o">=&gt;</span> <span class="s1">'A_DEDICATED_V280_INITIALIZER_TOKEN'</span><span class="p">,</span>
+    <span class="mf">...</span>
+<span class="p">],</span>
+</code></pre></div></div>
+
+<p>Use a dedicated <code class="language-plaintext highlighter-rouge">init_token</code> with no leading/trailing spaces. The local initializer displays the value you enter in clear, along with its character count and SHA-256 fingerprint, to make signature problems diagnosable.</p>
+
+<p>If <code class="language-plaintext highlighter-rouge">init_token</code> is left empty, the server uses <code class="language-plaintext highlighter-rouge">admin_token</code>, but an explicit initializer token is less ambiguous during installation.</p>
+
+<p>Do not put the shared <code class="language-plaintext highlighter-rouge">data/server-config.json</code> CRON token in <code class="language-plaintext highlighter-rouge">app.cron_token</code>; those are separate tokens.</p>
+
+<h2 id="9-prepare-the-protected-filesystem-directories">9. Prepare the protected filesystem directories</h2>
+
+<p>v2.8 creates these automatically, but creating the roots through SSH makes permission problems obvious before initialization:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> /kunden/homepages/43/d141198007/htdocs
+<span class="nb">mkdir</span> <span class="nt">-p</span> data/runtime-v280 data/archive-v280
+<span class="nb">chmod </span>u+rwx data/runtime-v280 data/archive-v280
+</code></pre></div></div>
+
+<p>Do not run recursive <code class="language-plaintext highlighter-rouge">chmod</code> against IONOS-managed directories such as the hosting <code class="language-plaintext highlighter-rouge">logs</code> directory. v2.8 uses its own runtime tree.</p>
+
+<p>Default runtime paths are:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>data/runtime-v280/cache/chesscom/
+data/runtime-v280/logs/
+data/runtime-v280/fresh-init/
+data/runtime-v280/analytics/
+data/archive-v280/
+</code></pre></div></div>
+
+<p>Each protected runtime directory receives an <code class="language-plaintext highlighter-rouge">.htaccess</code> deny file when created.</p>
+
+<hr />
+
+<h1 id="phase-4--initialize-the-databases">Phase 4 — initialize the databases</h1>
+
+<h2 id="10-extract-the-initializer-on-your-pc">10. Extract the initializer on your PC</h2>
+
+<p>Extract:</p>
+
+<p><code class="language-plaintext highlighter-rouge">P2K_v2.8.0_Fresh_DB_Initializer_v1.0.0.zip</code></p>
+
+<p>Do not upload this package to the website. It is a local administration utility.</p>
+
+<p>It already embeds the six updated files you supplied:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">FinishedMatches-P2K(3).csv</code></li>
+  <li><code class="language-plaintext highlighter-rouge">ActiveMatches-P2K(2).csv</code></li>
+  <li><code class="language-plaintext highlighter-rouge">parseddata(3).csv</code></li>
+  <li><code class="language-plaintext highlighter-rouge">parsedmembers(2).csv</code></li>
+  <li><code class="language-plaintext highlighter-rouge">allmembers(3).csv</code></li>
+  <li><code class="language-plaintext highlighter-rouge">findings(2).txt</code></li>
+</ul>
+
+<p>You do not need to select or provide the files again.</p>
+
+<h2 id="11-validate-the-embedded-snapshot-locally">11. Validate the embedded snapshot locally</h2>
+
+<p>On Windows, double-click or run:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>VALIDATE_EMBEDDED_DATA.bat
+</code></pre></div></div>
+
+<p>On Linux/macOS:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./validate_embedded_data.sh
+</code></pre></div></div>
+
+<p>This stage performs no network request and must report the expected counts listed at the top of this guide.</p>
+
+<p>Do not proceed if local validation fails.</p>
+
+<h2 id="12-run-the-fresh-initializer">12. Run the fresh initializer</h2>
+
+<p>Windows:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>RUN_INITIALIZER.bat
+</code></pre></div></div>
+
+<p>Linux/macOS:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./run_initializer.sh
+</code></pre></div></div>
+
+<p>The utility asks for:</p>
+
+<ol>
+  <li>website root URL — press Enter for <code class="language-plaintext highlighter-rouge">https://www.promotetoking.org</code>;</li>
+  <li>the v2.8 <code class="language-plaintext highlighter-rouge">init_token</code> — it is shown in clear for verification;</li>
+  <li>confirmation <code class="language-plaintext highlighter-rouge">INITIALIZE</code> before any schema/data creation;</li>
+  <li>final confirmation <code class="language-plaintext highlighter-rouge">INITIALIZE-P2K-2.8.0</code> before Analytics is built and initialization is sealed.</li>
+</ol>
+
+<p>The server first refuses to proceed if either configured database already contains tables.</p>
+
+<p>The initializer then:</p>
+
+<ol>
+  <li>creates Core schema version 1;</li>
+  <li>creates Analytics schema version 1;</li>
+  <li>streams normalized members into Core;</li>
+  <li>streams normalized matches into Core;</li>
+  <li>streams compact boards/games into Core;</li>
+  <li>validates exact Core counts and 371,168 Club Points;</li>
+  <li>rebuilds Analytics from Core;</li>
+  <li>stores small initialization audit rows;</li>
+  <li>creates a paused incremental catch-up job;</li>
+  <li>leaves Team Points paused intentionally.</li>
+</ol>
+
+<p>There are no SQL staging tables and no SQL HTTP-cache tables.</p>
+
+<p>If a network interruption occurs before finalization, rerun with the same data; the uploaded Core rows are idempotent. If you start a completely new initializer run while an unfinished run is registered, the endpoint will refuse the conflicting run rather than mixing data.</p>
+
+<hr />
+
+<h1 id="phase-5--verify-before-resuming">Phase 5 — verify before resuming</h1>
+
+<h2 id="13-verify-basic-team-points-data">13. Verify basic Team Points data</h2>
+
+<p>Open:</p>
+
+<p><code class="language-plaintext highlighter-rouge">https://www.promotetoking.org/TeamPointsAdmin.html?admin=1</code></p>
+
+<p>Check the database-backed status. Expected snapshot values include:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Members           4,473
+Matches          17,091
+Finished         15,997
+In progress       1,019
+Registration         74
+Game events     198,107
+Club Points     371,168
+</code></pre></div></div>
+
+<p>The one findings-only match <code class="language-plaintext highlighter-rouge">1983076</code> should be queued for an authoritative metadata refresh rather than silently omitted.</p>
+
+<h2 id="14-verify-storage--capacity">14. Verify Storage &amp; capacity</h2>
+
+<p>Open:</p>
+
+<p><code class="language-plaintext highlighter-rouge">https://www.promotetoking.org/TeamPointsAdmin.html?admin=1&amp;tab=storage</code></p>
+
+<p>Confirm:</p>
+
+<ul>
+  <li>Core DB is available;</li>
+  <li>Analytics DB is available;</li>
+  <li>both DB lights are green;</li>
+  <li>each DB shows the expected configured quota;</li>
+  <li>filesystem cache shows a separate quota (512 MiB by default);</li>
+  <li>the first storage sample is recorded.</li>
+</ul>
+
+<p>Immediately after a fresh install there is not enough history for a real monthly forecast. The page should say it is collecting a baseline. During the first month it may show a labelled daily-bootstrap estimate. After at least two calendar months, projections use the monthly series.</p>
+
+<h2 id="15-verify-the-publicinsights-views">15. Verify the public/Insights views</h2>
+
+<p>Check at least:</p>
+
+<ul>
+  <li>Dashboard Team Points total;</li>
+  <li>Hall of Fame / Daily ranks;</li>
+  <li>Team Insights;</li>
+  <li>Members Insights;</li>
+  <li>Matches Insights;</li>
+  <li>Opponents Insights;</li>
+  <li>a known player profile;</li>
+  <li>a known match detail.</li>
+</ul>
+
+<p>All Team Points analytical values should now be served from Analytics projections derived from Core.</p>
+
+<h2 id="16-live-ranks-after-a-fresh-analytics-db">16. Live Ranks after a fresh Analytics DB</h2>
+
+<p>Live Rank tables intentionally start fresh because they are Analytics data and are not part of the six Team Points snapshot files.</p>
+
+<p>Preserve <code class="language-plaintext highlighter-rouge">data/live-ranks/</code> from the old site. In <strong>Team Points &gt; Live ranks</strong>, re-upload/process the retained Live Rank CSV pack if the new Analytics DB has no Live Rank rows yet.</p>
+
+<p>Do not delete the original Live Rank CSV/source directory until the new Analytics results have been checked.</p>
+
+<h2 id="17-tournament-and-tracked-match-data">17. Tournament and tracked-match data</h2>
+
+<p>These remain filesystem-backed and should already be present if you preserved:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">data/tournaments/</code></li>
+  <li><code class="language-plaintext highlighter-rouge">data/match-tracking/</code></li>
+</ul>
+
+<p>Verify the Tournament and tracking administration screens before removing any old website backup.</p>
+
+<hr />
+
+<h1 id="phase-6--resume-scheduled-processing">Phase 6 — resume scheduled processing</h1>
+
+<h2 id="18-restoreverify-cron">18. Restore/verify CRON</h2>
+
+<p>v2.8 keeps the same endpoint URLs and cadence as v2.7.x:</p>
+
+<pre><code class="language-cron">*/5 * * * * .../server/team-points/public/cron.php?token=TEAM_POINTS_CRON_TOKEN
+17 * * * * .../api/track-upcoming-league-matches/?token=SHARED_CRON_TOKEN
+2-59/5 * * * * .../server/tournaments/public/cron.php?token=SHARED_CRON_TOKEN
+</code></pre>
+
+<p>If your existing SSH CRON wrapper already calls these URLs with the correct tokens, it can remain in use.</p>
+
+<p>See <code class="language-plaintext highlighter-rouge">CRON_SETUP_v2.8.0.md</code> for the canonical schedule.</p>
+
+<h2 id="19-resume-team-points">19. Resume Team Points</h2>
+
+<p>Return to:</p>
+
+<p><code class="language-plaintext highlighter-rouge">https://www.promotetoking.org/TaskControl.html?admin=1</code></p>
+
+<p>Resume Team Points.</p>
+
+<p>The first catch-up job will refresh the club match index, roster and the unknown metadata row(s), then routine incremental processing continues.</p>
+
+<h2 id="20-watch-the-first-cycles">20. Watch the first cycles</h2>
+
+<p>Check:</p>
+
+<ul>
+  <li>Team Points job/process logs;</li>
+  <li>Scheduled Task Control;</li>
+  <li>Storage &amp; capacity;</li>
+  <li>filesystem cache growth.</li>
+</ul>
+
+<p>The API cache should remain bounded by <code class="language-plaintext highlighter-rouge">cache_max_bytes</code>; it should not consume either MariaDB quota.</p>
+
+<hr />
+
+<h1 id="phase-7--retire-v27x-data">Phase 7 — retire v2.7.x data</h1>
+
+<p>Only after the new system has been verified and at least one normal Team Points cycle has completed:</p>
+
+<ol>
+  <li>retain a final old database backup;</li>
+  <li>remove old one-time/emergency scripts listed in <code class="language-plaintext highlighter-rouge">DECOMMISSION_v2.8.0.md</code>;</li>
+  <li>remove old importer CSV/ZIP/PYZ copies from the web root if any;</li>
+  <li>keep tournament, match-tracking and Live Rank source data;</li>
+  <li>when you no longer require rollback, delete the old v2.7.x Team Points database from IONOS.</li>
+</ol>
+
+<p>The old database is not referenced by v2.8.0 once <code class="language-plaintext highlighter-rouge">config.local.php</code> points Core and Analytics at the new databases.</p>
+
+<hr />
+
+<h1 id="recovery-rules">Recovery rules</h1>
+
+<h2 id="core-unavailable">Core unavailable</h2>
+
+<p>Administrator page access still works. Core-backed features show data errors. Do not rebuild Core from Analytics: Core is authoritative.</p>
+
+<p>Restore Core from backup or, for a brand-new installation before any new data matters, recreate both fresh databases and rerun the initializer.</p>
+
+<h2 id="analytics-unavailable">Analytics unavailable</h2>
+
+<p>Core collection remains authoritative. Analytics is rebuildable from Core. Do not reacquire historical Chess.com data just because Analytics was lost.</p>
+
+<h2 id="filesystem-cache-deleted">Filesystem cache deleted</h2>
+
+<p>No durable data is lost. The cache repopulates from Chess.com as requests occur.</p>
+
+<h2 id="filesystem-cache-approaches-its-cap">Filesystem cache approaches its cap</h2>
+
+<p>The cache automatically purges expired data and evicts old files. The Storage &amp; capacity tab shows the separate cache budget.</p>
+
+<h2 id="a-database-reaches-80">A database reaches 80%</h2>
+
+<p>The corresponding Storage &amp; capacity light turns red. Investigate growth before it approaches IONOS’s hard quota. Core and Analytics are monitored independently.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALL_v2.8.0.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

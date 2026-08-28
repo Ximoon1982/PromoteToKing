@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Architecture | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Architecture" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/docs/ARCHITECTURE.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/docs/ARCHITECTURE.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Architecture" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Architecture","url":"https://ximoon1982.github.io/PromoteToKing/docs/ARCHITECTURE.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="architecture">Architecture</h1>
+
+<h2 id="design-goals">Design goals</h2>
+
+<p>The repository remains deployable as ordinary static files while sharing network, cache, analysis, and configuration logic. Each tool also remains directly usable as a standalone page.</p>
+
+<p>The user interface is intentionally isolated from infrastructure changes: existing page markup, CSS classes, labels, filters, result cards, and charts are preserved. Infrastructure changes preserve the existing page layouts. User-visible additions since 2.0.0 are the Administration Diagnostics tab and the shared viewport-aware information-popover behavior; analytical calculations and ordinary controls are unchanged.</p>
+
+<h2 id="runtime-layers">Runtime layers</h2>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>index.html retained-tab shell
+  └── one persistent same-origin iframe per tool
+       ├── standalone HTML shell
+       ├── local page CSS
+       ├── site-config.js
+       ├── shared API cache and explicit API client
+       ├── optional shared analysis coordinator / analytics
+       ├── shared information-popover component where required
+       ├── shared concise control-hint layer
+       └── page controller or shared analysis core
+</code></pre></div></div>
+
+<p>The tab shell never parses or replays another page’s scripts, never calls <code class="language-plaintext highlighter-rouge">document.write</code>, and never destroys a loaded tool when changing tabs.</p>
+
+<h2 id="page-implementations">Page implementations</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Entry point</th>
+      <th>Controller and shared modules</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">FindMatch.htm</code></td>
+      <td><code class="language-plaintext highlighter-rouge">find-match.js</code>, explicit client/cache, analysis coordinator, optional analytics and simulated login</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">AnalyzeMatches.htm</code></td>
+      <td>lightweight mode wrapper plus <code class="language-plaintext highlighter-rouge">upcoming-analysis-core.js</code>, explicit client/cache, analysis coordinator</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">MatchCreationAnalyzer.htm</code></td>
+      <td><code class="language-plaintext highlighter-rouge">match-creation-analyzer.js</code>, <code class="language-plaintext highlighter-rouge">match-creation-charts.js</code>, explicit client/cache, analysis coordinator</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">AnalyzeMatch.html</code></td>
+      <td><code class="language-plaintext highlighter-rouge">analyze-match.js</code>, explicit client/cache</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">AnalyzeMatchModal.html</code></td>
+      <td>lightweight modal mode wrapper plus <code class="language-plaintext highlighter-rouge">upcoming-analysis-core.js</code>, explicit client/cache</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">RecruitMatch.html</code></td>
+      <td><code class="language-plaintext highlighter-rouge">recruit-match.js</code>, explicit client/cache</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">ChallengeListAssistant.html</code></td>
+      <td>URL validation, activity classification, ordered challenge recommendation, explicit client/cache</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">index.html</code></td>
+      <td><code class="language-plaintext highlighter-rouge">site-tabs.js</code>, <code class="language-plaintext highlighter-rouge">admin-features.js</code>, explicit client/cache, analysis coordinator, simulated login</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The Upcoming page and detailed modal use the same analytical core. Their wrappers only describe page-specific presentation differences.</p>
+
+<h2 id="central-configuration">Central configuration</h2>
+
+<p><code class="language-plaintext highlighter-rouge">assets/js/site-config.js</code> defines routes, club slug, league identifiers, approved API origins, networking defaults, cache calibration values, and feature flags. Runtime controllers read this object rather than maintaining independent route or league lists.</p>
+
+<p><code class="language-plaintext highlighter-rouge">site-manifest.json</code> is packaging metadata. It lists every shipped file and records runtime capabilities, but it is not the runtime source of truth.</p>
+
+<h2 id="local-and-online-application-backends">Local and online application backends</h2>
+
+<p><code class="language-plaintext highlighter-rouge">serve_local.py</code> uses <code class="language-plaintext highlighter-rouge">ThreadingHTTPServer</code> and <code class="language-plaintext highlighter-rouge">SimpleHTTPRequestHandler</code> from the Python standard library for local use. <code class="language-plaintext highlighter-rouge">api/index.php</code> and the endpoint directories implement the same contract on Apache/PHP hosting. The browser therefore uses the same same-origin endpoints in both modes:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>GET /api/challenge-club-list
+PUT /api/challenge-club-list
+POST /api/match-assistant-log
+GET /api/match-assistant-logs
+GET/POST /api/track-upcoming-league-matches
+GET /api/match-history
+GET/DELETE /api/tracked-match-data
+</code></pre></div></div>
+
+<p>The Challenge Assistant, Match Assistant usage logger, Administration log explorer, history chart, and match-data management panel use ordinary same-origin <code class="language-plaintext highlighter-rouge">fetch</code>; these endpoints are intentionally outside <code class="language-plaintext highlighter-rouge">P2K_API_CLIENT</code>, which remains restricted to approved Chess.com API origins. Endpoint directories provide extensionless URLs without requiring PHP filenames in the frontend.</p>
+
+<p>The stored record contains a schema version, monotonically increasing revision, UTC update timestamp, and ordered de-duplicated club slugs. Writes use a temporary file, <code class="language-plaintext highlighter-rouge">fsync</code>, atomic replacement, and a backup of the preceding record. A process-local re-entrant lock serializes concurrent saves. The browser supplies the revision it last loaded; stale writes receive HTTP 409 and do not overwrite newer data.</p>
+
+<p>Club-slug validation is deliberately limited to transport safety rather than undocumented Chess.com naming assumptions: lowercase letters, digits, and hyphens are accepted in any position, provided at least one letter or digit is present.</p>
+
+<p>The frontend treats storage as optional. A failed initial read does not block any Challenge Assistant function. Automatic loading fills only untouched empty inputs; manual loading replaces only the active internal tab.</p>
+
+<p>Completed user-initiated Match Assistant analyses append one compact JSON object per line to <code class="language-plaintext highlighter-rouge">logs/match-assistant/YYYY-MM-DD.jsonl</code>. The server supplies the UTC timestamp and selects the daily filename, while the browser supplies only the canonical username and current filtered match count. A process-local lock serializes appends. Automatic synchronized refreshes and cancelled or failed analyses do not send a log event.</p>
+
+<p>The read endpoint aggregates a selected UTC date range and optional case-insensitive username substring. It returns total analyses, total matches found, distinct usernames, daily aggregates, per-user aggregates, and recent matching entries. Direct requests under <code class="language-plaintext highlighter-rouge">/logs/</code> and <code class="language-plaintext highlighter-rouge">/data/</code> are denied. Python-local log reads are loopback-only unless the launcher is explicitly started with <code class="language-plaintext highlighter-rouge">--allow-remote-log-read</code>; the online PHP deployment should be protected by hosting-level authentication when exposed publicly.</p>
+
+<h2 id="explicit-api-client">Explicit API client</h2>
+
+<p><code class="language-plaintext highlighter-rouge">assets/js/shared/api-client.js</code> captures and calls native <code class="language-plaintext highlighter-rouge">fetch</code>; it never replaces <code class="language-plaintext highlighter-rouge">window.fetch</code>.</p>
+
+<h3 id="scheduling">Scheduling</h3>
+
+<ul>
+  <li>One bounded queue is shared by calls within a page.</li>
+  <li>Endpoint and task priorities determine initial order.</li>
+  <li>Equal priorities retain insertion order.</li>
+  <li>Waiting tasks gain priority over time to prevent starvation.</li>
+  <li>Configured and adaptive concurrency are reported separately.</li>
+</ul>
+
+<h3 id="rate-limiting-and-resilience">Rate limiting and resilience</h3>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">Retry-After</code> pauses the host-wide queue.</li>
+  <li>Retry delays include jitter to avoid synchronized retries.</li>
+  <li>Repeated transient failures open a short circuit pause.</li>
+  <li>Concurrency reduces after rate limits and recovers gradually after successful requests.</li>
+  <li>Conditional fetch failures retry without conditional headers before JSONP.</li>
+</ul>
+
+<h3 id="structured-errors">Structured errors</h3>
+
+<p>Errors include category, code, HTTP status, URL, retryability, retry delay, and attempt number. Categories cover cancellation, timeout, network, not found, forbidden, rate limit, server, client, parse, and cache failures.</p>
+
+<h3 id="batch-results">Batch results</h3>
+
+<p><code class="language-plaintext highlighter-rouge">processPriority()</code> returns separate succeeded, failed, and pending entries. The result can retry failures or resume pending entries without rerunning settled work. Page controllers decide how those entries map to their domain UI.</p>
+
+<h2 id="cache-and-request-coordination">Cache and request coordination</h2>
+
+<p><code class="language-plaintext highlighter-rouge">assets/js/shared/api-cache.js</code> owns storage and duplicate-request coordination only.</p>
+
+<h3 id="storage">Storage</h3>
+
+<ul>
+  <li>IndexedDB stores response body, headers, validators, timestamp, approximate size, endpoint kind, and detected match state.</li>
+  <li>A bounded in-memory LRU cache keeps the client useful when IndexedDB is unavailable or full.</li>
+  <li>Malformed cached JSON is awaited and removed before a network retry.</li>
+  <li>Quota errors trigger one emergency cleanup and one write retry.</li>
+</ul>
+
+<h3 id="retention">Retention</h3>
+
+<p>Scheduled pruning is disabled. See <code class="language-plaintext highlighter-rouge">CACHE_CALIBRATION.md</code> for the proposed measurement-based thresholds.</p>
+
+<p>The cache differentiates:</p>
+
+<ul>
+  <li>network-preferred club match indexes;</li>
+  <li>active match JSON;</li>
+  <li>finished match JSON;</li>
+  <li>unknown-state match JSON;</li>
+  <li>player data;</li>
+  <li>other endpoints.</li>
+</ul>
+
+<p>Freshness controls when the network is contacted; retention controls when stored records may be deleted. They are intentionally separate.</p>
+
+<h3 id="cross-tab-duplicate-coordination">Cross-tab duplicate coordination</h3>
+
+<p><code class="language-plaintext highlighter-rouge">BroadcastChannel</code> is an optional optimization:</p>
+
+<ul>
+  <li>local claim windows store only claims relevant to a locally pending URL;</li>
+  <li>start and heartbeat events maintain renewable leases;</li>
+  <li>recent completion memory prevents completion-before-waiter races;</li>
+  <li>expired claims, leases, and completion records are cleaned periodically;</li>
+  <li>channels and timers close on page teardown.</li>
+</ul>
+
+<p>A shared local request owns an internal abort controller and tracks subscribers. One caller cancelling does not cancel the request for remaining subscribers.</p>
+
+<h2 id="analysis-synchronization">Analysis synchronization</h2>
+
+<p><code class="language-plaintext highlighter-rouge">assets/js/shared/analysis-coordinator.js</code> publishes completion events between retained iframe documents through <code class="language-plaintext highlighter-rouge">BroadcastChannel</code> with a local-storage event fallback.</p>
+
+<ul>
+  <li>Find, Upcoming, and Creation register refresh handlers.</li>
+  <li>The source tool is excluded from its own event.</li>
+  <li>Busy tools postpone by declining the current event rather than interrupting work.</li>
+  <li>Synchronized refreshes carry a flag and do not publish another completion event.</li>
+  <li>Find requires an already known username; Upcoming and Creation can initialize from their shared club match data.</li>
+</ul>
+
+<p>This shares cached responses and avoids discarding each tool’s page state. It does not merge unrelated view models or change the tools’ calculations.</p>
+
+<h2 id="retained-tab-shell">Retained-tab shell</h2>
+
+<p><code class="language-plaintext highlighter-rouge">assets/js/pages/site-tabs.js</code> creates one same-origin iframe per route and keeps it mounted. The current frame is visible and the others are hidden. A newly loading frame remains hidden until the parent has installed the embedded presentation override, preventing the standalone border/background from flashing before the retained-tab form is ready.</p>
+
+<p>Benefits:</p>
+
+<ul>
+  <li>loaded result DOM and controller state survive tab changes;</li>
+  <li>global variables and styles remain isolated by document;</li>
+  <li>standalone pages remain the only tool implementations;</li>
+  <li>script replay, HTML parsing, and document-write compatibility are eliminated.</li>
+</ul>
+
+<p>The parent applies an embedded-only presentation override inside each same-origin document so the existing index shell continues to provide the common heading without changing standalone pages. The <code class="language-plaintext highlighter-rouge">admin</code> URL flag controls whether Diagnostics, Match Recruitment, and Challenge Assistant are included in the visible route set; hidden administrative frames are not preloaded.</p>
+
+<h2 id="shared-information-popovers">Shared information popovers</h2>
+
+<p><code class="language-plaintext highlighter-rouge">assets/js/shared/info-popover.js</code> and <code class="language-plaintext highlighter-rouge">assets/css/info-popover.css</code> provide one delegated component for dynamically rendered analytical information. Compact explanations use one generated tooltip per document; Match Assistant recommendation details retain their own interactive dialog element.</p>
+
+<p>The component measures the trigger and the currently visible viewport, selects above or below placement, clamps horizontal placement, and repositions on local or same-origin parent scrolling and resizing. Retained iframe documents derive the parent-visible region from the iframe rectangle so popovers remain next to their trigger even when the parent page has scrolled through a tall embedded tool.</p>
+
+<p>Outside pointer presses, Escape, parent-document interaction, and removal of the active rendered trigger close the open popover. Fine-pointer hover remains available, while touch devices rely on explicit tap state to avoid sticky emulated hover. All information buttons use the same blue visual treatment; embedded action buttons retain their existing page-specific style.</p>
+
+<h2 id="concise-control-hints">Concise control hints</h2>
+
+<p><code class="language-plaintext highlighter-rouge">assets/js/shared/control-hints.js</code> applies short native <code class="language-plaintext highlighter-rouge">title</code> descriptions to useful controls that do not already define one. It is selector-based, preserves page-defined titles, and observes dynamically rendered controls. Information triggers (<code class="language-plaintext highlighter-rouge">.p2k-info-button</code>) and every element inside <code class="language-plaintext highlighter-rouge">.p2k-info-popover</code> are excluded because their purpose is already to expose explanatory material. The module changes no classes, dimensions, labels, or styles.</p>
+
+<h2 id="diagnostics">Diagnostics</h2>
+
+<p><code class="language-plaintext highlighter-rouge">assets/js/pages/admin-features.js</code> initializes only when the index URL contains the <code class="language-plaintext highlighter-rouge">admin</code> flag. It reads public diagnostic snapshots from the parent and retained same-origin frames. It does not inspect private user content beyond the runtime counters exposed by those modules.</p>
+
+<p>It can clear each frame’s shared cache instance and copy a support snapshot. It also queries the local usage-log API, defaulting to the latest seven UTC days, and renders date/username filters, seven-day expansion, daily aggregates, per-user aggregates, matching entries, and distinct-username counts. It is enabled through the central feature flag.</p>
+
+<p>The same snapshot includes the central analytical-model registry from <code class="language-plaintext highlighter-rouge">P2K_SITE_CONFIG.modelVersions</code>. Model identifiers are calculation revisions, independent from the package release, and are documented in <code class="language-plaintext highlighter-rouge">docs/MODEL_VERSIONS.md</code>.</p>
+
+<h2 id="analytics">Analytics</h2>
+
+<p><code class="language-plaintext highlighter-rouge">assets/js/shared/analytics.js</code> is the only analytics loader. It is configurable and automatically disabled when embedded, served locally, or when browser privacy signals request it. Ordinary tool functionality never depends on analytics.</p>
+
+<h2 id="security-boundary">Security boundary</h2>
+
+<p>Every page has a Content Security Policy. The API client enforces the configured HTTPS origin allowlist independently of CSP. JSONP is confined to the explicit client and approved API origins. No inline executable script, inline event handler, global fetch interception, <code class="language-plaintext highlighter-rouge">document.write</code>, <code class="language-plaintext highlighter-rouge">unsafe-eval</code>, or remote source-code loader remains.</p>
+
+<h2 id="release-consistent-asset-loading">Release-consistent asset loading</h2>
+
+<p>All HTML entry points request local JavaScript and CSS with the repository release version as a query token. The retained iframe router applies the same token to internal tool-page URLs. Standalone pages opened from tab names use clean URLs without release query parameters. <code class="language-plaintext highlighter-rouge">match-priority.js</code> owns league-first/date-second ordering independently of the API transport, while <code class="language-plaintext highlighter-rouge">api-client.js</code> keeps compatibility aliases. This prevents a cached older API client from breaking a newer analyzer controller.</p>
+
+<h2 id="league-match-history-storage">League-match history storage</h2>
+
+<p>The cron tracker is a same-origin server operation implemented in both <code class="language-plaintext highlighter-rouge">serve_local.py</code> and <code class="language-plaintext highlighter-rouge">api/index.php</code>. It reads the Promote to King club match index, follows registered match references, filters configured league acronyms, and writes one immutable snapshot per match and invocation to <code class="language-plaintext highlighter-rouge">data/match-tracking/matches/&lt;match-id&gt;/&lt;UTC timestamp&gt;.json</code>. Snapshot writes are atomic and preserve partial success when one match request fails.</p>
+
+<p><code class="language-plaintext highlighter-rouge">/api/match-history/?match=&lt;id&gt;</code> returns a chronological, bounded list of valid snapshots. The browser never reads raw files. <code class="language-plaintext highlighter-rouge">assets/js/shared/match-history-ui.js</code> passes each stored match JSON through the current page’s analytical summarizer, so historical win probability uses the same model as live analysis. The host remains hidden unless usable snapshots are returned.</p>
+
+<p><code class="language-plaintext highlighter-rouge">/api/track-upcoming-league-matches/</code> accepts token-protected GET requests from the cron and same-origin, custom-header POST requests from Administration; both call the same snapshot routine. <code class="language-plaintext highlighter-rouge">/api/tracked-match-data/</code> exposes aggregate inventory metadata to Administration and accepts a confirmed same-origin DELETE for one numeric match ID. Each authorized cron or manual execution is wrapped by a shared execution logger that appends one record to <code class="language-plaintext highlighter-rouge">logs/scheduled-tasks/YYYY-MM-DD.jsonl</code>, including UTC start/end timestamps, duration, trigger type, status, and counts. <code class="language-plaintext highlighter-rouge">/api/scheduled-task-logs/</code> provides filtered read access to the Administration panel. Raw history and log directories remain inaccessible through Apache and the Python static handler.</p>
+
+<h2 id="administration-panels">Administration panels</h2>
+
+<p>The admin-only modal contains retained internal panels for Logs, Scheduled tasks, Diagnostics, and Match data management. Panel switching does not recreate the index or tool frames. The match-data panel can invoke the tracking routine manually through a same-origin POST without exposing the cron token. It also reports match ID, name, league, file count, first/last timestamp, scheduled start, and server-calculated started/upcoming state.</p>
+
+<h2 id="focus-aware-retained-tools">Focus-aware retained tools</h2>
+
+<p>The index creates a tool iframe only when its tab is selected. <code class="language-plaintext highlighter-rouge">tab-activity.js</code> receives same-origin activity messages, and <code class="language-plaintext highlighter-rouge">api-client.js</code> combines that activity signal with each caller signal. Inactive tools abort queued/active API acquisition. <code class="language-plaintext highlighter-rouge">analysis-coordinator.js</code> discards synchronized refreshes for inactive tools rather than waking hidden pages.</p>
+
+<h2 id="administration-page-gate">Administration page gate</h2>
+
+<p>Administration-only standalone pages load <code class="language-plaintext highlighter-rouge">admin-page-guard.js</code> before their controllers. The guard accepts the explicit admin flag, a same-origin verified parent administration state, or a currently OAuth-enabled session verified against the configured Chess.com club administrator list.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/docs/ARCHITECTURE.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

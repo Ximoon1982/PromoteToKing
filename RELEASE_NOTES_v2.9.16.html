@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.16 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.16" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.16.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.16.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.16" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.16","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.16.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2916">Promote to King v2.9.16</h1>
+
+<h2 id="scope">Scope</h2>
+
+<p>v2.9.16 is the prepared post-v2.9.15 integration release. It is built directly from the exact frozen v2.9.15 standalone SHA256 <code class="language-plaintext highlighter-rouge">83813c121c82b6c318e230065baaf52fd6930854ebdbb2723acb4159f0dc070e</code>, using internal source/package history only.</p>
+
+<h2 id="reliability-and-convergence">Reliability and convergence</h2>
+
+<ul>
+  <li><strong>Dashboard Recommendation Resilience Fix (DRR).</strong> Recent successful Match Assistant recommendations remain available as a presentation fallback during transient live-refresh failure, while live acquisition still runs and cached fallback display never renews its own age.</li>
+  <li><strong>Match Lifecycle Propagation Fix (MLP).</strong> Browser lifecycle observations stay non-canonical, but registered/in-progress/finished divergence queues the authoritative coalesced club-index audit so canonical lifecycle converges promptly.</li>
+  <li><strong>Fast Fetch Stability &amp; Diagnostics Fix (FFSD).</strong> Fast Fetch/Continuous Refresh records work-class failure reasons (HTTP, timeout, gateway, cache/lease, abort and observation rejection), clears sticky healthy-state errors, has a liveness reschedule, uses null-safe Task Control rendering and separates canonical checks due from browser work claimable now.</li>
+  <li><strong>UI v2 Deep-Link Routing Fix (UDR).</strong> Direct UI-v2 Administration/deep links retain <code class="language-plaintext highlighter-rouge">ui=v2</code>, survive the pre-authentication startup phase, restore compatible alias/subview/context state, and remain stable through browser history instead of being rewritten to Dashboard/UI v1 before admin resolution.</li>
+  <li><strong>Player Matches Archive Fallback Fix (PMAF).</strong> A known-valid current member whose Chess.com <code class="language-plaintext highlighter-rouge">/matches</code> endpoint is specifically unusable can fall back to bounded <code class="language-plaintext highlighter-rouge">/games/archives</code> discovery. Transient/auth/rate-limit failures do not activate fallback, unrelated personal-history matches do not fan out, and the primary endpoint is periodically re-probed.</li>
+</ul>
+
+<h2 id="opponent-intelligence">Opponent Intelligence</h2>
+
+<ul>
+  <li><strong>Opponent Intelligence Coverage &amp; Results Fix (OICR).</strong> W/D/L uses full canonical result history independently from the 200-row detail window; result coverage/missing results are explicit; <code class="language-plaintext highlighter-rouge">loss</code> maps correctly to <code class="language-plaintext highlighter-rouge">losses</code>; win-rate classifications use covered results.</li>
+  <li>Missing strength points in Opponent Balance can be derived from canonical paired-board rating evidence where metadata averages are absent, increasing honest heatmap coverage without inventing data.</li>
+  <li>Opponent links are normalized to human <code class="language-plaintext highlighter-rouge">https://www.chess.com/club/&lt;slug&gt;</code> URLs at write and read boundaries, fixing historical PubAPI-form links without a database migration.</li>
+</ul>
+
+<h2 id="achievement-catalogue-and-artwork">Achievement catalogue and artwork</h2>
+
+<ul>
+  <li>The approved 1WL, PCL, TCMAC, TMCL and KOTML league-specific artwork is integrated for all 35 league achievements: exact approved 640×640 PNG masters, 128×128 WebP thumbnails and 64×64 WebP miniatures.</li>
+  <li>General achievement catalogues no longer display family/group progress bars. Progress remains available only in a player’s catalogue.</li>
+</ul>
+
+<h2 id="compatibility">Compatibility</h2>
+
+<ul>
+  <li>Core schema: <strong>13</strong> (unchanged)</li>
+  <li>Analytics schema: <strong>6</strong> (unchanged)</li>
+  <li>Achievement catalogue definitions: <strong>162</strong> (unchanged)</li>
+  <li>External CRON cadence: <strong>4 tasks, unchanged</strong></li>
+  <li>OAuth adaptive tuning namespace and P0 Interactive Survival policy: unchanged</li>
+  <li>No database reset or reseed</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.16.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

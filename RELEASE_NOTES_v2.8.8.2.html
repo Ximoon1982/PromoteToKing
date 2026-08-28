@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.8.2 release notes | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.8.2 release notes" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.8.2.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.8.2.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.8.2 release notes" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.8.2 release notes","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.8.2.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2882-release-notes">Promote to King v2.8.8.2 release notes</h1>
+
+<p>v2.8.8.2 is a focused Dashboard-startup hotfix built on v2.8.8.1.</p>
+
+<h2 id="dashboard-startup-regression-fixed">Dashboard startup regression fixed</h2>
+
+<p>Investigation back to v2.8.6 isolated the first server-side regression to v2.8.7. The Dashboard’s initial public database request had moved from a materialized Analytics summary to a live historical Core aggregate, while Core freshness metadata also routed through a state helper that can create the state row with <code class="language-plaintext highlighter-rouge">INSERT IGNORE</code>.</p>
+
+<p>v2.8.8.2 restores a genuinely read-only/materialized public startup path:</p>
+
+<ul>
+  <li>historical Dashboard totals are served from <code class="language-plaintext highlighter-rouge">p2k_tp_club_totals</code>;</li>
+  <li>current member count is overlaid from the indexed authoritative Core roster;</li>
+  <li>Core generation/freshness metadata comes from a SELECT-only state reader;</li>
+  <li>public Dashboard/read-metadata GETs do not create or mutate <code class="language-plaintext highlighter-rouge">p2k_tp_state</code>;</li>
+  <li>worker/admin state creation remains unchanged.</li>
+</ul>
+
+<h2 id="client-startup-made-non-gating">Client startup made non-gating</h2>
+
+<p>The v2.8.8.1 3.5-second timeout mitigated a delayed database response but still placed it in front of the second wave. v2.8.8.2 removes that dependency completely: the first materialized database request and the automatic current matches/Live/secondary refresh path are launched independently. If the database response is delayed, the rest of the Dashboard continues loading.</p>
+
+<h2 id="retained-v2881-fixes">Retained v2.8.8.1 fixes</h2>
+
+<ul>
+  <li>immediate configured/local administrator recognition;</li>
+  <li>Administration iframe authorization race handling and bounded retry;</li>
+  <li>retryable Hall/Insights lazy module loading;</li>
+  <li>nested Profile/Achievement modal restoration;</li>
+  <li>unclipped responsive Profile rank artwork;</li>
+  <li>Opponent Intelligence W/D/L from canonical finished-match summaries plus automatic logic rebuild;</li>
+  <li>Team Insights all-history Club Points progression through today + six months, using the shared Low/Medium/High forecast model.</li>
+</ul>
+
+<h2 id="database-and-cron">Database and CRON</h2>
+
+<ul>
+  <li>Core schema <strong>6</strong>, Analytics schema <strong>5</strong>.</li>
+  <li>No reset, re-seed or schema migration is required from v2.8.8.1.</li>
+  <li>CRON cadence is unchanged: Club every 5 minutes, Tournament every 10 minutes, Player every 30 minutes, league monitoring hourly.</li>
+  <li>No new ACAMR/Intelligence/hotfix CRON task.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.8.8.2.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

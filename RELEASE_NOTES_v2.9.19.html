@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.19 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.19" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.19.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.19.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.19" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.19","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.19.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2919">Promote to King v2.9.19</h1>
+
+<h2 id="scope">Scope</h2>
+
+<p>v2.9.19 is built directly from the exact frozen internal v2.9.18 standalone SHA256 <code class="language-plaintext highlighter-rouge">c419aae7974ffd050e0641711792aa1673a616f2e7bedc09fb115e2ce519980a</code>, using internal source/package history only. GitHub is not used.</p>
+
+<h2 id="miac-alias--name-change-experience">MIAC alias / name-change experience</h2>
+
+<ul>
+  <li>Replaces the flat alias-edge display with the historical proof-of-concept interaction model: identity-chain explorer, successive transition timeline, searchable/filterable evidence table, evidence modal, and a separate manual confirmation queue.</li>
+  <li>Shared physical Daily-board evidence is sufficient to automatically confirm a still-candidate rename edge. Automatic review is recorded as <code class="language-plaintext highlighter-rouge">auto:shared_board</code> and multiple promotions in one policy pass coalesce into one identity-map generation change.</li>
+  <li>Explicit administrator rejection is sticky and is not silently reversed by later automatic evidence.</li>
+  <li>Contradictory known non-null Chess.com <code class="language-plaintext highlighter-rouge">player_id</code> values remain a hard conflict and block merging.</li>
+  <li>Manual Confirm/Reject uses the secured Team Points client, refreshes the live MIAC state, and is idempotent when the requested status already applies.</li>
+  <li>The Intelligence alias payload returns the complete evidence set and seed chain topology so long chains cannot be truncated by the former 200-edge presentation limit.</li>
+</ul>
+
+<h2 id="identity-propagation--derived-data-refresh-fix-ipdr">Identity Propagation &amp; Derived-data Refresh Fix (IPDR)</h2>
+
+<ul>
+  <li>MIAC <code class="language-plaintext highlighter-rouge">identity_map_generation</code> is now an input to general Analytics and Achievement refresh watermarks, in addition to MIRA.</li>
+  <li>Confirmed identity topology changes therefore invalidate and rebuild username-derived Analytics, achievements and MCA attribution instead of leaving old/new usernames split in derived data.</li>
+  <li>Daily/monthly/player projections aggregate through the canonical identity map; Daily unique-player counts count canonical identities.</li>
+  <li>Canonical player rating display can fall back to a confirmed alias rating when the chosen canonical username has no current rating snapshot.</li>
+  <li>Player-profile lookup resolves historical aliases to the canonical player and recent match/opponent history spans all confirmed aliases.</li>
+  <li>Achievement ownership and threshold derivation are canonicalized during rebuild; duplicate alias ownership is removed only from rebuildable Analytics output. Raw Core match/board/game/point evidence is not rewritten merely because identity attribution changes.</li>
+  <li><strong>MCA historical substitution evidence:</strong> re-uploading/replacing the same physical arena source can confirm exactly one disappeared username → exactly one new username only when stable arena participation fingerprints match and every unchanged participant remains stable. Comparison hashes/evidence are persisted before source replacement.</li>
+  <li><strong>Daily historical substitution evidence:</strong> a clean old username → new username ownership handover on the same physical <code class="language-plaintext highlighter-rouge">match_id + board_no</code> is definitive when neither identity owns another board in that match. Evidence is persisted before current board ownership is updated.</li>
+  <li>Both definitive historical rules retain the explicit-rejection guard and contradictory-<code class="language-plaintext highlighter-rouge">player_id</code> veto.</li>
+</ul>
+
+<h2 id="achievement-and-player-ux">Achievement and player UX</h2>
+
+<ul>
+  <li>Adds <strong>Most earned</strong> beside <strong>Achievement catalogue</strong>, ranking catalogue entries from most to least current members who have earned them and displaying the current-member count.</li>
+  <li>Player-specific unearned achievement details display progress when available.</li>
+  <li>Achievement detail supports Previous / Next across the complete catalogue and Left / Right keyboard navigation in both dashboard-hosted and standalone/general catalogue flows.</li>
+  <li>Player profile action is labelled <code class="language-plaintext highlighter-rouge">View all achievements of &lt;member name&gt;</code> and has spacing from the achievement card below.</li>
+  <li>Personalized dashboard achievement labels use the same compact typography as Team Points and include <code class="language-plaintext highlighter-rouge">View →</code> to the general Achievements page.</li>
+</ul>
+
+<h2 id="insights-and-layout-corrections">Insights and layout corrections</h2>
+
+<ul>
+  <li>Members Insights removes the summary metrics <strong>All recorded members</strong>, <strong>Former members</strong>, and <strong>Team Points in period</strong>; filtering capabilities are retained.</li>
+  <li>Lineup evolution and win-probability history are not mounted when there is no stored historical snapshot; a single current/live point no longer creates a false history chart.</li>
+  <li>Live Rook and other framed rank/achievement artwork use inset <code class="language-plaintext highlighter-rouge">contain</code> rendering on narrow/mobile layouts to prevent frame clipping.</li>
+  <li>Highest-priority action rows and System-health rows share corresponding 72px desktop row geometry for vertical alignment; mobile rows remain content-sized.</li>
+</ul>
+
+<h2 id="compatibility">Compatibility</h2>
+
+<ul>
+  <li>Core schema: <strong>14</strong> (unchanged).</li>
+  <li>Analytics schema: <strong>7</strong> (unchanged).</li>
+  <li>Achievement catalogue: <strong>162 definitions</strong> (unchanged).</li>
+  <li>MIAC seed/provenance: unchanged from v2.9.18; no reseed.</li>
+  <li>Existing four operational CRON cadences and the weekly long-life backup cadence are unchanged.</li>
+  <li>OAuth adaptive tuning namespace / P0 Interactive Survival / ACDC / CTAR / CMDI behavior remains intact.</li>
+  <li>No destructive database reset or migration is required.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.19.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Cache calibration proposal | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Cache calibration proposal" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/docs/CACHE_CALIBRATION.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/docs/CACHE_CALIBRATION.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Cache calibration proposal" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Cache calibration proposal","url":"https://ximoon1982.github.io/PromoteToKing/docs/CACHE_CALIBRATION.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="cache-calibration-proposal">Cache calibration proposal</h1>
+
+<h2 id="current-release-decision">Current release decision</h2>
+
+<p>Scheduled IndexedDB pruning is disabled in version 2.0.0. This prevents age-, count-, or size-based deletion from removing useful historical match JSON before real storage behavior is measured.</p>
+
+<p>Only a browser-reported quota failure can trigger emergency cleanup. The application still functions through its memory cache if that cleanup cannot free enough persistent storage.</p>
+
+<h2 id="why-the-previous-global-limits-were-unsuitable">Why the previous global limits were unsuitable</h2>
+
+<p>A universal 12-hour maximum age, 750-entry limit, and 24 MiB ceiling treats a small volatile club index and a larger historical match record as though they had the same value and mutation rate. Match analyses repeatedly reuse match detail JSON, and completed matches are substantially more stable than registration or active matches.</p>
+
+<h2 id="proposed-classification">Proposed classification</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Data class</th>
+      <th style="text-align: right">Freshness</th>
+      <th style="text-align: right">Cached serving window</th>
+      <th style="text-align: right">Proposed deletion age after calibration</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Club match index</td>
+      <td style="text-align: right">2 minutes, network preferred</td>
+      <td style="text-align: right">stale-if-error up to 1 day</td>
+      <td style="text-align: right">6 hours after supersession</td>
+    </tr>
+    <tr>
+      <td>Active/registration match JSON</td>
+      <td style="text-align: right">5 minutes</td>
+      <td style="text-align: right">normally 1 day; stale-if-error up to 7 days</td>
+      <td style="text-align: right">7 days after last access</td>
+    </tr>
+    <tr>
+      <td>Finished match JSON</td>
+      <td style="text-align: right">1 day</td>
+      <td style="text-align: right">up to 365 days</td>
+      <td style="text-align: right">365 days or no age deletion while below quota</td>
+    </tr>
+    <tr>
+      <td>Unknown-state match JSON</td>
+      <td style="text-align: right">5 minutes</td>
+      <td style="text-align: right">up to 30 days</td>
+      <td style="text-align: right">30 days</td>
+    </tr>
+    <tr>
+      <td>Player/profile/stats/clubs</td>
+      <td style="text-align: right">30 minutes</td>
+      <td style="text-align: right">up to 48 hours; stale-if-error up to 7 days</td>
+      <td style="text-align: right">48 hours</td>
+    </tr>
+    <tr>
+      <td>Other PubAPI data</td>
+      <td style="text-align: right">10 minutes</td>
+      <td style="text-align: right">up to 7 days</td>
+      <td style="text-align: right">7 days</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Serving windows and deletion ages are separate. A record can remain stored for future conditional revalidation even after the client no longer serves it directly.</p>
+
+<h2 id="measurement-period">Measurement period</h2>
+
+<p>Collect at least 30 days of diagnostics across representative desktop and mobile browsers. Record only aggregate technical values:</p>
+
+<ul>
+  <li>entry counts by endpoint kind and match state;</li>
+  <li>p50, p90, p95, and maximum entry size;</li>
+  <li>total estimated storage usage and browser-reported quota;</li>
+  <li>hit, stale-hit, refresh, and stale-if-error rates;</li>
+  <li>quota failures and emergency cleanup frequency;</li>
+  <li>proportion of retained match records actually reused after 7, 30, 90, and 180 days;</li>
+  <li>average and peak concurrent open tabs.</li>
+</ul>
+
+<p>No username, match title, or response body needs to be exported for calibration.</p>
+
+<h2 id="proposed-thresholds-after-measurement">Proposed thresholds after measurement</h2>
+
+<p>Use the lower of:</p>
+
+<ul>
+  <li>512 MiB; or</li>
+  <li>60% of the browser-reported storage quota.</li>
+</ul>
+
+<p>Use 10,000 entries only as a secondary safety cap, not as the primary target. Protect at least the 5,000 most recently used match records. Evict in this order:</p>
+
+<ol>
+  <li>expired non-match records;</li>
+  <li>old club indexes and player data;</li>
+  <li>unknown-state match records;</li>
+  <li>old active match records;</li>
+  <li>finished match records, oldest last-access first, only when necessary.</li>
+</ol>
+
+<p>The final limits should be chosen from observed p95 usage with at least 50% headroom. Scheduled pruning should remain disabled until those measurements are reviewed.</p>
+
+<h2 id="manual-verification">Manual verification</h2>
+
+<p>The Administration Diagnostics tab exposes pruning state, approximate cache size, counts, and cache/request counters. Use <strong>Clear cache</strong> only for troubleshooting; it is not part of routine maintenance.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/docs/CACHE_CALIBRATION.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

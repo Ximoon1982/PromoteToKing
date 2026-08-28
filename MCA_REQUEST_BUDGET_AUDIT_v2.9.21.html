@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>MCA request-budget audit — v2.9.21 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="MCA request-budget audit — v2.9.21" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/MCA_REQUEST_BUDGET_AUDIT_v2.9.21.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/MCA_REQUEST_BUDGET_AUDIT_v2.9.21.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="MCA request-budget audit — v2.9.21" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"MCA request-budget audit — v2.9.21","url":"https://ximoon1982.github.io/PromoteToKing/MCA_REQUEST_BUDGET_AUDIT_v2.9.21.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="mca-request-budget-audit--v2921">MCA request-budget audit — v2.9.21</h1>
+
+<h2 id="observed-v2920-regression">Observed v2.9.20 regression</h2>
+
+<p><code class="language-plaintext highlighter-rouge">team-points-client.js</code> defaults administrator requests to 30 seconds. <code class="language-plaintext highlighter-rouge">team-points-features.js</code> invoked both MCA <code class="language-plaintext highlighter-rouge">process_start</code> and <code class="language-plaintext highlighter-rouge">process_step</code> without an action-specific timeout. MORCF made the OAuth profile path operational, exposing valid operations that can exceed that generic deadline.</p>
+
+<h2 id="correction">Correction</h2>
+
+<ul>
+  <li>Full MCA rebuild client deadline: 110 s.</li>
+  <li>OAuth profile step client deadline: 75 s.</li>
+  <li>OAuth batch launch budget: 12 s of the currently learned CPS.</li>
+  <li>Absolute MCA profile-batch cap: 32.</li>
+  <li>Backend re-applies the rate-derived cap before <code class="language-plaintext highlighter-rouge">processProfileBatch()</code>.</li>
+</ul>
+
+<p>Examples: at 0.5 CPS the cap is 6 profiles; at 1 CPS it is 12; at 5 CPS or above the absolute cap of 32 applies. This keeps low-rate/backoff operation bounded while retaining useful parallelism at healthy rates.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/MCA_REQUEST_BUDGET_AUDIT_v2.9.21.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

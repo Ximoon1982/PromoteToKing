@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.3 — OAuth default, display identity, achievements and Green consolidation | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.3 — OAuth default, display identity, achievements and Green consolidation" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.3.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.3.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.3 — OAuth default, display identity, achievements and Green consolidation" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.3 — OAuth default, display identity, achievements and Green consolidation","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.3.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2103--oauth-default-display-identity-achievements-and-green-consolidation">Promote to King v2.10.3 — OAuth default, display identity, achievements and Green consolidation</h1>
+
+<p>v2.10.3 is a cumulative application release on top of v2.10.1.2. The public Team Points source remains Blue-hardwired with the verified Blue engine baseline v2.9.22.10 while Green reconstruction continues.</p>
+
+<h2 id="authentication-and-display-identity">Authentication and display identity</h2>
+<ul>
+  <li>Real Chess.com OAuth is now the normal/default mode on every API-capable production page; <code class="language-plaintext highlighter-rouge">oauth=2</code> is no longer required.</li>
+  <li>Explicit <code class="language-plaintext highlighter-rouge">?oauth=1</code> remains the simulated/test-account override.</li>
+  <li>Team Points Migration follows the same default while retaining its parallel OAuth bridge fallback for the browser accelerator.</li>
+  <li><code class="language-plaintext highlighter-rouge">?name=&lt;username&gt;</code> adds a display-only identity. It changes player-facing subject/rendering only when a real authenticated session exists. The real OAuth session continues to govern administration, CSRF, bearer/API transport and server authorization.</li>
+  <li>A visible **Viewing as <name>** cue is rendered when display identity differs from the authenticated account.</name></li>
+</ul>
+
+<h2 id="achievement-challenges">Achievement challenges</h2>
+<ul>
+  <li>Dashboard and unified Player Profile challenge surfaces no longer disappear when an optional intelligence query fails.</li>
+  <li>Optional member-intelligence enrichment is fail-soft; core member/profile responses remain available.</li>
+  <li>Dashboard always retains the Achievements/View surface; Profile replaces failed challenge loading with an explicit unavailable state.</li>
+</ul>
+
+<h2 id="achievement-catalogue">Achievement catalogue</h2>
+<p>The catalogue grows from 162 to 191 definitions with 29 additive achievements in six families:</p>
+<ul>
+  <li>Consecutive match-start days: 3 / 5 / 7 / 10 / 14 days.</li>
+  <li>Match Impact: Match Winner and Match Saver ladders at 1 / 5 / 10 / 15 / 20.</li>
+  <li>Close calls: Photo Finish / Close-Call Veteran / Master / Legend at 5 / 20 / 50 / 100.</li>
+  <li>Winning Side: 10 / 50 / 100 / 250 winning P2K team matches.</li>
+  <li>Opponent Variety: 25 / 50 / 100 distinct opponent clubs.</li>
+  <li>Old Foes: 5 / 10 / 25 rematch participations after the first meeting with an opponent.</li>
+</ul>
+
+<p>Match Impact is derived only from stored authoritative finished-game points and finished non-void match scores. A winner contribution is one whose removal would make the P2K team no longer win; a saver contribution is one whose removal would turn a team draw into a loss.</p>
+
+<p>Legacy breadth semantics remain frozen. The newer additive breadth model may recognize the new categories.</p>
+
+<h2 id="artwork">Artwork</h2>
+<ul>
+  <li>54 approved 640×640 masters from the seven supplied artwork archives are integrated byte-for-byte after manifest SHA-256 verification.</li>
+  <li>Matching 128×128 WebP thumbs and 64×64 WebP miniatures are generated from the approved masters.</li>
+  <li>The 54 artworks cover both newly added families and approved replacements for existing placeholder families.</li>
+</ul>
+
+<h2 id="green-reconstruction-hotfix-consolidation">Green reconstruction hotfix consolidation</h2>
+<p>v2.10.3 folds the final v2.10.1.2 Green patch line into the numbered release:</p>
+<ul>
+  <li>Green profile/stats seeding-stage stall hotfix.</li>
+  <li>Green browser accelerator terminal HTTP 404/410 handling hotfix.</li>
+</ul>
+
+<p>The cumulative updater accepts v2.10.1.2 installations with neither patch, only the profile/stats patch, or both patches already installed, and converges them to the same v2.10.3 files.</p>
+
+<h2 id="storage-capacity-monitoring">Storage capacity monitoring</h2>
+<ul>
+  <li>Database/storage history is now rolled up by ISO week instead of calendar month.</li>
+  <li>Growth and capacity projection use weekly measured change once at least two weekly observations exist; daily sampling remains available as bootstrap evidence.</li>
+</ul>
+
+<h2 id="compatibility--operations">Compatibility / operations</h2>
+<ul>
+  <li>Public Team Points source: Blue hardwired.</li>
+  <li>Blue engine baseline: v2.9.22.10.</li>
+  <li>Green migration version: v2.10.3.</li>
+  <li>Core schema: 16 unchanged.</li>
+  <li>Analytics schema: 7 unchanged.</li>
+  <li>No database reset or reseed.</li>
+  <li>No Green cycle/stage/routing/force-mode changes by the installer.</li>
+  <li>Existing OAuth credentials/configuration and local server configuration are protected.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.3.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

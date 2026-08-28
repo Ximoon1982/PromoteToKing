@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.7.3 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.7.3" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.7.3.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.7.3.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.7.3" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.7.3","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.7.3.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v273">Promote to King v2.7.3</h1>
+
+<h2 id="scope">Scope</h2>
+
+<p>Authentication/access decoupling only. No Team Points schema, Insights, CRON, tournament, scoring, recommendation, or importer behavior is changed.</p>
+
+<h2 id="changes">Changes</h2>
+
+<ul>
+  <li>Administrator page access no longer opens MariaDB or calls the Chess.com public API.</li>
+  <li><code class="language-plaintext highlighter-rouge">?admin=1</code> remains an offline-safe administrator access path.</li>
+  <li>Embedded administrator pages inherit the already-established administrator state from their parent page without database access.</li>
+  <li>Future OAuth sessions can grant administrator access through an administrator claim/role.</li>
+  <li>An optional local <code class="language-plaintext highlighter-rouge">adminUsernames</code> allow-list is available in <code class="language-plaintext highlighter-rouge">config/site-branding.js</code> for OAuth-authenticated identities when a local authorization list is preferred.</li>
+  <li>Existing short-lived local administrator markers remain accepted as a transition path.</li>
+  <li>DB-backed controls establish their Team Points server session only when those controls actually need the database. A database failure therefore affects the relevant data/control panel rather than hiding the administrator page.</li>
+  <li><code class="language-plaintext highlighter-rouge">AnalyzeMatch.html</code> is public again; the accidental administrator page guard was removed.</li>
+</ul>
+
+<h2 id="immediate-access-behavior">Immediate access behavior</h2>
+
+<p>With MariaDB unavailable, pages opened with <code class="language-plaintext highlighter-rouge">?admin=1</code> continue to render. Non-database tools remain usable. Components whose data source is MariaDB can display their normal connection/error state without revoking administrator page access.</p>
+
+<h2 id="future-oauth-integration">Future OAuth integration</h2>
+
+<p>The client access layer recognizes OAuth session claims such as <code class="language-plaintext highlighter-rouge">isAdmin</code>, <code class="language-plaintext highlighter-rouge">admin</code>, <code class="language-plaintext highlighter-rouge">superAdmin</code>, and roles/permissions including <code class="language-plaintext highlighter-rouge">admin</code>, <code class="language-plaintext highlighter-rouge">administrator</code>, or <code class="language-plaintext highlighter-rouge">super_admin</code>. This keeps login identity independent from application data services.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.7.3.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

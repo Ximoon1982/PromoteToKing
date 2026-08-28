@@ -436,11 +436,88 @@ final class GreenRepository
         return $out;
     }
 
-    public function memberEvents(int $limit=200): array
+    /** Chronology read model only: stored lifecycle events remain append-only/raw. */
+    public function memberEvents(int $limit=200,array $filters=[]): array
     {
-        $limit=max(1,min(1000,$limit));$fetchLimit=min(3000,max($limit,$limit*3));
-        $events=$this->core->query("SELECT event_id,identity_id,event_type,detected_at,effective_at,username,previous_username,new_username,profile_status,profile_checked_at,cycle_no,source,metadata_json FROM p2k_g_member_events ORDER BY detected_at DESC,event_id DESC LIMIT {$fetchLimit}")->fetchAll()?:[];
-        return $this->collapseMemberEvents($events,$limit);
+        $limit=max(1,min(1000,$limit));
+        $eventType=strtolower(trim((string)($filters['event_type']??'')));
+        if(!in_array($eventType,['','joined','left','name_changed','rejoined'],true))$eventType='';
+        $member=strtolower(trim(ltrim((string)($filters['member']??''),'@')));
+        $from=$this->memberEventDateFilter((string)($filters['from']??''));
+        $to=$this->memberEventDateFilter((string)($filters['to']??''));
+        if($from!==null&&$to!==null&&$from>$to)throw new \InvalidArgumentException('The chronology From date must not be after the To date.');
+
+        $where=[];$params=[];
+        // Include a 48-hour context around a requested date range so rename-collapse
+        // can still see the transient joined/left rows it needs to suppress.
+        if($from!==null){$where[]='detected_at>=DATE_SUB(?,INTERVAL 48 HOUR)';$params[]=$from.' 00:00:00';}
+        if($to!==null){$where[]='detected_at<DATE_ADD(DATE_ADD(?,INTERVAL 1 DAY),INTERVAL 48 HOUR)';$params[]=$to.' 00:00:00';}
+
+        if($member!==''){
+            $scope=$this->memberEventScope($member);$keys=$scope['keys'];$ids=$scope['identity_ids'];$clauses=[];
+            if($ids){$ph=implode(',',array_fill(0,count($ids),'?'));$clauses[]="identity_id IN ({$ph})";array_push($params,...$ids);}
+            if($keys){$ph=implode(',',array_fill(0,count($keys),'?'));$clauses[]="LOWER(username) IN ({$ph})";array_push($params,...$keys);$clauses[]="LOWER(previous_username) IN ({$ph})";array_push($params,...$keys);$clauses[]="LOWER(new_username) IN ({$ph})";array_push($params,...$keys);}
+            if(!$clauses)return [];
+            $where[]='('.implode(' OR ',$clauses).')';
+        }
+        $fetchLimit=$member!==''?5000:min(10000,max(3000,$limit*6));
+        $sql='SELECT event_id,identity_id,event_type,detected_at,effective_at,username,previous_username,new_username,profile_status,profile_checked_at,cycle_no,source,metadata_json FROM p2k_g_member_events'.($where?' WHERE '.implode(' AND ',$where):'').' ORDER BY detected_at DESC,event_id DESC LIMIT '.$fetchLimit;
+        $q=$this->core->prepare($sql);$q->execute($params);$events=$this->collapseMemberEvents($q->fetchAll()?:[],$fetchLimit);
+        $events=$this->memberChronologyView($events);
+        $out=[];foreach($events as $event){
+            $detected=(string)($event['detected_at']??'');
+            if($from!==null&&$detected<$from.' 00:00:00')continue;
+            if($to!==null){$next=(new \DateTimeImmutable($to.' 00:00:00',new \DateTimeZone('UTC')))->modify('+1 day')->format('Y-m-d H:i:s');if($detected>=$next)continue;}
+            if($eventType!==''&&(string)($event['event_type']??'')!==$eventType)continue;
+            $out[]=$event;if(count($out)>=$limit)break;
+        }
+        return $out;
+    }
+
+    private function memberEventDateFilter(string $value): ?string
+    {
+        $value=trim($value);if($value==='')return null;
+        $d=\DateTimeImmutable::createFromFormat('!Y-m-d',$value,new \DateTimeZone('UTC'));
+        $errors=\DateTimeImmutable::getLastErrors();
+        if(!$d||($errors!==false&&(($errors['warning_count']??0)>0||($errors['error_count']??0)>0))||$d->format('Y-m-d')!==$value)throw new \InvalidArgumentException('Chronology dates must use YYYY-MM-DD.');
+        return $value;
+    }
+
+    /** Resolve a chronology username through the stable player-id/alias graph. */
+    private function memberEventScope(string $key): array
+    {
+        $keys=[$key=>true];$ids=[];$pid=null;$canonical='';
+        $q=$this->core->prepare('SELECT id,chess_player_id,username_key FROM p2k_g_players WHERE username_key=? LIMIT 1');$q->execute([$key]);$p=$q->fetch();
+        if(is_array($p)){$ids[(int)$p['id']]=true;if(is_numeric($p['chess_player_id']??null))$pid=(int)$p['chess_player_id'];$canonical=strtolower((string)$p['username_key']);}
+        $q=$this->core->prepare('SELECT canonical_username_key,chess_player_id FROM p2k_g_identity_map WHERE username_key=? ORDER BY trusted DESC,updated_at DESC LIMIT 1');$q->execute([$key]);$m=$q->fetch();
+        if(is_array($m)){if($canonical==='')$canonical=strtolower(trim((string)($m['canonical_username_key']??'')));if($pid===null&&is_numeric($m['chess_player_id']??null))$pid=(int)$m['chess_player_id'];}
+        if($canonical!=='')$keys[$canonical]=true;
+        if($pid===null){$q=$this->core->prepare('SELECT chess_player_id FROM p2k_g_player_aliases WHERE username_key=? ORDER BY last_seen_at DESC LIMIT 1');$q->execute([$key]);$v=$q->fetchColumn();if($v!==false&&is_numeric($v))$pid=(int)$v;}
+        if($pid!==null){
+            $q=$this->core->prepare('SELECT id,username_key FROM p2k_g_players WHERE chess_player_id=?');$q->execute([$pid]);foreach($q->fetchAll()?:[] as $r){$ids[(int)$r['id']]=true;$keys[strtolower((string)$r['username_key'])]=true;}
+            $q=$this->core->prepare('SELECT username_key FROM p2k_g_player_aliases WHERE chess_player_id=?');$q->execute([$pid]);foreach($q->fetchAll(\PDO::FETCH_COLUMN)?:[] as $v)$keys[strtolower((string)$v)]=true;
+            $q=$this->core->prepare('SELECT username_key,canonical_username_key FROM p2k_g_identity_map WHERE chess_player_id=?');$q->execute([$pid]);foreach($q->fetchAll()?:[] as $r){$keys[strtolower((string)$r['username_key'])]=true;$c=strtolower(trim((string)($r['canonical_username_key']??'')));if($c!=='')$keys[$c]=true;}
+        }elseif($canonical!==''){
+            $q=$this->core->prepare('SELECT username_key FROM p2k_g_identity_map WHERE canonical_username_key=?');$q->execute([$canonical]);foreach($q->fetchAll(\PDO::FETCH_COLUMN)?:[] as $v)$keys[strtolower((string)$v)]=true;
+        }
+        return ['keys'=>array_values(array_filter(array_keys($keys))),'identity_ids'=>array_values(array_keys($ids))];
+    }
+
+    /** Consolidate discovered+joined into one displayed Joined event; raw rows are untouched. */
+    private function memberChronologyView(array $events): array
+    {
+        $joined=[];foreach($events as $event){if((string)($event['event_type']??'')!=='joined')continue;$id=(int)($event['identity_id']??0);$user=strtolower(trim((string)($event['username']??'')));$ts=strtotime((string)($event['detected_at']??'').' UTC')?:0;$joined[]=['id'=>$id,'user'=>$user,'ts'=>$ts,'cycle'=>(int)($event['cycle_no']??0)];}
+        $out=[];foreach($events as $event){
+            $raw=(string)($event['event_type']??'');
+            if($raw==='discovered'){
+                $id=(int)($event['identity_id']??0);$user=strtolower(trim((string)($event['username']??'')));$ts=strtotime((string)($event['detected_at']??'').' UTC')?:0;$cycle=(int)($event['cycle_no']??0);$paired=false;
+                foreach($joined as $j){if($id>0&&$j['id']>0&&$id!==$j['id'])continue;if($user!==''&&$j['user']!==''&&$user!==$j['user'])continue;if(($cycle>0&&$j['cycle']>0&&$cycle===$j['cycle'])||abs($ts-$j['ts'])<=600){$paired=true;break;}}
+                if($paired)continue;$event['event_type']='joined';$event['raw_event_type']='discovered';
+            }
+            $metadata=[];if(is_string($event['metadata_json']??null)&&$event['metadata_json']!==''){$decoded=json_decode((string)$event['metadata_json'],true);if(is_array($decoded))$metadata=$decoded;}
+            $event['metadata']=$metadata;unset($event['metadata_json']);$out[]=$event;
+        }
+        return $out;
     }
 
     public function memberLookup(string $username): array
@@ -497,9 +574,15 @@ final class GreenRepository
 
     public function markDepartureProfileResult(string $username,int $httpStatus,?array $payload=null): void
     {
-        $status='unknown';if(in_array($httpStatus,[404,410],true))$status='closed';elseif($httpStatus===200){$reported=strtolower(trim((string)($payload['status']??'')));$status=in_array($reported,['closed','disabled'],true)?'closed':'active';}
+        $reported=strtolower(trim((string)($payload['status']??'')));
+        $reason=strtolower(trim((string)($payload['closure_reason']??$payload['closed_reason']??$payload['reason']??'')));
+        if($reported!==''&&str_contains($reported,':')){[$base,$suffix]=array_pad(explode(':',$reported,2),2,'');if($reason==='')$reason=trim($suffix);$coarse=$base;}else$coarse=$reported;
+        $status='unknown';
+        if(in_array($httpStatus,[404,410],true)){$status='closed';if($reported==='')$reported='closed';if($reason==='')$reason='http_'.$httpStatus;}
+        elseif($httpStatus===200){$status=in_array($coarse,['closed','disabled'],true)?'closed':'active';if($reported==='')$reported=$status;}
         if($status==='unknown')return;
-        $q=$this->core->prepare("UPDATE p2k_g_member_events SET profile_status=?,profile_checked_at=UTC_TIMESTAMP(),metadata_json=JSON_SET(COALESCE(metadata_json,'{}'),'$.profile_http_status',?) WHERE event_type='left' AND username=? AND profile_status='pending' ORDER BY event_id DESC LIMIT 1");$q->execute([$status,$httpStatus,$username]);
+        $q=$this->core->prepare("UPDATE p2k_g_member_events SET profile_status=?,profile_checked_at=UTC_TIMESTAMP(),metadata_json=JSON_SET(COALESCE(metadata_json,'{}'),'$.profile_http_status',?,'$.profile_account_status',?,'$.profile_closure_reason',?) WHERE event_type='left' AND username=? AND profile_status='pending' ORDER BY event_id DESC LIMIT 1");
+        $q->execute([$status,$httpStatus,$reported,$reason!==''?$reason:null,$username]);
     }
 
     private function releaseMatchClaim(int $id): void

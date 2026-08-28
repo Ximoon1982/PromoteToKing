@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Migration notes — v2.10.6.8 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Migration notes — v2.10.6.8" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.10.6.8.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.10.6.8.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Migration notes — v2.10.6.8" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Migration notes — v2.10.6.8","url":"https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.10.6.8.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="migration-notes--v21068">Migration notes — v2.10.6.8</h1>
+
+<p>There is no database migration in v2.10.6.8. Existing Blue data, Green Core/Analytics data, GAB state, GFFL debt, GQAC state, cycle history and compatibility projections are preserved exactly.</p>
+
+<p>The change is a routing-policy correction for the mature continuously cycling Green runtime. Bootstrap conditions such as <code class="language-plaintext highlighter-rouge">unknown_matches = 0</code> or <code class="language-plaintext highlighter-rouge">pending_boards = 0</code> are no longer meaningful production cutover requirements because Quick cycles continually repopulate those work queues.</p>
+
+<h2 id="public-read-routing">Public-read routing</h2>
+
+<p>When <strong>Switch reads to Green</strong> is selected:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">public_read_target = green</code></li>
+  <li><code class="language-plaintext highlighter-rouge">migration_phase = green_reads_both_writing</code></li>
+  <li><code class="language-plaintext highlighter-rouge">worker_target = both</code></li>
+  <li><code class="language-plaintext highlighter-rouge">client_ingest_target = both</code></li>
+  <li>Blue Team Points pause flags are cleared when possible.</li>
+</ul>
+
+<p>GABCRF and compatibility convergence continue normally after the switch.</p>
+
+<p>The public read router now requires only Green technical availability and compatible schemas. It no longer checks <code class="language-plaintext highlighter-rouge">gab_status=ready</code> before opening the Green read databases. Once Green is explicitly selected, a real Green connection/schema failure remains fail-closed and is surfaced rather than silently falling back to Blue.</p>
+
+<h2 id="green-primary">Green primary</h2>
+
+<p><strong>Make Green primary</strong> changes the routing to Green reads + Green maintenance and requests pause of the Blue Team Points workers. It is deliberately separate from the first Green-read switch so production can first run with Blue maintained as a rollback source.</p>
+
+<h2 id="rollback">Rollback</h2>
+
+<p><strong>Rollback reads to Blue</strong> restores:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">public_read_target = blue</code></li>
+  <li><code class="language-plaintext highlighter-rouge">migration_phase = shadow_writing</code></li>
+  <li><code class="language-plaintext highlighter-rouge">worker_target = both</code></li>
+  <li><code class="language-plaintext highlighter-rouge">client_ingest_target = both</code></li>
+</ul>
+
+<p>No data is deleted on either side.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/MIGRATION_v2.10.6.8.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

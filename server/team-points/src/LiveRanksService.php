@@ -416,21 +416,29 @@ final class LiveRanksService
     }
 
 
-    /** v2.10.6.6 MCA known-source timestamp backfill status. */
+    /** v2.10.6.25 manual-only known-source timestamp repair status. */
     public function autoSyncStatus(): array
     {
-        $q=$this->pdo->prepare('SELECT * FROM p2k_lr_sync_state WHERE club_slug=? LIMIT 1');$q->execute([$this->clubSlug]);$state=$q->fetch(PDO::FETCH_ASSOC)?:[];
         $counts=['pending'=>0,'running'=>0,'completed'=>0,'error'=>0];
-        $cq=$this->pdo->prepare('SELECT status,COUNT(*) total FROM p2k_lr_sync_queue WHERE club_slug=? GROUP BY status');$cq->execute([$this->clubSlug]);
-        foreach($cq->fetchAll(PDO::FETCH_ASSOC)?:[] as $row)$counts[(string)$row['status']]=(int)$row['total'];
-        $total=max((int)($state['total_events']??0),array_sum($counts));$done=(int)($state['checked_events']??0)+(int)($state['error_count']??0);
-        $eq=$this->pdo->prepare("SELECT arena_id,arena_slug,arena_url,csv_url,stage,attempts,last_error,updated_at FROM p2k_lr_sync_queue WHERE club_slug=? AND status='error' ORDER BY updated_at DESC,arena_id DESC LIMIT 100");
+        $cq=$this->pdo->prepare("SELECT status,COUNT(*) total FROM p2k_lr_sync_queue WHERE club_slug=? AND needs_csv=0 GROUP BY status");$cq->execute([$this->clubSlug]);
+        foreach($cq->fetchAll(PDO::FETCH_ASSOC)?:[] as $row)if(isset($counts[(string)$row['status']]))$counts[(string)$row['status']]=(int)$row['total'];
+        $total=array_sum($counts);$done=$counts['completed']+$counts['error'];
+        $eq=$this->pdo->prepare("SELECT arena_id,arena_slug,arena_url,csv_url,stage,attempts,last_error,updated_at FROM p2k_lr_sync_queue WHERE club_slug=? AND needs_csv=0 AND needs_date=1 AND status='error' ORDER BY updated_at DESC,arena_id DESC LIMIT 100");
         $eq->execute([$this->clubSlug]);$errors=array_map(static fn(array $row):array=>[
             'arena_id'=>(int)$row['arena_id'],'arena_slug'=>(string)$row['arena_slug'],'arena_url'=>(string)$row['arena_url'],
             'csv_url'=>(string)$row['csv_url'],'stage'=>(string)$row['stage'],'attempts'=>(int)$row['attempts'],
             'error'=>(string)($row['last_error']??''),'updated_at'=>(string)($row['updated_at']??''),
         ],$eq->fetchAll(PDO::FETCH_ASSOC)?:[]);
-        return $state+['queue'=>$counts,'errors'=>$errors,'progress_percent'=>$total>0?round(100*min($total,$done)/$total,1):((string)($state['status']??'')==='completed'?100.0:0.0),'request_spacing_ms'=>1000,'serial'=>true,'mode'=>'timestamp_only'];
+        $missingQ=$this->pdo->prepare('SELECT COUNT(*) FROM p2k_lr_files WHERE club_slug=? AND actual_event_date IS NULL');$missingQ->execute([$this->clubSlug]);$missing=(int)$missingQ->fetchColumn();
+        $stateQ=$this->pdo->prepare('SELECT last_request_at,request_count FROM p2k_lr_sync_state WHERE club_slug=? LIMIT 1');$stateQ->execute([$this->clubSlug]);$shared=$stateQ->fetch(PDO::FETCH_ASSOC)?:[];
+        $status=($counts['pending']+$counts['running'])>0?'running':($total>0?'completed':'idle');
+        return [
+            'status'=>$status,'phase'=>$status==='running'?'dates':'manual','total_events'=>$total,'checked_events'=>$done,
+            'dates_added'=>$counts['completed'],'error_count'=>$counts['error'],'queue'=>$counts,'errors'=>$errors,
+            'progress_percent'=>$total>0?round(100*$done/$total,1):($missing===0?100.0:0.0),'request_spacing_ms'=>1000,'serial'=>true,
+            'mode'=>'manual_timestamp_only','manual_only'=>true,'historical_missing_dates'=>$missing,
+            'last_request_at'=>$shared['last_request_at']??null,'request_count'=>(int)($shared['request_count']??0),
+        ];
     }
 
     private function syncLock(callable $callback): mixed
@@ -459,11 +467,11 @@ final class LiveRanksService
         $body='';$status=0;$contentType='';
         if(function_exists('curl_init')){
             $ch=curl_init($url);if($ch===false)throw new \RuntimeException('Unable to initialize MCA HTTP client.');
-            curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>5,CURLOPT_CONNECTTIMEOUT=>12,CURLOPT_TIMEOUT=>30,CURLOPT_USERAGENT=>'PromoteToKing/2.10.6.6 MCA Date Backfill (+https://www.promotetoking.org)',CURLOPT_HTTPHEADER=>$headers,CURLOPT_HEADER=>false]);
+            curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>5,CURLOPT_CONNECTTIMEOUT=>12,CURLOPT_TIMEOUT=>30,CURLOPT_USERAGENT=>'PromoteToKing/2.10.6.25 MCA Date Repair (+https://www.promotetoking.org)',CURLOPT_HTTPHEADER=>$headers,CURLOPT_HEADER=>false]);
             $raw=curl_exec($ch);if($raw===false){$error=curl_error($ch);curl_close($ch);throw new \RuntimeException('MCA fetch failed: '.$error);}
             $body=(string)$raw;$status=(int)curl_getinfo($ch,CURLINFO_RESPONSE_CODE);$contentType=(string)curl_getinfo($ch,CURLINFO_CONTENT_TYPE);curl_close($ch);
         }else{
-            $context=stream_context_create(['http'=>['method'=>'GET','timeout'=>30,'ignore_errors'=>true,'header'=>"User-Agent: PromoteToKing/2.10.6.6 MCA Date Backfill\r\nAccept: text/html,text/csv;q=0.9,*/*;q=0.5\r\nAccept-Language: en-US,en;q=0.8\r\n"]]);
+            $context=stream_context_create(['http'=>['method'=>'GET','timeout'=>30,'ignore_errors'=>true,'header'=>"User-Agent: PromoteToKing/2.10.6.25 MCA Date Repair\r\nAccept: text/html,text/csv;q=0.9,*/*;q=0.5\r\nAccept-Language: en-US,en;q=0.8\r\n"]]);
             $raw=@file_get_contents($url,false,$context);$body=$raw===false?'':(string)$raw;
             foreach($http_response_header??[] as $header){if(preg_match('~^HTTP/\S+\s+(\d+)~i',$header,$m))$status=(int)$m[1];elseif(stripos($header,'Content-Type:')===0)$contentType=trim(substr($header,13));}
         }
@@ -479,9 +487,9 @@ final class LiveRanksService
     }
 
     /**
-     * v2.10.6.6: automation never discovers or downloads MCA source CSVs.
-     * The stored CSV filename is authoritative for arena identity; only files
-     * whose actual event date is unknown are queued for event-page timestamping.
+     * Manual historical-date repair only. Automatic Results discovery/download
+     * is owned by McaResultsCronService; this queue slice contains needs_csv=0
+     * rows derived exclusively from already stored source filenames.
      */
     private function seedTimestampQueue(): int
     {
@@ -502,7 +510,7 @@ final class LiveRanksService
     {
         $phase=(string)($state['phase']??'');
         if(($state['status']??'')!=='running'||$phase==='dates')return $state;
-        $this->pdo->prepare('DELETE FROM p2k_lr_sync_queue WHERE club_slug=?')->execute([$this->clubSlug]);
+        $this->pdo->prepare('DELETE FROM p2k_lr_sync_queue WHERE club_slug=? AND needs_csv=0')->execute([$this->clubSlug]);
         $total=$this->seedTimestampQueue();
         $status=$total>0?'running':'completed';
         $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status=?,phase=?,total_events=?,checked_events=0,csv_found=0,csv_added=0,error_count=0,rebuild_required=0,current_arena_id=NULL,current_arena_slug=NULL,current_stage=NULL,finished_at=?,last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$status,$total>0?'dates':'complete',$total,$total>0?null:gmdate('Y-m-d H:i:s'),$this->clubSlug]);
@@ -538,13 +546,13 @@ final class LiveRanksService
     public function startAutoSync(bool $force=false): array
     {
         return $this->syncLock(function() use($force):array {
-            $this->ensureStorage();$this->ensureSyncState();$this->clearImpossibleFutureEventDates();$state=$this->autoSyncStatus();
-            if(!$force&&($state['status']??'')==='running'&&(($state['queue']['pending']??0)+($state['queue']['running']??0)>0))return $state;
-            $this->pdo->prepare('DELETE FROM p2k_lr_sync_queue WHERE club_slug=?')->execute([$this->clubSlug]);
-            $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='running',phase='dates',total_events=0,checked_events=0,csv_found=0,csv_added=0,dates_added=0,error_count=0,request_count=0,current_arena_id=NULL,current_arena_slug=NULL,current_stage=NULL,rebuild_required=0,started_at=UTC_TIMESTAMP(),finished_at=NULL,last_error=NULL,last_scan_at=UTC_TIMESTAMP(),next_scan_at=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 12 HOUR),updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$this->clubSlug]);
-            $total=$this->seedTimestampQueue();
-            if($total<=0)$this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='completed',phase='complete',total_events=0,finished_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$this->clubSlug]);
-            else $this->pdo->prepare("UPDATE p2k_lr_sync_state SET total_events=?,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$total,$this->clubSlug]);
+            $this->ensureStorage();$this->ensureSyncState();$this->clearImpossibleFutureEventDates();
+            $state=$this->autoSyncStatus();
+            if(!$force&&$state['status']==='running')return $state;
+            // Date repair owns only needs_csv=0 rows. MCA Results discovery/hydration
+            // owns needs_csv=1 rows and must remain untouched.
+            $this->pdo->prepare('DELETE FROM p2k_lr_sync_queue WHERE club_slug=? AND needs_csv=0')->execute([$this->clubSlug]);
+            $this->seedTimestampQueue();
             return $this->autoSyncStatus();
         });
     }
@@ -552,65 +560,51 @@ final class LiveRanksService
     public function retryAutoSyncErrors(): array
     {
         return $this->syncLock(function():array {
-            $this->ensureSyncState();
-            $this->pdo->prepare("UPDATE p2k_lr_sync_queue SET csv_url='',status='pending',stage='page',needs_csv=0,needs_date=1,last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=? AND status='error'")->execute([$this->clubSlug]);
-            $q=$this->pdo->prepare("SELECT COUNT(*) FROM p2k_lr_sync_queue WHERE club_slug=? AND status='pending'");$q->execute([$this->clubSlug]);$pending=(int)$q->fetchColumn();
-            if($pending>0)$this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='running',phase='dates',error_count=0,current_arena_id=NULL,current_arena_slug=NULL,current_stage=NULL,finished_at=NULL,last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$this->clubSlug]);
+            $q=$this->pdo->prepare("UPDATE p2k_lr_sync_queue SET status='pending',stage='page',last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=? AND needs_csv=0 AND needs_date=1 AND status='error'");$q->execute([$this->clubSlug]);
             return $this->autoSyncStatus();
         });
     }
 
     private function finishSyncItem(int $arenaId): void
     {
-        $this->pdo->prepare("UPDATE p2k_lr_sync_queue SET status='completed',stage='done',fetched_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE club_slug=? AND arena_id=?")->execute([$this->clubSlug,$arenaId]);
-        $this->pdo->prepare("UPDATE p2k_lr_sync_state SET checked_events=checked_events+1,current_arena_id=NULL,current_arena_slug=NULL,current_stage=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$this->clubSlug]);
+        $this->pdo->prepare("UPDATE p2k_lr_sync_queue SET status='completed',stage='done',needs_csv=0,needs_date=0,fetched_at=UTC_TIMESTAMP(),last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=? AND arena_id=? AND needs_csv=0")->execute([$this->clubSlug,$arenaId]);
     }
 
     public function autoSyncStep(): array
     {
         return $this->syncLock(function():array {
-            $this->ensureSyncState();$sq=$this->pdo->prepare('SELECT * FROM p2k_lr_sync_state WHERE club_slug=? LIMIT 1');$sq->execute([$this->clubSlug]);$syncState=$sq->fetch(PDO::FETCH_ASSOC)?:[];
-            $syncState=$this->normalizeLegacySyncCycle($syncState);
-            if(($syncState['status']??'')!=='running')return $this->autoSyncStatus();
-            $this->pdo->prepare("UPDATE p2k_lr_sync_queue SET status='pending' WHERE club_slug=? AND status='running'")->execute([$this->clubSlug]);
-            $q=$this->pdo->prepare("SELECT q.* FROM p2k_lr_sync_queue q JOIN p2k_lr_files f ON f.club_slug=q.club_slug AND (f.arena_id=q.arena_id OR f.original_name=CONCAT(q.arena_slug,'.csv')) WHERE q.club_slug=? AND q.status='pending' AND f.actual_event_date IS NULL ORDER BY q.arena_id DESC LIMIT 1");$q->execute([$this->clubSlug]);$item=$q->fetch(PDO::FETCH_ASSOC);
-            if(!is_array($item)){
-                $this->recomputeEventDates();$this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='completed',phase='complete',finished_at=UTC_TIMESTAMP(),current_arena_id=NULL,current_arena_slug=NULL,current_stage=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$this->clubSlug]);return $this->autoSyncStatus();
-            }
-            $arenaId=(int)$item['arena_id'];$this->pdo->prepare("UPDATE p2k_lr_sync_queue SET status='running',stage='page',needs_csv=0,needs_date=1,attempts=attempts+1,updated_at=UTC_TIMESTAMP() WHERE club_slug=? AND arena_id=?")->execute([$this->clubSlug,$arenaId]);
-            $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='running',phase='dates',current_arena_id=?,current_arena_slug=?,current_stage='page',updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$arenaId,$item['arena_slug'],$this->clubSlug]);
+            $this->ensureSyncState();
+            $this->pdo->prepare("UPDATE p2k_lr_sync_queue SET status='pending' WHERE club_slug=? AND needs_csv=0 AND needs_date=1 AND status='running'")->execute([$this->clubSlug]);
+            $q=$this->pdo->prepare("SELECT q.* FROM p2k_lr_sync_queue q JOIN p2k_lr_files f ON f.club_slug=q.club_slug AND (f.arena_id=q.arena_id OR f.original_name=CONCAT(q.arena_slug,'.csv')) WHERE q.club_slug=? AND q.needs_csv=0 AND q.needs_date=1 AND q.status='pending' AND f.actual_event_date IS NULL ORDER BY q.arena_id DESC LIMIT 1");$q->execute([$this->clubSlug]);$item=$q->fetch(PDO::FETCH_ASSOC);
+            if(!is_array($item)){$this->recomputeEventDates();return $this->autoSyncStatus();}
+            $arenaId=(int)$item['arena_id'];
+            $this->pdo->prepare("UPDATE p2k_lr_sync_queue SET status='running',stage='page',attempts=attempts+1,last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=? AND arena_id=? AND needs_csv=0")->execute([$this->clubSlug,$arenaId]);
             try{
                 $page=$this->syncHttpGet((string)$item['arena_url']);$date=$this->extractArenaStart((string)$page['body']);
                 if(empty($date['event_date']))throw new \RuntimeException('Unable to extract the MCA event date from the known arena page.');
                 $fq=$this->pdo->prepare('SELECT id,actual_event_date FROM p2k_lr_files WHERE club_slug=? AND (arena_id=? OR original_name=?) LIMIT 1');$fq->execute([$this->clubSlug,$arenaId,$item['arena_slug'].'.csv']);$file=$fq->fetch(PDO::FETCH_ASSOC);
                 if(!is_array($file))throw new \RuntimeException('The queued MCA timestamp item no longer has a stored source CSV.');
-                if(empty($file['actual_event_date'])){$this->pdo->prepare('UPDATE p2k_lr_files SET actual_event_date=?,event_date_updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$date['event_date'],(int)$file['id']]);$this->pdo->prepare('UPDATE p2k_lr_sync_state SET dates_added=dates_added+1 WHERE club_slug=?')->execute([$this->clubSlug]);}
-                $this->pdo->prepare('UPDATE p2k_lr_sync_queue SET event_start_at=?,event_date=?,needs_date=0,updated_at=UTC_TIMESTAMP() WHERE club_slug=? AND arena_id=?')->execute([$date['event_start_at'],$date['event_date'],$this->clubSlug,$arenaId]);
+                if(empty($file['actual_event_date']))$this->pdo->prepare('UPDATE p2k_lr_files SET actual_event_date=?,event_date_updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$date['event_date'],(int)$file['id']]);
+                $this->pdo->prepare('UPDATE p2k_lr_sync_queue SET event_start_at=?,event_date=? WHERE club_slug=? AND arena_id=? AND needs_csv=0')->execute([$date['event_start_at'],$date['event_date'],$this->clubSlug,$arenaId]);
                 $this->finishSyncItem($arenaId);
             }catch(\Throwable $e){
                 $this->pdo->prepare("UPDATE p2k_lr_sync_queue SET status='error',stage='page',needs_csv=0,needs_date=1,last_error=?,updated_at=UTC_TIMESTAMP() WHERE club_slug=? AND arena_id=?")->execute([substr($e->getMessage(),0,4000),$this->clubSlug,$arenaId]);
-                $this->pdo->prepare("UPDATE p2k_lr_sync_state SET error_count=error_count+1,last_error=?,current_arena_id=NULL,current_arena_slug=NULL,current_stage=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([substr($e->getMessage(),0,4000),$this->clubSlug]);
             }
-            $pending=$this->pdo->prepare("SELECT COUNT(*) FROM p2k_lr_sync_queue WHERE club_slug=? AND status='pending'");$pending->execute([$this->clubSlug]);
-            if((int)$pending->fetchColumn()===0){$this->recomputeEventDates();$this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='completed',phase='complete',finished_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$this->clubSlug]);}
+            $pending=$this->pdo->prepare("SELECT COUNT(*) FROM p2k_lr_sync_queue WHERE club_slug=? AND needs_csv=0 AND needs_date=1 AND status='pending'");$pending->execute([$this->clubSlug]);
+            if((int)$pending->fetchColumn()===0)$this->recomputeEventDates();
             return $this->autoSyncStatus();
         });
     }
 
     public function acknowledgeAutoSyncRebuild(): array
     {
-        $this->ensureSyncState();$this->pdo->prepare("UPDATE p2k_lr_sync_state SET rebuild_required=0,phase=CASE WHEN status='completed' THEN 'complete' ELSE phase END,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$this->clubSlug]);
         return $this->autoSyncStatus();
     }
 
-    /** CLI/CRON helper. Twice daily, timestamp only stored MCA CSVs whose date is still unknown. */
+    /** Compatibility hook only. Historical date repair is manual-only in v2.10.6.25. */
     public function runAutoSyncCron(int $maxSeconds=90): array
     {
-        $this->ensureSyncState();$state=$this->autoSyncStatus();$due=empty($state['next_scan_at'])||(strtotime((string)$state['next_scan_at'].' UTC')?:0)<=time();
-        if(($state['status']??'idle')!=='running'&&$due)$state=$this->startAutoSync(true);
-        $deadline=microtime(true)+max(5,min(300,$maxSeconds));
-        while(($state['status']??'')==='running'&&microtime(true)<$deadline-2.0)$state=$this->autoSyncStep();
-        return $state;
+        return $this->autoSyncStatus()+['cron_disabled'=>true];
     }
 
     public function statusPayload(): array
@@ -622,7 +616,8 @@ final class LiveRanksService
         return [
             'files' => $this->fileRows(),
             'processing' => $state,
-            'sync' => $this->autoSyncStatus(),
+            'sync' => (new McaResultsCronService($this->pdo, $this->repository))->status(),
+            'date_sync' => $this->autoSyncStatus(),
             'players' => $players,
             'summary' => $this->summary($players),
         ];

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.0 installation | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.0 installation" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.0.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.0.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.0 installation" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.0 installation","url":"https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.0.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v290-installation">Promote to King v2.9.0 installation</h1>
+
+<h2 id="full-standalone">Full standalone</h2>
+
+<p>Deploy the root-flat <code class="language-plaintext highlighter-rouge">PromoteToKing_v2.9.0_FULL_STANDALONE.zip</code> into the site root. Preserve production-only <code class="language-plaintext highlighter-rouge">.env</code>, <code class="language-plaintext highlighter-rouge">*.local.php</code>, <code class="language-plaintext highlighter-rouge">data/server-config.json</code>, databases, runtime data and logs; these mutable secrets/data are not supplied by the standalone package.</p>
+
+<p>After deployment, from the production site root run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./reset-install-cron-v2.9.0.sh
+</code></pre></div></div>
+
+<p>The helper auto-detects a real PHP CLI (<code class="language-plaintext highlighter-rouge">PHP_SAPI=cli</code>; on current IONOS production <code class="language-plaintext highlighter-rouge">/usr/bin/php8.5-cli</code>), validates protected CRON configuration, repairs the shared CRON token if necessary, creates the analytics HMAC secret if absent, and installs four secretless dispatcher entries.</p>
+
+<h2 id="incremental-update-from-v2811">Incremental update from v2.8.11</h2>
+
+<p>Upload both the incremental ZIP and <code class="language-plaintext highlighter-rouge">update-v2.8.11-to-v2.9.0.sh</code> to the production site root, then run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./update-v2.8.11-to-v2.9.0.sh
+</code></pre></div></div>
+
+<p>The updater is argumentless. It validates the archive manifest before applying it, creates a timestamped <code class="language-plaintext highlighter-rouge">_backup</code> containing configuration/data/logs/crontab plus every replaced file, normalizes permissions, validates the updated release, checks the production root over HTTP when curl is available, installs the v2.9.0 CRON schedule, and restores replaced files/crontab on a failed post-update validation where feasible.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALL_v2.9.0.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

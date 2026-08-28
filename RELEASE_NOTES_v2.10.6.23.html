@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.23 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.23" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.23.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.23.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.23" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.23","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.23.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v210623">Promote to King v2.10.6.23</h1>
+
+<h2 id="member-chronology-tournament-visibility-and-member-lookup">Member chronology, tournament visibility and member lookup</h2>
+
+<p>This release improves the Administration data surfaces without changing Team Points scoring, Green routing, CRON definitions or database schema.</p>
+
+<p>Member chronology now consolidates a stable-player-ID rename into one authoritative <code class="language-plaintext highlighter-rouge">Name changed</code> event. Transient new-name discovery/join observations and the correlated old-name departure are suppressed from chronology output, while genuine historical leaves and rejoins remain visible. New rename confirmations also clean the correlated transient lifecycle rows.</p>
+
+<p>Tournament Management now includes a complete <code class="language-plaintext highlighter-rouge">Known tournaments</code> table sourced from the existing tournament archive and displaying latest known status, period, type, player count and update time.</p>
+
+<p>The Dashboard <code class="language-plaintext highlighter-rouge">New matches · 24 h</code> metric now starts at the same unknown value used elsewhere (<code class="language-plaintext highlighter-rouge">—</code>). An authoritative successful response containing no matches displays <code class="language-plaintext highlighter-rouge">0</code>; failed or not-yet-loaded state remains <code class="language-plaintext highlighter-rouge">—</code>.</p>
+
+<p>Administration → Members gains a <code class="language-plaintext highlighter-rouge">Member lookup</code> card. A current or former username resolves through the Green identity graph and presents available membership lifecycle, aliases, account/closure evidence, ratings, Daily activity and Team Points, current match workload, achievement count, MCA summary, roster/profile/stat freshness and lifecycle chronology. The lookup endpoint remains admin-authorized.</p>
+
+<p>No DB schema/reset/reseed, CRON-definition, Blue/Green routing, scoring, heatmap formula/data, artwork or public-navigation changes are included.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.23.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

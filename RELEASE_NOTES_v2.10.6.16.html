@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.16 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.16" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.16.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.16.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.16" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.16","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.16.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v210616">Promote to King v2.10.6.16</h1>
+
+<p>v2.10.6.16 is a cumulative Green cycle-boundary and worker-runtime corrective from the canonical v2.10.6.15 source tree.</p>
+
+<h2 id="correctives">Correctives</h2>
+
+<ul>
+  <li>Prevent the finite-cycle tail pass from crossing a completed cycle boundary. Work for the next Quick cycle can no longer run before that cycle is formally started/timed.</li>
+  <li>Self-heal active Quick cycles already beyond <code class="language-plaintext highlighter-rouge">quick_boards</code> with no GQAC cohort by rewinding only that active cycle to <code class="language-plaintext highlighter-rouge">quick_boards</code>, creating its cohort, and resuming the normal sequence. No data reset or reseed is performed.</li>
+  <li>Checkpoint terminal 404/410 profile and stats observations on periodic refreshes, not only when the previous checkpoint is NULL.</li>
+  <li>Record real Quick Profiles and Quick Stats phase progress using current-member completed/due counts instead of binary <code class="language-plaintext highlighter-rouge">0 / 1</code> telemetry.</li>
+  <li>Preserve detailed phase totals when a phase completes.</li>
+  <li>Remove the synchronous analytics rebuild from <code class="language-plaintext highlighter-rouge">completeCycle()</code>, release the global <code class="language-plaintext highlighter-rouge">p2k_green_worker</code> lock before Green/compatibility analytics maintenance, and serialize analytics under its own lock.</li>
+  <li>Restore full Green/compatibility analytics materialization to a 300-second minimum cadence (reverting the v2.10.6.11 30-second pressure); live per-object Green compatibility projection remains immediate.</li>
+  <li>Treat post-lock analytics rebuild failures as maintenance telemetry rather than failing an already-successful finite Green worker.</li>
+  <li>Add timing telemetry for finite cycle, finite tail, GAB, GFFL, current maintenance, Green analytics and compatibility analytics, plus core-lock runtime vs total request runtime.</li>
+  <li>Clarify that historical cycle-duration averages before v2.10.6.16 may contain boundary-timing distortion and that Task Control displays UTC.</li>
+</ul>
+
+<h2 id="compatibility">Compatibility</h2>
+
+<ul>
+  <li>Public Dashboard, Hall of Fame and Insights DOM/layout remain regression-locked unchanged.</li>
+  <li>No database schema change, database reset, reseed, CRON schedule change, Blue/Green routing change, scoring change or artwork change.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.16.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

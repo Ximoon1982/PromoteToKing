@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.8.1 hotfix release notes | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.8.1 hotfix release notes" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.8.1.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.8.1.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.8.1 hotfix release notes" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.8.1 hotfix release notes","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.8.1.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2881-hotfix-release-notes">Promote to King v2.8.8.1 hotfix release notes</h1>
+
+<p>v2.8.8.1 is a focused reliability/correctness hotfix for v2.8.8. It retains the complete v2.8.8 feature set.</p>
+
+<h2 id="dashboard-and-administration-startup">Dashboard and Administration startup</h2>
+
+<ul>
+  <li>The Dashboard first-paint critical path no longer waits indefinitely for the initial materialized Team Points database request. After a bounded 3.5-second wait it renders and starts the normal automatic second wave while the database request continues in the background.</li>
+  <li>A locally/configured administrator is recognized immediately from the authenticated session/configuration. Chess.com club-profile verification no longer sits in front of an already sufficient local admin decision.</li>
+  <li>Embedded Administration pages tolerate parent/iframe initialization-order races instead of depending on one readiness message arriving at exactly the right instant.</li>
+  <li>Lazy Hall/Insights modules use an 8-second load guard with one cache-busted retry. A failed first dynamic load is no longer permanently memoized as a dead feature promise.</li>
+  <li>Integrated Administration iframes likewise receive one bounded cache-busted retry if their first load does not complete.</li>
+  <li>These changes are aimed at the observed symptom where the Dashboard eventually appeared and admin recognition eventually succeeded, but the Administration panel itself could remain blank/pending.</li>
+</ul>
+
+<h2 id="unified-profile-achievements-and-modal-reliability">Unified profile, achievements and modal reliability</h2>
+
+<ul>
+  <li>Nested modal restoration remains DOM-preserving.</li>
+  <li>Asynchronous Profile enrichment is now scoped to the specific Profile root rather than the currently visible global modal body. Opening an Achievement while Profile enrichment is still running can no longer redirect later Profile callbacks into the nested Achievement modal.</li>
+  <li>Profile rank artwork keeps its intrinsic square display box and <code class="language-plaintext highlighter-rouge">object-fit: contain</code>; responsive profile layouts no longer clip the lower portion of rank images.</li>
+</ul>
+
+<h2 id="opponent-intelligence-correctness">Opponent Intelligence correctness</h2>
+
+<ul>
+  <li>Opponent win/draw/loss totals now consume the canonical <code class="language-plaintext highlighter-rouge">p2k_tp_match_summaries.result</code> outcome used by the rest of current analytics rather than the older match-metadata result field.</li>
+  <li>Authoritative void 0–0 matches remain excluded.</li>
+  <li>The Analytics source watermark includes <code class="language-plaintext highlighter-rouge">opponent-outcomes-v2881</code>, forcing one normal materialized Analytics rebuild after deployment so already-stored zero-loss opponent rows are corrected automatically. This is a logic rebuild, not a schema migration.</li>
+</ul>
+
+<h2 id="team-insights--club-points-score-progression">Team Insights — Club Points score progression</h2>
+
+<ul>
+  <li>Adds <strong>Club Points score progression</strong> immediately above the existing Year-over-year Club Points progression.</li>
+  <li>The chart begins on the first stored Club Points day and shows actual cumulative Club Points through today.</li>
+  <li>It then projects exactly six calendar months beyond today using the <strong>same forecast engine and assumptions</strong> as the year-over-year chart:
+    <ul>
+      <li>latest 90 days split into three 30-day blocks;</li>
+      <li>recent-rate weighting;</li>
+      <li>capped ±8% trend bend;</li>
+      <li>Low / Medium / High scenarios with the same ±10% uncertainty band.</li>
+    </ul>
+  </li>
+  <li>Forecast implementation is shared, not duplicated, so the two Team Insights projections cannot silently diverge in methodology.</li>
+</ul>
+
+<h2 id="database-and-operations">Database and operations</h2>
+
+<ul>
+  <li>Core schema remains <strong>6</strong>.</li>
+  <li>Analytics schema remains <strong>5</strong>.</li>
+  <li>No database reset, re-seed or SQL migration is required when upgrading from v2.8.8.</li>
+  <li>Upgrading directly from v2.8.7 still requires the normal additive Core 5 → 6 migration introduced by v2.8.8.</li>
+  <li>CRON cadence is unchanged: Club every 5 minutes, Tournament every 10 minutes, Player every 30 minutes, league monitoring hourly.</li>
+  <li>No new hotfix CRON entry is introduced.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.8.8.1.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

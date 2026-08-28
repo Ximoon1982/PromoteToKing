@@ -1,0 +1,37 @@
+Promote to King v2.10.7 validation report
+Generated UTC: 2026-08-27 22:30:09
+
+BASELINE
+- GitHub main commit: c73dfab43457ede2956cb0f92046cf696788661e
+- Git tree: fb64aaaa2b8b672934f0e8d0daec1d4bcf1d2da3
+- main VERSION before increment: 2.10.6.24
+- corrected R3 installer SHA-256: 8cc438fa142f642e16d10f3ba3f6712f02f9ccc9f3a4a7ce91559f1a75bab48b
+- R3 applied locally: PASS
+- resulting VERSION: 2.10.6.25
+- AchievementCatalog.php baseline SHA-256: b4a560270438f298f54f42a3fca000f455e3aa037279074f258b2061709cd43f
+- AnalyticsBuilder.php baseline SHA-256: 8d987d2193959040dc58036c12556c0be07855cb697941b120f148eed5c6f34f
+- ClubIntelligenceService.php baseline SHA-256: 76a046857fc99ee589a99b8d99a6e24dee079faaf0dd61ad0964fae6e9df7f8f
+
+V2.10.7 SOURCE VALIDATION
+- 14 final-source gates: PASS
+- PHP syntax lint, AchievementCatalog.php: PASS
+- PHP syntax lint, AnalyticsBuilder.php: PASS
+- PHP syntax lint, ClubIntelligenceService.php: PASS
+- Approved artwork masters SHA-256: PASS (9/9)
+- Master dimensions 1254x1254: PASS (9/9)
+- Runtime PNG dimensions 640x640: PASS (9/9)
+- Runtime WebP thumbnails 128x128: PASS (9/9)
+
+INSTALLER
+- Complete-file payload count: 24
+- Runtime PHP source transformation: NONE
+- GitHub/source hash prerequisite on production: NONE
+- Database/runtime data/config/secrets changes: NONE
+- CRON changes: NONE
+- Installer SHA-256: 76d776ab8aca62c0ee4e21b79c59da0daa5b3e38028a4b5f582eb6bcebab3f90
+- Clean install from reconstructed R3 v2.10.6.25: PASS
+- Installed files byte-identical to payload: PASS (24/24)
+- Installed VERSION: 2.10.7
+- Installed MIGRATION_VERSION: 2.10.7
+- Forced post-copy failure rollback: PASS
+- Rollback result byte-identical to R3 v2.10.6.25 baseline (excluding retained backup directory): PASS

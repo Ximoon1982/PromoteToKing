@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.4 — Achievement catalogue lineage audit | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.4 — Achievement catalogue lineage audit" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/ACHIEVEMENT_CATALOG_AUDIT_v2.8.9_TO_v2.9.4.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/ACHIEVEMENT_CATALOG_AUDIT_v2.8.9_TO_v2.9.4.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.4 — Achievement catalogue lineage audit" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.4 — Achievement catalogue lineage audit","url":"https://ximoon1982.github.io/PromoteToKing/ACHIEVEMENT_CATALOG_AUDIT_v2.8.9_TO_v2.9.4.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v294--achievement-catalogue-lineage-audit">Promote to King v2.9.4 — Achievement catalogue lineage audit</h1>
+
+<p>Date: 2026-08-10</p>
+
+<h2 id="corrected-preservation-result">Corrected preservation result</h2>
+
+<p>The earlier v2.9.2/v2.9.3 corrective interpretation treated the requested 1 / 5 / 10 / 15 / 20 group-breadth ladder as a replacement for the v2.9.0 breadth entries. That is not the preservation contract now required.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Release</th>
+      <th style="text-align: right">Total</th>
+      <th>Catalogue interpretation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>v2.8.9</td>
+      <td style="text-align: right">115</td>
+      <td>baseline</td>
+    </tr>
+    <tr>
+      <td>v2.8.11</td>
+      <td style="text-align: right">115</td>
+      <td>unchanged</td>
+    </tr>
+    <tr>
+      <td>v2.9.0 / v2.9.1</td>
+      <td style="text-align: right">128</td>
+      <td>115 baseline + 4 same-day + 5 concurrency + 4 shipped legacy breadth entries</td>
+    </tr>
+    <tr>
+      <td>v2.9.4</td>
+      <td style="text-align: right"><strong>133</strong></td>
+      <td><strong>all 128 v2.9.1 keys preserved + 5 new additive distinct-group breadth entries</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="the-128-key-v291-baseline-is-preserved-exactly">The 128-key v2.9.1 baseline is preserved exactly</h3>
+
+<p>v2.9.4 freezes the v2.9.1 catalogue key sequence in <code class="language-plaintext highlighter-rouge">tests/fixtures/v291_achievement_keys.txt</code>. The first 128 current catalogue keys must match that fixture exactly. This protects every historical achievement identity, not merely a representative subset.</p>
+
+<p>The shipped v2.9.0/v2.9.1 source contains four entries explicitly categorized as <code class="language-plaintext highlighter-rouge">achievement-breadth</code>:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">groups-5</code> — Achievement Explorer</li>
+  <li><code class="language-plaintext highlighter-rouge">groups-10</code> — Achievement Voyager</li>
+  <li><code class="language-plaintext highlighter-rouge">groups-15</code> — Achievement Pathfinder</li>
+  <li><code class="language-plaintext highlighter-rouge">groups-all</code> — Achievement Universalist</li>
+</ul>
+
+<p>Although the user recollection is that the original breadth family contained five achievements, no fifth stable historical key is present in the audited shipped 128-key catalogue. v2.9.4 therefore does <strong>not invent</strong> a historical key. Instead it preserves the entire 128-key baseline so no original achievement of any family can disappear.</p>
+
+<h3 id="five-requested-breadth-achievements-are-additive">Five requested breadth achievements are additive</h3>
+
+<p>The requested distinct eligible-group milestones are introduced with separate identities:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">breadth-groups-1</code></li>
+  <li><code class="language-plaintext highlighter-rouge">breadth-groups-5</code></li>
+  <li><code class="language-plaintext highlighter-rouge">breadth-groups-10</code></li>
+  <li><code class="language-plaintext highlighter-rouge">breadth-groups-15</code></li>
+  <li><code class="language-plaintext highlighter-rouge">breadth-groups-20</code></li>
+</ul>
+
+<p>These are excluded from their own eligible-group counting category, exactly like the legacy breadth family, so meta-achievements do not recursively inflate breadth progress.</p>
+
+<h2 id="resulting-invariant">Resulting invariant</h2>
+
+<p><strong>128 preserved v2.9.1 achievements + 5 new breadth achievements = 133 total.</strong></p>
+
+<p>Regression coverage verifies:</p>
+
+<ul>
+  <li>the exact 128-key preserved baseline and order;</li>
+  <li>the five new <code class="language-plaintext highlighter-rouge">breadth-groups-*</code> keys;</li>
+  <li>retention of <code class="language-plaintext highlighter-rouge">groups-all</code> and the three other shipped legacy breadth keys;</li>
+  <li>evaluator/materializer support for both legacy and new breadth families;</li>
+  <li>complete public/player catalogue reads without breadth-family filtering.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/ACHIEVEMENT_CATALOG_AUDIT_v2.8.9_TO_v2.9.4.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

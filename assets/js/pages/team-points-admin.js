@@ -509,12 +509,43 @@
     }
   }
 
+  function memberChronologyFilters() {
+    return {
+      member: String($('memberChronologyMember')?.value || '').trim(),
+      event_type: String($('memberChronologyEventType')?.value || '').trim(),
+      from: String($('memberChronologyFrom')?.value || '').trim(),
+      to: String($('memberChronologyTo')?.value || '').trim()
+    };
+  }
+
+  function memberDepartureStatus(event) {
+    if (event?.event_type !== 'left') return '—';
+    const metadata = event && typeof event.metadata === 'object' && event.metadata ? event.metadata : {};
+    let account = String(metadata.profile_account_status || event.profile_status || 'pending').trim();
+    const reason = String(metadata.profile_closure_reason || '').trim();
+    if (event.profile_status === 'closed' && reason && !account.includes(':')) account += `:${reason}`;
+    return `${esc(account || 'pending')}${event.profile_checked_at ? ` · ${esc(formatUtc(event.profile_checked_at))}` : ''}`;
+  }
+
   function renderMemberChronology(events=[]) {
     const rows=$('memberChronologyRows');if(!rows)return;
-    const label={discovered:'Discovered',joined:'Joined',left:'Left',name_changed:'Name changed',rejoined:'Rejoined'};
-    rows.innerHTML=events.map(e=>{const transition=e.event_type==='name_changed'?`${esc(e.previous_username||e.username||'—')} → ${esc(e.new_username||'—')}`:'—';const profile=e.event_type==='left'?`${esc(e.profile_status||'pending')}${e.profile_checked_at?` · ${esc(formatUtc(e.profile_checked_at))}`:''}`:'—';return `<tr><td>${esc(formatUtc(e.detected_at))}</td><td>${esc(label[e.event_type]||e.event_type||'')}</td><td>${esc(e.username||e.new_username||'—')}</td><td>${transition}</td><td>${profile}</td><td>${esc(e.source||'—')}</td><td>${e.cycle_no?esc(`#${e.cycle_no}`):'—'}</td></tr>`}).join('')||'<tr><td colspan="7">No member lifecycle event has been recorded yet.</td></tr>';
+    const label={joined:'Joined',left:'Left',name_changed:'Name changed',rejoined:'Rejoined'};
+    rows.innerHTML=events.map(e=>{const transition=e.event_type==='name_changed'?`${esc(e.previous_username||e.username||'—')} → ${esc(e.new_username||'—')}`:'—';return `<tr><td>${esc(formatUtc(e.detected_at))}</td><td>${esc(label[e.event_type]||e.event_type||'')}</td><td>${esc(e.username||e.new_username||'—')}</td><td>${transition}</td><td>${memberDepartureStatus(e)}</td></tr>`}).join('')||'<tr><td colspan="5">No member lifecycle event matches the current filters.</td></tr>';
   }
-  async function loadMemberChronology(force=false){if(state.memberEventsLoaded&&!force)return;setMessage('memberChronologyStatus','Loading Green member chronology…');try{const d=await greenRequest('member-events',{params:{limit:500}});const events=Array.isArray(d.events)?d.events:[];renderMemberChronology(events);state.memberEventsLoaded=true;const pending=events.filter(e=>e.event_type==='left'&&e.profile_status==='pending').length;setMessage('memberChronologyStatus',`${number(events.length)} event${events.length===1?'':'s'} loaded${pending?` · ${number(pending)} departure profile check${pending===1?'':'s'} pending`:''}.`,pending?'':'success');}catch(error){setMessage('memberChronologyStatus',error.message||String(error),'error');}}
+
+  async function loadMemberChronology(force=false){
+    if(state.memberEventsLoaded&&!force)return;
+    const filters=memberChronologyFilters();
+    if(filters.from&&filters.to&&filters.from>filters.to){setMessage('memberChronologyStatus','The From date must not be after the To date.','error');return;}
+    setMessage('memberChronologyStatus','Loading Green member chronology…');
+    try{
+      const params={limit:1000};Object.entries(filters).forEach(([key,value])=>{if(value)params[key]=value;});
+      const d=await greenRequest('member-events',{params});const events=Array.isArray(d.events)?d.events:[];renderMemberChronology(events);state.memberEventsLoaded=true;
+      const pending=events.filter(e=>e.event_type==='left'&&e.profile_status==='pending').length;
+      const filtered=Object.values(filters).some(Boolean);
+      setMessage('memberChronologyStatus',`${number(events.length)} event${events.length===1?'':'s'} loaded${filtered?' for the current filters':''}${pending?` · ${number(pending)} departure profile check${pending===1?'':'s'} pending`:''}.`,pending?'':'success');
+    }catch(error){setMessage('memberChronologyStatus',error.message||String(error),'error');}
+  }
 
   function setupTabs() {
     const tabs = [...document.querySelectorAll('[data-tab]')];
@@ -586,6 +617,13 @@
     $('tpRefresh').addEventListener('click', () => refreshStatus(true).catch(() => {}));
     $('storageRefresh')?.addEventListener('click', () => loadStorageMetrics(true));
     $('memberChronologyRefresh')?.addEventListener('click', () => loadMemberChronology(true));
+    $('memberChronologyApply')?.addEventListener('click', () => { state.memberEventsLoaded=false; loadMemberChronology(true); });
+    $('memberChronologyClear')?.addEventListener('click', () => {
+      ['memberChronologyMember','memberChronologyFrom','memberChronologyTo'].forEach(id => { if ($(id)) $(id).value=''; });
+      if ($('memberChronologyEventType')) $('memberChronologyEventType').value='';
+      state.memberEventsLoaded=false; loadMemberChronology(true);
+    });
+    $('memberChronologyMember')?.addEventListener('keydown', event => { if (event.key==='Enter') { event.preventDefault(); state.memberEventsLoaded=false; loadMemberChronology(true); } });
     $('tpQuery').addEventListener('click', queryDatabase);
     $('tpDownload').addEventListener('click', downloadCsv);
     $('tpClearSearch')?.addEventListener('click', () => {

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>v2.9.22.5 Task Control / Diagnostics Hotfix Audit | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="v2.9.22.5 Task Control / Diagnostics Hotfix Audit" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/HOTFIX_AUDIT_v2.9.22.5.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/HOTFIX_AUDIT_v2.9.22.5.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="v2.9.22.5 Task Control / Diagnostics Hotfix Audit" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"v2.9.22.5 Task Control / Diagnostics Hotfix Audit","url":"https://ximoon1982.github.io/PromoteToKing/HOTFIX_AUDIT_v2.9.22.5.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="v29225-task-control--diagnostics-hotfix-audit">v2.9.22.5 Task Control / Diagnostics Hotfix Audit</h1>
+
+<p>Observed production symptoms:</p>
+
+<ul>
+  <li>only the browser-native Fast Fetcher / Fresh Reconstruction cards remained visible;</li>
+  <li>Runtime Diagnostics reported 8-second timeouts for <code class="language-plaintext highlighter-rouge">insights-health.php</code> and traffic intelligence;</li>
+  <li>loaded cache markers mixed <code class="language-plaintext highlighter-rouge">2.9.22.4.4</code>, older release markers, while site-config reported <code class="language-plaintext highlighter-rouge">2.9.22.4</code>.</li>
+</ul>
+
+<p>Root causes confirmed in the exact v2.9.22.4 package:</p>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">server/control/public/api.php?action=status</code> synchronously generated full Club and Player work details for every Task Control refresh. Large durable queues made card bootstrap depend on expensive queue/coverage scans.</li>
+  <li>Task Control also synchronously waited for Fresh Reconstruction staging sync before rendering the server task cards.</li>
+  <li><code class="language-plaintext highlighter-rouge">intelligence.php</code> eagerly opened Core and Analytics before dispatching <code class="language-plaintext highlighter-rouge">scope=traffic</code>, despite traffic analytics being filesystem-backed.</li>
+  <li>Runtime Diagnostics imposed the same 8-second deadline on DB-backed health and lightweight diagnostics.</li>
+  <li>Twenty HTML/HTM entry points were stamped with the invalid cache generation <code class="language-plaintext highlighter-rouge">2.9.22.4.4</code>; additional entry points retained older cache generations.</li>
+</ol>
+
+<p>Corrective contract:</p>
+
+<ul>
+  <li>status bootstrap returns task registry state + CRON shell markers only;</li>
+  <li>expensive work reports are lazy per selected task;</li>
+  <li>all four server cards have a visible fallback state if bootstrap is unavailable;</li>
+  <li>traffic diagnostics bypass databases;</li>
+  <li>Insights Health gets a separate 20-second diagnostic budget;</li>
+  <li>all HTML/HTM <code class="language-plaintext highlighter-rouge">?v=</code> asset markers are exactly <code class="language-plaintext highlighter-rouge">2.9.22.5</code>.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/HOTFIX_AUDIT_v2.9.22.5.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.4 migration notes | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.4 migration notes" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.10.4.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.10.4.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.4 migration notes" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.4 migration notes","url":"https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.10.4.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2104-migration-notes">Promote to King v2.10.4 migration notes</h1>
+
+<h2 id="analytics-schema-7--8">Analytics schema 7 → 8</h2>
+
+<p>The migration is additive. <code class="language-plaintext highlighter-rouge">p2k_lr_files</code> receives nullable/derived MCA event-date provenance fields:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">actual_event_date</code></li>
+  <li><code class="language-plaintext highlighter-rouge">effective_event_date</code></li>
+  <li><code class="language-plaintext highlighter-rouge">event_date_precision</code> (<code class="language-plaintext highlighter-rouge">known</code>, <code class="language-plaintext highlighter-rouge">interpolated</code>, <code class="language-plaintext highlighter-rouge">upload-fallback</code>)</li>
+  <li><code class="language-plaintext highlighter-rouge">event_date_updated_at</code></li>
+</ul>
+
+<p>Existing rows initialize their effective date from upload date when no actual date is known. Later actual-date edits recompute neighboring effective dates dynamically by arena ID and invalidate the achievement refresh watermark.</p>
+
+<p>No Core or Green table is dropped/truncated/reseeded.</p>
+
+<h2 id="achievement-rebuild-behavior">Achievement rebuild behavior</h2>
+
+<p>MCA-derived achievement unlocks are rebuildable Analytics projections. v2.10.4 reconstructs their crossing dates chronologically by arena using the effective event-date provenance. Approximate provenance remains explicitly marked rather than presented as exact.</p>
+
+<h2 id="authentication-boundary">Authentication boundary</h2>
+
+<p>The Team Points administrator session is no longer bootstrapped from a browser-posted username. It is derived from the real server-side Chess.com OAuth session and then independently checked against the current club administrators before <code class="language-plaintext highlighter-rouge">P2KTPSESSID</code> is created.</p>
+
+<h2 id="green-gqac--gscf">Green GQAC / GSCF</h2>
+
+<p>GSCF uses one Green-only CRON feeder at minute 2 and 32 of each hour. The feeder has an 18-second soft target and 24-second hard worker budget; the existing <code class="language-plaintext highlighter-rouge">p2k_green_worker</code> database lease prevents overlap. Blue CRON entries are not modified.</p>
+
+<p>GQAC adds two small Green accounting tables lazily and idempotently on the first <code class="language-plaintext highlighter-rouge">quick_boards</code> pass:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">p2k_g_quick_board_cycles</code></li>
+  <li><code class="language-plaintext highlighter-rouge">p2k_g_quick_board_cycle_items</code></li>
+</ul>
+
+<p>The current quick-board workload is snapshotted once. New board debt discovered after that snapshot is intentionally carried into the next quick cycle. Terminal 200/404/410 observations retire the current-cycle item; newer hints preserve <code class="language-plaintext highlighter-rouge">needs_refresh=1</code> for next-cycle convergence. No Green data reset or reseed is performed.</p>
+
+<h2 id="matches--team-points-artwork">Matches / Team Points artwork</h2>
+
+<p>v2.10.4 intentionally retains the seven existing SVG placeholders for First Match, First Step, Rising Star, Clutch Player, Great Strategist, Match Veteran and Match Legend. The exact recovered Aug-6 source filenames and SHA-256 values remain recorded in <code class="language-plaintext highlighter-rouge">ARTWORK_PROVENANCE_v2.10.4.json</code> for a later artwork-only integration.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/MIGRATION_v2.10.4.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

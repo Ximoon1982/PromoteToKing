@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.18 migration | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.18 migration" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.9.18.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.9.18.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.18 migration" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.18 migration","url":"https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.9.18.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2918-migration">Promote to King v2.9.18 migration</h1>
+
+<p>v2.9.18 performs additive migrations only.</p>
+
+<h2 id="core-13--14">Core 13 → 14</h2>
+
+<p>Adds MIAC identity state/names/evidence/canonical-map storage, authoritative <code class="language-plaintext highlighter-rouge">player_id</code> support needed for identity confirmation, and PIR state/issues. Existing members, matches, boards, games and point events remain canonical and are not recreated.</p>
+
+<h2 id="analytics-6--7">Analytics 6 → 7</h2>
+
+<p>Adds normalized MCA source-row evidence, MIRA per-row attribution, canonical-identity/generation fields and rebuild state. Existing uploaded MCA source files remain the immutable source of truth for derivation.</p>
+
+<h2 id="miac-seed">MIAC seed</h2>
+
+<p><code class="language-plaintext highlighter-rouge">resources/miac/seed.zip</code> and <code class="language-plaintext highlighter-rouge">resources/miac/miac-seed.json</code> are release resources. The install/CRON setup copies them into protected <code class="language-plaintext highlighter-rouge">data/miac/seed/</code>. Seed import is idempotent. Candidate rename hypotheses do not automatically merge identities.</p>
+
+<h2 id="pir-authority-boundary">PIR authority boundary</h2>
+
+<p>PIR does not alter canonical scores/results/points based on arithmetic or CSV evidence. It records an issue and requests authoritative Chess.com match/board revalidation.</p>
+
+<h2 id="cron">CRON</h2>
+
+<p>The four operational schedules retain their existing cadence. A fifth managed entry runs the weekly long-life backup. CMDI isolates optional maintenance inside each Club/Player HTTP invocation; it does not require extra frequent maintenance CRON entries.</p>
+
+<p>No database reset, destructive migration or manual CSV reimport is required.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/MIGRATION_v2.9.18.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

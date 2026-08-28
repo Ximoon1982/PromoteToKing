@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Post-v2.9.15 integration — DRR Fix, MLP Fix, catalogue progress context | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Post-v2.9.15 integration — DRR Fix, MLP Fix, catalogue progress context" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/NEXT_RELEASE_INTEGRATION_DRR_MLP_CATALOGUE_v2.9.15.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/NEXT_RELEASE_INTEGRATION_DRR_MLP_CATALOGUE_v2.9.15.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Post-v2.9.15 integration — DRR Fix, MLP Fix, catalogue progress context" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Post-v2.9.15 integration — DRR Fix, MLP Fix, catalogue progress context","url":"https://ximoon1982.github.io/PromoteToKing/NEXT_RELEASE_INTEGRATION_DRR_MLP_CATALOGUE_v2.9.15.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="post-v2915-integration--drr-fix-mlp-fix-catalogue-progress-context">Post-v2.9.15 integration — DRR Fix, MLP Fix, catalogue progress context</h1>
+
+<p>Status: integrated into the internal post-v2.9.15 working tree only. No release number, updater, standalone archive, incremental archive, schema, CRON cadence, or package manifest finalization is part of this preparation.</p>
+
+<h2 id="dashboard-recommendation-resilience-fix-drr-fix">Dashboard Recommendation Resilience Fix (DRR Fix)</h2>
+
+<ul>
+  <li>The existing per-user dashboard Match Assistant session cache is now available to dashboard recommendation mode, not only to full-assistant restoration.</li>
+  <li>A valid recent successful recommendation snapshot may be rendered while a live recommendation refresh continues.</li>
+  <li>If the live refresh fails, the valid recent snapshot remains usable instead of the recommendation card being blanked.</li>
+  <li>If a live refresh times out after cached recommendations were shown, those recommendations are preserved.</li>
+  <li>Cached presentation never suppresses the live refresh and is explicitly tagged as cached/warning state across the iframe bridge.</li>
+  <li>Re-rendering cached recommendations does not refresh the cache timestamp, preventing stale data from being perpetuated indefinitely.</li>
+  <li>Parent-side recommendation rendering is null-safe for optional card elements and validates same-origin recommendation messages.</li>
+</ul>
+
+<h2 id="match-lifecycle-propagation-fix-mlp-fix">Match Lifecycle Propagation Fix (MLP Fix)</h2>
+
+<ul>
+  <li>Browser, ACAMR and other browser-observation club-index payloads remain non-canonical.</li>
+  <li><code class="language-plaintext highlighter-rouge">recordObservedClubMatchReference()</code> continues to insert newly observed matches with canonical <code class="language-plaintext highlighter-rouge">status='unknown'</code> and stores the browser bucket only in <code class="language-plaintext highlighter-rouge">observed_status</code>.</li>
+  <li>A new repository divergence check detects when <code class="language-plaintext highlighter-rouge">observed_status</code> is one of <code class="language-plaintext highlighter-rouge">registered</code>, <code class="language-plaintext highlighter-rouge">in_progress</code>, or <code class="language-plaintext highlighter-rouge">finished</code> and differs from canonical <code class="language-plaintext highlighter-rouge">status</code>.</li>
+  <li>Such divergence queues the existing authoritative <code class="language-plaintext highlighter-rouge">sync_club_matches</code> work with priority discovery.</li>
+  <li>Canonical queue identity remains <code class="language-plaintext highlighter-rouge">club-match-index</code>, so repeated browser/ACAMR/Fast Fetch observations coalesce to one outstanding authoritative club-index audit.</li>
+  <li>Only the authoritative server club-index fetch promotes lifecycle into canonical status; browser observations never write canonical lifecycle directly.</li>
+</ul>
+
+<h2 id="achievement-catalogue-progress-bar-context">Achievement catalogue progress-bar context</h2>
+
+<ul>
+  <li>General catalogue (no player selected): no family or group progress bars are rendered.</li>
+  <li>Player-specific catalogue: family/group progress bars remain, and per-achievement progress remains available from member intelligence.</li>
+  <li>The rule is applied both to the Dashboard achievement catalogue modal and the embedded Achievements/Hall catalogue page.</li>
+</ul>
+
+<h2 id="validation">Validation</h2>
+
+<ul>
+  <li>Focused DRR/MLP/catalogue tests: PASS.</li>
+  <li>Existing observation/OAuth/dashboard focused regressions: PASS.</li>
+  <li>Full pytest suite after integration: 412 / 412 PASS.</li>
+  <li>Dashboard main-bundle size guard remains enforced and PASS (&lt;172000 bytes).</li>
+  <li><code class="language-plaintext highlighter-rouge">dashboard-v2.js</code> and <code class="language-plaintext highlighter-rouge">find-match.js</code> JavaScript syntax: PASS.</li>
+  <li>TournamentAchievementBadgesDemo inline JavaScript syntax: PASS.</li>
+  <li>Repository.php and ObservationIngestor.php PHP syntax: PASS.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/NEXT_RELEASE_INTEGRATION_DRR_MLP_CATALOGUE_v2.9.15.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

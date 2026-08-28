@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Chess.com OAuth proof of concept — v2.9.7 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Chess.com OAuth proof of concept — v2.9.7" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/OAUTH_POC_README.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/OAUTH_POC_README.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Chess.com OAuth proof of concept — v2.9.7" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Chess.com OAuth proof of concept — v2.9.7","url":"https://ximoon1982.github.io/PromoteToKing/OAUTH_POC_README.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="chesscom-oauth-proof-of-concept--v297">Chess.com OAuth proof of concept — v2.9.7</h1>
+
+<p>The real OAuth experiment is deliberately isolated from Promote to King’s production authentication.</p>
+
+<ul>
+  <li>Test page: <code class="language-plaintext highlighter-rouge">OAuthTest.php?oauth=2</code></li>
+  <li>Production simulated OAuth remains <code class="language-plaintext highlighter-rouge">?oauth=1</code> and is unchanged.</li>
+  <li>The POC uses Authorization Code + PKCE (S256), state and nonce handling, server-side token exchange and HttpOnly session cookies.</li>
+  <li>It is a POC only; it is not a production authorization source.</li>
+</ul>
+
+<p>Chess.com directs developers who need authenticated-user or connected-board integrations to request OAuth access through its Developer Community and provides OAuth 2.0 documentation there. Use only values issued/approved for the P2K application.</p>
+
+<h2 id="persistent-credentials--registration-values">Persistent credentials / registration values</h2>
+
+<p>Do not place deployment credentials in <code class="language-plaintext highlighter-rouge">config/oauth-test.php</code>. That file is a release default/example and can change with a package.</p>
+
+<p>Run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./install-oauth-poc-v2.9.7.sh
+</code></pre></div></div>
+
+<p>The installer creates:</p>
+
+<p><code class="language-plaintext highlighter-rouge">server/team-points/config/oauth.local.php</code></p>
+
+<p>with mode <code class="language-plaintext highlighter-rouge">0600</code>. The protected Team Points config directory is server-denied by <code class="language-plaintext highlighter-rouge">.htaccess</code>. The file is excluded from standalone and incremental release payloads and explicitly protected by the updater. If it already exists, the installer refuses to overwrite it.</p>
+
+<p>Environment variables <code class="language-plaintext highlighter-rouge">P2K_OAUTH_APP_NAME</code>, <code class="language-plaintext highlighter-rouge">P2K_OAUTH_CLIENT_ID</code>, <code class="language-plaintext highlighter-rouge">P2K_OAUTH_REDIRECT_URL</code>, <code class="language-plaintext highlighter-rouge">P2K_OAUTH_AUTHORIZE_URL</code>, <code class="language-plaintext highlighter-rouge">P2K_OAUTH_TOKEN_URL</code> and <code class="language-plaintext highlighter-rouge">P2K_OAUTH_SCOPE</code> may override the protected file for a test host.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/OAUTH_POC_README.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

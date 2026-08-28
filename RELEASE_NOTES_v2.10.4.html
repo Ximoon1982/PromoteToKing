@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.4 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.4" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.4.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.4.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.4" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.4","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.4.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2104">Promote to King v2.10.4</h1>
+
+<p>v2.10.4 is a cumulative corrective and feature release built on v2.10.3. It keeps the public Team Points source on Blue (engine baseline v2.9.22.10) while consolidating post-v2.10.3 Green repair work and hardening authentication/UI privilege boundaries.</p>
+
+<h2 id="administrator-identity-and-display-only-name">Administrator identity and display-only <code class="language-plaintext highlighter-rouge">?name=</code></h2>
+
+<ul>
+  <li>Team Points administrator-session establishment is bound to the server-side <code class="language-plaintext highlighter-rouge">P2KOAUTH</code> identity. The browser no longer supplies a trusted username when opening the administrator session.</li>
+  <li>Legacy state-changing maintenance endpoints now require the secured Team Points administrator session/CSRF in addition to their existing same-origin/custom-request-header checks.</li>
+  <li><code class="language-plaintext highlighter-rouge">?admin=1</code> is no longer an administrator/UI admission bypass.</li>
+  <li><code class="language-plaintext highlighter-rouge">?name=&lt;player&gt;</code> remains display-only: player-facing content and visible privileges are projected as that player would see them, while OAuth, bearer transport, CSRF, server authorization and audit identity continue to use the real authenticated account.</li>
+  <li>The display identity propagates through ui-v1/ui-v2 integrated frames and the Team Points migration interface.</li>
+</ul>
+
+<h2 id="achievement-integrity-and-ux">Achievement integrity and UX</h2>
+
+<ul>
+  <li>Achievement Condition Integrity Fix (ACIF) aligns measurable progress with the corresponding unlock condition and prevents a measurable <code class="language-plaintext highlighter-rouge">current &gt;= target</code> condition from remaining unearned after rebuild.</li>
+  <li>Quantifiable unearned achievements can display progress even at <code class="language-plaintext highlighter-rouge">0 / target</code>; earned achievements never display a progress bar.</li>
+  <li>Seniority progress uses the same calendar-month/year thresholds as earning rather than fixed day approximations.</li>
+  <li>The Achievements toolbar adds <strong>See mine</strong> between <strong>Achievement catalogue</strong> and <strong>Most earned</strong>.</li>
+  <li>The seven approved recovered Matches / Team Points artworks are the release targets for First Match, First Step, Rising Star, Clutch Player, Great Strategist, Match Veteran and Match Legend, with standard 64px/128px derivatives.</li>
+</ul>
+
+<h2 id="mca-source-event-dates">MCA source event dates</h2>
+
+<ul>
+  <li>Stored MCA source CSV rows link directly to their Chess.com live arena page using the filename slug/arena ID.</li>
+  <li>Administrators can enter or clear an actual event date while retaining the original upload date.</li>
+  <li>Actual dates are hard anchors. Between known anchors, missing dates are interpolated by numeric arena-ID distance; outside the anchored range, upload date is the fallback.</li>
+  <li>Interpolated/upload-fallback dates are explicitly rendered as <strong>approximative date</strong>.</li>
+  <li>MCA achievement rebuilds use the historical arena crossing date rather than the latest aggregate-row update time. Known dates produce exact MCA achievement dates; interpolated/fallback dates retain approximate precision provenance.</li>
+  <li>Editing a known event date invalidates the achievement source watermark so later rebuilds converge automatically.</li>
+</ul>
+
+<h2 id="green-integrity-and-scheduling">Green integrity and scheduling</h2>
+
+<ul>
+  <li>Green Integrity Convergence Lane (GICL) re-arms bounded canonical debt when finished matches still have incomplete boards/player events. It is idempotent and does not create duplicate queue rows.</li>
+  <li>A match transition to finished forces one final refresh of still-incomplete boards.</li>
+  <li>Green player totals/leaderboards materialize current club members only.</li>
+  <li>Green Staggered CRON Feeder (GSCF) installs one bounded Green-only feeder at minutes <code class="language-plaintext highlighter-rouge">2</code> and <code class="language-plaintext highlighter-rouge">32</code> each hour. Its worker slice targets 18 seconds and has a 24-second hard ceiling.</li>
+  <li>GSCF does not change Blue CRON. The existing <code class="language-plaintext highlighter-rouge">p2k_green_worker</code> DB lease, Green claims and shared pacing authority remain authoritative; the feeder adds resumable opportunities without introducing a competing concurrency controller.</li>
+  <li>The dedicated GSCF installer is idempotent and preserves unrelated/Blue CRON entries.</li>
+  <li>Green Quick-cycle Accounting &amp; Convergence (GQAC) snapshots <code class="language-plaintext highlighter-rouge">quick_boards</code> into one finite cohort per Green quick cycle. Work discovered after the snapshot is deferred to the next cycle instead of enlarging the current finish line.</li>
+  <li>GQAC terminal board observations retire the current-cycle item once. If a newer authoritative hint arrived while the request was in flight, the board remains <code class="language-plaintext highlighter-rouge">needs_refresh=1</code> for the next cycle. Transient HTTP failures retain bounded retry/backoff within the finite cohort.</li>
+  <li>GQAC exposes total/completed/pending/percent, claim attempts, unique/repeated claimed IDs, requeued-for-next and net completion. Worker and browser accelerator consume that same planner state.</li>
+</ul>
+
+<h2 id="database-and-compatibility">Database and compatibility</h2>
+
+<ul>
+  <li>Blue/Core schema remains 16.</li>
+  <li>Analytics advances additively from schema 7 to schema 8 for MCA event-date provenance (<code class="language-plaintext highlighter-rouge">actual_event_date</code>, <code class="language-plaintext highlighter-rouge">effective_event_date</code>, precision and update timestamp).</li>
+  <li>Green adds two idempotent GQAC accounting tables (<code class="language-plaintext highlighter-rouge">p2k_g_quick_board_cycles</code>, <code class="language-plaintext highlighter-rouge">p2k_g_quick_board_cycle_items</code>). Existing Green databases create them automatically on the first quick-board accounting pass; no reset/reseed is required.</li>
+  <li>No database reset or reseed is required.</li>
+  <li>Public Team Points source remains <strong>BLUE — hardwired</strong>; Green remains migration/reconstruction state.</li>
+  <li>v2.10.4 updater accepts v2.10.3 installations with release-controlled post-v2.10.3 hotfixes already applied and converges them to one numbered source state.</li>
+</ul>
+
+<h2 id="matches--team-points-artwork">Matches / Team Points artwork</h2>
+
+<p>v2.10.4 intentionally retains the seven existing SVG placeholders for First Match, First Step, Rising Star, Clutch Player, Great Strategist, Match Veteran and Match Legend. The exact recovered Aug-6 source filenames and SHA-256 values remain recorded in <code class="language-plaintext highlighter-rouge">ARTWORK_PROVENANCE_v2.10.4.json</code> for a later artwork-only integration.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.4.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

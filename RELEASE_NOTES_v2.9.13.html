@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.13 — canonical queue deduplication and compaction | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.13 — canonical queue deduplication and compaction" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.13.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.13.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.13 — canonical queue deduplication and compaction" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.13 — canonical queue deduplication and compaction","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.13.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2913--canonical-queue-deduplication-and-compaction">Promote to King v2.9.13 — canonical queue deduplication and compaction</h1>
+
+<p>v2.9.13 is a focused queue/scheduler release built from the verified v2.9.12 package. Core schema advances from 12 to 13; Analytics remains 6; the achievement catalogue remains 162; the external four-task CRON cadence is unchanged.</p>
+
+<h2 id="canonical-outstanding-work">Canonical outstanding work</h2>
+
+<ul>
+  <li>Queue deduplication now uses a canonical work identity rather than the caller-specific <code class="language-plaintext highlighter-rouge">item_key</code>.</li>
+  <li>Equivalent outstanding requests from CRON, browser observations, repair tools, freshness buckets and analyzers coalesce into one active work item.</li>
+  <li>Canonical identities cover club match index, membership/roster, matches, boards, player matches, player stats, player profiles, opponent profiles, monthly archives, member reconciliation and raw discovery chains.</li>
+  <li>Terminal rows remain immutable audit history. Deduplication applies to outstanding <code class="language-plaintext highlighter-rouge">pending</code>, <code class="language-plaintext highlighter-rouge">running</code> and <code class="language-plaintext highlighter-rouge">retry</code> work only.</li>
+</ul>
+
+<h2 id="merge-promotion-and-continuation-semantics">Merge, promotion and continuation semantics</h2>
+
+<ul>
+  <li>A duplicate request against pending/retry work merges its payload, strongest priority and provenance into the surviving item.</li>
+  <li><code class="language-plaintext highlighter-rouge">sync_roster</code> and <code class="language-plaintext highlighter-rouge">sync_members</code> share one membership identity; a stronger full-membership request promotes a pending lightweight roster item.</li>
+  <li>A request that arrives while the canonical item is already running records a requested next generation instead of adding another queue row.</li>
+  <li>Any number of duplicates arriving during the same running generation produce at most one continuation generation.</li>
+  <li>Freshness deadlines retain deadline priority after coalescing and force authoritative network acquisition when merged into membership work.</li>
+</ul>
+
+<h2 id="legacy-backlog-compaction">Legacy backlog compaction</h2>
+
+<ul>
+  <li>Core 13 migration assigns canonical identities to outstanding legacy rows and compacts redundant pending/retry rows into one survivor.</li>
+  <li>Redundant outstanding rows become <code class="language-plaintext highlighter-rouge">skipped/coalesced</code>; completed/failed historical records are not erased.</li>
+  <li>Running legacy duplicates already in flight are allowed to finish safely; future requirements converge onto one canonical continuation.</li>
+  <li>Six-hour housekeeping contains an idempotent safety net that resumes compaction only when legacy uncanonicalized active rows remain.</li>
+</ul>
+
+<h2 id="queue-visibility">Queue visibility</h2>
+
+<p>Task Control now reports active canonical work, coalesced request count and any residual legacy active rows. Progress treats <code class="language-plaintext highlighter-rouge">done + skipped/coalesced</code> as committed queue work so a compacted historical backlog no longer appears perpetually unfinished.</p>
+
+<h2 id="synthetic-queue-benchmark">Synthetic queue benchmark</h2>
+
+<p>A mixed 150,002-request model collapsed to 25,001 canonical outstanding work items: 125,001 duplicate requests coalesced, an 83.33% reduction. The two hourly freshness resources remained first in scheduler order. A separate 100,000-request flood against one running item advanced its generation exactly once.</p>
+
+<h2 id="compatibility">Compatibility</h2>
+
+<ul>
+  <li>Core schema 13 / Analytics schema 6.</li>
+  <li>v2.9.12 OAuth transport, 50 req/s convergence controller, cache/feeder corrections and security properties are unchanged.</li>
+  <li>Hourly authoritative member-list and club-match-index freshness guarantees remain enforced.</li>
+  <li>Protected local/OAuth/shared configuration remains protected by the incremental updater.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.13.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

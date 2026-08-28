@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.0 storage architecture | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.0 storage architecture" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/ARCHITECTURE_v2.8.0.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/ARCHITECTURE_v2.8.0.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.0 storage architecture" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.0 storage architecture","url":"https://ximoon1982.github.io/PromoteToKing/ARCHITECTURE_v2.8.0.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v280-storage-architecture">Promote to King v2.8.0 storage architecture</h1>
+
+<h2 id="purpose">Purpose</h2>
+
+<p>v2.8.0 is a clean-break storage release designed to keep Promote to King comfortably below IONOS MariaDB quotas for the next several years and to prevent a disposable cache or failed bulk import from locking the durable data store.</p>
+
+<p>The application uses three independent storage domains:</p>
+
+<ol>
+  <li><strong>Core MariaDB</strong> — canonical facts and current worker state.</li>
+  <li><strong>Analytics MariaDB</strong> — rebuildable projections and analytical products.</li>
+  <li><strong>Protected filesystem</strong> — compressed Chess.com API cache, application logs, temporary runtime state, and optional archives.</li>
+</ol>
+
+<p>Administrator page admission remains independent of all three storage domains. A database failure can make a data-backed panel unavailable, but it must not lock an administrator out of pages that do not require that database.</p>
+
+<h2 id="core-database">Core database</h2>
+
+<p>The Core database is authoritative. It contains compact normalized facts:</p>
+
+<ul>
+  <li>members, with integer <code class="language-plaintext highlighter-rouge">member_id</code>;</li>
+  <li>opponents and aliases;</li>
+  <li>one canonical row per match;</li>
+  <li>one canonical row per member/match board;</li>
+  <li>up to two compact game rows per board;</li>
+  <li>Team Points worker jobs and queue items;</li>
+  <li>CRON leases and current task-control state;</li>
+  <li>audit/repair state with bounded retention;</li>
+  <li>a tiny initialization audit record.</li>
+</ul>
+
+<p>High-volume rows use integer foreign keys rather than repeating usernames and long URLs. Compatibility SQL views expose the old logical surfaces used by retained application code, but those views do not duplicate the data.</p>
+
+<p>The Core database deliberately does <strong>not</strong> contain:</p>
+
+<ul>
+  <li>Chess.com HTTP response bodies;</li>
+  <li>seed-import copies;</li>
+  <li>bulk raw JSON archives;</li>
+  <li>permanent application logs.</li>
+</ul>
+
+<h2 id="analytics-database">Analytics database</h2>
+
+<p>Analytics is a projection database. Every Team Points analytical row can be rebuilt from Core without reacquiring Chess.com history.</p>
+
+<p>It contains:</p>
+
+<ul>
+  <li>player lifetime totals;</li>
+  <li>player monthly facts;</li>
+  <li>match analytical facts;</li>
+  <li>club totals;</li>
+  <li>durable daily Insights facts;</li>
+  <li>opponent aggregates;</li>
+  <li>Live Rank tables;</li>
+  <li>storage history and projection state;</li>
+  <li>Analytics initialization and refresh state.</li>
+</ul>
+
+<p>If Analytics is damaged or lost, Core remains the source of truth. Rebuilding Analytics does not require rescanning global Chess.com match IDs or every member’s complete match history.</p>
+
+<p>To avoid repeatedly scanning a growing historical Core archive, analytical projections are refreshed on demand at a bounded cadence (<code class="language-plaintext highlighter-rouge">analytics_refresh_interval_seconds</code>, default six hours) rather than after every five-minute collection invocation.</p>
+
+<h2 id="filesystem-cache">Filesystem cache</h2>
+
+<p><code class="language-plaintext highlighter-rouge">server/shared/FilesystemCache.php</code> stores Chess.com API responses as sharded gzip files. Default location:</p>
+
+<p><code class="language-plaintext highlighter-rouge">data/runtime-v280/cache/chesscom/</code></p>
+
+<p>Properties:</p>
+
+<ul>
+  <li>SHA-256 URL identity;</li>
+  <li>gzip compression;</li>
+  <li>atomic temporary-file + rename writes;</li>
+  <li>TTL stored with each response;</li>
+  <li>expired-entry deletion;</li>
+  <li>least-recent-file eviction when the configured byte cap is exceeded;</li>
+  <li>default hard cache budget: 512 MiB;</li>
+  <li><code class="language-plaintext highlighter-rouge">.htaccess</code> denial and blank indexes in runtime directories.</li>
+</ul>
+
+<p>The cache is disposable. Deleting it may increase Chess.com API traffic temporarily, but does not delete durable P2K facts.</p>
+
+<h2 id="no-sql-seed-staging">No SQL seed staging</h2>
+
+<p>The fresh initializer does not upload a second full copy of the snapshot into SQL staging tables.</p>
+
+<p>It:</p>
+
+<ol>
+  <li>verifies the six embedded source files locally;</li>
+  <li>verifies that both configured databases are empty;</li>
+  <li>creates the Core and Analytics schemas;</li>
+  <li>streams idempotent normalized member/match/board/game batches directly into Core;</li>
+  <li>validates exact Core counts and Club Points;</li>
+  <li>builds Analytics from Core;</li>
+  <li>stores only small initialization audit rows;</li>
+  <li>creates a paused incremental catch-up job.</li>
+</ol>
+
+<p>The initializer never creates <code class="language-plaintext highlighter-rouge">p2k_tp_seed_*</code>, <code class="language-plaintext highlighter-rouge">p2k_tp_http_cache</code>, or <code class="language-plaintext highlighter-rouge">p2k_shared_http_cache</code> tables.</p>
+
+<h2 id="storage-housekeeping">Storage housekeeping</h2>
+
+<p>The Team Points CRON periodically invokes bounded housekeeping. Default retention:</p>
+
+<ul>
+  <li>completed/skipped job items: 14 days;</li>
+  <li>failed job items: 30 days;</li>
+  <li>worker/process/task logs: 30 days;</li>
+  <li>consistency-repair history: 180 days;</li>
+  <li>filesystem API cache: TTL + hard byte cap;</li>
+  <li>filesystem logs: 30 days.</li>
+</ul>
+
+<p>No routine task removes Core match/game facts.</p>
+
+<h2 id="capacity-monitoring">Capacity monitoring</h2>
+
+<p>The Team Points administration page has <strong>Storage &amp; capacity</strong>.</p>
+
+<p>For Core and Analytics it queries <code class="language-plaintext highlighter-rouge">information_schema.tables</code> and compares actual data+index bytes with the configured database quota. Each DB is:</p>
+
+<ul>
+  <li>green below 80%;</li>
+  <li>red at or above 80%;</li>
+  <li>unknown if that DB cannot be reached.</li>
+</ul>
+
+<p>It also measures:</p>
+
+<ul>
+  <li>filesystem cache;</li>
+  <li>runtime logs;</li>
+  <li>archive directory;</li>
+  <li>other v2.8 runtime data.</li>
+</ul>
+
+<p>One sample per UTC day is retained in Analytics. The graph uses the last measurement in each calendar month. Once two calendar months exist, capacity projections use linear growth of the monthly series to estimate dates at 80% and 100%. During the first month only, daily samples provide an explicitly labelled bootstrap estimate.</p>
+
+<p>The storage monitor itself is failure-isolated: inability to inspect one database is reported for that database instead of making the whole administrator page inaccessible.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/ARCHITECTURE_v2.8.0.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.7.0 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.7.0" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.7.0.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.7.0.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.7.0" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.7.0","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.7.0.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v270">Promote to King v2.7.0</h1>
+
+<h2 id="administration">Administration</h2>
+<ul>
+  <li>Administration is reorganized into Daily matches, Live arenas, and Administration tools.</li>
+  <li>Daily matches contains Upcoming Matches, Match Creation, Challenge Assistant, and Open Match Analyzer.</li>
+  <li>Live arenas contains Live Ranks computation.</li>
+  <li>Administration tools contains Scheduled Tasks Control, Task Logs, and Runtime Diagnostics with Insights API health.</li>
+  <li>Tournament-add controls are shown only for the Tournaments scheduled task.</li>
+  <li>Match-monitoring controls are shown only for Match Monitoring.</li>
+  <li>Added a client control that queues incremental tournament discovery and missing-medalist processing.</li>
+</ul>
+
+<h2 id="tournament-worker">Tournament worker</h2>
+<ul>
+  <li>Tournament maintenance is split into persistent discovery, status, and podium stages.</li>
+  <li>Each CRON invocation performs one API-heavy stage, saves its cursor, and rotates to the next stage.</li>
+  <li>A daily cycle records per-stage completion and remains resumable after timeout or transient API failure.</li>
+  <li>The worker uses a 45-second application deadline for the IONOS 60-second web-CRON ceiling.</li>
+  <li>Recommended cadence: every five minutes.</li>
+</ul>
+
+<h2 id="compatibility">Compatibility</h2>
+<ul>
+  <li>Existing tournament archive data and discovery cursors are retained.</li>
+  <li>Existing CRON endpoint remains valid; only its schedule changes.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.7.0.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

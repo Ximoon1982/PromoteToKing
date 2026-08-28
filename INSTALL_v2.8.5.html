@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King Standalone v2.8.5 — upgrade/install | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King Standalone v2.8.5 — upgrade/install" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.8.5.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.8.5.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King Standalone v2.8.5 — upgrade/install" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King Standalone v2.8.5 — upgrade/install","url":"https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.8.5.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-standalone-v285--upgradeinstall">Promote to King Standalone v2.8.5 — upgrade/install</h1>
+
+<ol>
+  <li>Back up the current web tree and both MariaDB databases.</li>
+  <li>Upload/extract the v2.8.5 standalone tree over the application files. Preserve your production <code class="language-plaintext highlighter-rouge">config.local.php</code>/secrets; do not replace them with example configuration files.</li>
+  <li>Do <strong>not</strong> empty or recreate Core or Analytics. The first authenticated Team Points admin/CRON execution performs the additive Core 4 → 5 migration.</li>
+  <li>
+    <p>Replace the current user’s CRON list with the supplied script if that is the intended SSH user:</p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">chmod</span> +x reset-install-cron-v2.8.5.sh
+./reset-install-cron-v2.8.5.sh <span class="s1">'TEAM_POINTS_CRON_TOKEN'</span> <span class="s1">'SHARED_CRON_TOKEN'</span> <span class="s1">'https://www.promotetoking.org'</span>
+</code></pre></div>    </div>
+  </li>
+  <li>Trigger or wait for the first Club/Player CRON executions. In Team Points Administration verify:
+    <ul>
+      <li>Club index observed is recent (target ≤5 minutes);</li>
+      <li>Roster observed is recent (target ≤30 minutes);</li>
+      <li>Club and Player workers appear separately;</li>
+      <li>no unresolved failed urgent board work remains.</li>
+    </ul>
+  </li>
+  <li>Check Hall of Fame → Achievements and one player Profile. Cards should render before any missing-avatar background lookup, and reopening should reuse cached/materialized data.</li>
+  <li>Check Team Insights. A finished authoritative 0–0 match must not contribute to any metric or graph.</li>
+</ol>
+
+<p>See <code class="language-plaintext highlighter-rouge">MIGRATION_v2.8.5.md</code>, <code class="language-plaintext highlighter-rouge">CRON_SETUP_v2.8.5.md</code>, and <code class="language-plaintext highlighter-rouge">RELEASE_NOTES_v2.8.5.md</code> for details.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALL_v2.8.5.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

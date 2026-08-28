@@ -14,6 +14,11 @@
     activity: "p2kActivityInput",
     recommendation: "p2kRecommendationInput"
   });
+  const SERVER_LIST_SAVE_IDS = Object.freeze({
+    checker: "p2kCheckerSaveList",
+    activity: "p2kActivitySaveList",
+    recommendation: "p2kRecommendationSaveList"
+  });
   const serverListState = {
     available: false,
     exists: false,
@@ -1150,15 +1155,21 @@
 
   function updateServerListControls() {
     const load = document.getElementById("p2kChallengeServerLoad");
-    const save = document.getElementById("p2kChallengeServerSave");
-    if (!load || !save) return;
-    const input = serverListInput();
+    const activeKey = activeTabKey();
     const activeRun = Boolean(document.querySelector('.p2k-cla-tab-panel:not([hidden]) button[id$="Pause"]:not(:disabled)'));
-    const rematchMode = activeTabKey() === "recommendation" && recommendationMode() === "rematch";
-    load.disabled = rematchMode || serverListState.busy || !serverListState.available || !serverListState.exists || activeRun;
-    save.disabled = rematchMode || serverListState.busy || !serverListState.available || !String(input?.value || "").trim() || activeRun;
-    load.title = rematchMode ? "Server club lists are not used in rematch mode." : "";
-    save.title = rematchMode ? "Server club lists are not used in rematch mode." : "";
+    const rematchMode = activeKey === "recommendation" && recommendationMode() === "rematch";
+    if (load) {
+      load.disabled = rematchMode || serverListState.busy || !serverListState.available || !serverListState.exists || activeRun;
+      load.title = rematchMode ? "Server club lists are not used in rematch mode." : "";
+    }
+    Object.entries(SERVER_LIST_SAVE_IDS).forEach(([key, id]) => {
+      const save = document.getElementById(id); if (!save) return;
+      const input = serverListInput(key);
+      const panelRunning = key === activeKey && activeRun;
+      const disabledForMode = key === "recommendation" && recommendationMode() === "rematch";
+      save.disabled = disabledForMode || serverListState.busy || !serverListState.available || !String(input?.value || "").trim() || panelRunning;
+      save.title = disabledForMode ? "Server club lists are not used in rematch mode." : "Save exactly the list currently loaded in this tab.";
+    });
   }
 
   function serverListText(clubs) {
@@ -1174,8 +1185,7 @@
     return true;
   }
 
-  function normalizedActiveServerList() {
-    const key = activeTabKey();
+  function normalizedServerList(key = activeTabKey()) {
     const input = serverListInput(key);
     if (!input) return { clubs: [], invalid: ["Input field unavailable"] };
     if (key === "recommendation") {
@@ -1254,9 +1264,9 @@
     }
   }
 
-  async function saveActiveServerDefault() {
+  async function saveServerDefault(key = activeTabKey()) {
     if (serverListState.busy || !serverListState.available) return;
-    const parsed = normalizedActiveServerList();
+    const parsed = normalizedServerList(key);
     if (parsed.invalid.length) {
       serverStatus(`Cannot save: ${parsed.invalid.length} invalid club reference${parsed.invalid.length === 1 ? "" : "s"}.`, "error");
       return;
@@ -1268,7 +1278,7 @@
 
     serverListState.busy = true;
     updateServerListControls();
-    serverStatus(`Saving ${parsed.clubs.length} club${parsed.clubs.length === 1 ? "" : "s"} from the current tab…`);
+    serverStatus(`Saving ${parsed.clubs.length} club${parsed.clubs.length === 1 ? "" : "s"} from the ${key === "recommendation" ? "Challenge recommendation" : key === "checker" ? "Club URL checker" : "Club activity checker"} tab…`);
     try {
       const data = window.P2K_TEAM_POINTS_CLIENT?.endpointRequest
         ? await window.P2K_TEAM_POINTS_CLIENT.endpointRequest(SERVER_LIST_ENDPOINT, {
@@ -1307,14 +1317,15 @@
 
   function installServerDefaultList() {
     const load = document.getElementById("p2kChallengeServerLoad");
-    const save = document.getElementById("p2kChallengeServerSave");
-    if (!load || !save) return;
+    if (!load) return;
     Object.values(SERVER_LIST_INPUT_IDS).forEach(id => {
       const input = document.getElementById(id);
       input?.addEventListener("input", updateServerListControls);
     });
     load.addEventListener("click", () => void loadServerDefault({ currentTabOnly: true }));
-    save.addEventListener("click", () => void saveActiveServerDefault());
+    Object.entries(SERVER_LIST_SAVE_IDS).forEach(([key, id]) => {
+      document.getElementById(id)?.addEventListener("click", () => void saveServerDefault(key));
+    });
     updateServerListControls();
     void loadServerDefault({ currentTabOnly: false, announce: false });
   }

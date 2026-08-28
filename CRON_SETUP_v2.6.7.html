@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.7.1 — pause, remove and install CRON tasks | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.7.1 — pause, remove and install CRON tasks" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/CRON_SETUP_v2.6.7.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/CRON_SETUP_v2.6.7.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.7.1 — pause, remove and install CRON tasks" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.7.1 — pause, remove and install CRON tasks","url":"https://ximoon1982.github.io/PromoteToKing/CRON_SETUP_v2.6.7.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v271--pause-remove-and-install-cron-tasks">Promote to King v2.7.1 — pause, remove and install CRON tasks</h1>
+
+<p>The endpoint paths and production tokens are unchanged. v2.7.1 uses short, durable scheduler ticks and does not require a self-scheduling PHP chain.</p>
+
+<p>Replace <code class="language-plaintext highlighter-rouge">YOUR-DOMAIN</code>, <code class="language-plaintext highlighter-rouge">YOUR-PATH</code>, <code class="language-plaintext highlighter-rouge">TEAM_POINTS_CRON_TOKEN</code> and <code class="language-plaintext highlighter-rouge">CRON_TOKEN</code> before installation. Keep tokens private.</p>
+
+<h2 id="1-pause-tasks-before-deployment-or-clean-seeding">1. Pause tasks before deployment or clean seeding</h2>
+
+<p>Open:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://YOUR-DOMAIN/YOUR-PATH/TaskControl.html?admin=1
+</code></pre></div></div>
+
+<p>Select a task and press <strong>Pause</strong>. For Team Points, wait until the status is <strong>Paused</strong> before applying a clean seed. An already running queue item may finish and commit before the pause becomes effective.</p>
+
+<p>Pausing in the website prevents work from starting, but it does not delete the host’s scheduled HTTP calls. Disable or remove the old scheduler entries as described below.</p>
+
+<h2 id="2-inspect-and-back-up-the-current-crontab">2. Inspect and back up the current crontab</h2>
+
+<p>When SSH/user crontab is available:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>crontab <span class="nt">-l</span> <span class="o">&gt;</span> <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/p2k-crontab-before-v2.7.1.txt"</span>
+crontab <span class="nt">-l</span>
+</code></pre></div></div>
+
+<p>When using the IONOS graphical scheduler, record each task’s URL and cadence before deleting it.</p>
+
+<h2 id="3-remove-old-promote-to-king-entries">3. Remove old Promote to King entries</h2>
+
+<h3 id="shell-crontab">Shell crontab</h3>
+
+<p>Edit:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>crontab <span class="nt">-e</span>
+</code></pre></div></div>
+
+<p>Delete every old line calling any of these endpoints:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/server/team-points/public/cron.php
+/api/track-upcoming-league-matches/
+/server/tournaments/public/cron.php
+</code></pre></div></div>
+
+<p>Also delete any obsolete wrapper or self-scheduling Team Points command. There must be only one recurring entry per endpoint.</p>
+
+<p>A safe command-line alternative creates a filtered copy for review:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>crontab <span class="nt">-l</span> | <span class="nb">grep</span> <span class="nt">-v</span> <span class="nt">-E</span> <span class="s1">'server/team-points/public/cron\.php|api/track-upcoming-league-matches|server/tournaments/public/cron\.php'</span> <span class="o">&gt;</span> <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/p2k-crontab-filtered.txt"</span>
+<span class="nb">cat</span> <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/p2k-crontab-filtered.txt"</span>
+crontab <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/p2k-crontab-filtered.txt"</span>
+</code></pre></div></div>
+
+<h3 id="ionos-graphical-scheduler">IONOS graphical scheduler</h3>
+
+<p>Open the hosting control panel’s scheduled-task/CRON section, disable or delete the three old Promote to King HTTP tasks, and verify no duplicate remains. If the interface only permits daily scheduling, use shell crontab or an external HTTPS scheduler for the five-minute/hourly calls.</p>
+
+<h2 id="4-create-a-log-directory">4. Create a log directory</h2>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/logs"</span>
+</code></pre></div></div>
+
+<h2 id="5-install-the-v271-schedules">5. Install the v2.7.1 schedules</h2>
+
+<p>Open <code class="language-plaintext highlighter-rouge">crontab -e</code> and add one marked block:</p>
+
+<pre><code class="language-cron"># BEGIN PROMOTE TO KING v2.7.1
+*/5 * * * * /usr/bin/curl --fail --silent --show-error --max-time 55 'https://YOUR-DOMAIN/YOUR-PATH/server/team-points/public/cron.php?token=TEAM_POINTS_CRON_TOKEN' &gt;&gt;"$HOME/logs/p2k-team-points-cron.log" 2&gt;&amp;1
+17 * * * * /usr/bin/curl --fail --silent --show-error --max-time 55 'https://YOUR-DOMAIN/YOUR-PATH/api/track-upcoming-league-matches/?token=CRON_TOKEN' &gt;&gt;"$HOME/logs/p2k-match-monitoring-cron.log" 2&gt;&amp;1
+2-59/5 * * * * /usr/bin/curl --fail --silent --show-error --max-time 55 'https://YOUR-DOMAIN/YOUR-PATH/server/tournaments/public/cron.php?token=CRON_TOKEN' &gt;&gt;"$HOME/logs/p2k-tournaments-cron.log" 2&gt;&amp;1
+# END PROMOTE TO KING v2.7.1
+</code></pre>
+
+<p>The two five-minute tasks are offset by two minutes to reduce simultaneous scheduler starts. All Chess.com consumers also share the server-side gateway lease/cache.</p>
+
+<p>Token sources:</p>
+
+<ul>
+  <li>Team Points: <code class="language-plaintext highlighter-rouge">app.cron_token</code> in <code class="language-plaintext highlighter-rouge">server/team-points/config/config.local.php</code>;</li>
+  <li>match monitoring and tournaments: <code class="language-plaintext highlighter-rouge">cronToken</code> in <code class="language-plaintext highlighter-rouge">data/server-config.json</code>.</li>
+</ul>
+
+<h2 id="6-what-each-task-does">6. What each task does</h2>
+
+<h3 id="team-points--every-5-minutes">Team Points — every 5 minutes</h3>
+
+<p>Processes one bounded durable segment. Routine work uses the seeded incremental algorithm: roster reconciliation, club match-index changes, due match details, recent player monthly archives and board fallbacks. Full member-history and raw-ID scans are manual repair modes only.</p>
+
+<h3 id="match-monitoring--every-hour-at-minute-17">Match monitoring — every hour at minute 17</h3>
+
+<p>Acts as a scheduler tick. Each tracked match follows its own adaptive next-due time, so the endpoint does not reload every match each hour.</p>
+
+<h3 id="tournaments--every-5-minutes-offset-at-minutes-2-7-12">Tournaments — every 5 minutes, offset at minutes 2, 7, 12…</h3>
+
+<p>Advances the resumable discovery, status and podium/medalist stages within the hosting execution limit.</p>
+
+<h2 id="7-test-endpoints-manually">7. Test endpoints manually</h2>
+
+<p>Run each once, without publishing the output or token:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">--fail</span> <span class="nt">--show-error</span> <span class="nt">--max-time</span> 55 <span class="s1">'https://YOUR-DOMAIN/YOUR-PATH/server/team-points/public/cron.php?token=TEAM_POINTS_CRON_TOKEN'</span>
+curl <span class="nt">--fail</span> <span class="nt">--show-error</span> <span class="nt">--max-time</span> 55 <span class="s1">'https://YOUR-DOMAIN/YOUR-PATH/api/track-upcoming-league-matches/?token=CRON_TOKEN'</span>
+curl <span class="nt">--fail</span> <span class="nt">--show-error</span> <span class="nt">--max-time</span> 55 <span class="s1">'https://YOUR-DOMAIN/YOUR-PATH/server/tournaments/public/cron.php?token=CRON_TOKEN'</span>
+</code></pre></div></div>
+
+<p>A paused task may legitimately report that execution was skipped because it is paused.</p>
+
+<h2 id="8-verify-installation">8. Verify installation</h2>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>crontab <span class="nt">-l</span>
+<span class="nb">tail</span> <span class="nt">-n</span> 50 <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/logs/p2k-team-points-cron.log"</span>
+<span class="nb">tail</span> <span class="nt">-n</span> 50 <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/logs/p2k-match-monitoring-cron.log"</span>
+<span class="nb">tail</span> <span class="nt">-n</span> 50 <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/logs/p2k-tournaments-cron.log"</span>
+</code></pre></div></div>
+
+<p>Then open Scheduled Tasks Control and confirm:</p>
+
+<ul>
+  <li>Team Points expected cadence: 5 minutes;</li>
+  <li>Match monitoring expected cadence: 1 hour;</li>
+  <li>Tournaments expected cadence: 5 minutes;</li>
+  <li>no duplicate/busy pattern caused by multiple host entries;</li>
+  <li>Team Points displays <code class="language-plaintext highlighter-rouge">seeded_incremental_v1</code> and the latest seed state.</li>
+</ul>
+
+<p>Resume paused tasks only after website upload, database migration and seed verification are complete.</p>
+
+<h2 id="9-emergency-stop">9. Emergency stop</h2>
+
+<p>For an immediate stop:</p>
+
+<ol>
+  <li>pause the task in Scheduled Tasks Control;</li>
+  <li>disable/remove its host CRON entry;</li>
+  <li>wait for any currently running bounded invocation to finish;</li>
+  <li>verify no fresh run appears in Task Logs.</li>
+</ol>
+
+<p>Do not revoke or expose tokens merely to stop scheduling. Rotate a token only if it may have leaked.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/CRON_SETUP_v2.6.7.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

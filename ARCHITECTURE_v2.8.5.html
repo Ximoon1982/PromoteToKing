@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.5 architecture | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.5 architecture" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/ARCHITECTURE_v2.8.5.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/ARCHITECTURE_v2.8.5.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.5 architecture" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.5 architecture","url":"https://ximoon1982.github.io/PromoteToKing/ARCHITECTURE_v2.8.5.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v285-architecture">Promote to King v2.8.5 architecture</h1>
+
+<h2 id="storage-and-authority">Storage and authority</h2>
+
+<p>v2.8.5 keeps the compact split architecture:</p>
+
+<ul>
+  <li><strong>Core schema 5</strong> — canonical club/member/match/board/game/point facts, durable queues, worker state, safe player profile/avatar snapshots, and the Core generation/freshness state.</li>
+  <li><strong>Analytics schema 5</strong> — rebuildable materialized player, match, opponent, Hall/achievement and Insights projections.</li>
+  <li><strong>Filesystem cache/runtime</strong> — shared Chess.com HTTP cache, bounded public response cache, locks and operational logs.</li>
+</ul>
+
+<p>Browser observations are never authoritative. They may identify relevant Chess.com resources and prioritize work, but canonical roster membership, ratings, match facts and point events are written only from server-side Chess.com verification through the shared gateway. This avoids trusting JSON that a browser user could fabricate.</p>
+
+<h2 id="background-workers">Background workers</h2>
+
+<p>Two independent Team Points lanes share the same gateway and databases:</p>
+
+<ul>
+  <li><strong>Club lane — every 5 minutes.</strong> Every invocation injects a new 5-minute club-index discovery bucket. Fresh discovery, changed/recent matches and urgent boards are processed before Analytics maintenance.</li>
+  <li><strong>Player lane — every 30 minutes.</strong> Every 30-minute bucket injects a lightweight authoritative roster refresh independently of historical player work. Player archives, reconciliation, ratings and achievement refresh remain lower priority.</li>
+</ul>
+
+<p>Tournament maintenance is recommended every 10 minutes and league match monitoring hourly, staggered from the two Team Points lanes.</p>
+
+<h2 id="analytics-freshness">Analytics freshness</h2>
+
+<p>Core schema 5 maintains <code class="language-plaintext highlighter-rouge">p2k_tp_state.core_generation</code>. Canonical writes that affect public statistics advance that generation. Analytics records the generation it has built, so normal freshness checks compare small state values rather than repeatedly scanning Core tables with <code class="language-plaintext highlighter-rouge">COUNT/MAX</code> watermarks.</p>
+
+<p>Public GET endpoints read materialized data only. They do not perform schema migration or initiate Analytics/achievement rebuilds. Background workers own those operations.</p>
+
+<h2 id="public-response-caching">Public response caching</h2>
+
+<p>Materialized Profile, Achievement and Insights responses use short generation-keyed filesystem caches with ETags. Cache entries support stale fallback, bounded cleanup and per-key build locks to avoid stampedes. Operational/admin/session APIs remain uncached/no-store where freshness is required.</p>
+
+<p>Tournament archive GETs support ETag/Last-Modified and short browser caching.</p>
+
+<h2 id="member-and-avatar-freshness">Member and avatar freshness</h2>
+
+<p>The authoritative club-member roster is refreshed about every 30 minutes even during long Player jobs. A valid opportunistic <code class="language-plaintext highlighter-rouge">/club/promote-to-king/members</code> response can trigger the authoritative roster verification earlier; the browser-supplied roster itself is not written to canonical membership.</p>
+
+<p>Avatar/profile metadata is persistent and demand-driven rather than bulk crawled:</p>
+
+<ul>
+  <li>Achievement wall resolves only missing avatars in the currently visible 12-player batch.</li>
+  <li>Login force-refreshes the logged-in Chess.com profile and feeds the validated response back to Core.</li>
+  <li>Profile opening displays the stored avatar immediately and revalidates that one profile in the background.</li>
+  <li>A stale known avatar remains usable; freshness determines revalidation, not whether it may be displayed.</li>
+</ul>
+
+<h2 id="00-void-matches">0–0 void matches</h2>
+
+<p>Authoritative finished 0–0 matches remain in canonical match metadata with <code class="language-plaintext highlighter-rouge">is_void=1</code> for traceability. They contribute zero to all public Analytics, Insights, graphs, outcomes, averages, opponent aggregates, player participation metrics and achievement reconstruction.</p>
+
+<h2 id="compatibility-and-maintenance">Compatibility and maintenance</h2>
+
+<p>v2.8.5 upgrades Core 4 to Core 5 additively; Analytics remains schema 5. No database reset is required. The v2.8.4 split-worker, board-parser compatibility, failed-board recovery and tournament-achievement date Revision 2 behavior are retained.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/ARCHITECTURE_v2.8.5.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

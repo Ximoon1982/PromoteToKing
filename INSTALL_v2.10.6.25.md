@@ -1,0 +1,20 @@
+# Install v2.10.6.25
+
+v2.10.6.25 is an incremental production update from canonical v2.10.6.24. The complete source archive remains the canonical/recovery artifact and is **not required on the production host for a normal update**.
+
+For the normal IONOS update, place these two files in the Promote to King site root:
+
+- `PromoteToKing_v2.10.6.25_INCREMENTAL_INSTALLER.run`
+- `install-promote-to-king-2.10.6.25.sh`
+
+Then run exactly:
+
+```bash
+bash install-promote-to-king-2.10.6.25.sh
+```
+
+The incremental installer accepts v2.10.6.24 as predecessor and v2.10.6.25 for an idempotent replay. It stages and verifies only the v2.10.6.25 delta, preserves runtime `data/`, local configuration and unrelated CRON entries, backs up every overwritten file, tracks every new file, installs the twice-daily MCA Results CRON, verifies the installed delta, and restores both application files and CRON if installation fails.
+
+For disaster recovery or reconstruction of the complete canonical source tree, the separate `PromoteToKing_v2.10.6.25_SOURCE.tar.gz` and `PromoteToKing_v2.10.6.25_SOURCE_INSTALLER.run` remain available, but they are not part of the normal incremental deployment path.
+
+No database reset or reseed is performed. Historical MCA date repair is manual-only; the twice-daily CRON performs legacy index discovery and missing Results CSV acquisition.

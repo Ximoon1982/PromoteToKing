@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.4 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.4" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.4.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.4.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.4" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.4","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.4.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v21064">Promote to King v2.10.6.4</h1>
+
+<h2 id="mca-index-csv-acquisition-corrective">MCA index CSV acquisition corrective</h2>
+
+<p>v2.10.6.4 corrects the remaining MCA Results auto-sync failure seen after v2.10.6.3.</p>
+
+<h3 id="root-cause">Root cause</h3>
+<p>The paginated Promote to King past-events index exposed Results CSV download links, but <code class="language-plaintext highlighter-rouge">discoverArenaLinks()</code> retained only arena identities and initialized every <code class="language-plaintext highlighter-rouge">csv_url</code> to an empty string. P2K therefore discarded the authoritative CSV URL and unnecessarily tried to rediscover/export Results from each arena page.</p>
+
+<h3 id="corrective-behavior">Corrective behavior</h3>
+<ul>
+  <li>Every paginated MCA index page is parsed as arena + exposed Results CSV metadata.</li>
+  <li>CSV URLs are accepted from normal anchors, data export attributes, and hydrated JSON URLs.</li>
+  <li>URLs are associated by arena id where possible and by nearest arena card as a guarded fallback.</li>
+  <li>Index CSV URLs survive duplicate/rename merging and retry queue resets.</li>
+  <li>If an event needs CSV but its date is already known, the worker starts directly at the CSV stage.</li>
+  <li>If its date is missing, the worker fetches the arena page once for the date, then uses the already captured index CSV URL.</li>
+  <li>Arena-page CSV discovery and complete Player Results reconstruction remain fallback paths only.</li>
+  <li>Existing &gt;=1 request/second serial source pacing is unchanged.</li>
+</ul>
+
+<h3 id="data--migration">Data / migration</h3>
+<p>No schema migration, database reset, Green reseed, or MCA data deletion is required.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.4.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

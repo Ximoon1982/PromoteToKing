@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.5 CRON setup | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.5 CRON setup" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/CRON_SETUP_v2.8.5.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/CRON_SETUP_v2.8.5.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.5 CRON setup" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.5 CRON setup","url":"https://ximoon1982.github.io/PromoteToKing/CRON_SETUP_v2.8.5.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v285-cron-setup">Promote to King v2.8.5 CRON setup</h1>
+
+<p>v2.8.5 keeps the two independent Team Points workers and makes their freshness guarantees explicit. Club discovery is injected on every Club invocation; the lightweight roster refresh is independently injected every 30 minutes even if a long Player job is still active.</p>
+
+<h2 id="recommended-schedule">Recommended schedule</h2>
+
+<pre><code class="language-cron"># BEGIN PROMOTE TO KING v2.8.5
+*/5 * * * * /usr/bin/curl --fail --silent --show-error --max-time 55 'https://YOUR-DOMAIN/server/team-points/public/cron-club.php?token=TEAM_POINTS_CRON_TOKEN'
+2-59/10 * * * * /usr/bin/curl --fail --silent --show-error --max-time 55 'https://YOUR-DOMAIN/server/tournaments/public/cron.php?token=SHARED_CRON_TOKEN'
+7,37 * * * * /usr/bin/curl --fail --silent --show-error --max-time 55 'https://YOUR-DOMAIN/server/team-points/public/cron-player.php?token=TEAM_POINTS_CRON_TOKEN'
+17 * * * * /usr/bin/curl --fail --silent --show-error --max-time 55 'https://YOUR-DOMAIN/api/track-upcoming-league-matches/?token=SHARED_CRON_TOKEN'
+# END PROMOTE TO KING v2.8.5
+</code></pre>
+
+<ul>
+  <li><strong>Club Points:</strong> every 5 minutes. A new time-bucketed club-index discovery item is injected even when an older Club job is still running; urgent match/board work runs before Analytics maintenance.</li>
+  <li><strong>Tournaments:</strong> every 10 minutes, offset at minute 2. This reduces contention with the shared Chess.com gateway while remaining frequent enough for tournament status/podium maintenance.</li>
+  <li><strong>Player Points:</strong> every 30 minutes at minutes 7 and 37. A lightweight roster refresh is independently injected every 30 minutes; historical player/archive work remains lower priority.</li>
+  <li><strong>Match monitoring:</strong> hourly at minute 17.</li>
+</ul>
+
+<p><code class="language-plaintext highlighter-rouge">server/team-points/public/cron.php</code> remains a compatibility alias for the <strong>Club Points</strong> lane. Do not schedule both <code class="language-plaintext highlighter-rouge">cron.php</code> and <code class="language-plaintext highlighter-rouge">cron-club.php</code>.</p>
+
+<h2 id="one-command-ssh-replacement">One-command SSH replacement</h2>
+
+<p>The release includes <code class="language-plaintext highlighter-rouge">reset-install-cron-v2.8.5.sh</code>. It deliberately deletes the <strong>entire crontab of the current SSH user</strong> and installs only the four entries above:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">chmod</span> +x reset-install-cron-v2.8.5.sh
+./reset-install-cron-v2.8.5.sh <span class="s1">'TEAM_POINTS_CRON_TOKEN'</span> <span class="s1">'SHARED_CRON_TOKEN'</span> <span class="s1">'https://www.promotetoking.org'</span>
+</code></pre></div></div>
+
+<p>The third argument is optional and defaults to <code class="language-plaintext highlighter-rouge">https://www.promotetoking.org</code>.</p>
+
+<blockquote>
+  <p>Warning: because the requested script uses <code class="language-plaintext highlighter-rouge">crontab -r</code>, any unrelated CRON entries belonging to the same SSH user are removed too. Run <code class="language-plaintext highlighter-rouge">crontab -l</code> first if you need to preserve anything outside Promote to King.</p>
+</blockquote>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/CRON_SETUP_v2.8.5.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

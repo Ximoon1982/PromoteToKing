@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.13 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.13" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.13.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.13.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.13" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.13","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.13.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v210613">Promote to King v2.10.6.13</h1>
+
+<p>Baseline: v2.10.6.12 complete canonical source tree.</p>
+
+<h2 id="scope">Scope</h2>
+
+<p>v2.10.6.13 consolidates navigation/state handling and completes the authenticated Admin shell introduced in v2.10.6.12.</p>
+
+<h3 id="administration">Administration</h3>
+
+<ul>
+  <li>Admin cards now open detail content inside the Admin shell instead of navigating to the older public-side Administration interface.</li>
+  <li>The six top-level Admin tabs remain unchanged: Competitions, Members, Team, Opponents, Admin &amp; maintenance, Misc.</li>
+  <li>Opening a card replaces that tab’s card grid with the relevant existing operational tool, preserving the Admin navigation around it.</li>
+  <li>Existing tools are reused through embedded standalone pages; business logic is not duplicated.</li>
+  <li>Detail pages support breadcrumbs/back navigation and detail subtabs.</li>
+  <li>Scheduled Task Control continues to expose the Green Team Points surface and accelerator.</li>
+  <li>Lost &amp; found continues to preserve the complete existing administrator tool catalogue.</li>
+</ul>
+
+<h3 id="url--browser-state">URL / browser state</h3>
+
+<ul>
+  <li>Public top-level views use canonical <code class="language-plaintext highlighter-rouge">page=dashboard|hall|insights</code> URLs while legacy empty Dashboard URLs remain accepted.</li>
+  <li>Hall and Insights subtabs remain directly addressable.</li>
+  <li>Admin categories use <code class="language-plaintext highlighter-rouge">view=admin&amp;adminCategory=...</code>.</li>
+  <li>Admin detail pages use <code class="language-plaintext highlighter-rouge">adminDetail=...</code>; detail subtabs use <code class="language-plaintext highlighter-rouge">adminDetailTab=...</code>.</li>
+  <li>Embedded operational-tool subtabs propagate to the parent URL with <code class="language-plaintext highlighter-rouge">adminToolTab=...</code> where required.</li>
+  <li>Back, Forward and Refresh reconstruct the selected public/Admin state.</li>
+  <li>Direct Admin deep links survive the asynchronous administrator/OAuth verification phase.</li>
+  <li>Legacy integrated Administration direct URLs now correctly accept <code class="language-plaintext highlighter-rouge">members</code> and <code class="language-plaintext highlighter-rouge">migration</code>.</li>
+</ul>
+
+<h3 id="dashboard-match-assistant-corrective">Dashboard Match Assistant corrective</h3>
+
+<ul>
+  <li>The Dashboard no longer promotes the hidden recommendation iframe into the full analyzer.</li>
+  <li>A dedicated full Match Assistant iframe is created/reused for expansion.</li>
+  <li>Recommendations remain visually intact while the full assistant prepares.</li>
+  <li>The Dashboard switches to the analyzer only after the dedicated frame reports full-ready.</li>
+  <li>Open/close actions now create browser-history states so Back/Forward restore the expanded state.</li>
+</ul>
+
+<h3 id="utc-restoration">UTC restoration</h3>
+
+<ul>
+  <li>Date/time display formatters that had begun following the browser’s CET/local timezone are explicitly returned to UTC.</li>
+  <li>The audit covers shared match history/start times, Dashboard operational telemetry, match creation/analyzer/challenge views, Task Control, Club Intelligence, Team Points admin/migration, OAuth/session dates, tournament management and related operational pages.</li>
+</ul>
+
+<h2 id="public-ui-regression-constraint">Public UI regression constraint</h2>
+
+<p>The public Dashboard / Hall of Fame / Insights DOM and pre-v2.10.6.13 Dashboard CSS are regression-locked to v2.10.6.12. Public visual presentation is unchanged except for:</p>
+
+<ol>
+  <li>the Dashboard Match Assistant expansion corrective; and</li>
+  <li>timestamps being displayed in UTC again.</li>
+</ol>
+
+<p>URL changes are state/navigation-only and do not alter public layout.</p>
+
+<h2 id="explicitly-unchanged">Explicitly unchanged</h2>
+
+<ul>
+  <li>Database schema and data</li>
+  <li>Blue/Green routing</li>
+  <li>Club/player scoring</li>
+  <li>CRON configuration</li>
+  <li>API acquisition policy</li>
+  <li>Artwork/images</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.13.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

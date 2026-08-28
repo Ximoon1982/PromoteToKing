@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.14 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.14" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.14.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.14.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.14" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.14","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.14.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v210614">Promote to King v2.10.6.14</h1>
+
+<p>Corrective Admin-detail integration release based on the canonical v2.10.6.13 source tree.</p>
+
+<h2 id="admin-detail-rendering">Admin detail rendering</h2>
+<ul>
+  <li>Removes the fixed 610/720 px Admin detail viewport.</li>
+  <li>The Admin detail iframe now participates in the existing <code class="language-plaintext highlighter-rouge">p2k-frame-height</code> contract and grows to its rendered content.</li>
+  <li>The detail wrapper is borderless/transparent so embedded tools read as the full Admin content surface rather than a nested framed page.</li>
+  <li>Single-detail destinations no longer show a redundant one-item detail tab bar.</li>
+</ul>
+
+<h2 id="embedded-tool-lifecycle">Embedded tool lifecycle</h2>
+<ul>
+  <li>Admin details now receive <code class="language-plaintext highlighter-rouge">active=1</code>, <code class="language-plaintext highlighter-rouge">p2k-tool-activity</code>, and <code class="language-plaintext highlighter-rouge">p2k-admin-ready</code> using the established integrated-frame lifecycle.</li>
+  <li>Restores acquisition for Upcoming Matches Analyzer, Match Creation Analyzer, Challenge Assistant, Open Match Analyzer and other activity-aware embedded tools.</li>
+  <li>Admin detail frames are deactivated when returning to the card grid.</li>
+</ul>
+
+<h2 id="embedded-presentation-cleanup">Embedded presentation cleanup</h2>
+<ul>
+  <li>Club Intelligence hides its standalone 12-tab navigation and duplicate title in Admin mode while retaining Refresh and the selected functional content.</li>
+  <li>Scheduled Task Control hides its duplicate internal Scheduled/Green surface tabs when embedded; the parent Admin detail tabs own that navigation.</li>
+  <li>Runtime Diagnostics keeps Refresh/Copy actions but removes the duplicate embedded title block.</li>
+  <li>Tournament Management removes its standalone introductory card in embedded mode.</li>
+  <li>Task Logs removes its duplicate heading in embedded mode.</li>
+  <li>Data Reconciliation and Production Migration now report dynamic embedded height.</li>
+  <li>Production Migration hides its standalone header only while embedded.</li>
+  <li>MCA no longer embeds the whole global Scheduled Task Control as an MCA subtab; MCA Source Data remains the focused MCA administration surface.</li>
+</ul>
+
+<h2 id="regression-boundary">Regression boundary</h2>
+<ul>
+  <li>Public Dashboard, Hall of Fame and Insights DOM/layout remain unchanged from v2.10.6.13.</li>
+  <li>UTC behavior from v2.10.6.13 is preserved.</li>
+  <li>No database schema/reset/reseed, CRON, Green/Blue routing, scoring, or image change.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.14.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.7 — Green cutover observability and readiness correction | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.7 — Green cutover observability and readiness correction" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.7.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.7.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.7 — Green cutover observability and readiness correction" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.7 — Green cutover observability and readiness correction","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.7.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v21067--green-cutover-observability-and-readiness-correction">Promote to King v2.10.6.7 — Green cutover observability and readiness correction</h1>
+
+<p>v2.10.6.7 is a narrow Green production-cutover corrective over v2.10.6.6. It does not change Club Points scoring, Green acquisition, database schema, CRON cadence, MCA timestamp-only behavior, or public-read default routing.</p>
+
+<h2 id="green-observability-corrections">Green observability corrections</h2>
+
+<ul>
+  <li>Green server timestamps in Scheduled Task Control are now interpreted as UTC and displayed in the browser’s local timezone, including cycle start, GAB phases, GFFL oldest-due time, accelerator timestamps and Green worker invocation history.</li>
+  <li>GAB reconciliation no longer presents cumulative projection attempts as <code class="language-plaintext highlighter-rouge">processed / unique match target</code>. The UI labels reconciliation as convergence work, shows cumulative projection attempts, pass number, and the last exact full-pass remaining count when available.</li>
+  <li>GAB overall progress cannot show 100% while any lane remains incomplete.</li>
+  <li>If the final GAB lane completes exactly at the end of a worker slice, GAB is finalized to <code class="language-plaintext highlighter-rouge">ready</code> immediately instead of waiting for another invocation. Status also self-heals a transient <code class="language-plaintext highlighter-rouge">running</code> state when all lanes are already complete, and refuses to advertise <code class="language-plaintext highlighter-rouge">ready</code> if a lane is incomplete.</li>
+  <li>Public-read parity no longer uses the obsolete hard-coded denominator <code class="language-plaintext highlighter-rouge">13</code>. The exact number of checks is established from the current smoke audit; a pending audit is shown without a fake denominator.</li>
+  <li>GQAC now explains when no cohort exists (for example while a quick cycle is still in <code class="language-plaintext highlighter-rouge">quick_matches</code> and is waiting for <code class="language-plaintext highlighter-rouge">quick_boards</code>).</li>
+</ul>
+
+<h2 id="cutover-readiness">Cutover readiness</h2>
+
+<p>Administration → Scheduled Task Control → Green now shows explicit cutover readiness metrics:</p>
+
+<ul>
+  <li>Green validation: READY / WAIT</li>
+  <li>GAB / read adapter: READY / WAIT</li>
+  <li>Read cutover: READY / BLOCKED</li>
+  <li>blocking check count and exact blocker names</li>
+</ul>
+
+<p>The normal migration gate remains fail-closed. v2.10.6.7 does not force Green public reads and does not weaken the existing validation/GAB/public-read adapter checks. When all gates pass, the recommended first production step remains <strong>Green reads with both writers maintained</strong>, leaving Blue live as the rollback source.</p>
+
+<h2 id="data--migration-impact">Data / migration impact</h2>
+
+<ul>
+  <li>Database schema change: none.</li>
+  <li>Database reset: none.</li>
+  <li>Reseed: none.</li>
+  <li>CRON change: none.</li>
+  <li>Images: unchanged; reuse the v2.10.5.5 image archive.</li>
+  <li>MCA source behavior remains v2.10.6.6 timestamp-only known-file date backfill.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.7.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

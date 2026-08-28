@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="PromoteToKing" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALLATION.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALLATION.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="PromoteToKing" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"PromoteToKing","url":"https://ximoon1982.github.io/PromoteToKing/INSTALLATION.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <blockquote>
+  <p>Current release: <strong>v2.9.9</strong>. For the exact v2.9.8 → v2.9.9 procedure, see <code class="language-plaintext highlighter-rouge">INSTALL_v2.9.9.md</code>.</p>
+</blockquote>
+
+<h1 id="v297-installation-note">v2.9.7 installation note</h1>
+
+<p>For production updating from verified v2.9.5, use <code class="language-plaintext highlighter-rouge">update-v2.9.5-to-v2.9.7.sh</code> with <code class="language-plaintext highlighter-rouge">PromoteToKing_v2.9.5_to_v2.9.7_INCREMENTAL.zip</code>. See <code class="language-plaintext highlighter-rouge">INSTALL_v2.9.7.md</code>.</p>
+
+<h1 id="promote-to-king-v288-installation--upgrade">Promote to King v2.8.8 installation / upgrade</h1>
+
+<p>For an existing v2.8.6 installation, follow <strong><code class="language-plaintext highlighter-rouge">INSTALL_v2.8.8.md</code></strong>, <strong><code class="language-plaintext highlighter-rouge">MIGRATION_v2.8.8.md</code></strong>, and <strong><code class="language-plaintext highlighter-rouge">CRON_SETUP_v2.8.8.md</code></strong>.</p>
+
+<p>v2.8.8 is an in-place code upgrade. Core remains schema 5 and Analytics remains schema 5. Do not reset either database, rerun the fresh initializer, or reload the historical seed.</p>
+
+<p>The supplied <strong>argument-less</strong> <code class="language-plaintext highlighter-rouge">reset-install-cron-v2.8.8.sh</code> reads the two existing production CRON secrets from protected configuration and can deliberately replace the complete current SSH user’s crontab with the staggered v2.8.8 schedule.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALLATION.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

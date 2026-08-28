@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.8.2 startup hotfix | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.8.2 startup hotfix" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/HOTFIX_v2.8.8.2.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/HOTFIX_v2.8.8.2.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.8.2 startup hotfix" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.8.2 startup hotfix","url":"https://ximoon1982.github.io/PromoteToKing/HOTFIX_v2.8.8.2.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2882-startup-hotfix">Promote to King v2.8.8.2 startup hotfix</h1>
+
+<p>This hotfix addresses the persistent production symptom where the public Dashboard can remain blank/pending even after the v2.8.8.1 client-side timeout/admin fixes.</p>
+
+<h2 id="regression-boundary">Regression boundary</h2>
+
+<p>Comparison of the shipped v2.8.6, v2.8.7 and v2.8.8.1 code identified the first problematic server-side critical-path change in <strong>v2.8.7</strong>:</p>
+
+<ul>
+  <li>v2.8.6 served the first Dashboard historical totals from the one-row materialized Analytics projection;</li>
+  <li>v2.8.7 changed that first read to a live aggregate over historical Core match metadata;</li>
+  <li>v2.8.7 also added Core freshness metadata through <code class="language-plaintext highlighter-rouge">Repository::state()</code>, whose normal worker path calls <code class="language-plaintext highlighter-rouge">ensureState()</code> and can execute <code class="language-plaintext highlighter-rouge">INSERT IGNORE</code> before reading state.</li>
+</ul>
+
+<p>That meant a public GET could perform a database write and a historical aggregate before returning the first Dashboard payload. If a worker transaction held the relevant database lock, the public PHP request could wait behind it. On a constrained PHP host, blocked requests can also occupy workers needed by Administration iframe requests.</p>
+
+<h2 id="v2882-correction">v2.8.8.2 correction</h2>
+
+<ul>
+  <li>Public Dashboard/read metadata now use a new <strong>pure read-only Core state lookup</strong>. Public GETs do not create/update the Core state row.</li>
+  <li>Worker/admin write paths retain <code class="language-plaintext highlighter-rouge">state()</code> + <code class="language-plaintext highlighter-rouge">ensureState()</code> exactly where state creation is appropriate.</li>
+  <li>The first Dashboard historical totals again come from the <strong>materialized Analytics <code class="language-plaintext highlighter-rouge">p2k_tp_club_totals</code> row</strong>, while current membership still overlays the indexed authoritative Core roster count.</li>
+  <li>The browser no longer waits for the first database response before launching the automatic current/Live second wave. The materialized database request and post-paint refreshes progress independently.</li>
+  <li>A delayed database response can update the Dashboard when it arrives, but cannot hold the whole Dashboard in a startup state.</li>
+</ul>
+
+<p>All v2.8.8.1 fixes remain included: immediate configured-admin recognition, Administration iframe race/retry handling, retryable Hall/Insights lazy modules, nested modal reliability, profile rank-image containment, canonical Opponent Intelligence outcomes, and the six-month Team Insights Club Points progression forecast.</p>
+
+<h2 id="operations">Operations</h2>
+
+<ul>
+  <li>Core schema: <strong>6</strong>.</li>
+  <li>Analytics schema: <strong>5</strong>.</li>
+  <li>No database reset/re-seed or new SQL migration from v2.8.8/v2.8.8.1.</li>
+  <li>CRON cadence remains unchanged.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/HOTFIX_v2.8.8.2.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>v2.9.22.2 OAuth saturation audit | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="v2.9.22.2 OAuth saturation audit" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/HOTFIX_AUDIT_v2.9.22.2.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/HOTFIX_AUDIT_v2.9.22.2.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="v2.9.22.2 OAuth saturation audit" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"v2.9.22.2 OAuth saturation audit","url":"https://ximoon1982.github.io/PromoteToKing/HOTFIX_AUDIT_v2.9.22.2.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="v29222-oauth-saturation-audit">v2.9.22.2 OAuth saturation audit</h1>
+
+<p>The production symptom was an OAuth launch target near 26.5 calls/s while Fresh Points Reconstruction completed only about 2.2 fetches/s, with gateway target 2, one active POST and no queued work.</p>
+
+<p>Root causes:</p>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">OAuthSession::runtimeOpenFileCap(count($requests))</code> returned the smaller of host capacity and current batch size. A two-request batch therefore advertised <code class="language-plaintext highlighter-rouge">transport_cap=2</code>.</li>
+  <li>The browser treated that transient value as persistent transport capacity.</li>
+  <li><code class="language-plaintext highlighter-rouge">processPriority()</code> could snapshot that collapsed capacity as its logical worker count for a large reconstruction phase.</li>
+  <li>Reconstruction persistence still produced many small same-origin writes, adding avoidable downstream traffic.</li>
+</ol>
+
+<p>v2.9.22.2 separates physical transport capacity from batch size, keeps a 256-request logical reconstruction feeder, uses the shared rate coordinator for actual launch pacing, reserves P0 foreground capacity, and coalesces staging persistence.</p>
+
+<p>Focused browser saturation validation deliberately begins with a legacy two-request gateway response. Capacity remains 256. A subsequent 256-match background batch reaches a gateway target of 32 with five simultaneous background gateway POSTs and zero page errors.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/HOTFIX_AUDIT_v2.9.22.2.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

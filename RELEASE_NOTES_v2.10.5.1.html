@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.5.1 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.5.1" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.5.1.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.5.1.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.5.1" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.5.1","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.5.1.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v21051">Promote to King v2.10.5.1</h1>
+
+<p>Runtime-version/cache-consistency corrective on top of v2.10.5.</p>
+
+<h2 id="corrected">Corrected</h2>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">assets/js/site-config.js</code> now reports the installed release as <strong>2.10.5.1</strong> instead of the stale 2.10.4.x build line.</li>
+  <li>The browser site-config build timestamp is refreshed to the corrective build.</li>
+  <li>All active top-level HTML/HTM pages use one first-party cache generation: <strong>2.10.5.1</strong>.</li>
+  <li>Dynamic first-party scripts injected by <code class="language-plaintext highlighter-rouge">site-config.js</code> use the same cache generation.</li>
+  <li>Green runtime release observability (<code class="language-plaintext highlighter-rouge">GreenConfig</code>, migration API, migration accelerator panel) reports <strong>2.10.5.1</strong> consistently.</li>
+  <li>Package validation now rejects mixed/stale 2.10.x cache markers in active pages.</li>
+</ul>
+
+<h2 id="unchanged">Unchanged</h2>
+
+<ul>
+  <li>No database schema change.</li>
+  <li>No database reset or reseed.</li>
+  <li>No CRON or worker-budget change.</li>
+  <li>No GQAC/Quick algorithm change relative to v2.10.5.</li>
+  <li>No Member chronology change relative to v2.10.5.</li>
+  <li>No Production Migration behavior change relative to v2.10.5.</li>
+  <li>Public Team Points reads remain Blue by default and Green-read cutover remains safety-gated.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.5.1.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

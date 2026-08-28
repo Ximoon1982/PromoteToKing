@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.19 installation | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.19 installation" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.19.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.19.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.19 installation" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.19 installation","url":"https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.19.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2919-installation">Promote to King v2.9.19 installation</h1>
+
+<h2 id="incremental-upgrade-from-exact-v2918">Incremental upgrade from exact v2.9.18</h2>
+
+<p>Place these two files in the deployed Promote to King root:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">PromoteToKing_v2.9.18_to_v2.9.19_INCREMENTAL.zip</code></li>
+  <li><code class="language-plaintext highlighter-rouge">update-v2.9.18-to-v2.9.19.sh</code></li>
+</ul>
+
+<p>Do <strong>not</strong> manually unzip the incremental archive. Run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">chmod</span> +x update-v2.9.18-to-v2.9.19.sh
+./update-v2.9.18-to-v2.9.19.sh
+</code></pre></div></div>
+
+<p>The updater verifies that production is exact VERSION 2.9.18, creates compact rollback archives, validates every incremental payload hash, applies the release, preserves protected DB/OAuth/shared configuration, verifies Core14/Analytics7, and installs the v2.9.19 managed CRON script names.</p>
+
+<h2 id="miac-seed">MIAC seed</h2>
+
+<p>The supplied v2.9.18 MIAC seed remains the release seed. <code class="language-plaintext highlighter-rouge">install-miac-seed-v2.9.19.sh</code> is idempotent and preserves existing runtime review/confirmation state. No destructive reseed occurs.</p>
+
+<h2 id="managed-schedule">Managed schedule</h2>
+
+<ul>
+  <li>Club: every 5 minutes.</li>
+  <li>Tournaments: every 10 minutes, offset 2.</li>
+  <li>Player: every 10 minutes, offset 4.</li>
+  <li>Match tracking: hourly at minute 17.</li>
+  <li>Weekly long-life backup: Sunday 03:37.</li>
+</ul>
+
+<p>Unrelated CRON entries are preserved.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALL_v2.9.19.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

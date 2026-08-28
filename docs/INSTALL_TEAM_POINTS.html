@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Team Points installation and operation — v2.7.3 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Team Points installation and operation — v2.7.3" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/docs/INSTALL_TEAM_POINTS.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/docs/INSTALL_TEAM_POINTS.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Team Points installation and operation — v2.7.3" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Team Points installation and operation — v2.7.3","url":"https://ximoon1982.github.io/PromoteToKing/docs/INSTALL_TEAM_POINTS.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="team-points-installation-and-operation--v273">Team Points installation and operation — v2.7.3</h1>
+
+<p>Team Points is a server-owned, MariaDB-backed collection process. The browser never receives database credentials and no browser tab must remain open for scheduled processing.</p>
+
+<h2 id="production-requirements">Production requirements</h2>
+
+<ul>
+  <li>PHP 8.1+ with PDO MySQL.</li>
+  <li>MariaDB/MySQL using InnoDB and <code class="language-plaintext highlighter-rouge">utf8mb4</code>.</li>
+  <li>HTTPS and outbound HTTPS access to <code class="language-plaintext highlighter-rouge">api.chess.com</code>.</li>
+  <li>SSH/user crontab or another scheduler capable of calling an HTTPS URL every five minutes.</li>
+</ul>
+
+<h2 id="configuration">Configuration</h2>
+
+<p>Copy:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>server/team-points/config/config.example.php
+</code></pre></div></div>
+
+<p>to:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>server/team-points/config/config.local.php
+</code></pre></div></div>
+
+<p>Configure the database, <code class="language-plaintext highlighter-rouge">admin_token</code>, <code class="language-plaintext highlighter-rouge">cron_token</code>, <code class="language-plaintext highlighter-rouge">allowed_origin</code>, and a recognizable User-Agent. The recommended timeout contract is:</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s1">'worker_max_seconds'</span> <span class="o">=&gt;</span> <span class="mi">35</span><span class="p">,</span>
+<span class="s1">'worker_segment_seconds'</span> <span class="o">=&gt;</span> <span class="mi">35</span><span class="p">,</span>
+<span class="s1">'cron_endpoint_max_seconds'</span> <span class="o">=&gt;</span> <span class="mi">48</span><span class="p">,</span>
+<span class="s1">'cron_expected_interval_seconds'</span> <span class="o">=&gt;</span> <span class="mi">300</span><span class="p">,</span>
+<span class="s1">'cron_continuous_enabled'</span> <span class="o">=&gt;</span> <span class="kc">false</span><span class="p">,</span>
+<span class="s1">'request_timeout_seconds'</span> <span class="o">=&gt;</span> <span class="mi">15</span><span class="p">,</span>
+</code></pre></div></div>
+
+<p>The endpoint deliberately stops before the hosting provider’s approximately 60-second ceiling. One invocation may complete only part of the durable queue; the next invocation resumes it.</p>
+
+<h2 id="automatic-database-initialization">Automatic database initialization</h2>
+
+<p>When a verified club administrator logs in, <code class="language-plaintext highlighter-rouge">server/team-points/public/session.php</code> automatically:</p>
+
+<ol>
+  <li>connects to MariaDB;</li>
+  <li>installs or additively upgrades schema v13;</li>
+  <li>initializes the shared Chess.com gateway and unified task registry;</li>
+  <li>verifies administrator status through the gateway;</li>
+  <li>creates a short-lived HttpOnly same-origin session and CSRF token.</li>
+</ol>
+
+<p>A recent verified club profile may be used during a temporary Chess.com outage, within the configured administrator stale-cache window. A username alone is never accepted as proof of administrator status.</p>
+
+<h2 id="authoritative-insights-dimensions">Authoritative Insights dimensions</h2>
+
+<p>Schema 13 permanently stores match start/end times, rules, time control and league classification. It also materializes daily Team Insights facts in <code class="language-plaintext highlighter-rouge">p2k_tp_insight_daily</code>. Re-run the embedded v1.2.0 Seed Importer after upgrading from v2.7.1 so historical graphs do not depend on ingestion timestamps and all stored dimensions are populated.</p>
+
+<h2 id="scheduled-execution">Scheduled execution</h2>
+
+<p>Install the existing compatible endpoint every five minutes:</p>
+
+<pre><code class="language-cron">*/5 * * * * /usr/bin/curl --fail --silent --show-error --max-time 55 "https://YOUR-DOMAIN/server/team-points/public/cron.php?token=YOUR_PRIVATE_CRON_TOKEN" &gt;/dev/null 2&gt;&gt;"$HOME/p2k-team-points-cron-errors.log"
+</code></pre>
+
+<p>The URL and token contract are unchanged from earlier releases. Internally, the endpoint now:</p>
+
+<ul>
+  <li>enters the unified task registry;</li>
+  <li>obtains the same-task execution lock;</li>
+  <li>runs one Worker segment of at most 35 seconds;</li>
+  <li>commits each queue item independently;</li>
+  <li>returns within the 48-second endpoint target;</li>
+  <li>relies on the next external five-minute invocation rather than a self-scheduled PHP chain.</li>
+</ul>
+
+<h2 id="administration-controls">Administration controls</h2>
+
+<p>Open <code class="language-plaintext highlighter-rouge">TaskControl.html</code> from Administration. The Team Points task supports:</p>
+
+<ul>
+  <li><strong>Start / queue</strong> — creates or activates the durable job;</li>
+  <li><strong>Resume</strong> — clears safe-pause state;</li>
+  <li><strong>Pause</strong> — requests a safe pause after the current item commits;</li>
+  <li><strong>Refresh</strong> — reloads status without executing work.</li>
+</ul>
+
+<p><code class="language-plaintext highlighter-rouge">TeamPointsAdmin.html</code> remains available. Its legacy <strong>Run one segment now</strong> action performs one bounded compatibility segment; it no longer starts an endless browser loop.</p>
+
+<h2 id="queue-stages">Queue stages</h2>
+
+<p>Normal seeded incremental work uses:</p>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">sync_members</code> — reconciles the current roster from one club-members response without queuing every member history.</li>
+  <li><code class="language-plaintext highlighter-rouge">sync_club_matches</code> — reads the club match index and queues only new, changed or due details.</li>
+  <li><code class="language-plaintext highlighter-rouge">sync_match</code> — stores match metadata, participants and board references.</li>
+  <li><code class="language-plaintext highlighter-rouge">sync_player_archive</code> — reads current/previous monthly archives for unresolved recent participants.</li>
+  <li><code class="language-plaintext highlighter-rouge">sync_board</code> — resolves remaining boards and skips the API request when two finished events are already stored.</li>
+</ol>
+
+<p>Explicit repair actions may additionally queue <code class="language-plaintext highlighter-rouge">sync_player</code> for complete player match histories or <code class="language-plaintext highlighter-rouge">discover_match_ids</code> for a bounded numeric range. Those stages are not part of recurring CRON work. Raw-ID discovery checkpoints the exact next ID before the Worker deadline.</p>
+
+<h2 id="shared-chesscom-gateway">Shared Chess.com gateway</h2>
+
+<p>All production Team Points calls pass through <code class="language-plaintext highlighter-rouge">server/shared/SharedChessGateway.php</code>, which provides:</p>
+
+<ul>
+  <li>one MariaDB response cache shared with tournaments and league tracking;</li>
+  <li>ETag/Last-Modified revalidation;</li>
+  <li>a global outbound request lock and delay;</li>
+  <li>retry/backoff support;</li>
+  <li>known-valid health probes;</li>
+  <li>abnormal false-404 protection;</li>
+  <li>optional stale-cache use only where explicitly permitted.</li>
+</ul>
+
+<h2 id="local-simulation">Local simulation</h2>
+
+<p>Run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 serve_team_points_local.py <span class="nt">--reset</span>
+</code></pre></div></div>
+
+<p>Open the printed local URL, log in as <code class="language-plaintext highlighter-rouge">Ximoon</code> or <code class="language-plaintext highlighter-rouge">Promoter</code>, and use the Administration controls. The simulator preserves the legacy API paths and durable queue semantics but uses SQLite and deterministic fake data.</p>
+
+<h2 id="security">Security</h2>
+
+<ul>
+  <li>Do not publish <code class="language-plaintext highlighter-rouge">config.local.php</code>, database credentials, admin token or CRON token.</li>
+  <li>Browser administration uses a secured session plus CSRF; the legacy <code class="language-plaintext highlighter-rouge">X-P2K-Admin-Token</code> remains only for compatible integrations.</li>
+  <li>SQL values use prepared statements.</li>
+  <li>Configuration, source and SQL directories are denied by <code class="language-plaintext highlighter-rouge">.htaccess</code>.</li>
+</ul>
+
+<h2 id="v271-clean-initialization">v2.7.1 clean initialization</h2>
+
+<p>For a complete replacement from the embedded updated snapshot, use the separate <code class="language-plaintext highlighter-rouge">P2K_TeamPoints_Seed_Importer_v1.2.0.zip</code> tool and follow <code class="language-plaintext highlighter-rouge">INSTALL_v2.7.1.md</code>. Pause Team Points and disable its host CRON before Apply. The website upload alone is additive and does not delete current data; only the tool’s exact <code class="language-plaintext highlighter-rouge">REPLACE-TEAM-POINTS-DATA</code> confirmation starts the locked transaction.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/docs/INSTALL_TEAM_POINTS.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

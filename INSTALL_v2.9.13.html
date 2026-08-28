@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Install Promote to King v2.9.13 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Install Promote to King v2.9.13" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.13.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.13.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Install Promote to King v2.9.13" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Install Promote to King v2.9.13","url":"https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.13.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="install-promote-to-king-v2913">Install Promote to King v2.9.13</h1>
+
+<h2 id="incremental-upgrade-from-v2912">Incremental upgrade from v2.9.12</h2>
+
+<p>Upload these two files to the existing P2K site root:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">PromoteToKing_v2.9.12_to_v2.9.13_INCREMENTAL.zip</code></li>
+  <li><code class="language-plaintext highlighter-rouge">update-v2.9.12-to-v2.9.13.sh</code></li>
+</ul>
+
+<p>Then run from the site root:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">chmod</span> +x update-v2.9.12-to-v2.9.13.sh
+./update-v2.9.12-to-v2.9.13.sh
+</code></pre></div></div>
+
+<p>The updater is argumentless. It verifies the v2.9.12 source installation and every payload hash, backs up protected/runtime configuration under <code class="language-plaintext highlighter-rouge">_backup</code>, applies Core schema 13, compacts outstanding legacy queue duplicates, verifies no active uncanonicalized queue rows remain, preserves protected configuration byte-for-byte, and reinstalls/verifies the four P2K CRON entries while retaining unrelated CRON entries.</p>
+
+<h2 id="full-standalone">Full standalone</h2>
+
+<p>For a new installation, extract <code class="language-plaintext highlighter-rouge">PromoteToKing_Standalone_v2.9.13.zip</code> into the target directory, configure protected local settings, install OAuth configuration if used, and run <code class="language-plaintext highlighter-rouge">reset-install-cron-v2.9.13.sh</code> where server CRON is required. Fresh installations create Core schema 13 directly and have no legacy queue backlog to compact.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALL_v2.9.13.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

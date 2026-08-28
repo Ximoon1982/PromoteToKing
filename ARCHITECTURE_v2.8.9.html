@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.9 architecture | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.9 architecture" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/ARCHITECTURE_v2.8.9.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/ARCHITECTURE_v2.8.9.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.9 architecture" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.9 architecture","url":"https://ximoon1982.github.io/PromoteToKing/ARCHITECTURE_v2.8.9.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v289-architecture">Promote to King v2.8.9 architecture</h1>
+
+<h2 id="startup-ownership-rule">Startup ownership rule</h2>
+
+<p>Anything executed by <code class="language-plaintext highlighter-rouge">initialize()</code> / <code class="language-plaintext highlighter-rouge">renderView()</code> before lazy features load must be owned by the main Dashboard controller or derived from the live DOM. Startup code must never depend on a symbol defined only by a Hall/Insights/Admin lazy module.</p>
+
+<p>Integrated iframe activity therefore uses DOM discovery (<code class="language-plaintext highlighter-rouge">iframe.dashboard-integrated-frame[id]</code>) rather than a manually synchronized cross-module ID array.</p>
+
+<h2 id="dashboard-contract">Dashboard contract</h2>
+
+<p>v2.8.9 intentionally retains the proven v2.8.6 Dashboard data-loading contract. The first Team Points request and its required constants live in the main controller. Automatic Chess.com/Live enrichment remains post-paint and cannot be required for authentication.</p>
+
+<h2 id="authentication-contract">Authentication contract</h2>
+
+<p>Session application and configured/local admin recognition are independent from Dashboard data success. Configured administrators are authorized immediately; remote Chess.com club-profile verification is only a secondary route for users not in the local/configured set.</p>
+
+<p>Embedded admin pages accept parent authorization and poll briefly to survive message-order races.</p>
+
+<h2 id="lazy-feature-contract">Lazy-feature contract</h2>
+
+<p>Hall and integrated Insights remain lazy, but their factories receive an explicit context object. A failure to load a lazy module may fail that feature locally; it must not prevent Dashboard startup or authentication. Lazy-load promises reset after failure so a retry can succeed.</p>
+
+<h2 id="acamr-contract">ACAMR contract</h2>
+
+<p>ACAMR is opportunistic and isolated from Dashboard startup. It begins only after an authenticated session is available and the ACAMR client is loaded. Server workers and CRON remain authoritative and fully sufficient without connected browsers.</p>
+
+<p>ACAMR may assist Club/Member Points, relevant member archives/boards, ratings and roster freshness. It may not monitor tournaments or match registration. Browser payloads remain hints/observations and do not write canonical point facts.</p>
+
+<h2 id="storage--operations">Storage / operations</h2>
+
+<p>Core schema 6 and Analytics schema 5 are retained. No additional CRON task is introduced.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/ARCHITECTURE_v2.8.9.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

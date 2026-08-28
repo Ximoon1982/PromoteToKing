@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>P2K v2.9.12 transport, feeder, consumer and cache audit | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="P2K v2.9.12 transport, feeder, consumer and cache audit" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/TRANSPORT_AUDIT_v2.9.12.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/TRANSPORT_AUDIT_v2.9.12.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="P2K v2.9.12 transport, feeder, consumer and cache audit" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"P2K v2.9.12 transport, feeder, consumer and cache audit","url":"https://ximoon1982.github.io/PromoteToKing/TRANSPORT_AUDIT_v2.9.12.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="p2k-v2912-transport-feeder-consumer-and-cache-audit">P2K v2.9.12 transport, feeder, consumer and cache audit</h1>
+
+<h2 id="scope">Scope</h2>
+
+<p>Audit covered the shared Chess.com API path and all known production consumers: Find Match, Upcoming Matches, Match Creation Analyzer, Challenge Assistant, Recruitment tools, Open Match analysis, Tournament Management, Task Control/Admin tools, dashboard/embedded panels, player profile/stats consumers and server-side OAuth maintenance bridges.</p>
+
+<h2 id="confirmed-v2911-bottlenecks">Confirmed v2.9.11 bottlenecks</h2>
+
+<ol>
+  <li>OAuth request timeout could expire while still waiting in the browser/gateway queue.</li>
+  <li>Serialized gateway waves created drain/refill bubbles on slow endpoints.</li>
+  <li>Completion-throughput telemetry mixed launch rate with response-tail latency.</li>
+  <li>Permanent 404/410 responses could be interpreted as transport pressure.</li>
+  <li>Rate authority was per browser document/frame rather than one live budget for the OAuth session.</li>
+  <li>The same 429 could be punished by multiple layers, creating deep recovery valleys.</li>
+  <li>IndexedDB persistence was awaited per response on the completion path.</li>
+  <li>Priority admission repeatedly rescanned the remaining queue, yielding O(N^2) feeder work.</li>
+  <li>Match Creation repeatedly rescanned stage populations and repainted progress per completion.</li>
+  <li>Old finished-match cache entries became stale after one day and generated background refresh traffic that could compete with foreground analysis.</li>
+</ol>
+
+<h2 id="v2912-corrections">v2.9.12 corrections</h2>
+
+<ul>
+  <li>Server-shared launch coordinator keyed by a non-reversible hash of the server-held OAuth token.</li>
+  <li>Hybrid PI/D pressure response plus hard 429 boundary and anti-windup/coalescing.</li>
+  <li>Shared foreground hold; background work cannot reserve ahead of active foreground demand.</li>
+  <li>Endpoint-class successful-latency baselines; 429 latency and permanent 4xx do not poison baselines.</li>
+  <li>Six bounded gateway POST feeders, each subject to the same shared upstream launch clock.</li>
+  <li>Network timeout begins at actual server upstream launch, not browser queue admission.</li>
+  <li>Linear priority feeder after one stable sort; bulk cache warm-up.</li>
+  <li>Batched IndexedDB writes and bulk reads.</li>
+  <li>Finished-match cache entries remain reusable for the long retention window unless explicitly forced network-only.</li>
+  <li>Match Creation uses constant-time pending counters and throttled visual progress rendering.</li>
+</ul>
+
+<h2 id="hard-50-requestssecond-upstream-simulation">Hard 50 requests/second upstream simulation</h2>
+
+<p>The current <code class="language-plaintext highlighter-rouge">OAuthRateCoordinator</code> was exercised across eight concurrent PHP requester processes against a real local HTTP service enforcing a rolling one-second cap of 50 arrivals.</p>
+
+<p>Final frozen run:</p>
+
+<ul>
+  <li>Attempts: 512</li>
+  <li>Upstream arrivals: 512</li>
+  <li>Accepted: 508</li>
+  <li>HTTP 429: 4</li>
+  <li>Deliberate HTTP 404: 32</li>
+  <li>Peak rolling one-second arrivals: 52</li>
+  <li>Backlash episodes: 2</li>
+  <li>Settled rate: 47.6727 req/s</li>
+  <li>Learned unsafe boundary: 51.8181 req/s</li>
+  <li>Slowest worker elapsed: 17.926 s</li>
+</ul>
+
+<p>The 404 responses did not create transport pressure. The controller converged below the cap after discovering the boundary and did not enter a late-run collapse.</p>
+
+<h2 id="700-match-browser-workload">700-match browser workload</h2>
+
+<p>Chromium exercised the real shared client and Match Creation page path with 700 detail requests. Gateway responses were deliberately slower than a 1-second browser request timeout to prove queue/gateway waiting no longer consumes that timeout.</p>
+
+<p>Observed:</p>
+
+<ul>
+  <li>700 Match Creation details completed</li>
+  <li>33 gateway batches</li>
+  <li>6 maximum active gateway POSTs</li>
+  <li>0 direct Chess.com browser bypasses</li>
+  <li>Settled mocked server-shared rate: 46.5 req/s</li>
+  <li>0 page errors</li>
+</ul>
+
+<p>Cache phase:</p>
+
+<ul>
+  <li>200 finished-match keys requested</li>
+  <li>150 old finished-match cache hits</li>
+  <li>50 network misses</li>
+  <li>0 stale-background refresh competition for those finished matches</li>
+</ul>
+
+<h2 id="release-invariants">Release invariants</h2>
+
+<p>Core 12 / Analytics 6; no schema migration. Simulated OAuth and logged-out paths remain serial. User OAuth tokens remain server-side and are not available to CRON/CLI.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/TRANSPORT_AUDIT_v2.9.12.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

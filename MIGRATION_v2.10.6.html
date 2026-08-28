@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>v2.10.6 migration | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="v2.10.6 migration" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.10.6.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.10.6.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="v2.10.6 migration" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"v2.10.6 migration","url":"https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.10.6.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="v2106-migration">v2.10.6 migration</h1>
+
+<p>Source baseline: <strong>v2.10.5.5</strong>.</p>
+
+<p>The migration is in-place and additive:</p>
+
+<ul>
+  <li>Core schema 16 → 17: add <code class="language-plaintext highlighter-rouge">p2k_tp_boards.opponent_username</code> and its lookup index.</li>
+  <li>Analytics schema 8 → 9: add MCA event/source provenance plus <code class="language-plaintext highlighter-rouge">p2k_lr_sync_state</code> and <code class="language-plaintext highlighter-rouge">p2k_lr_sync_queue</code>.</li>
+  <li>Existing Team Points, Green, MCA source files, MCA derived data, identities, configuration and runtime data are preserved.</li>
+  <li>No database reset or Green reseed is required.</li>
+  <li>The v2.10.6 updater backs up every replaced existing file before copy and performs no source-file deletion.</li>
+  <li>GABCRF is self-reconciling and can run against the existing Green database after schema migration.</li>
+  <li>MCA automatic source synchronization can coexist with the existing manual upload path.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/MIGRATION_v2.10.6.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

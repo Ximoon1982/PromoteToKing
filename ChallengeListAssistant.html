@@ -10,7 +10,7 @@
 <link href="assets/css/site.css?v=2.10.6" rel="stylesheet"/>
 <link href="assets/css/upcoming-matches-analyzer.css?v=2.10.6" rel="stylesheet"/>
 <link href="assets/css/challenge-list-assistant.css?v=2.10.6" rel="stylesheet"/>
-<script src="config/site-branding.js?v=2.10.6"></script><script src="assets/js/site-config.js?v=2.10.6"></script><script defer src="assets/js/shared/real-oauth.js?v=2.10.6"></script><script src="assets/js/shared/simulated-oauth.js?v=2.10.6"></script><script src="assets/js/shared/team-points-client.js?v=2.10.6"></script><script defer src="assets/js/shared/authenticated-member-refresh.js?v=2.10.6"></script><script src="assets/js/shared/admin-page-guard.js?v=2.10.6"></script><style>html.admin-access-pending body{visibility:hidden}</style>
+<script src="config/site-branding.js?v=2.10.6"></script><script src="assets/js/site-config.js?v=2.10.6.25"></script><script defer src="assets/js/shared/real-oauth.js?v=2.10.6"></script><script src="assets/js/shared/simulated-oauth.js?v=2.10.6"></script><script src="assets/js/shared/team-points-client.js?v=2.10.6"></script><script defer src="assets/js/shared/authenticated-member-refresh.js?v=2.10.6"></script><script src="assets/js/shared/admin-page-guard.js?v=2.10.6"></script><style>html.admin-access-pending body{visibility:hidden}</style>
 <link rel="stylesheet" href="assets/css/admin-embedded.css?v=2.10.6">
 <script src="assets/js/shared/embedded-page.js?v=2.10.6"></script>
 <link href="assets/css/responsive-unification.css?v=2.10.6" rel="stylesheet"/>
@@ -26,7 +26,10 @@
 <button aria-controls="p2kClubCheckerPanel" aria-selected="false" class="site-tab" data-p2k-tab="checker" id="p2kClubCheckerTab" role="tab" tabindex="-1" type="button">Club URL checker</button>
 <button aria-controls="p2kActivityCheckerPanel" aria-selected="false" class="site-tab" data-p2k-tab="activity" id="p2kActivityCheckerTab" role="tab" tabindex="-1" type="button">Club activity checker</button>
 </div>
-<div id="p2kChallengeServerDefault" hidden><span id="p2kChallengeServerStatus"></span><button id="p2kChallengeServerLoad" type="button"></button><button id="p2kChallengeServerSave" type="button"></button></div>
+<div class="p2k-cla-server-default" id="p2kChallengeServerDefault">
+<div class="p2k-cla-server-default-copy"><strong>Saved server club list</strong><span id="p2kChallengeServerStatus">Checking saved list…</span></div>
+<div class="p2k-cla-server-default-actions"><button class="p2k-cla-secondary-button" id="p2kChallengeServerLoad" type="button">Load saved list into this tab</button></div>
+</div>
 <section aria-labelledby="p2kClubCheckerTab" class="p2k-cla-tab-panel" data-p2k-panel="checker" hidden id="p2kClubCheckerPanel" role="tabpanel">
 <p class="p2k-cla-intro">Paste or upload a list of Chess.com club URLs. The assistant checks each club endpoint and lists the normal club URLs that return an HTTP, network, timeout, or invalid-response error.</p>
 <fieldset class="p2k-filter-group">
@@ -53,6 +56,7 @@
 <button class="p2k-cla-secondary-button" disabled="" id="p2kCheckerPause" type="button">Pause</button>
 <button class="p2k-cla-secondary-button p2k-cla-stop-button" disabled="" id="p2kCheckerStop" type="button">Stop</button>
 <button class="p2k-cla-secondary-button" id="p2kCheckerClear" type="button">Clear</button>
+<button class="p2k-cla-secondary-button" id="p2kCheckerSaveList" type="button">Save current list</button>
 </div>
 </fieldset>
 <div class="p2k-cla-summary-grid">
@@ -108,6 +112,7 @@
 <button class="p2k-cla-secondary-button" disabled="" id="p2kActivityPause" type="button">Pause</button>
 <button class="p2k-cla-secondary-button p2k-cla-stop-button" disabled="" id="p2kActivityStop" type="button">Stop</button>
 <button class="p2k-cla-secondary-button" id="p2kActivityClear" type="button">Clear</button>
+<button class="p2k-cla-secondary-button" id="p2kActivitySaveList" type="button">Save current list</button>
 </div>
 </fieldset>
 <div class="p2k-cla-summary-grid">
@@ -197,6 +202,7 @@ TCMAC" spellcheck="false"></textarea>
 <button class="p2k-cla-secondary-button" disabled="" id="p2kRecommendationPause" type="button">Pause</button>
 <button class="p2k-cla-secondary-button p2k-cla-stop-button" disabled="" id="p2kRecommendationStop" type="button">Stop</button>
 <button class="p2k-cla-secondary-button" id="p2kRecommendationClear" type="button">Clear</button>
+<button class="p2k-cla-secondary-button" id="p2kRecommendationSaveList" type="button">Save current list</button>
 </div>
 </fieldset>
 <div class="p2k-cla-summary-grid">
@@ -229,5 +235,5 @@ TCMAC" spellcheck="false"></textarea>
 <div class="p2k-cla-note">Requests use the shared adaptive transport. Real OAuth evaluates candidates in parallel while preserving the ordered recommendation list; anonymous or simulated OAuth remains serial. The initial run finds up to 10 recommendations. Each Find 5 more run continues without rechecking settled clubs.</div>
 </section>
 </div>
-<script src="assets/js/site-config.js?v=2.10.6"></script><script src="assets/js/shared/tab-activity.js?v=2.10.6"></script><script src="assets/js/shared/api-cache.js?v=2.10.6"></script><script src="assets/js/shared/match-priority.js?v=2.10.6"></script><script src="assets/js/shared/api-client.js?v=2.10.6"></script><script src="assets/js/pages/challenge-list-assistant.js?v=2.10.6"></script><script src="assets/js/shared/control-hints.js?v=2.10.6"></script></body>
+<script src="assets/js/site-config.js?v=2.10.6.25"></script><script src="assets/js/shared/tab-activity.js?v=2.10.6"></script><script src="assets/js/shared/api-cache.js?v=2.10.6"></script><script src="assets/js/shared/match-priority.js?v=2.10.6"></script><script src="assets/js/shared/api-client.js?v=2.10.6"></script><script src="assets/js/pages/challenge-list-assistant.js?v=2.10.6.25"></script><script src="assets/js/shared/control-hints.js?v=2.10.6"></script></body>
 </html>

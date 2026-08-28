@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.6 — MCA timestamp-only source maintenance | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.6 — MCA timestamp-only source maintenance" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.6.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.6.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.6 — MCA timestamp-only source maintenance" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.6 — MCA timestamp-only source maintenance","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.6.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v21066--mca-timestamp-only-source-maintenance">Promote to King v2.10.6.6 — MCA timestamp-only source maintenance</h1>
+
+<h2 id="purpose">Purpose</h2>
+
+<p>v2.10.6.6 deliberately removes automatic MCA arena discovery and automatic Results CSV acquisition from Promote to King.</p>
+
+<p>Chess.com MCA Results CSV files are again an explicitly administered source pack: new files are added through the existing manual upload control. Automation is limited to recovering the event date for CSV files that are already stored.</p>
+
+<h2 id="mca-source-behavior">MCA source behavior</h2>
+
+<p>For each stored CSV whose <code class="language-plaintext highlighter-rouge">actual_event_date</code> is missing, P2K derives the arena identity from the filename:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">slug-ID.csv</code></li>
+  <li>event page: <code class="language-plaintext highlighter-rouge">https://www.chess.com/tournament/live/arena/slug-ID</code></li>
+</ul>
+
+<p>The timestamp worker fetches only that public arena page, extracts the event start date, and records it as the trusted actual event date.</p>
+
+<p>Files that already have a valid actual date are not requested again.</p>
+
+<p>Impossible future dates are cleared by the existing sanity guard and become eligible for timestamp backfill again.</p>
+
+<h2 id="removed-from-the-runtime-mca-maintenance-path">Removed from the runtime MCA maintenance path</h2>
+
+<ul>
+  <li>Promote to King MCA past-events index requests</li>
+  <li>index parsing / new-arena discovery</li>
+  <li>index pagination traversal</li>
+  <li><code class="language-plaintext highlighter-rouge">/download-results</code> acquisition</li>
+  <li>automatic Results CSV insertion or replacement</li>
+  <li>arena Player Results table reconstruction</li>
+  <li>Player Results pagination handling</li>
+  <li>possible-rename-triggered CSV refreshes</li>
+  <li>automatic dataset rebuild after the timestamp worker</li>
+</ul>
+
+<p>Manual CSV upload, manual dataset processing, manual date editing and MCA Blue → Green synchronization remain unchanged.</p>
+
+<h2 id="cron">CRON</h2>
+
+<p>The existing twice-daily MCA worker is retained, but it is now timestamp-only. A normal cycle with no stored CSV missing a date makes zero Chess.com requests.</p>
+
+<p>Requests for missing dates remain serial and paced at at least one second apart.</p>
+
+<h2 id="migration--data-safety">Migration / data safety</h2>
+
+<ul>
+  <li>No database schema change.</li>
+  <li>No database reset.</li>
+  <li>No reseed.</li>
+  <li>No stored MCA CSV is deleted or replaced by this change.</li>
+  <li>No artwork/image change.</li>
+  <li>Existing source data is retained.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.6.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

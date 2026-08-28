@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>v2.9.20 corrective implementation audit | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="v2.9.20 corrective implementation audit" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/MORCF_DMBHF_ACDM_UI_AUDIT_v2.9.20.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/MORCF_DMBHF_ACDM_UI_AUDIT_v2.9.20.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="v2.9.20 corrective implementation audit" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"v2.9.20 corrective implementation audit","url":"https://ximoon1982.github.io/PromoteToKing/MORCF_DMBHF_ACDM_UI_AUDIT_v2.9.20.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="v2920-corrective-implementation-audit">v2.9.20 corrective implementation audit</h1>
+
+<h2 id="morcf">MORCF</h2>
+<p><code class="language-plaintext highlighter-rouge">live-ranks-admin.php</code> now captures <code class="language-plaintext highlighter-rouge">$requestedRate</code> in the MCA <code class="language-plaintext highlighter-rouge">process_step</code> fetcher closure and passes it to <code class="language-plaintext highlighter-rouge">OAuthSession::batchForAuthorizedRequest</code>.</p>
+
+<h2 id="miac-modal--pagination">MIAC modal / pagination</h2>
+<p>Club Intelligence has a shared 25-row paginator for <code class="language-plaintext highlighter-rouge">ci-table</code> tables, a 25-row Members page size, and parent-viewport-aware MIAC evidence modal positioning for embedded operation.</p>
+
+<h2 id="dmbhf">DMBHF</h2>
+<p><code class="language-plaintext highlighter-rouge">dashboard-match-board-hydration.js</code> owns current-match detail hydration. Registered/ongoing rows are deduplicated by detail URL, scheduled via the shared priority client as background traffic, merged in place, and totaled from authoritative <code class="language-plaintext highlighter-rouge">boards</code> only.</p>
+
+<h2 id="acdm">ACDM</h2>
+<p>The server control planner returns canonical debt, urgency, lane and adaptive pulse suggestions. Continuous refresh activates drain mode only when canonical debt exists, chains at most six pulses, requires productivity to continue, adapts quota and delay, and yields to foreground pressure.</p>
+
+<p>All changes reuse existing authoritative workers, queue coalescing, shared OAuth/cache transport and P0 Interactive Survival controls.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/MORCF_DMBHF_ACDM_UI_AUDIT_v2.9.20.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.11 — Release Notes | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.11 — Release Notes" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.11.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.11.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.11 — Release Notes" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.11 — Release Notes","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.11.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2911--release-notes">Promote to King v2.9.11 — Release Notes</h1>
+
+<h2 id="adaptive-oauth-rate-convergence">Adaptive OAuth rate convergence</h2>
+
+<ul>
+  <li>Replaces burst-oriented authenticated concurrency growth with a paced calls-per-second controller.</li>
+  <li>Starts at 8 calls/second and learns a stable safe operating rate from successful throughput, latency, transient errors, HTTP 429 and Retry-After feedback.</li>
+  <li>Tracks the last proven-safe rate and the lowest observed unsafe/backlash boundary, then converges below that boundary rather than repeatedly overshooting it.</li>
+  <li>Requires multiple clean samples before probing upward and retains a safety margin after backlash.</li>
+  <li>Server-side cURL-multi launches are paced at the learned CPS target; concurrency is retained as latency headroom rather than used as a proxy for request rate.</li>
+</ul>
+
+<h2 id="match-creation-analyzer">Match Creation Analyzer</h2>
+
+<ul>
+  <li>Removes the remaining effective bottleneck caused by comparing slow match-detail responses with unrelated fast club-index latency.</li>
+  <li>Maintains independent latency baselines for club indexes, match details, rosters, club profiles, player profiles, stats, player-match indexes and archives.</li>
+  <li>When slow endpoints need more in-flight capacity to sustain a known-safe rate, the connection cap grows without falsely reducing the safe CPS target.</li>
+</ul>
+
+<h2 id="diagnostics-and-shared-maintenance">Diagnostics and shared maintenance</h2>
+
+<ul>
+  <li>Speed Fetch now reports the paced rate target, learned safe rate, backlash boundary and in-flight cap.</li>
+  <li>Live Ranks and opponent maintenance Bearer bridges use the same learned rate budget.</li>
+  <li>Logged-out and simulated OAuth (<code class="language-plaintext highlighter-rouge">oauth=1</code>) behavior remains serial.</li>
+  <li>User OAuth tokens remain server-side and are not used by CRON.</li>
+</ul>
+
+<h2 id="compatibility">Compatibility</h2>
+
+<ul>
+  <li>Base release: v2.9.10.</li>
+  <li>Core schema remains 12.</li>
+  <li>Analytics schema remains 6.</li>
+  <li>Achievement catalogue remains 162.</li>
+  <li>No database migration and no CRON cadence change.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.11.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>P2K Data Reconciliation — next-release preparation | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="P2K Data Reconciliation — next-release preparation" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/DATA_RECONCILIATION_NEXT_RELEASE.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/DATA_RECONCILIATION_NEXT_RELEASE.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="P2K Data Reconciliation — next-release preparation" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"P2K Data Reconciliation — next-release preparation","url":"https://ximoon1982.github.io/PromoteToKing/DATA_RECONCILIATION_NEXT_RELEASE.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="p2k-data-reconciliation--next-release-preparation">P2K Data Reconciliation — next-release preparation</h1>
+
+<h2 id="purpose">Purpose</h2>
+<p>Admin-only staged CSV/TXT reconciliation for historical/current P2K data. The service validates uploads locally and against production before any mutation. CSV input is evidence for discovery and acceleration; it is not a second source of truth for conflicting canonical match fields.</p>
+
+<h2 id="ui">UI</h2>
+<p>Administration → Administration tools → Data Reconciliation.
+Deep-link: <code class="language-plaintext highlighter-rouge">?page=administration&amp;adminTool=reconciliation</code> (through the dashboard navigation state).</p>
+
+<h2 id="acceptedrecognized-families">Accepted/recognized families</h2>
+<p>Recognized by headers/content rather than filename:</p>
+<ul>
+  <li>current roster: <code class="language-plaintext highlighter-rouge">PlayerName,Joined</code></li>
+  <li>parsed member/board rows: <code class="language-plaintext highlighter-rouge">Player,Match,Board,Start1,...</code></li>
+  <li>parsed match data: <code class="language-plaintext highlighter-rouge">MatchUrl,MatchName,StartTime,...</code></li>
+  <li>DailyData: <code class="language-plaintext highlighter-rouge">Date,Games started,...,Cumulated points</code></li>
+  <li>finished match export</li>
+  <li>active/registration match export</li>
+  <li>findings TXT (one Chess.com match API URL per line)</li>
+</ul>
+
+<h2 id="safety-contract">Safety contract</h2>
+<ul>
+  <li>protected Admin endpoint + existing same-origin/CSRF checks</li>
+  <li>private runtime staging; server-generated/sanitized names; SHA-256 for every input</li>
+  <li>CSV/TXT only; 32 MiB per-file limit</li>
+  <li>check/report phase makes no canonical writes</li>
+  <li>score/result/Club Points conflicts are NEVER copied from CSV; they queue authoritative <code class="language-plaintext highlighter-rouge">sync_match</code></li>
+  <li>absence from an almost-current member CSV NEVER marks a member former</li>
+  <li>positive member presence may be seeded, followed by authoritative roster refresh</li>
+  <li>non-conflicting player↔board evidence may be seeded; incomplete board times remain queued for authoritative board completion</li>
+  <li>bounded/idempotent apply steps with exact <code class="language-plaintext highlighter-rouge">APPLY &lt;batch-id&gt;</code> confirmation</li>
+  <li>existing durable <code class="language-plaintext highlighter-rouge">sync_match</code>, <code class="language-plaintext highlighter-rouge">sync_board</code>, <code class="language-plaintext highlighter-rouge">sync_members</code> queues are reused</li>
+</ul>
+
+<h2 id="dailydata-checkpoint-rule">DailyData checkpoint rule</h2>
+<p>DailyData is treated as a dated prefix checksum, not necessarily the terminal production total.
+The service sorts non-void finished matches chronologically and finds the prefix where BOTH:</p>
+<ul>
+  <li>cumulative non-void finished count equals DailyData</li>
+  <li>cumulative Club Points equals DailyData</li>
+</ul>
+
+<p>That match’s authoritative end timestamp becomes the checkpoint boundary. Matches finishing later, including later on the same UTC day, are allowed to exist in production without making the checkpoint fail.</p>
+
+<h2 id="current-2026-08-10-batch">Current 2026-08-10 batch</h2>
+<p>Local analysis of the supplied batch found:</p>
+<ul>
+  <li>4,474 current-member rows</li>
+  <li>16,048 finished match rows</li>
+  <li>1,094 active/registration rows (1,007 in progress, 87 registration)</li>
+  <li>17,143 findings, one beyond active+finished (<code class="language-plaintext highlighter-rouge">1982490</code>)</li>
+  <li>105,600 parsed member/match rows</li>
+  <li>1,510 finished 0–0/void rows</li>
+  <li>DailyData checkpoint: 14,538 non-void finished / 373,025 Club Points / 15,545 started / 1,007 in progress</li>
+  <li>DailyData reconciles to the match exports on all complete days, and the chronological count+points prefix resolves exactly.</li>
+</ul>
+
+<p>Targeted revalidation candidates include <code class="language-plaintext highlighter-rouge">1796256</code>, <code class="language-plaintext highlighter-rouge">1844231</code>, <code class="language-plaintext highlighter-rouge">1708709</code>, <code class="language-plaintext highlighter-rouge">1821730</code>, <code class="language-plaintext highlighter-rouge">1844727</code>; <code class="language-plaintext highlighter-rouge">1794360</code> has a formatted-date mismatch and must use Unix time; <code class="language-plaintext highlighter-rouge">1982490</code> should be discovered by targeted sync.</p>
+
+<p>See <code class="language-plaintext highlighter-rouge">P2K_CSV_RECONCILIATION_AUDIT_2026-08-10.md</code> and the machine-readable issue/summary files packaged with this preparation.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/DATA_RECONCILIATION_NEXT_RELEASE.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

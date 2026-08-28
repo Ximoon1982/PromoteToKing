@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Install Promote to King v2.10.6 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Install Promote to King v2.10.6" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.10.6.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.10.6.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Install Promote to King v2.10.6" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Install Promote to King v2.10.6","url":"https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.10.6.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="install-promote-to-king-v2106">Install Promote to King v2.10.6</h1>
+
+<h2 id="incremental-upgrade-from-v21055">Incremental upgrade from v2.10.5.5</h2>
+
+<p>Unzip <code class="language-plaintext highlighter-rouge">P2K_v2.10.5.5_to_v2.10.6_INCREMENTAL.zip</code>, then from the extracted package run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>bash update-v2.10.5.5-to-v2.10.6.sh /homepages/43/d141198007/htdocs/PromoteToKing
+</code></pre></div></div>
+
+<p>The updater verifies payload hashes, backs up every replaced file, applies the additive Core 17 / Analytics 9 schema migrations, validates Blue and configured Green compatibility schemas, lints delivered PHP/shell files, and installs the twice-daily MCA CRON block when <code class="language-plaintext highlighter-rouge">crontab</code> is available.</p>
+
+<p>If <code class="language-plaintext highlighter-rouge">crontab</code> is not available, run <code class="language-plaintext highlighter-rouge">reset-install-mca-cron-v2.10.6.sh</code> through SSH where supported or add the printed command to the IONOS Cron Job Manager twice daily.</p>
+
+<h2 id="mca-scheduler">MCA scheduler</h2>
+
+<p>The installed expression is:</p>
+
+<pre><code class="language-cron">17 0,12 * * * .../cron-mca-results-v2.10.6.sh
+</code></pre>
+
+<p>The source worker additionally enforces a 12-hour next-scan gate and serial &gt;=1-second request spacing, so accidental extra invocations do not increase the intended scan cadence.</p>
+
+<h2 id="standalonesource-deployment">Standalone/source deployment</h2>
+
+<p>For recovery or a complete code deployment, use the v2.10.6 SOURCE archive together with the unchanged v2.10.5.5/v2.10.6 assets-images archive. Protected local configuration and runtime/database data must not be overwritten.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALL_v2.10.6.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

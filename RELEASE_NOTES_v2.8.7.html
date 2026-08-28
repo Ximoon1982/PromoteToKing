@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King Standalone v2.8.7 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King Standalone v2.8.7" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.7.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.7.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King Standalone v2.8.7" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King Standalone v2.8.7","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.7.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-standalone-v287">Promote to King Standalone v2.8.7</h1>
+
+<p>v2.8.7 is built on the finalized v2.8.6 progressive-loading baseline. It integrates the post-v2.8.6 architecture/performance/correctness audit and adds <strong>ACAMR — Authenticated Client-Assisted Member Refresh</strong>.</p>
+
+<h2 id="acamr--authenticated-client-assisted-member-refresh">ACAMR — authenticated client-assisted member refresh</h2>
+
+<p>ACAMR uses authenticated browsers as a low-pulse discovery/verification accelerator for the existing Team Points workers. It does <strong>not</strong> create a second source of truth: browser Chess.com responses remain untrusted observations and canonical facts are still written only after server-side verification through the shared Chess.com gateway.</p>
+
+<p>Activation contract:</p>
+
+<ul>
+  <li><strong>Real OAuth authentication:</strong> ACAMR is active regardless of the simulated-OAuth feature flag.</li>
+  <li><strong>Simulated authentication:</strong> ACAMR is active only when the <code class="language-plaintext highlighter-rouge">oauth</code> / <code class="language-plaintext highlighter-rouge">simulatedOAuth</code> feature flag is enabled.</li>
+  <li><strong>No authenticated session:</strong> ACAMR is inactive.</li>
+</ul>
+
+<p>ACAMR scope includes:</p>
+
+<ul>
+  <li>Club Points and Member Points discovery/computation pipeline;</li>
+  <li>current-member team-match and board discovery required for point calculation;</li>
+  <li>current player archives used to locate finished team games;</li>
+  <li>Daily/Classical and Chess960 rating refresh hints;</li>
+  <li>low-frequency authoritative roster refresh hints.</li>
+</ul>
+
+<p>ACAMR explicitly excludes:</p>
+
+<ul>
+  <li>tournaments;</li>
+  <li>match-registration monitoring, recruitment, or registered-player tracking.</li>
+</ul>
+
+<p>The client scheduler elects one same-origin leader across tabs/iframes and requests small server-assigned member claims. Different connected users are distributed across the member pool through temporary protected filesystem claims. Default pulse is 20 seconds and claims are held for 20 minutes to avoid duplicate work.</p>
+
+<p>For ACAMR monthly archive observations, the server no longer has to blindly re-fetch the complete archive simply to discover relevant work. If a known P2K participation is identified, ACAMR schedules the corresponding authoritative board verification. The board worker then fetches Chess.com itself and stores the canonical game result/point event. Client-computed scores are never accepted.</p>
+
+<h2 id="post-v286-audit-integration">Post-v2.8.6 audit integration</h2>
+
+<ul>
+  <li>Dashboard historical totals now use the canonical Core snapshot and cannot be overwritten by Chess.com’s bounded recent match index.</li>
+  <li>Redundant Dashboard club-members/profile requests are removed where local Core data already exists.</li>
+  <li>Core generation/freshness participates in mixed Core/Analytics cache invalidation.</li>
+  <li>Player/Profile membership freshness is overlaid from Core.</li>
+  <li>Club resolution avoids repeated population-wide COUNT scans.</li>
+  <li>A paused Player-history lane still performs the cheap authoritative roster freshness pass.</li>
+  <li>Members custom-range sections share one range projection; Team Insights progressive sections share one normalized daily base dataset.</li>
+  <li>Daily and Live Hall summaries use bounded SQL aggregates and fetch member rows only for the selected page.</li>
+  <li>Tournament browsing uses a materialized browse index with early ETag/304 handling; Hall search uses its per-player tournament index.</li>
+  <li>Dashboard secondary work remains automatic but is routed through the shared low-priority scheduler.</li>
+  <li>Hall and integrated Insights logic are lazy modules, reducing the initial Dashboard controller size.</li>
+</ul>
+
+<h2 id="correctness-retained">Correctness retained</h2>
+
+<ul>
+  <li>Finished authoritative 0–0 matches stay stored with <code class="language-plaintext highlighter-rouge">is_void=1</code> for traceability and remain excluded from every public analytical metric, graph and achievement path.</li>
+  <li>Club and Player Team Points workers remain separate.</li>
+  <li>Failed-board recovery and synchronization-health semantics remain intact.</li>
+  <li>Avatar/profile fetching remains persistent, demand-driven and visible-batch only.</li>
+  <li>Tournament Achievement Date Revision 2 remains intact.</li>
+</ul>
+
+<h2 id="database--cron">Database / CRON</h2>
+
+<ul>
+  <li>Core schema: <strong>5</strong>.</li>
+  <li>Analytics schema: <strong>5</strong>.</li>
+  <li>No database reset, re-seed or SQL migration is required from v2.8.6.</li>
+  <li>Server CRON cadence is unchanged: Club 5 min, Tournament 10 min, Player 30 min, league monitoring hourly.</li>
+  <li>ACAMR is opportunistic only; server workers remain fully autonomous when no authenticated users are online.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.8.7.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

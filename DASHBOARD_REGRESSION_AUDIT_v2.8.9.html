@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Dashboard regression audit — v2.8.6 to v2.8.9 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Dashboard regression audit — v2.8.6 to v2.8.9" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/DASHBOARD_REGRESSION_AUDIT_v2.8.9.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/DASHBOARD_REGRESSION_AUDIT_v2.8.9.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Dashboard regression audit — v2.8.6 to v2.8.9" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Dashboard regression audit — v2.8.6 to v2.8.9","url":"https://ximoon1982.github.io/PromoteToKing/DASHBOARD_REGRESSION_AUDIT_v2.8.9.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="dashboard-regression-audit--v286-to-v289">Dashboard regression audit — v2.8.6 to v2.8.9</h1>
+
+<h2 id="confirmed-boundary">Confirmed boundary</h2>
+
+<p>Production confirmation: v2.8.6 works; v2.8.7 does not.</p>
+
+<h2 id="confirmed-primary-cause">Confirmed primary cause</h2>
+
+<p>The v2.8.7 Hall/Insights module split moved an integrated-frame ID list out of the startup controller while <code class="language-plaintext highlighter-rouge">setIntegratedFrameActivity()</code> in the main controller continued to reference it. The default Dashboard route calls that function during the first <code class="language-plaintext highlighter-rouge">renderView()</code>.</p>
+
+<p>Observed browser-gate failure on the shipped pre-fix tree:</p>
+
+<p><code class="language-plaintext highlighter-rouge">ReferenceError: integratedFrameIds is not defined</code></p>
+
+<p>Because <code class="language-plaintext highlighter-rouge">initialize()</code> calls <code class="language-plaintext highlighter-rouge">renderView()</code> before <code class="language-plaintext highlighter-rouge">loadTeamData()</code> and <code class="language-plaintext highlighter-rouge">applySession()</code>, the exception stops both data startup and authentication/admin application. This is why the two user-visible symptoms occurred together.</p>
+
+<h2 id="confirmed-secondary-dependency-defect">Confirmed secondary dependency defect</h2>
+
+<p>The emergency v2.8.8.3 rollback restored the v2.8.6 <code class="language-plaintext highlighter-rouge">loadTeamData()</code> function but did not restore the <code class="language-plaintext highlighter-rouge">clubMembersAPI</code> constant removed by the later refactor. Once the primary startup exception is fixed, the post-paint second wave could therefore fail when it first evaluates that identifier.</p>
+
+<h2 id="why-previous-static-tests-missed-it">Why previous static tests missed it</h2>
+
+<p>Syntax checking proves only that JavaScript parses. Unit/static assertions also validated function presence and release contracts but did not execute the real startup ordering. An unresolved lexical/global identifier is valid syntax and fails only at runtime when the branch executes.</p>
+
+<h2 id="safer-implementation-adopted">Safer implementation adopted</h2>
+
+<ol>
+  <li>Startup-owned frame enumeration is derived from the DOM in the main controller; no lazy module owns a startup dependency.</li>
+  <li>The v2.8.6 Dashboard function is paired with its full constant/dependency set.</li>
+  <li>Admin recognition is independent of remote API completion.</li>
+  <li>Lazy-feature failures are local and retryable.</li>
+  <li>A browser execution gate runs the shipped HTML/controller with mocked network data and requires:
+    <ul>
+      <li>zero uncaught page errors;</li>
+      <li>Team database values rendered;</li>
+      <li>configured simulated admin recognized;</li>
+      <li>Administration navigation available.</li>
+    </ul>
+  </li>
+  <li>ACAMR is tested independently from Dashboard boot and does not participate in the startup dependency graph.</li>
+</ol>
+
+<h2 id="acamr-assessment">ACAMR assessment</h2>
+
+<p>No evidence links ACAMR itself to the confirmed startup exception. The failure occurs synchronously in <code class="language-plaintext highlighter-rouge">renderView()</code> before <code class="language-plaintext highlighter-rouge">loadTeamData()</code> and <code class="language-plaintext highlighter-rouge">applySession()</code> complete. ACAMR is therefore re-enabled in v2.8.9 with its original trust/scope boundaries and remains independently disable-able if future telemetry shows a performance problem.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/DASHBOARD_REGRESSION_AUDIT_v2.8.9.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

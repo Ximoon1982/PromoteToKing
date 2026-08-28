@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.22.2 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.22.2" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.22.2.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.22.2.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.22.2" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.22.2","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.22.2.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v29222">Promote to King v2.9.22.2</h1>
+
+<p>Focused OAuth saturation / Fresh Points Reconstruction throughput hotfix on the frozen v2.9.22.1 baseline.</p>
+
+<h2 id="fixes">Fixes</h2>
+
+<ul>
+  <li>Prevents a small OAuth gateway batch from shrinking the remembered transport capacity. Server telemetry now separates real <code class="language-plaintext highlighter-rouge">transport_capacity</code> from <code class="language-plaintext highlighter-rouge">batch_size</code>.</li>
+  <li>Keeps OAuth <code class="language-plaintext highlighter-rouge">processPriority()</code> logical feeder depth independent from physical gateway capacity; Fresh Points Reconstruction explicitly feeds up to 256 logical requests.</li>
+  <li>Resets the browser OAuth tuning namespace to v4 and starts each gateway POST with an 8-connection bootstrap target. The server-side OAuthRateCoordinator remains the sole CPS authority.</li>
+  <li>Reconstruction traffic now uses the background class so all five non-reserved gateway POST lanes are available while one P0 lane remains reserved for interactive requests.</li>
+  <li>Coalesces reconstruction staging writes for up to 1 second (or 400 rows) with the existing 1,600-row high-water safety limit, reducing tiny same-origin persistence POSTs.</li>
+  <li>Adds Logical feeder and Transport capacity metrics to Fresh Points Reconstruction diagnostics.</li>
+  <li>Normalizes current HTML asset cache markers to v2.9.22.2, preventing stale v2.9.22/v2.9.22.1 API clients or site configuration from surviving a hotfix reload.</li>
+</ul>
+
+<h2 id="compatibility">Compatibility</h2>
+
+<ul>
+  <li>Core schema: 15 (unchanged)</li>
+  <li>Analytics schema: 7 (unchanged)</li>
+  <li>No database migration or reset</li>
+  <li>Existing v2.9.22 CRON contract remains unchanged: four operational jobs plus one weekly backup job</li>
+  <li>Protected runtime configuration is not included or modified by the incremental updater</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.22.2.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

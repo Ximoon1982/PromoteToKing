@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>v2.10.6.9 Green public-data migration note | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="v2.10.6.9 Green public-data migration note" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.10.6.9.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.10.6.9.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="v2.10.6.9 Green public-data migration note" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"v2.10.6.9 Green public-data migration note","url":"https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.10.6.9.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="v21069-green-public-data-migration-note">v2.10.6.9 Green public-data migration note</h1>
+
+<h2 id="objective">Objective</h2>
+
+<p>After v2.10.6.8 the routing flag could correctly say <strong>GREEN</strong> while some public features still read Green-hosted compatibility tables that had last been materialized during an earlier GAB phase. The observed symptoms included:</p>
+
+<ul>
+  <li>Dashboard Club Points below the native Green value.</li>
+  <li>Dashboard finished-match aggregate lagging native Green.</li>
+  <li>Opponent Insights heatmap coverage collapsing to a small partial population.</li>
+  <li>Dashboard System Health flagging the deliberately non-authoritative Blue Club Points task.</li>
+</ul>
+
+<p>v2.10.6.9 makes Green authoritative at the data-contract level, not only at the database-router level.</p>
+
+<h2 id="read-policy">Read policy</h2>
+
+<h3 id="native-green-reads">Native Green reads</h3>
+
+<p>These public values use Green Core directly when the effective public source is Green:</p>
+
+<ul>
+  <li>Dashboard club totals / Club Points.</li>
+  <li>Signed-in player Team Points summary and W/D/L/game totals.</li>
+  <li>Current membership/identity chronology required by that player summary.</li>
+</ul>
+
+<h3 id="live-green-compatibility-contracts">Live Green compatibility contracts</h3>
+
+<p>Existing public services that depend on the mature <code class="language-plaintext highlighter-rouge">p2k_tp_*</code> / <code class="language-plaintext highlighter-rouge">p2k_an_*</code> contracts retain those APIs, but their source is now live Green:</p>
+
+<ul>
+  <li>every Green worker match/member update projects immediately;</li>
+  <li>browser/accelerator observations project the affected match/board/member immediately;</li>
+  <li>404/410 terminal match/board observations also project immediately;</li>
+  <li>compatibility analytics refresh while GAB is running.</li>
+</ul>
+
+<p>This preserves stable public service contracts while removing the stale-GAB materialization behavior.</p>
+
+<h2 id="gabgabcrf-after-cutover">GAB/GABCRF after cutover</h2>
+
+<p>GABCRF remains useful. It repairs historical compatibility drift and proves eventual completeness. It is no longer a freshness gate for current Green observations or analytics rebuilds.</p>
+
+<h2 id="rollback">Rollback</h2>
+
+<p>Blue remains intact. If a Green-serving defect is discovered, <strong>Rollback reads to Blue</strong> remains available. v2.10.6.9 does not delete Blue data or alter CRON definitions.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/MIGRATION_v2.10.6.9.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

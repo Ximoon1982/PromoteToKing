@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.1 Hotfix 2 — database migration | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.1 Hotfix 2 — database migration" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.8.1.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.8.1.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.1 Hotfix 2 — database migration" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.1 Hotfix 2 — database migration","url":"https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.8.1.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v281-hotfix-2--database-migration">Promote to King v2.8.1 Hotfix 2 — database migration</h1>
+
+<p>Source: any working v2.8.x Core + Analytics database pair (schema revision 1 or either historical schema-revision-2 branch).
+Target: <strong>schema revision 3</strong> in both databases.</p>
+
+<p>The Hotfix 2 convergence migration exists because v2.8.1 and RecoveryFix7 independently used revision 2 for different additive fields. Revision 3 contains both sets.</p>
+
+<h2 id="core">Core</h2>
+
+<p><code class="language-plaintext highlighter-rouge">server/team-points/sql/core-migration-v2.8.1-hotfix2.sql</code> idempotently adds, when missing:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">daily_rating</code>, <code class="language-plaintext highlighter-rouge">chess960_rating</code>, <code class="language-plaintext highlighter-rouge">rating_updated_at</code> on <code class="language-plaintext highlighter-rouge">p2k_tp_members</code>;</li>
+  <li><code class="language-plaintext highlighter-rouge">p2k_avg_rating</code>, <code class="language-plaintext highlighter-rouge">opponent_avg_rating</code> on <code class="language-plaintext highlighter-rouge">p2k_tp_match_metadata</code>;</li>
+  <li>Core schema revision 3.</li>
+</ul>
+
+<h2 id="analytics">Analytics</h2>
+
+<p><code class="language-plaintext highlighter-rouge">server/team-points/sql/analytics-migration-v2.8.1-hotfix2.sql</code> idempotently adds, when missing:</p>
+
+<ul>
+  <li>materialized Daily/Chess960 member ratings and update timestamp;</li>
+  <li><code class="language-plaintext highlighter-rouge">last_standard_game_at</code> and <code class="language-plaintext highlighter-rouge">last_chess960_game_at</code>;</li>
+  <li>match average-rating fields;</li>
+  <li><code class="language-plaintext highlighter-rouge">first_place_count</code> for Live/MCA aggregates;</li>
+  <li>persistent <code class="language-plaintext highlighter-rouge">p2k_an_achievement_unlocks</code>;</li>
+  <li>Analytics schema revision 3.</li>
+</ul>
+
+<p>The repository invalidates the previous Analytics refresh marker/state after an Analytics upgrade so the first post-upgrade read rebuilds the combined projections.</p>
+
+<h2 id="supported-convergence-paths">Supported convergence paths</h2>
+
+<ul>
+  <li>original v2.8 schema 1 → combined schema 3;</li>
+  <li>v2.8.1/Hotfix1 schema 2 → combined schema 3;</li>
+  <li>RecoveryFix7 schema 2 → combined schema 3.</li>
+</ul>
+
+<p>No initializer, seed reload, table replacement, or destructive reset is required. Pre-v2.8 single-database layouts remain outside the supported in-place migration path.</p>
+
+<h2 id="invocation">Invocation</h2>
+
+<p>Migration is attempted automatically by Team Points public/admin endpoints and by the Team Points CRON before they reject an older supported v2.8 schema.</p>
+
+<h2 id="rollback">Rollback</h2>
+
+<p>The migration is additive/idempotent. A code rollback may leave the extra columns/table in place. Back up both databases before deployment as normal.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/MIGRATION_v2.8.1.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

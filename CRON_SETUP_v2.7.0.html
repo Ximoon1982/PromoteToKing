@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>IONOS CRON setup — Promote to King v2.7.0 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="IONOS CRON setup — Promote to King v2.7.0" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/CRON_SETUP_v2.7.0.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/CRON_SETUP_v2.7.0.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="IONOS CRON setup — Promote to King v2.7.0" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"IONOS CRON setup — Promote to King v2.7.0","url":"https://ximoon1982.github.io/PromoteToKing/CRON_SETUP_v2.7.0.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="ionos-cron-setup--promote-to-king-v270">IONOS CRON setup — Promote to King v2.7.0</h1>
+
+<p>Tournament maintenance is resumable and designed for IONOS Web Hosting. Each invocation has a 45-second application deadline and performs one of three stages: discovery, status refresh, or podium/medalist completion.</p>
+
+<p>Recommended schedule: every 5 minutes.</p>
+
+<pre><code class="language-cron">*/5 * * * * /usr/bin/curl --max-time 55 --fail --silent --show-error "https://www.promotetoking.org/server/tournaments/public/cron.php?token=REPLACE_WITH_CRON_TOKEN" &gt;&gt; "$HOME/logs/p2k-tournaments-cron.log" 2&gt;&amp;1
+</code></pre>
+
+<p>Create the log directory first if needed:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/logs"</span>
+</code></pre></div></div>
+
+<p>Use <code class="language-plaintext highlighter-rouge">crontab -e</code> to edit the user crontab, then verify with <code class="language-plaintext highlighter-rouge">crontab -l</code>. Keep the token private.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/CRON_SETUP_v2.7.0.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

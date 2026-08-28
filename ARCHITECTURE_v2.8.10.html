@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.10 architecture | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.10 architecture" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/ARCHITECTURE_v2.8.10.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/ARCHITECTURE_v2.8.10.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.10 architecture" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.10 architecture","url":"https://ximoon1982.github.io/PromoteToKing/ARCHITECTURE_v2.8.10.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2810-architecture">Promote to King v2.8.10 architecture</h1>
+
+<h2 id="stable-startup-boundary">Stable startup boundary</h2>
+
+<p>The production-confirmed v2.8.9 Dashboard/auth startup graph is frozen. Initialization, session application and configured/local admin recognition do not depend on lazy Hall/Insights modules, Chess.com second-wave data, ACAMR, Tournament state or Match Tracking state.</p>
+
+<h2 id="canonical-outcome-boundary">Canonical outcome boundary</h2>
+
+<p>For a finished non-void match, authoritative stored team scores determine win/draw/loss. Analytics consumes the score-derived canonical summary view rather than trusting a duplicated historical result label. Authoritative finished 0–0 remains void and analytically excluded.</p>
+
+<h2 id="public-dashboard-merge-boundary">Public Dashboard merge boundary</h2>
+
+<p>The canonical database owns current membership and all-history totals. Chess.com current <code class="language-plaintext highlighter-rouge">/matches</code> data may enrich registration/in-progress state but may not overwrite canonical all-history Finished KPIs. Secondary enrichment remains automatic post-paint.</p>
+
+<h2 id="mutable-runtime-boundary">Mutable runtime boundary</h2>
+
+<p>Release archives contain code, static assets, schema/migrations and configuration examples—not live secrets/registries/archives. Tournament and Match Tracking runtime files are created/maintained on the host and have conservative backup recovery.</p>
+
+<h2 id="protected-writerequest-boundary">Protected write/request boundary</h2>
+
+<p>Admin mutations use CSRF plus an explicit <code class="language-plaintext highlighter-rouge">X-Club-Tools-Request</code> action kind. The shared client centrally maps protected endpoints to their required action kind. CRON uses a separate protected <code class="language-plaintext highlighter-rouge">X-P2K-Cron-Token</code> header with legacy query-token compatibility.</p>
+
+<h2 id="cron-observability-boundary">CRON observability boundary</h2>
+
+<p>The shell dispatcher records an invocation marker before HTTP. Application Task Registry records endpoint execution. Comparing the two layers distinguishes scheduler/daemon failures from authentication/HTTP/application failures.</p>
+
+<h2 id="intelligence-boundary">Intelligence boundary</h2>
+
+<p>Intelligence features report measured values only. Where counterfactual or historical data was not collected (e.g. historical recruitment conversion, old arena source URLs, pre-snapshot detailed time travel), the UI states the limitation rather than synthesizing data.</p>
+
+<h2 id="tournament-maintenance-boundary">Tournament maintenance boundary</h2>
+
+<p>Tournament status checking is primary maintenance and runs on every 10-minute Tournament invocation. Discovery and podium refresh are staged extras. Public browse signatures include the active recovery candidates, so serving a <code class="language-plaintext highlighter-rouge">.bak</code>/timestamped backup after an accidentally empty primary cannot leave the BrowseIndex/ETag pinned to the empty archive.</p>
+
+<h2 id="admin-routing-and-lookup-efficiency">Admin routing and lookup efficiency</h2>
+
+<p>Configured/local administrators are recognized before any remote Chess.com club-profile verification in both the Dashboard and outer site router. Personalized member intelligence uses a keyed single-member query; bulk member intelligence is cached within a request for aggregate views, avoiding repeated full-roster scans during authenticated-home/profile rendering.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/ARCHITECTURE_v2.8.10.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

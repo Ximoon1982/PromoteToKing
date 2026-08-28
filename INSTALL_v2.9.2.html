@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.2 — installation / upgrade | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.2 — installation / upgrade" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.2.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.2.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.2 — installation / upgrade" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.2 — installation / upgrade","url":"https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.2.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v292--installation--upgrade">Promote to King v2.9.2 — installation / upgrade</h1>
+
+<h2 id="recommended-production-upgrade-from-v291">Recommended production upgrade from v2.9.1</h2>
+
+<p>Upload these two files into the production site root (<code class="language-plaintext highlighter-rouge">~/PromoteToKing</code>):</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">PromoteToKing_v2.9.1_to_v2.9.2_INCREMENTAL.zip</code></li>
+  <li><code class="language-plaintext highlighter-rouge">update-v2.9.1-to-v2.9.2.sh</code></li>
+</ul>
+
+<p>Then run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> ~/PromoteToKing
+<span class="nb">chmod</span> +x update-v2.9.1-to-v2.9.2.sh
+./update-v2.9.1-to-v2.9.2.sh
+</code></pre></div></div>
+
+<p>The updater is argumentless. Before replacing anything it verifies the incremental payload SHA-256 manifest and creates a timestamped <code class="language-plaintext highlighter-rouge">_backup</code> containing configuration, the complete <code class="language-plaintext highlighter-rouge">data</code> tree, known log directories, the previous crontab, and every file that will be replaced. It then applies only the verified payload, validates version/PHP/shell markers, performs an optional root HTTP check, installs/verifies the four v2.9.2 CRON entries, and retains the backup. A post-apply validation failure triggers best-effort rollback of replaced/new files and the previous crontab.</p>
+
+<h2 id="full-standalone">Full standalone</h2>
+
+<p><code class="language-plaintext highlighter-rouge">PromoteToKing_Standalone_v2.9.2.zip</code> is the root-flat standalone package.</p>
+
+<p>It deliberately excludes mutable production secrets and runtime state such as <code class="language-plaintext highlighter-rouge">data/server-config.json</code>, Team Points <code class="language-plaintext highlighter-rouge">config.local.php</code>, runtime databases, caches, logs and <code class="language-plaintext highlighter-rouge">_backup</code> contents. Example/default configuration and protected empty data directories are retained.</p>
+
+<h2 id="database">Database</h2>
+
+<p>Do <strong>not</strong> reset or re-seed the database.</p>
+
+<p>v2.9.2 upgrades in place:</p>
+
+<ul>
+  <li>Core schema 8 → 9: adds nullable <code class="language-plaintext highlighter-rouge">rated_board_count</code> to <code class="language-plaintext highlighter-rouge">p2k_tp_match_metadata</code>.</li>
+  <li>Analytics schema 5 → 6: adds nullable <code class="language-plaintext highlighter-rouge">rated_board_count</code> to <code class="language-plaintext highlighter-rouge">p2k_an_match_facts</code>.</li>
+</ul>
+
+<p>The existing repository schema-upgrade path applies the additive migrations idempotently. Historical match-rating rows without paired-board provenance are intentionally excluded from the Opponent Balance Analyzer until authoritative match revalidation repopulates them.</p>
+
+<h2 id="cron">CRON</h2>
+
+<p>The updater installs the v2.9.2 dispatcher automatically. To reinstall it separately, run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> ~/PromoteToKing
+<span class="nb">chmod</span> +x reset-install-cron-v2.9.2.sh cron-dispatch-v2.9.2.sh
+./reset-install-cron-v2.9.2.sh
+</code></pre></div></div>
+
+<p>See <code class="language-plaintext highlighter-rouge">CRON_SETUP_v2.9.2.md</code>.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALL_v2.9.2.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

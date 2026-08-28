@@ -450,9 +450,78 @@ final class ClubIntelligenceService
         unset($r); return $rows;
     }
 
+
+    /** v2.10.7: resolve every physical member row belonging to one MIAC identity. */
+    private function canonicalMemberIds(int $fallbackMemberId,string $usernameKey): array
+    {
+        $canonical=$usernameKey;
+        try{
+            $r=$this->optionalOne($this->core,"SELECT COALESCE(im.canonical_username_key,u.username_key) canonical_username_key FROM p2k_tp_members u LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0 WHERE u.club_slug=? AND u.member_id=? LIMIT 1",[$this->clubSlug,$fallbackMemberId]);
+            if(!empty($r['canonical_username_key']))$canonical=(string)$r['canonical_username_key'];
+            $rows=$this->optionalAll($this->core,"SELECT u.member_id FROM p2k_tp_members u LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0 WHERE u.club_slug=? AND COALESCE(im.canonical_username_key,u.username_key)=? ORDER BY u.member_id",[$this->clubSlug,$canonical]);
+            $ids=array_values(array_unique(array_filter(array_map(static fn($x)=>(int)($x['member_id']??0),$rows),static fn($x)=>$x>0)));
+            if($ids)return $ids;
+        }catch(\Throwable $e){error_log('P2K canonical progress identity: '.$e->getMessage());}
+        return [$fallbackMemberId];
+    }
+
+    private static function memberScopeSql(array $memberIds): string
+    {
+        $ids=array_values(array_unique(array_filter(array_map('intval',$memberIds),static fn($x)=>$x>0)));
+        return $ids?implode(',',$ids):'0';
+    }
+
+    /** Durable lower-tier evidence: no monotonic ladder may display below an earned tier. */
+    private static function progressFloorIdentity(string $key): ?array
+    {
+        if($key==='first-match')return ['matches',1.0];
+        if($key==='first-point')return ['team-points-total',1.0];
+        if(preg_match('/^matches-(\d+)$/',$key,$m))return ['matches',(float)$m[1]];
+        if(preg_match('/^games-(\d+)$/',$key,$m))return ['games',(float)$m[1]];
+        if(preg_match('/^wins-(\d+)$/',$key,$m))return ['wins',(float)$m[1]];
+        $daily=['daily-pawn'=>10,'daily-knight'=>20,'daily-bishop'=>50,'daily-rook'=>100,'daily-queen'=>150,'daily-king'=>250,'daily-bronze-king'=>500,'daily-silver-king'=>1000,'daily-gold-king'=>1500,'daily-platinum-king'=>2000,'daily-amethyst-king'=>3000,'daily-topaz-king'=>4000,'daily-emerald-king'=>5500,'daily-sapphire-king'=>7000,'daily-ruby-king'=>8500,'daily-diamond-king'=>10000];
+        if(isset($daily[$key]))return ['team-points-total',(float)$daily[$key]];
+        $live=['live-rank-pawn'=>50,'live-rank-knight'=>150,'live-rank-bishop'=>500,'live-rank-rook'=>2500,'live-rank-queen'=>7500,'live-rank-king'=>15000];
+        if(isset($live[$key]))return ['mca-points',(float)$live[$key]];
+        $generalLeague=['league-debut'=>1,'league-regular'=>10,'league-veteran'=>25,'league-specialist'=>50,'league-legend'=>100];
+        if(isset($generalLeague[$key]))return ['league-matches',(float)$generalLeague[$key]];
+        if($key==='multi-league')return ['league-kinds',3.0];if($key==='all-league')return ['league-kinds',5.0];
+        if(preg_match('/^(1wl|pcl|tcmac|tmcl|kotml)-(competitor|veteran|legend)$/',$key,$m))return ['league-'.$m[1].'-matches',(float)(['competitor'=>1,'veteran'=>10,'legend'=>20][$m[2]])];
+        if(preg_match('/^(1wl|pcl|tcmac|tmcl|kotml)-(first-point|scorer|specialist|master)$/',$key,$m))return ['league-'.$m[1].'-points',(float)(['first-point'=>1,'scorer'=>5,'specialist'=>10,'master'=>20][$m[2]])];
+        if(preg_match('/^mca-(?:debut|(10|50|100|250))$/',$key,$m))return ['mca-arenas',$key==='mca-debut'?1.0:(float)$m[1]];
+        if($key==='mca-top10')return ['mca-top10',1.0];if($key==='mca-top10-10')return ['mca-top10',10.0];
+        if($key==='mca-podium')return ['mca-podium',1.0];if($key==='mca-podium-5')return ['mca-podium',5.0];
+        if(preg_match('/^mca-win-(\d+)$/',$key,$m))return ['mca-wins',(float)$m[1]];
+        if(preg_match('/^mca-streak-(\d+)$/',$key,$m))return ['mca-streak',(float)$m[1]];
+        if(preg_match('/^mca-wins-(\d+)$/',$key,$m))return ['mca-wins-one-arena',(float)$m[1]];
+        if(preg_match('/^same-day-matches-(\d+)$/',$key,$m))return ['same-day-matches',(float)$m[1]];
+        if(preg_match('/^concurrent-games-(\d+)$/',$key,$m))return ['concurrent-games',(float)$m[1]];
+        if(preg_match('/^groups-(5|10|15)$/',$key,$m))return ['legacy-breadth',(float)$m[1]];
+        if($key==='groups-all')return ['legacy-breadth',21.0];
+        if(preg_match('/^breadth-groups-(\d+)$/',$key,$m))return ['breadth',(float)$m[1]];
+        if(preg_match('/^collector-(\d+)$/',$key,$m))return ['collector',(float)$m[1]];
+        if(preg_match('/^rivalry-(\d+)$/',$key,$m))return ['rivalry',(float)$m[1]];
+        if(preg_match('/^opponent-countries-(\d+)$/',$key,$m))return ['opponent-countries',(float)$m[1]];
+        if(preg_match('/^chess960-matches-(\d+)$/',$key,$m))return ['chess960',(float)$m[1]];
+        if(preg_match('/^active-months-(\d+)$/',$key,$m))return ['active-months',(float)$m[1]];
+        if(preg_match('/^large-match-(\d+)$/',$key,$m))return ['large-match',(float)$m[1]];
+        if(preg_match('/^upset-(\d+)$/',$key,$m))return ['upset',(float)$m[1]];
+        if($key==='match-score-15')return ['match-score',3.0];if($key==='match-score-20')return ['match-score',4.0];
+        if(preg_match('/^match-start-streak-(\d+)$/',$key,$m))return ['match-start-streak',(float)$m[1]];
+        if(preg_match('/^match-winner-(\d+)$/',$key,$m))return ['match-winner',(float)$m[1]];
+        if(preg_match('/^match-saver-(\d+)$/',$key,$m))return ['match-saver',(float)$m[1]];
+        if($key==='photo-finish-5')return ['close-call',5.0];if(preg_match('/^close-call-(?:veteran-20|master-50|legend-100)$/',$key))return ['close-call',str_ends_with($key,'-20')?20.0:(str_ends_with($key,'-50')?50.0:100.0)];
+        if(preg_match('/^winning-side-(\d+)$/',$key,$m))return ['winning-side',(float)$m[1]];
+        if(preg_match('/^opponent-variety-(\d+)$/',$key,$m))return ['opponent-variety',(float)$m[1]];
+        if(preg_match('/^old-foes-(\d+)$/',$key,$m))return ['old-foes',(float)$m[1]];
+        if(preg_match('/^team-points-(day|week|month|year)-(\d+)$/',$key,$m))return ['team-points-'.$m[1],(float)$m[2]];
+        return null;
+    }
+
     public function memberProfile(string $username): array
     {
         $key=\p2k_tp_username_key($username);$row=$this->memberRow($key);if(!$row)return ['found'=>false,'username'=>$username];
+        $memberIds=$this->canonicalMemberIds((int)$row['member_id'],$key);$memberScope=self::memberScopeSql($memberIds);
         $live=$this->optionalOne($this->analytics,'SELECT total_points,arena_count,total_games,total_wins,total_draws,total_losses,best_streak,max_wins_single_arena,best_rank,first_place_count,top3_count,top10_count FROM p2k_lr_players WHERE club_slug=? AND username_key=? LIMIT 1',[$this->clubSlug,$key]);
         $row['live']=['points'=>(float)($live['total_points']??0),'arenas'=>(int)($live['arena_count']??0),'games'=>(int)($live['total_games']??0),'wins'=>(int)($live['total_wins']??0),'draws'=>(int)($live['total_draws']??0),'losses'=>(int)($live['total_losses']??0),'best_streak'=>(int)($live['best_streak']??0),'max_wins_single_arena'=>(int)($live['max_wins_single_arena']??0),'best_rank'=>(int)($live['best_rank']??0),'first_place_count'=>(int)($live['first_place_count']??0),'top3'=>(int)($live['top3_count']??0),'top10'=>(int)($live['top10_count']??0)];
         $recent=$this->optionalOne($this->core,
@@ -474,40 +543,41 @@ final class ClubIntelligenceService
         // achievement unlock generation. It remains an intelligence backend
         // concern even though Member Intelligence is no longer shown on the
         // normal Dashboard/Profile surface.
-        $leagueRows=$this->optionalAll($this->core,"SELECT mm.match_name,COUNT(DISTINCT mm.match_id) matches,SUM(g.points_x2)/2.0 points FROM p2k_tp_games g JOIN p2k_tp_boards b ON b.board_id=g.board_id JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id WHERE b.member_id=? AND mm.is_void=0 AND mm.is_league=1 GROUP BY mm.match_id,mm.match_name",[$this->clubSlug,(int)$row['member_id']]);
+        $leagueRows=$this->optionalAll($this->core,"SELECT mm.match_id,mm.match_name,1 matches,COALESCE(SUM(g.points_x2),0)/2.0 points FROM p2k_tp_boards b JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id LEFT JOIN p2k_tp_games g ON g.board_id=b.board_id WHERE b.member_id IN ($memberScope) AND mm.is_void=0 AND mm.is_league=1 GROUP BY mm.match_id,mm.match_name",[$this->clubSlug]);
         $league=['matches'=>0,'leagues'=>[]];
-        foreach($leagueRows as $lr){$name=strtoupper((string)($lr['match_name']??''));$league['matches']+=(int)($lr['matches']??0);foreach(['1WL','TCMAC','KOTML','TMCL','WKCL','PCL','CW'] as $code){if(preg_match('/(^|[^A-Z0-9])'.preg_quote($code,'/').'([^A-Z0-9]|$)/',$name)){if(!isset($league['leagues'][strtolower($code)]))$league['leagues'][strtolower($code)]=['matches'=>0,'points'=>0.0];$league['leagues'][strtolower($code)]['matches']+=(int)($lr['matches']??0);$league['leagues'][strtolower($code)]['points']+=(float)($lr['points']??0);break;}}}
+        foreach($leagueRows as $lr){$name=strtoupper((string)($lr['match_name']??''));$league['matches']+=(int)($lr['matches']??0);foreach(['1WL','PCL','TCMAC','TMCL','KOTML'] as $code){if(preg_match('/(^|[^A-Z0-9])'.preg_quote($code,'/').'([^A-Z0-9]|$)/',$name)){if(!isset($league['leagues'][strtolower($code)]))$league['leagues'][strtolower($code)]=['matches'=>0,'points'=>0.0];$league['leagues'][strtolower($code)]['matches']+=(int)($lr['matches']??0);$league['leagues'][strtolower($code)]['points']+=(float)($lr['points']??0);break;}}}
         // v2.9.0 achievement-family progress metrics. These are reconstructed only
         // from authoritative stored participation/match/game intervals; incomplete
         // finished boards are excluded from concurrency rather than guessed.
-        $sameDay=$this->optionalOne($this->core,"SELECT MAX(day_matches) peak FROM (SELECT DATE(mm.start_time) d,COUNT(DISTINCT mm.match_id) day_matches FROM p2k_tp_boards b JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id WHERE b.member_id=? AND mm.is_void=0 AND mm.start_time IS NOT NULL AND mm.start_time<=UTC_TIMESTAMP() GROUP BY DATE(mm.start_time)) x",[$this->clubSlug,(int)$row['member_id']]);
-        $concurrentPeak=0;try{$concurrentPeak=$this->concurrentGamesPeak((int)$row['member_id']);}catch(\Throwable $e){error_log('P2K member intelligence concurrency metric: '.$e->getMessage());}
+        $sameDay=$this->optionalOne($this->core,"SELECT MAX(day_matches) peak FROM (SELECT DATE(mm.start_time) d,COUNT(DISTINCT mm.match_id) day_matches FROM p2k_tp_boards b JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id WHERE b.member_id IN ($memberScope) AND mm.is_void=0 AND mm.start_time IS NOT NULL AND mm.start_time<=UTC_TIMESTAMP() GROUP BY DATE(mm.start_time)) x",[$this->clubSlug]);
+        $concurrentPeak=0;try{$concurrentPeak=$this->concurrentGamesPeak($memberIds);}catch(\Throwable $e){error_log('P2K member intelligence concurrency metric: '.$e->getMessage());}
         $earnedKeys=array_map(static fn($r)=>(string)$r['achievement_key'],$this->optionalAll($this->analytics,'SELECT achievement_key FROM p2k_an_achievement_unlocks WHERE club_slug=? AND username_key=?',[$this->clubSlug,$key]));
         $categoryByKey=[];foreach(AchievementCatalog::all() as $a)$categoryByKey[(string)$a['key']]=(string)$a['category'];
         $eligible=array_fill_keys(AchievementCatalog::eligibleBreadthCategories(),true);$legacyEligible=array_fill_keys(AchievementCatalog::legacyBreadthCategories(),true);$earnedCategories=[];$legacyEarnedCategories=[];
         $earnedNonCollector=0;foreach($earnedKeys as $achievementKey){$cat=$categoryByKey[$achievementKey]??'';if(isset($eligible[$cat]))$earnedCategories[$cat]=true;if(isset($legacyEligible[$cat]))$legacyEarnedCategories[$cat]=true;if($cat!==''&&$cat!=='achievement-collector')$earnedNonCollector++;}
         $newMetrics=$this->optionalOne($this->core,"SELECT
-            (SELECT MAX(cnt) FROM (SELECT COUNT(DISTINCT mm.match_id) cnt FROM p2k_tp_boards bx JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=bx.match_id WHERE bx.member_id=? AND mm.is_void=0 AND COALESCE(mm.opponent_slug,'')<>'' GROUP BY mm.opponent_slug) r) rivalry_max,
+            (SELECT MAX(cnt) FROM (SELECT COUNT(DISTINCT mm.match_id) cnt FROM p2k_tp_boards bx JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=bx.match_id LEFT JOIN p2k_tp_opponent_aliases oa ON oa.club_slug=mm.club_slug AND oa.alias_slug=mm.opponent_slug WHERE bx.member_id IN ($memberScope) AND mm.is_void=0 AND COALESCE(oa.canonical_slug,mm.opponent_slug,'')<>'' GROUP BY COALESCE(oa.canonical_slug,mm.opponent_slug)) r) rivalry_max,
             COUNT(DISTINCT CASE WHEN COALESCE(o.country_code,'')<>'' THEN o.country_code END) opponent_countries,
             COUNT(DISTINCT CASE WHEN LOWER(COALESCE(mm.rules,'')) LIKE '%960%' THEN mm.match_id END) chess960_matches,
             MAX(mm.board_count) largest_match_boards,
             MAX(CASE WHEN g.points_x2=2 AND b.p2k_rating IS NOT NULL AND b.opponent_rating IS NOT NULL THEN b.opponent_rating-b.p2k_rating ELSE NULL END) max_upset_delta
-            FROM p2k_tp_boards b JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id LEFT JOIN p2k_tp_opponents o ON o.club_slug=mm.club_slug AND o.opponent_slug=mm.opponent_slug LEFT JOIN p2k_tp_games g ON g.board_id=b.board_id WHERE b.member_id=? AND mm.is_void=0",[$this->clubSlug,(int)$row['member_id'],$this->clubSlug,(int)$row['member_id']]);
-        $months=$this->optionalAll($this->core,"SELECT DISTINCT DATE_FORMAT(COALESCE(mm.start_time,mm.end_time),'%Y-%m') ym FROM p2k_tp_boards b JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id WHERE b.member_id=? AND mm.is_void=0 AND COALESCE(mm.start_time,mm.end_time) IS NOT NULL ORDER BY ym",[$this->clubSlug,(int)$row['member_id']]);
+            FROM p2k_tp_boards b JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id LEFT JOIN p2k_tp_opponent_aliases oa2 ON oa2.club_slug=mm.club_slug AND oa2.alias_slug=mm.opponent_slug LEFT JOIN p2k_tp_opponents o ON o.club_slug=mm.club_slug AND o.opponent_slug=COALESCE(oa2.canonical_slug,mm.opponent_slug) LEFT JOIN p2k_tp_games g ON g.board_id=b.board_id WHERE b.member_id IN ($memberScope) AND mm.is_void=0",[$this->clubSlug,$this->clubSlug]);
+        $months=$this->optionalAll($this->core,"SELECT DISTINCT DATE_FORMAT(COALESCE(mm.start_time,mm.end_time),'%Y-%m') ym FROM p2k_tp_boards b JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id WHERE b.member_id IN ($memberScope) AND mm.is_void=0 AND COALESCE(mm.start_time,mm.end_time) IS NOT NULL ORDER BY ym",[$this->clubSlug]);
         $maxMonthStreak=0;$currentStreak=0;$previous=null;foreach($months as $mr){$ym=(string)($mr['ym']??'');if(!preg_match('/^(\d{4})-(\d{2})$/',$ym,$mx))continue;$idx=((int)$mx[1])*12+(int)$mx[2];$currentStreak=$previous!==null&&$idx===$previous+1?$currentStreak+1:1;$previous=$idx;$maxMonthStreak=max($maxMonthStreak,$currentStreak);}
-        $boardPerf=$this->optionalOne($this->core,"SELECT MAX(points_x2) best_board_points_x2,MAX(two_draws) two_draws FROM (SELECT SUM(g.points_x2) points_x2,CASE WHEN SUM(g.points_x2=1)>=2 THEN 1 ELSE 0 END two_draws FROM p2k_tp_boards b JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id JOIN p2k_tp_games g ON g.board_id=b.board_id WHERE b.member_id=? AND mm.is_void=0 GROUP BY b.board_id HAVING COUNT(g.game_row_id)>=2) z",[$this->clubSlug,(int)$row['member_id']]);
-        $participations=$this->optionalAll($this->core,"SELECT mm.match_id,mm.start_time,mm.end_time,mm.status,mm.result,mm.p2k_score,mm.opponent_score,mm.opponent_slug,COALESCE(SUM(g.points_x2),0) player_points_x2 FROM p2k_tp_boards b JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id LEFT JOIN p2k_tp_games g ON g.board_id=b.board_id WHERE b.member_id=? AND mm.is_void=0 GROUP BY mm.match_id,mm.start_time,mm.end_time,mm.status,mm.result,mm.p2k_score,mm.opponent_score,mm.opponent_slug ORDER BY COALESCE(mm.start_time,mm.end_time),mm.match_id",[$this->clubSlug,(int)$row['member_id']]);
+        $boardPerf=$this->optionalOne($this->core,"SELECT MAX(points_x2) best_board_points_x2,MAX(two_draws) two_draws FROM (SELECT SUM(g.points_x2) points_x2,CASE WHEN SUM(g.points_x2=1)>=2 THEN 1 ELSE 0 END two_draws FROM p2k_tp_boards b JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id JOIN p2k_tp_games g ON g.board_id=b.board_id WHERE b.member_id IN ($memberScope) AND mm.is_void=0 GROUP BY b.board_id HAVING COUNT(g.game_row_id)>=2) z",[$this->clubSlug]);
+        $participations=$this->optionalAll($this->core,"SELECT mm.match_id,mm.start_time,mm.end_time,mm.status,mm.result,mm.p2k_score,mm.opponent_score,COALESCE(oa.canonical_slug,mm.opponent_slug) opponent_slug,COALESCE(SUM(g.points_x2),0) player_points_x2 FROM p2k_tp_boards b JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id LEFT JOIN p2k_tp_opponent_aliases oa ON oa.club_slug=mm.club_slug AND oa.alias_slug=mm.opponent_slug LEFT JOIN p2k_tp_games g ON g.board_id=b.board_id WHERE b.member_id IN ($memberScope) AND mm.is_void=0 GROUP BY mm.match_id,mm.start_time,mm.end_time,mm.status,mm.result,mm.p2k_score,mm.opponent_score,COALESCE(oa.canonical_slug,mm.opponent_slug) ORDER BY COALESCE(mm.start_time,mm.end_time),mm.match_id",[$this->clubSlug]);
         $startDays=[];$opponents=[];$rematches=0;$closeCalls=0;$winningSide=0;$matchWinners=0;$matchSavers=0;
         foreach($participations as $pr){$start=(string)($pr['start_time']??'');if($start!=='')$startDays[substr($start,0,10)]=true;$opp=strtolower(trim((string)($pr['opponent_slug']??'')));if($opp!==''){if(isset($opponents[$opp]))$rematches++;else $opponents[$opp]=true;}if(strtolower((string)($pr['status']??''))!=='finished')continue;$result=strtolower((string)($pr['result']??''));$p2k=(float)($pr['p2k_score']??0);$other=(float)($pr['opponent_score']??0);if(abs($p2k-$other)<=1.000001)$closeCalls++;if($result==='win')$winningSide++;$own=(int)($pr['player_points_x2']??0);$p2kx2=(int)round($p2k*2);$otherx2=(int)round($other*2);if($own>0&&$result==='win'&&$p2kx2-$own<=$otherx2)$matchWinners++;if($own>0&&$result==='draw'&&$p2kx2-$own<$otherx2)$matchSavers++;}
         $dayIndexes=[];foreach(array_keys($startDays) as $d){$ts=strtotime($d.' UTC');if($ts!==false)$dayIndexes[]=(int)floor($ts/86400);}sort($dayIndexes,SORT_NUMERIC);$startDayPeak=0;$run=0;$prev=null;foreach($dayIndexes as $idx){$run=$prev!==null&&$idx===$prev+1?$run+1:1;$prev=$idx;$startDayPeak=max($startDayPeak,$run);}
-        $row['achievement_metrics']=['same_day_match_starts_peak'=>(int)($sameDay['peak']??0),'concurrent_games_peak'=>$concurrentPeak,'earned_group_count'=>count($earnedCategories),'eligible_group_count'=>count($eligible),'legacy_earned_group_count'=>count($legacyEarnedCategories),'legacy_eligible_group_count'=>count($legacyEligible),'earned_non_collector_count'=>$earnedNonCollector,'rivalry_max'=>(int)($newMetrics['rivalry_max']??0),'opponent_countries'=>(int)($newMetrics['opponent_countries']??0),'chess960_matches'=>(int)($newMetrics['chess960_matches']??0),'active_month_streak'=>$maxMonthStreak,'largest_match_boards'=>(int)($newMetrics['largest_match_boards']??0),'max_upset_delta'=>(int)($newMetrics['max_upset_delta']??0),'best_board_points_x2'=>(int)($boardPerf['best_board_points_x2']??0),'two_draws'=>(int)($boardPerf['two_draws']??0),'consecutive_match_start_days_peak'=>$startDayPeak,'opponent_variety'=>count($opponents),'rematch_count'=>$rematches,'close_call_matches'=>$closeCalls,'winning_side_matches'=>$winningSide,'match_winner_count'=>$matchWinners,'match_saver_count'=>$matchSavers];
+        $periodPeaks=$this->optionalOne($this->core,"SELECT MAX(CASE WHEN period_type='day' THEN points_x2 END)/2.0 team_points_day_peak,MAX(CASE WHEN period_type='week' THEN points_x2 END)/2.0 team_points_week_peak,MAX(CASE WHEN period_type='month' THEN points_x2 END)/2.0 team_points_month_peak,MAX(CASE WHEN period_type='year' THEN points_x2 END)/2.0 team_points_year_peak FROM (SELECT 'day' period_type,DATE(g.game_end_utc) period_key,SUM(g.points_x2) points_x2 FROM p2k_tp_games g JOIN p2k_tp_boards b ON b.board_id=g.board_id JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id WHERE b.member_id IN ($memberScope) AND mm.is_void=0 GROUP BY DATE(g.game_end_utc) UNION ALL SELECT 'week',YEARWEEK(g.game_end_utc,3),SUM(g.points_x2) FROM p2k_tp_games g JOIN p2k_tp_boards b ON b.board_id=g.board_id JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id WHERE b.member_id IN ($memberScope) AND mm.is_void=0 GROUP BY YEARWEEK(g.game_end_utc,3) UNION ALL SELECT 'month',DATE_FORMAT(g.game_end_utc,'%Y-%m'),SUM(g.points_x2) FROM p2k_tp_games g JOIN p2k_tp_boards b ON b.board_id=g.board_id JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id WHERE b.member_id IN ($memberScope) AND mm.is_void=0 GROUP BY DATE_FORMAT(g.game_end_utc,'%Y-%m') UNION ALL SELECT 'year',YEAR(g.game_end_utc),SUM(g.points_x2) FROM p2k_tp_games g JOIN p2k_tp_boards b ON b.board_id=g.board_id JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id WHERE b.member_id IN ($memberScope) AND mm.is_void=0 GROUP BY YEAR(g.game_end_utc)) p",[$this->clubSlug,$this->clubSlug,$this->clubSlug,$this->clubSlug]);
+        $row['achievement_metrics']=['team_points_day_peak'=>(float)($periodPeaks['team_points_day_peak']??0),'team_points_week_peak'=>(float)($periodPeaks['team_points_week_peak']??0),'team_points_month_peak'=>(float)($periodPeaks['team_points_month_peak']??0),'team_points_year_peak'=>(float)($periodPeaks['team_points_year_peak']??0),'same_day_match_starts_peak'=>(int)($sameDay['peak']??0),'concurrent_games_peak'=>$concurrentPeak,'earned_group_count'=>count($earnedCategories),'eligible_group_count'=>count($eligible),'legacy_earned_group_count'=>count($legacyEarnedCategories),'legacy_eligible_group_count'=>count($legacyEligible),'earned_non_collector_count'=>$earnedNonCollector,'rivalry_max'=>(int)($newMetrics['rivalry_max']??0),'opponent_countries'=>(int)($newMetrics['opponent_countries']??0),'chess960_matches'=>(int)($newMetrics['chess960_matches']??0),'active_month_streak'=>$maxMonthStreak,'largest_match_boards'=>(int)($newMetrics['largest_match_boards']??0),'max_upset_delta'=>(int)($newMetrics['max_upset_delta']??0),'best_board_points_x2'=>(int)($boardPerf['best_board_points_x2']??0),'two_draws'=>(int)($boardPerf['two_draws']??0),'consecutive_match_start_days_peak'=>$startDayPeak,'opponent_variety'=>count($opponents),'rematch_count'=>$rematches,'close_call_matches'=>$closeCalls,'winning_side_matches'=>$winningSide,'match_winner_count'=>$matchWinners,'match_saver_count'=>$matchSavers];
         $row['achievement_progress']=$this->achievementProgress($row,$league);$row['challenges']=array_slice($row['achievement_progress'],0,5);return ['found'=>true,'member'=>$row];
     }
 
-    private function concurrentGamesPeak(int $memberId): int
+    private function concurrentGamesPeak(array $memberIds): int
     {
-        if($memberId<=0)return 0;
-        $rows=$this->all($this->core,"SELECT b.board_id,mm.status,mm.start_time,g.game_end_utc FROM p2k_tp_boards b JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id LEFT JOIN p2k_tp_games g ON g.board_id=b.board_id WHERE b.member_id=? AND mm.is_void=0 AND mm.start_time IS NOT NULL AND mm.start_time<=UTC_TIMESTAMP() AND mm.status IN ('in_progress','finished') ORDER BY b.board_id,g.game_end_utc",[$this->clubSlug,$memberId]);
+        $memberScope=self::memberScopeSql($memberIds);if($memberScope==='0')return 0;
+        $rows=$this->all($this->core,"SELECT b.board_id,mm.status,mm.start_time,g.game_end_utc FROM p2k_tp_boards b JOIN p2k_tp_match_metadata mm ON mm.club_slug=? AND mm.match_id=b.match_id LEFT JOIN p2k_tp_games g ON g.board_id=b.board_id WHERE b.member_id IN ($memberScope) AND mm.is_void=0 AND mm.start_time IS NOT NULL AND mm.start_time<=UTC_TIMESTAMP() AND mm.status IN ('in_progress','finished') ORDER BY b.board_id,g.game_end_utc",[$this->clubSlug]);
         $boards=[];foreach($rows as $r){$id=(int)$r['board_id'];if(!isset($boards[$id]))$boards[$id]=['status'=>(string)$r['status'],'start'=>(string)$r['start_time'],'ends'=>[]];if(!empty($r['game_end_utc']))$boards[$id]['ends'][]=(string)$r['game_end_utc'];}
         $events=[];foreach($boards as $b){if($b['status']==='finished'&&count($b['ends'])<2)continue;$start=strtotime($b['start'].' UTC');if(!$start)continue;$events[]=[$start,2];foreach($b['ends'] as $end){$ts=strtotime($end.' UTC');if($ts)$events[]=[$ts,-1];}}
         usort($events,static fn($a,$b)=>$a[0]<=>$b[0]?:$a[1]<=>$b[1]);$active=0;$peak=0;foreach($events as [, $delta]){$active=max(0,$active+$delta);$peak=max($peak,$active);}return $peak;
@@ -522,6 +592,7 @@ final class ClubIntelligenceService
         foreach(AchievementCatalog::all() as $item){$key=(string)$item['key'];if(isset($set[$key]))continue;$cur=$target=null;$metric='';
             if($key==='first-match'){$cur=(float)$m['matches'];$target=1;$metric='Team matches';}
             elseif($key==='first-point'){$cur=(float)$m['points'];$target=1;$metric='Team Points';}
+            elseif(preg_match('/^team-points-(day|week|month|year)-(2|5|10|20|25|50|100|250)$/',$key,$x)){$cur=(float)($m['achievement_metrics']['team_points_'.$x[1].'_peak']??0);$target=(float)$x[2];$metric='Team Points in one '.($x[1]==='day'?'UTC day':($x[1]==='week'?'ISO week':('UTC calendar '.$x[1])));}
             elseif(preg_match('/^matches-(\d+)$/',$key,$x)){$cur=(float)$m['matches'];$target=(float)$x[1];$metric='Team matches';}
             elseif(preg_match('/^games-(\d+)$/',$key,$x)){$cur=(float)$m['games'];$target=(float)$x[1];$metric='Team games';}
             elseif(preg_match('/^wins-(\d+)$/',$key,$x)){$cur=(float)$m['wins'];$target=(float)$x[1];$metric='Team wins';}
@@ -534,8 +605,8 @@ final class ClubIntelligenceService
             elseif($key==='league-legend'){$cur=$leagueMatches;$target=100;$metric='League matches';}
             elseif($key==='multi-league'){$cur=$leagueKinds;$target=3;$metric='Leagues represented';}
             elseif($key==='all-league'){$cur=$leagueKinds;$target=5;$metric='Leagues represented';}
-            elseif(preg_match('/^(1wl|tcmac|kotml|tmcl|wkcl|pcl|cw)-(competitor|veteran|legend)$/',$key,$x)){$cur=(float)($leagueMap[$x[1]]['matches']??0);$target=$x[2]==='competitor'?1:($x[2]==='veteran'?10:20);$metric=strtoupper($x[1]).' matches';}
-            elseif(preg_match('/^(1wl|tcmac|kotml|tmcl|wkcl|pcl|cw)-(first-point|scorer|specialist|master)$/',$key,$x)){$cur=(float)($leagueMap[$x[1]]['points']??0);$target=['first-point'=>1,'scorer'=>5,'specialist'=>10,'master'=>20][$x[2]];$metric=strtoupper($x[1]).' points';}
+            elseif(preg_match('/^(1wl|pcl|tcmac|tmcl|kotml)-(competitor|veteran|legend)$/',$key,$x)){$cur=(float)($leagueMap[$x[1]]['matches']??0);$target=$x[2]==='competitor'?1:($x[2]==='veteran'?10:20);$metric=strtoupper($x[1]).' matches';}
+            elseif(preg_match('/^(1wl|pcl|tcmac|tmcl|kotml)-(first-point|scorer|specialist|master)$/',$key,$x)){$cur=(float)($leagueMap[$x[1]]['points']??0);$target=['first-point'=>1,'scorer'=>5,'specialist'=>10,'master'=>20][$x[2]];$metric=strtoupper($x[1]).' points';}
             elseif(preg_match('/^seniority-(1m|3m|6m|1y|2y|3y|5y)$/',$key,$x)&&$seniorityBase!==null){$offset=['1m'=>'+1 month','3m'=>'+3 months','6m'=>'+6 months','1y'=>'+1 year','2y'=>'+2 years','3y'=>'+3 years','5y'=>'+5 years'][$x[1]];$threshold=strtotime($offset,$seniorityBase);if($threshold!==false){$target=max(1,(float)(int)ceil(($threshold-$seniorityBase)/86400));$cur=max(0,(float)(int)floor((time()-$seniorityBase)/86400));$metric='Membership days';}}
             elseif(preg_match('/^mca-(?:debut|(\d+))$/',$key,$x)){$cur=(float)($m['live']['arenas']??0);$target=$key==='mca-debut'?1.0:(float)$x[1];$metric='MCA arenas';}
             elseif($key==='mca-top10'){$cur=(float)($m['live']['top10']??0);$target=1;$metric='MCA top-ten finishes';}
@@ -568,7 +639,7 @@ final class ClubIntelligenceService
             elseif(preg_match('/^winning-side-(10|50|100|250)$/',$key,$x)){$cur=(float)($m['achievement_metrics']['winning_side_matches']??0);$target=(float)$x[1];$metric='Team-match wins participated in';}
             elseif(preg_match('/^opponent-variety-(25|50|100)$/',$key,$x)){$cur=(float)($m['achievement_metrics']['opponent_variety']??0);$target=(float)$x[1];$metric='Distinct opponent clubs';}
             elseif(preg_match('/^old-foes-(5|10|25)$/',$key,$x)){$cur=(float)($m['achievement_metrics']['rematch_count']??0);$target=(float)$x[1];$metric='Rematch participations';}
-            if($target===null||$target<=0||$cur===null)continue;$cur=max(0,(float)$cur);$remaining=max(0,$target-$cur);$out[]=$item+['current'=>$cur,'target'=>$target,'remaining'=>$remaining,'progress_percent'=>round(min(100,100*$cur/$target),1),'progress_metric'=>$metric];
+            if($target===null||$target<=0||$cur===null)continue;$cur=max(0,(float)$cur);$identity=self::progressFloorIdentity($key);if($identity!==null){$floor=0.0;foreach(array_keys($set) as $earnedKey){$earnedIdentity=self::progressFloorIdentity((string)$earnedKey);if($earnedIdentity!==null&&$earnedIdentity[0]===$identity[0])$floor=max($floor,(float)$earnedIdentity[1]);}$cur=max($cur,$floor);}$remaining=max(0,$target-$cur);$out[]=$item+['current'=>$cur,'target'=>$target,'remaining'=>$remaining,'progress_percent'=>round(min(100,100*$cur/$target),1),'progress_metric'=>$metric];
         }
         usort($out,static fn($a,$b)=>$a['remaining']<=>$b['remaining']?:$b['progress_percent']<=>$a['progress_percent']);return $out;
     }

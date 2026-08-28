@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.9 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.9" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.9.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.9.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.9" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.9","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.9.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v299">Promote to King v2.9.9</h1>
+
+<p>v2.9.9 is a focused authenticated-throughput release built from the exact verified v2.9.8 package. It does not change scoring, achievements, database schemas or CRON cadence. Its purpose is to remove caller-side bottlenecks that prevented the real Chess.com OAuth Bearer transport from reaching the adaptive throughput demonstrated by the OAuth POCs.</p>
+
+<h2 id="real-oauth-throughput-policy">Real OAuth throughput policy</h2>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">?oauth=2</code> remains the only real Chess.com OAuth mode. The access token stays exclusively in the protected server-side PHP OAuth session and is never exposed to page JavaScript.</li>
+  <li>Anonymous/public traffic and simulated <code class="language-plaintext highlighter-rouge">?oauth=1</code> remain serial/conservative.</li>
+  <li>Real OAuth starts at a concurrency target of 8 and probes upward while batches remain healthy. The shared controller uses a deep reservoir of up to four waves per target and retains learned tuning in the browser session for 30 minutes.</li>
+  <li>Healthy growth proceeds progressively (for example 8 → 12 → 16 → 24 → 36) rather than restarting from 4 on every small batch.</li>
+  <li>HTTP 429 halves pressure immediately and honors <code class="language-plaintext highlighter-rouge">Retry-After</code>/backoff. Transport/5xx errors reduce pressure, and sustained throughput plateaus or sharply increased latency stop upward probing.</li>
+  <li>The server OAuth gateway accepts up to 512 queued PubAPI requests per batch and uses PHP cURL-multi with a runtime-safe open-file/connection cap. Feature pages no longer impose their own low concurrency ceilings when real OAuth is active.</li>
+</ul>
+
+<h2 id="cross-site-oauth-propagation-and-startup">Cross-site OAuth propagation and startup</h2>
+
+<ul>
+  <li>Fixed the site router so a parent page running <code class="language-plaintext highlighter-rouge">oauth=2</code> propagates <strong><code class="language-plaintext highlighter-rouge">oauth=2</code></strong>, not <code class="language-plaintext highlighter-rouge">oauth=1</code>, to embedded and standalone tools.</li>
+  <li>Fixed the router’s flag parsing so value <code class="language-plaintext highlighter-rouge">2</code> is recognized as real OAuth rather than treated as false.</li>
+  <li>All pages that use the shared Chess.com API client now load the real-OAuth adapter.</li>
+  <li>Chess.com requests on an <code class="language-plaintext highlighter-rouge">oauth=2</code> page wait for the initial server-side OAuth session probe before selecting the transport. Auto-running tools can no longer begin their first scan in anonymous serial mode merely because the OAuth adapter was deferred.</li>
+</ul>
+
+<h2 id="cron-control--continuous-speed-fetch">CRON Control / continuous speed fetch</h2>
+
+<ul>
+  <li>The continuous client refresh / speed-fetch card now requests up to 256 due tasks under real OAuth instead of 48.</li>
+  <li>The server planner accepts up to 512 tasks and scans a deeper due-work reservoir.</li>
+  <li>All scheduled tasks are handed to the shared adaptive transport together, allowing cURL-multi to stay fed through multiple probe waves.</li>
+  <li>The card does not maintain a competing feature-level concurrency setting; the shared OAuth gateway is the single pressure controller.</li>
+</ul>
+
+<h2 id="acamr">ACAMR</h2>
+
+<ul>
+  <li>Real OAuth ACAMR uses a substantially deeper feed: default 48 claims per pulse, 5-second pulse target and 600-member scan batch, with bounded caps.</li>
+  <li>Anonymous/simulated behavior retains the conservative historical pulse and claim limits.</li>
+  <li>Claim-bound observation/provenance rules from v2.9.8 remain unchanged; browser observations still cannot become canonical authority for points, match results, achievements or verified ratings.</li>
+</ul>
+
+<h2 id="match-and-recruitment-tools">Match and recruitment tools</h2>
+
+<p>The following callers now feed the shared adaptive scheduler rather than retaining feature-era serial loops or hard worker counts:</p>
+
+<ul>
+  <li>Find Match, including retry scans.</li>
+  <li>Upcoming Matches analysis, including failed-match retries.</li>
+  <li>Match Creation Analyzer, including targeted chart-detail reloads.</li>
+  <li>Challenge Assistant bulk checks, recommendation evaluation, board-detail acquisition and profile/match-index pairs.</li>
+  <li>Recruitment Demand Planner; the former hard four-worker pool is removed.</li>
+  <li>Router/admin club-profile verification uses the shared client when available.</li>
+</ul>
+
+<h2 id="tournament-ingestion">Tournament ingestion</h2>
+
+<ul>
+  <li>Tournament Management now uses the shared OAuth-aware API client for historical discovery, podium/group reads, placement lookups, retry work and medalist profile validation.</li>
+  <li>The legacy 550 ms paced requester remains only as a fallback when the shared client is genuinely unavailable; it is not used in the normal real-OAuth site path.</li>
+  <li>Cancellation and repair checkpoints remain intact.</li>
+</ul>
+
+<h2 id="server-maintenance-paths">Server-maintenance paths</h2>
+
+<p>Some admin operations POST to P2K server endpoints rather than directly scheduling browser PubAPI reads. Those paths now also use the authenticated Bearer transport when a real OAuth session exists:</p>
+
+<ul>
+  <li>Live Ranks former-player profile verification dynamically probes multiple profiles per server step instead of the former hard 8-profile serial step.</li>
+  <li>Opponent-club maintenance batches club profile/fallback checks through the server-held Bearer token.</li>
+  <li>Temporary 429/5xx/transport failures remain pending/retryable and cannot incorrectly classify a player as renamed/closed or an opponent club as disabled.</li>
+  <li>CLI/CRON workers deliberately remain anonymous/serial because v2.9.9 does not persist a user’s OAuth token for unattended background use.</li>
+</ul>
+
+<h2 id="validation">Validation</h2>
+
+<p>The dedicated browser throughput gate queues 256 mocked Chess.com calls and verifies the real-OAuth shared client actually produces successive batches of 32 at target 8, 48 at 12, 64 at 16 and 96 at 24, then probes to 36. The same gate verifies immediate reduction to 18 when a synthetic 429-pressure batch is reported.</p>
+
+<h2 id="data--compatibility">Data / compatibility</h2>
+
+<ul>
+  <li>Core schema: <strong>11</strong> (unchanged).</li>
+  <li>Analytics schema: <strong>6</strong> (unchanged).</li>
+  <li>Achievement catalogue: <strong>162</strong> (unchanged).</li>
+  <li>No migration, reset or reseed.</li>
+  <li>CRON cadence unchanged from v2.9.8.</li>
+  <li>Existing protected <code class="language-plaintext highlighter-rouge">server/team-points/config/oauth.local.php</code> is preserved unchanged.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.9.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

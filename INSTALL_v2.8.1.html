@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.1 — installation / upgrade guide | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.1 — installation / upgrade guide" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.8.1.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.8.1.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.1 — installation / upgrade guide" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.1 — installation / upgrade guide","url":"https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.8.1.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v281--installation--upgrade-guide">Promote to King v2.8.1 — installation / upgrade guide</h1>
+
+<p>v2.8.1 Hotfix 2 is an <strong>in-place convergence upgrade</strong> for a working v2.8.x Core + Analytics deployment, including v2.8.0 Recovery Fix 6 + AuthBaseline, v2.8.1/Hotfix1, or RecoveryFix7.</p>
+
+<p><strong>Do not create new databases. Do not run the v2.8.0 fresh initializer again. Do not reload the seed snapshot.</strong></p>
+
+<p>The existing Core and Analytics databases are upgraded automatically to <strong>schema revision 3</strong>. The migration accepts schema revision 1 and either historical revision-2 branch.</p>
+
+<h2 id="1-back-up-the-current-deployment">1. Back up the current deployment</h2>
+
+<p>Back up the website files and both v2.8 databases before replacing code. Preserve at minimum:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/config/config.local.php</code></li>
+  <li><code class="language-plaintext highlighter-rouge">data/server-config.json</code></li>
+  <li><code class="language-plaintext highlighter-rouge">config/site-branding.js</code></li>
+  <li><code class="language-plaintext highlighter-rouge">data/tournaments/</code></li>
+  <li><code class="language-plaintext highlighter-rouge">data/match-tracking/</code></li>
+  <li><code class="language-plaintext highlighter-rouge">data/live-ranks/</code></li>
+  <li><code class="language-plaintext highlighter-rouge">data/runtime-v280/</code></li>
+  <li><code class="language-plaintext highlighter-rouge">data/archive-v280/</code></li>
+</ul>
+
+<p>The package contains a baseline <code class="language-plaintext highlighter-rouge">config/site-branding.js</code>, but production customizations should not be overwritten blindly.</p>
+
+<h2 id="2-pause-scheduled-work-briefly">2. Pause scheduled work briefly</h2>
+
+<p>Pause Team Points from the integrated Administration / Scheduled tasks page, or temporarily disable the external CRON while replacing files. Match monitoring and tournament jobs can also be paused for a completely quiet deployment, but their schemas are unchanged.</p>
+
+<h2 id="3-upload-v281-over-v280">3. Upload v2.8.1 over v2.8.0</h2>
+
+<p>Extract the v2.8.1 ZIP locally and upload the website files over the current v2.8.0 installation.</p>
+
+<p>Keep the existing production secrets/configuration. In particular, do not replace <code class="language-plaintext highlighter-rouge">server/team-points/config/config.local.php</code> with the example configuration.</p>
+
+<h2 id="4-do-not-use-the-old-initializer">4. Do not use the old initializer</h2>
+
+<p>The v2.8.0 initializer and its Recovery Fixes were only for creating the two fresh v2.8 databases.</p>
+
+<p>For v2.8.1:</p>
+
+<ul>
+  <li>no initializer is required;</li>
+  <li>no CSV/TXT seed files are required;</li>
+  <li>no Core data is deleted;</li>
+  <li>no Analytics database is recreated.</li>
+</ul>
+
+<h2 id="5-trigger-the-in-place-schema-upgrade">5. Trigger the in-place schema upgrade</h2>
+
+<p>Open one of these pages while authenticated as administrator:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">https://www.promotetoking.org/TeamPointsAdmin.html?admin=1</code></li>
+  <li>or the integrated Administration / Live ranks / Storage pages.</li>
+</ul>
+
+<p>The Team Points API automatically calls <code class="language-plaintext highlighter-rouge">upgradeExistingSchema()</code> when either v2.8 database is below schema revision 3.</p>
+
+<p>Alternatively, the normal Team Points CRON is migration-aware and can perform the same upgrade. Opening the admin page first is preferable because it gives you an immediate visible verification point.</p>
+
+<p>The migration performs:</p>
+
+<h3 id="core--schema-revision-3">Core → schema revision 3</h3>
+
+<p>Idempotently adds the combined v2.8.1 + RecoveryFix7 fields when missing:</p>
+
+<ul>
+  <li>opportunistic member <code class="language-plaintext highlighter-rouge">daily_rating</code>, <code class="language-plaintext highlighter-rouge">chess960_rating</code>, and <code class="language-plaintext highlighter-rouge">rating_updated_at</code>;</li>
+  <li>match-level <code class="language-plaintext highlighter-rouge">p2k_avg_rating</code> and <code class="language-plaintext highlighter-rouge">opponent_avg_rating</code>.</li>
+</ul>
+
+<h3 id="analytics--schema-revision-3">Analytics → schema revision 3</h3>
+
+<p>Idempotently adds:</p>
+
+<ul>
+  <li>materialized Daily/Chess960 ratings;</li>
+  <li><code class="language-plaintext highlighter-rouge">last_standard_game_at</code> and <code class="language-plaintext highlighter-rouge">last_chess960_game_at</code>;</li>
+  <li>the two match average-rating fields;</li>
+  <li><code class="language-plaintext highlighter-rouge">first_place_count</code> for Live/MCA aggregates;</li>
+  <li><code class="language-plaintext highlighter-rouge">p2k_an_achievement_unlocks</code> for persistent achievement timestamps and member counts.</li>
+</ul>
+
+<p>The migration also invalidates the old Analytics refresh marker so the combined projections are populated on the first post-upgrade Analytics read.</p>
+
+<h2 id="6-verify-schema-versions">6. Verify schema versions</h2>
+
+<p>Open Team Points administration/status. Both data domains should report schema revision 3. No fresh initialization should run.</p>
+
+<h2 id="7-verify-administrator-access">7. Verify administrator access</h2>
+
+<p>Log in normally. Administrator membership is now determined in this order:</p>
+
+<ol>
+  <li>verified OAuth admin role/claim when real OAuth supplies one;</li>
+  <li>the public Promote to King Chess.com club API administrator list;</li>
+  <li><code class="language-plaintext highlighter-rouge">config/site-branding.js</code> <code class="language-plaintext highlighter-rouge">adminUsernames</code> only as an API-outage fallback;</li>
+  <li>explicit <code class="language-plaintext highlighter-rouge">?admin=1</code> remains an emergency/manual entry path.</li>
+</ol>
+
+<p>MariaDB is not consulted to decide whether the administrator UI may open.</p>
+
+<h2 id="8-verify-administration-integration">8. Verify Administration integration</h2>
+
+<p>From the main dashboard open Administration and check:</p>
+
+<ul>
+  <li>Open Match Analyzer;</li>
+  <li>Live ranks computation;</li>
+  <li>Storage &amp; capacity;</li>
+  <li>Scheduled tasks/logs/diagnostics.</li>
+</ul>
+
+<p>The integrated Live-ranks and Open Match Analyzer panels should expand to their content height instead of using a fixed scrolling iframe.</p>
+
+<p>The dashboard System health block should include an overall health indicator and Storage capacity health.</p>
+
+<h2 id="9-verify-tracked-match-history">9. Verify tracked-match history</h2>
+
+<p>Open a followed/upcoming match with tracking history and check the lineup-evolution graph:</p>
+
+<ul>
+  <li>the final point is labelled <strong>Current live lineup</strong>;</li>
+  <li>the x-axis uses real UTC time spacing;</li>
+  <li>hover displays exact values;</li>
+  <li>drag horizontally to zoom;</li>
+  <li>double-click or Reset zoom restores the full range;</li>
+  <li>opening a timeslot shows win-probability change versus the previous slot;</li>
+  <li>Left/Right keyboard arrows navigate timeslots.</li>
+</ul>
+
+<h2 id="10-verify-open-match-analyzer">10. Verify Open Match Analyzer</h2>
+
+<p>Open Administration / Open Match Analyzer.</p>
+
+<p>Confirm:</p>
+
+<ul>
+  <li>it appears as integrated page content;</li>
+  <li>the default Promote to King logo is not shown;</li>
+  <li>selecting a match and point of view updates <strong>Open standalone ↗</strong>;</li>
+  <li>the standalone URL contains the current <code class="language-plaintext highlighter-rouge">match</code> and selected <code class="language-plaintext highlighter-rouge">club</code> point of view.</li>
+</ul>
+
+<h2 id="11-verify-insights">11. Verify Insights</h2>
+
+<h3 id="team">Team</h3>
+
+<p>Check that duplicate KPI/metric blocks have been removed.</p>
+
+<h3 id="members">Members</h3>
+
+<p>Charts should use the enlarged layout.</p>
+
+<h3 id="matches">Matches</h3>
+
+<p>Check:</p>
+
+<ul>
+  <li>full-width chart cards;</li>
+  <li>larger pie charts;</li>
+  <li>no Closest-match highlight;</li>
+  <li>Longest ongoing match appears;</li>
+  <li>no persistent loading modal after a match profile opens.</li>
+</ul>
+
+<h3 id="opponents">Opponents</h3>
+
+<p>Check:</p>
+
+<ul>
+  <li>Most played opponents is Top 25 + Others, not a treemap;</li>
+  <li>opponent modal replaces its loading state;</li>
+  <li>monthly results are stacked W/D/L bars;</li>
+  <li>drag zoom and hover work;</li>
+  <li>win rate by time control appears;</li>
+  <li>win rate by opponent-rating bracket appears where rating data exists.</li>
+</ul>
+
+<p>Historical rating brackets are populated as authoritative match sheets are refreshed because the original v2.8 seed snapshot did not contain match-lineup rating values.</p>
+
+<h2 id="12-verify-unified-player-profiles">12. Verify unified player profiles</h2>
+
+<p>Open a ranked and an unranked player.</p>
+
+<p>For an unranked Daily/Live category there must be no broken image placeholder.</p>
+
+<p>Team Points progression should show:</p>
+
+<ul>
+  <li>monthly points as bars;</li>
+  <li>cumulative points as a line;</li>
+  <li>hover details;</li>
+  <li>drag zoom/reset.</li>
+</ul>
+
+<h2 id="13-verify-achievements">13. Verify achievements</h2>
+
+<p>Open a player profile and the All achievements modal.</p>
+
+<p>Check:</p>
+
+<ul>
+  <li>achievement groups are folded by default;</li>
+  <li>each group title shows <code class="language-plaintext highlighter-rouge">achieved / total</code>;</li>
+  <li>earned achievements show a stored earned timestamp when one can be reconstructed;</li>
+  <li>catalogue entries show how many members have earned each achievement.</li>
+</ul>
+
+<p>Some MCA achievements whose historical source files do not preserve an exact crossing time use an explicit <code class="language-plaintext highlighter-rouge">first-recorded</code> timestamp precision. Tournament-period achievements use the stored tournament period.</p>
+
+<h2 id="14-verify-tournaments">14. Verify tournaments</h2>
+
+<p>Open the tournament page and verify:</p>
+
+<ul>
+  <li>medalist rows are accented by their best medal;</li>
+  <li>gold/silver/bronze header columns have colored medal markers.</li>
+</ul>
+
+<h2 id="15-verify-recoveryfix7-integration">15. Verify RecoveryFix7 integration</h2>
+
+<p>Check the additional integrated features:</p>
+
+<ul>
+  <li>player stats opportunistically store Daily and Chess960 ratings without a separate crawler;</li>
+  <li>member Analytics expose separate last finished Standard and Chess960 game dates;</li>
+  <li>Match Recruitment Assistant uses stored category-specific ratings, excludes ineligible/opponent-club/already-registered players, and recruits strongest candidates first;</li>
+  <li>Team Insights shows the current-registration future region and Low/Medium/High current-year Club Points projections;</li>
+  <li>the recovered achievement artwork is used instead of the P2K-logo fallback.</li>
+</ul>
+
+<h2 id="16-verify-mobile-tab-width">16. Verify mobile tab width</h2>
+
+<p>On a phone-width viewport, open Insights, Hall of Fame and Administration. Their content should remain within the same outer width as the Promote to King header. Wide datasets scroll inside their table area, nested tabs scroll horizontally when needed, and the Dashboard desktop/mobile layout remains unchanged.</p>
+
+<h2 id="17-resume-scheduled-work">17. Resume scheduled work</h2>
+
+<p>Once the checks above pass, resume Team Points and restore the normal CRON schedule.</p>
+
+<p>No CRON URL or cadence changes are required by v2.8.1.</p>
+
+<h2 id="18-post-upgrade-storage-check">18. Post-upgrade storage check</h2>
+
+<p>Open Administration / Storage &amp; capacity. The v2.8 storage architecture is unchanged:</p>
+
+<ul>
+  <li>Core DB = canonical compact facts;</li>
+  <li>Analytics DB = rebuildable projections;</li>
+  <li>filesystem = gzip API cache, logs and runtime files.</li>
+</ul>
+
+<p>The schema-revision-3 additions are small and should not materially change the capacity forecast.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALL_v2.8.1.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

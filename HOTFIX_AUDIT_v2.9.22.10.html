@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>v2.9.22.10 telemetry hotfix audit | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="v2.9.22.10 telemetry hotfix audit" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/HOTFIX_AUDIT_v2.9.22.10.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/HOTFIX_AUDIT_v2.9.22.10.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="v2.9.22.10 telemetry hotfix audit" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"v2.9.22.10 telemetry hotfix audit","url":"https://ximoon1982.github.io/PromoteToKing/HOTFIX_AUDIT_v2.9.22.10.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="v292210-telemetry-hotfix-audit">v2.9.22.10 telemetry hotfix audit</h1>
+
+<h2 id="root-cause">Root cause</h2>
+<p>The Task Control status pulse intentionally became lightweight in v2.9.22.8. However, the browser still executed <code class="language-plaintext highlighter-rouge">state.taskDetails.clear()</code> every 60 seconds. A selected task therefore lost its lazy-loaded work snapshot on every status refresh and fell back to bootstrap transport health until the user explicitly re-selected the card. The regression affected all four server-backed task panels, not only Club Points.</p>
+
+<h2 id="correction">Correction</h2>
+<ul>
+  <li>Removed destructive detail-cache invalidation.</li>
+  <li>Status refresh now re-fetches only the selected server task detail.</li>
+  <li>Added an in-flight detail-load guard so concurrent card/status requests coalesce.</li>
+  <li>A failed refresh retains the previous detail snapshot.</li>
+  <li>Expanded scalar detail rendering from 12 to 32 entries and surfaces TaskRegistry execution details.</li>
+</ul>
+
+<h2 id="server-telemetry">Server telemetry</h2>
+<p>The Team Points detail endpoint remains lane-local. It does not restore the old whole-Core status aggregation. Club Points now reports club-index observed/verified freshness, match-state and due-detail counts plus maintained durable-job/active-queue counters. Member Points reports operational and server-verified freshness independently. Worker idle results now state why no durable job is runnable, and both CRON and bounded ACSR controller runs persist those fields into the unified TaskRegistry.</p>
+
+<h2 id="other-panels-checked">Other panels checked</h2>
+<ul>
+  <li>Club Points: restored and enriched.</li>
+  <li>Member Points: restored and enriched.</li>
+  <li>Match monitoring: existing detailed summary/work report retained through status refresh.</li>
+  <li>Tournaments: existing detailed summary/work report retained through status refresh.</li>
+</ul>
+
+<h2 id="risk-controls">Risk controls</h2>
+<p>No schema, CRON, scoring, OAuth, reconstruction or queue scheduling policy is changed. The selected-detail refresh preserves the v2.9.22.8 load-shedding rule: one server panel at a time, never all panels on bootstrap/status.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/HOTFIX_AUDIT_v2.9.22.10.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

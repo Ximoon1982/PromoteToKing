@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.1 — release notes | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.1 — release notes" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.1.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.1.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.1 — release notes" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.1 — release notes","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.1.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v291--release-notes">Promote to King v2.9.1 — release notes</h1>
+
+<p>v2.9.1 consolidates the prepared post-v2.9.0 branch. It is an additive upgrade from v2.9.0 and does <strong>not</strong> require a database reset or re-seed.</p>
+
+<h2 id="administration-and-navigation">Administration and navigation</h2>
+
+<ul>
+  <li>Administration/Admin Tools deep links now retain the selected group, subtab and supported tool context through refresh and browser history.</li>
+  <li>Dashboard Admin shortcuts open the intended configured administration view rather than a generic Admin landing page.</li>
+  <li>Hall of Fame is ordered before Insights in the main tab row.</li>
+  <li>Hall of Fame desktop search results are forced to the full content width.</li>
+  <li>Database Match Profile opens the normal Chess.com match page rather than the API URL.</li>
+  <li>Dashboard health monitoring uses the same traffic-light vocabulary as Storage &amp; Capacity.</li>
+  <li>Below-minimum match warnings on the Dashboard are limited to matches starting within the next seven days.</li>
+</ul>
+
+<h2 id="charts-and-team--opponent-intelligence">Charts and Team / Opponent intelligence</h2>
+
+<ul>
+  <li>Daily Boards and Club Points descriptions explicitly explain that legend/plot names can be clicked to show or hide series.</li>
+  <li>Maximized charts are positioned inside the current viewport, reflow after the maximized container is visible, lock background scrolling and restore the previous scroll position on close.</li>
+  <li>Monthly Active Members treats the whole current calendar month as incomplete/future.</li>
+  <li>Lineup Evolution and Win-probability History retain the first and last sample of a run of identical values while omitting redundant interior samples.</li>
+  <li>Club Intelligence → Team Depth excludes unrated members from the rating-axis plot while retaining their count/coverage metrics. Active, Available and Overloaded status metrics/percentages and status distinctions are shown.</li>
+  <li>Insights → Members supports multi-select Activity Status filtering (Active, Cooling, Inactive, Dormant, Unknown) before server-side pagination.</li>
+  <li>Club Intelligence → Opponents places the stored opponent avatar/logo before the opponent name.</li>
+  <li>Opponent Insights includes the Balance Analyzer with shared Friendly/League and Classical/Chess960 selectors, two density heatmaps, logarithmic match-size scaling, P2K strength equality reference, P2K-themed density colors and 2D wheel/pinch/pan/box zoom with adaptive re-binning.</li>
+</ul>
+
+<h2 id="achievements">Achievements</h2>
+
+<ul>
+  <li>Earned achievements no longer show progress bars.</li>
+  <li>Dashboard Achievement Challenge cards deep-link to the selected player’s view of that specific achievement.</li>
+  <li>Achievement catalogues include live achievement-name search.</li>
+  <li>Achievement breadth thresholds are 1, 5, 10, 15 and 20 eligible achievement groups.</li>
+  <li>50 previously approved recovered achievement artworks are integrated. Raster achievement masters are normalized to 640×640 with 64×64 miniatures and 128×128 thumbs; unresolved/new-family art remains on explicit placeholders.</li>
+  <li><code class="language-plaintext highlighter-rouge">Kingmaker</code> is renamed <strong>King Daily Rank</strong> and uses the framed King Daily Rank artwork.</li>
+  <li>Silver King Daily Rank uses the framed Silver King artwork.</li>
+  <li>Live Pawn uses the framed Live Pawn rank artwork.</li>
+</ul>
+
+<h2 id="match-creation">Match Creation</h2>
+
+<ul>
+  <li>Clicking a chart bar whose contributing matches lack board detail requests only those matches, preserves cached detail, displays local progress, and refreshes the selected chart/detail state. It does not trigger an archive-wide scan.</li>
+</ul>
+
+<h2 id="traffic--visitors-diagnostics">Traffic / Visitors diagnostics</h2>
+
+<ul>
+  <li>The current browser reports whether Traffic collection is active or suppressed by Do Not Track / Global Privacy Control.</li>
+  <li>Club Intelligence exposes collector configuration/storage health, last event and recent event counts.</li>
+  <li>Runtime Diagnostics includes Traffic collector state.</li>
+  <li>An isolated synthetic self-test checks collector → storage → aggregation without adding a real visitor.</li>
+  <li>DNT/GPC suppression remains respected; suppressed Traffic events are not persisted.</li>
+</ul>
+
+<h2 id="acamr-correction-and-diagnostics">ACAMR correction and diagnostics</h2>
+
+<ul>
+  <li>ACAMR now distinguishes a persistent browser-client ID (<code class="language-plaintext highlighter-rouge">localStorage</code>) from a browsing-session ID (<code class="language-plaintext highlighter-rouge">sessionStorage</code>) and authenticated-user identity. Raw IDs are sent only same-origin and only protected hashes are retained in telemetry.</li>
+  <li>Claim accounting records every claim/member rather than treating a successful planning request as one member.</li>
+  <li>Work is accounted by class: player matches, stats, archive and roster. Metrics distinguish tasks handed out, browser fetch success/failure, accepted ACAMR observations and authoritative work queued.</li>
+  <li>ACAMR-only observation accounting is separated from normal browser observations.</li>
+  <li>Club Intelligence cross-checks ACAMR activity against canonical freshness and warns for possible work-class starvation, repeated browser fetch failure and successful-fetch/observation-delivery stalls.</li>
+  <li>Browser fetch success is explicitly <strong>not</strong> presented as canonical completion. Authoritative server verification remains required.</li>
+  <li>Storage exceptions while creating browser diagnostic IDs fall back safely without blocking ACAMR.</li>
+</ul>
+
+<h2 id="data-reconciliation--csv-import">Data Reconciliation / CSV import</h2>
+
+<ul>
+  <li>New Admin Tools → Data Reconciliation drop point with Admin authorization, CSRF protection, private staging, SHA-256 input tracking and configurable retention.</li>
+  <li>Known CSV families are recognized by schema/content rather than numbered filenames, including Finished Matches, Active Matches, DailyData, parsed members, parsed data, all members and findings/discovery lists.</li>
+  <li><code class="language-plaintext highlighter-rouge">Check only</code> validates schemas, duplicates/references, score/result/points invariants, timestamp consistency, cross-file coverage and DailyData historical checkpoints without mutating canonical data.</li>
+  <li>DailyData is treated as a chronological non-void finished-match <strong>prefix checkpoint</strong>, not as a terminal current total; newer matches, including later matches on the same UTC day, are allowed after the resolved prefix.</li>
+  <li>Conflicting score/result/point data never directly overwrites canonical match facts. It creates targeted authoritative <code class="language-plaintext highlighter-rouge">sync_match</code> verification.</li>
+  <li>Positive member/board evidence can be seeded; absence from an almost-current CSV never demotes a member. Authoritative roster refresh resolves removals.</li>
+  <li>Apply is explicitly confirmed with <code class="language-plaintext highlighter-rouge">APPLY &lt;batch-id&gt;</code>, bounded/resumable/idempotent, uses existing durable queues and keeps fresh/live work authoritative.</li>
+</ul>
+
+<h2 id="durable-queue--work-report">Durable queue / Work Report</h2>
+
+<ul>
+  <li>Durable queue diagnostics separate total items, committed/done, true remaining backlog, pending, claimed/running, retry-waiting and failed. A zero pending count can no longer be interpreted as zero backlog.</li>
+</ul>
+
+<h2 id="compatibility--operations">Compatibility / operations</h2>
+
+<ul>
+  <li>No destructive database reset or re-seed is required.</li>
+  <li>The IONOS CRON watchdog remains 55 seconds.</li>
+  <li>CRON scripts continue to require a real PHP CLI (<code class="language-plaintext highlighter-rouge">PHP_SAPI === "cli"</code>) and prefer versioned IONOS CLI binaries such as <code class="language-plaintext highlighter-rouge">/usr/bin/php8.5-cli</code>.</li>
+  <li>The v2.9.0 historical Club Points revalidation tool remains compatible and keeps its original queue keys so an already-seeded revalidation is not duplicated.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.1.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

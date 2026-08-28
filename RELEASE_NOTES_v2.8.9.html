@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King Standalone v2.8.9 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King Standalone v2.8.9" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.9.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.9.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King Standalone v2.8.9" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King Standalone v2.8.9","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.9.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-standalone-v289">Promote to King Standalone v2.8.9</h1>
+
+<p>v2.8.9 is a convergence release built from the latest v2.8.8.3 tree. It retains the v2.8.8 feature set and successive fixes, fixes the production-confirmed Dashboard startup regression at its actual source, and re-enables ACAMR.</p>
+
+<h2 id="dashboard-startup-regression-root-cause-fixed">Dashboard startup regression: root cause fixed</h2>
+
+<p>Production testing established that v2.8.6 loads correctly and v2.8.7 does not. The browser startup audit reproduced the failure.</p>
+
+<p>The primary failure was introduced by the v2.8.7 Hall/Insights lazy-module split:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">renderView()</code> runs during initial Dashboard initialization.</li>
+  <li>on the default Dashboard route it calls <code class="language-plaintext highlighter-rouge">setIntegratedFrameActivity("")</code>;</li>
+  <li>that function referenced <code class="language-plaintext highlighter-rouge">integratedFrameIds</code>;</li>
+  <li>the ID list had been moved out of the main Dashboard controller during the lazy split;</li>
+  <li>the result was a synchronous <code class="language-plaintext highlighter-rouge">ReferenceError: integratedFrameIds is not defined</code> before <code class="language-plaintext highlighter-rouge">loadTeamData()</code> and <code class="language-plaintext highlighter-rouge">applySession()</code> could run.</li>
+</ul>
+
+<p>This explains both production symptoms at once: the HTML Dashboard shell was visible but data remained in Loading state, and the authenticated user was not recognized as an administrator because session/admin initialization was never reached.</p>
+
+<p>v2.8.9 removes that cross-module startup dependency. The main controller discovers the integrated frames directly from <code class="language-plaintext highlighter-rouge">iframe.dashboard-integrated-frame[id]</code>, so adding/removing an embedded tool cannot leave a missing or stale hard-coded identifier list.</p>
+
+<h2 id="secondary-rollback-dependency-fixed">Secondary rollback dependency fixed</h2>
+
+<p>The emergency v2.8.8.3 rollback restored the v2.8.6 <code class="language-plaintext highlighter-rouge">loadTeamData()</code> body, but the later controller refactor had already removed the <code class="language-plaintext highlighter-rouge">clubMembersAPI</code> constant that the v2.8.6 second wave uses. That would allow the database summary to load but could throw when the automatic Chess.com member/profile/match refresh starts.</p>
+
+<p>v2.8.9 restores the complete v2.8.6 Dashboard dependency contract, including <code class="language-plaintext highlighter-rouge">clubMembersAPI</code>, not only the function body.</p>
+
+<h2 id="dashboard-loading-policy">Dashboard loading policy</h2>
+
+<p>The proven v2.8.6 Dashboard loading sequence remains the baseline:</p>
+
+<ul>
+  <li>first visible database summary through the existing Team Points client;</li>
+  <li>database values applied immediately;</li>
+  <li>automatic post-paint Chess.com members/profile/matches and Live data second wave;</li>
+  <li>no low-priority scheduler is allowed to gate authentication or the first Dashboard state;</li>
+  <li>Hall/Insights may remain lazy because their dependencies are now isolated from startup.</li>
+</ul>
+
+<h2 id="administration">Administration</h2>
+
+<p>The v2.8.8.x admin resilience fixes are retained:</p>
+
+<ul>
+  <li>configured/local administrators are recognized before remote Chess.com verification;</li>
+  <li>OAuth role claims remain supported;</li>
+  <li>embedded Administration tools tolerate parent/iframe initialization-order races;</li>
+  <li>failed integrated-frame loads have a bounded retry.</li>
+</ul>
+
+<p>The browser startup gate verifies that a simulated Ximoon session becomes admin and that the Administration view can be entered without an uncaught startup exception.</p>
+
+<h2 id="acamr-re-enabled">ACAMR re-enabled</h2>
+
+<p>ACAMR is re-enabled because the reproduced startup failure occurs before ACAMR participates in Dashboard work and is attributable to the missing startup identifier.</p>
+
+<p>Activation remains:</p>
+
+<ul>
+  <li>real OAuth authentication: ACAMR active regardless of the simulated-OAuth flag;</li>
+  <li>simulated authentication: active only when the OAuth/simulatedOAuth flag is enabled;</li>
+  <li>no authenticated session: inactive.</li>
+</ul>
+
+<p>Scope remains:</p>
+
+<ul>
+  <li>Club Points and Member Points discovery/verification support;</li>
+  <li>relevant current-member match/board discovery;</li>
+  <li>player archives used to locate finished team games;</li>
+  <li>Daily/Classical and Chess960 rating refresh hints;</li>
+  <li>low-frequency roster freshness hints.</li>
+</ul>
+
+<p>Explicitly excluded:</p>
+
+<ul>
+  <li>tournaments;</li>
+  <li>match registration / registered-player monitoring / recruitment tracking.</li>
+</ul>
+
+<p>Browser observations remain non-authoritative. Canonical facts are still written only after server-side verification.</p>
+
+<h2 id="retained-v288-features-and-fixes">Retained v2.8.8 features and fixes</h2>
+
+<p>The independent v2.8.8 feature set remains, including:</p>
+
+<ul>
+  <li>human Chess.com URLs for achievement trigger links;</li>
+  <li>unified Profile actions from Daily and Live Hall;</li>
+  <li>mobile Hall rank containment;</li>
+  <li>DOM-preserving nested Profile/Achievement modals;</li>
+  <li>Achievements as the default Hall tab;</li>
+  <li>Team depth visualization;</li>
+  <li>Club Intelligence dashboards and telemetry;</li>
+  <li>data freshness / coverage and anomaly/action queue;</li>
+  <li>member activity, availability/overload and contribution intelligence;</li>
+  <li>recruitment-confidence model;</li>
+  <li>opponent intelligence profiles and cached opponent logos;</li>
+  <li>historical snapshots/time travel;</li>
+  <li>explainable Club Points forecasts;</li>
+  <li>cross-feature unified player modal;</li>
+  <li>personalized authenticated home;</li>
+  <li>achievement challenges;</li>
+  <li>Opponent Intelligence W/D/L correction;</li>
+  <li>Team Insights all-history Club Points progression through today + six months using the shared Low/Medium/High forecast model;</li>
+  <li>Profile rank-image clipping fix;</li>
+  <li>Administration iframe and lazy-feature retry hardening.</li>
+</ul>
+
+<h2 id="database-and-cron">Database and CRON</h2>
+
+<ul>
+  <li>Core schema: <strong>6</strong>.</li>
+  <li>Analytics schema: <strong>5</strong>.</li>
+  <li>No database reset, re-seed or new SQL migration is required from v2.8.8.x.</li>
+  <li>CRON cadence is unchanged: Club every 5 minutes, Tournament every 10 minutes, Player every 30 minutes, league monitoring hourly.</li>
+  <li>ACAMR remains opportunistic and adds no CRON entry.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.8.9.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

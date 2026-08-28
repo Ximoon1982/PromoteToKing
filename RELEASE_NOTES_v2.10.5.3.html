@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.5.3 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.5.3" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.5.3.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.5.3.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.5.3" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.5.3","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.5.3.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v21053">Promote to King v2.10.5.3</h1>
+
+<h2 id="green-finite-cycle-fairness-corrective">Green finite-cycle fairness corrective</h2>
+
+<p>v2.10.5.3 corrects a scheduler regression observed after the v2.10.5.2 GAB/GFFL cutover integration: a finite Green Quick cycle could remain in <code class="language-plaintext highlighter-rouge">quick_boards</code> for many invocations while continuous sidecar work continued to consume requests.</p>
+
+<h3 id="root-causes-corrected">Root causes corrected</h3>
+
+<ol>
+  <li><strong>Server sidecar starvation</strong> — GAB/GFFL/current-match maintenance could run before the finite Seed/Quick/Deep stage and consume the useful part of the worker invocation.</li>
+  <li><strong>Non-terminal transient GQAC debt</strong> — repeatedly transient/backed-off board obligations could remain pending indefinitely and prevent a fixed Quick-board cohort from reaching terminal state.</li>
+  <li><strong>Accelerator hidden over-claiming</strong> — after GAB/GFFL filled part of an accelerator batch, ordinary planners could still claim against the original full batch limit. Some 120-second leases could therefore be created for rows that were never actually returned to the browser.</li>
+  <li><strong>Misleading cycle observability</strong> — GAB and GFFL continuous services appeared as <code class="language-plaintext highlighter-rouge">running 0/0</code> finite phases and invocation history did not show how requests were split among core/GFFL/current maintenance work.</li>
+</ol>
+
+<h3 id="scheduling-behavior">Scheduling behavior</h3>
+
+<ul>
+  <li>The active finite Green cycle receives the first approximately <strong>70% of the 50-second soft worker target</strong>.</li>
+  <li>GAB server-side DB work is bounded after the finite slice. External GAB transport remains accelerator-fed.</li>
+  <li>GFFL and current-match maintenance are bounded sidecars.</li>
+  <li>A final finite-cycle tail pass uses remaining worker time when available.</li>
+  <li>The global <strong>50 s soft / 55 s hard</strong> worker contract is unchanged.</li>
+  <li><strong>GFFL remains enabled</strong> and keeps its normal freshness role.</li>
+  <li>In the browser Accelerator, <strong>P0 interactive remains first; GAB remains the highest-priority background lane while bootstrap is incomplete</strong>. Finite-cycle capacity is reserved so continuous sidecars cannot consume the entire batch.</li>
+</ul>
+
+<h3 id="gqac-transient-self-healing">GQAC transient self-healing</h3>
+
+<p>A Quick-board obligation that has already received at least three transient, non-terminal attempts in the current cycle is completed <strong>for that cycle only</strong> and marked <code class="language-plaintext highlighter-rouge">requeued_for_next=1</code>. The underlying board remains <code class="language-plaintext highlighter-rouge">needs_refresh</code>, so the data is not declared fresh and is retried in a later cycle.</p>
+
+<p>The same bounded rule is applied while reading/ensuring an already-running cohort, allowing a cycle such as the observed Cycle #16 to self-heal without reset or reseed.</p>
+
+<h3 id="accelerator-claim-correctness">Accelerator claim correctness</h3>
+
+<p>Finite rows are now claimed only against the actual number of remaining output slots. The Accelerator no longer creates invisible leases for tasks it cannot return in the current plan.</p>
+
+<h3 id="observability">Observability</h3>
+
+<ul>
+  <li>Quick Boards displays real GQAC completed/total progress.</li>
+  <li>GAB and GFFL are removed from the generic finite-cycle phase bars; each keeps its dedicated telemetry section.</li>
+  <li>GQAC telemetry exposes eligible, claimed, retry-backoff and deferred-transient counts.</li>
+  <li>Recent Green worker runs expose request split between finite core work, GFFL and current-match maintenance.</li>
+</ul>
+
+<h3 id="gabfix1-integrated">GABFIX1 integrated</h3>
+
+<p>The MariaDB portability correction for GAB primary-key discovery is included. <code class="language-plaintext highlighter-rouge">SHOW KEYS</code> results are ordered in PHP rather than using unsupported <code class="language-plaintext highlighter-rouge">ORDER BY Seq_in_index</code> syntax.</p>
+
+<h3 id="safety--migration-scope">Safety / migration scope</h3>
+
+<ul>
+  <li>No Green Core reseed.</li>
+  <li>No destructive database reset.</li>
+  <li>No Green schema migration.</li>
+  <li>No CRON cadence change.</li>
+  <li>No change to the 50 s soft / 55 s hard worker budget.</li>
+  <li>No image changes.</li>
+  <li>Public reads remain <strong>BLUE by default</strong> until the existing validation + GAB compatibility gates are passed and the administrator explicitly advances the migration phase.</li>
+  <li>Blue data is not retired or deleted.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.5.3.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

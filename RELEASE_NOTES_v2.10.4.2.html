@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.4.2 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.4.2" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.4.2.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.4.2.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.4.2" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.4.2","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.4.2.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v21042">Promote to King v2.10.4.2</h1>
+
+<h2 id="oauth-administrator-persistence-hotfix">OAuth administrator persistence hotfix</h2>
+
+<p>v2.10.4.2 fixes the remaining reload/iframe administrator-authority regression introduced by the v2.10.4 security split.</p>
+
+<h3 id="root-cause">Root cause</h3>
+
+<p>v2.10.4 changed Team Points administrator-session creation so <code class="language-plaintext highlighter-rouge">session.php</code> reopened the HttpOnly <code class="language-plaintext highlighter-rouge">P2KOAUTH</code> PHP session in a second HTTP request. On production this second-session recovery was not reliable after a fresh page load, so a normal reload could leave Live Ranks, Storage &amp; Capacity, Team Points Migration, and other administration surfaces without Team Points administrator authority even though the main OAuth adapter had already authenticated the real user.</p>
+
+<p>v2.10.4.1 removed the browser-local username prerequisite, but it still depended on that same second <code class="language-plaintext highlighter-rouge">P2KOAUTH</code> reopen and therefore did not fix the production reload failure.</p>
+
+<h3 id="v21042-behavior">v2.10.4.2 behavior</h3>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">oauth.php?action=session</code> remains the authoritative real-OAuth session check used by every page.</li>
+  <li>When authenticated, it returns a short-lived (60 second) HMAC-signed administrator-bootstrap assertion containing only the real OAuth username and audience/expiry claims.</li>
+  <li>The assertion is signed with an existing protected server-only Team Points secret (<code class="language-plaintext highlighter-rouge">admin_token</code>, with <code class="language-plaintext highlighter-rouge">cron_token</code> fallback); the secret never leaves the server.</li>
+  <li><code class="language-plaintext highlighter-rouge">team-points-client.js</code> waits for the real OAuth adapter and sends only that signed assertion to <code class="language-plaintext highlighter-rouge">session.php</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">session.php</code> verifies the assertion without reopening <code class="language-plaintext highlighter-rouge">P2KOAUTH</code>, then independently verifies that the asserted username is a current Promote to King administrator before creating <code class="language-plaintext highlighter-rouge">P2KTPSESSID</code>.</li>
+  <li>A stale assertion on a long-lived page triggers a real-OAuth refresh before Team Points reconnect.</li>
+  <li>A compatibility fallback still permits direct <code class="language-plaintext highlighter-rouge">P2KOAUTH</code> recovery when it is available, but normal reloads no longer depend on it.</li>
+  <li><code class="language-plaintext highlighter-rouge">?name=</code> remains display-only and cannot alter the signed real identity or server authorization.</li>
+  <li>Raw browser-posted usernames are never trusted for administrator authorization.</li>
+  <li>Guarded administration pages now load <code class="language-plaintext highlighter-rouge">team-points-client.js</code> before <code class="language-plaintext highlighter-rouge">admin-page-guard.js</code> consistently.</li>
+</ul>
+
+<h3 id="scope">Scope</h3>
+
+<p>No database migration, Green state mutation, GICL/GQAC/GSCF change, Blue/Green cutover, or CRON change is included in this hotfix.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.4.2.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

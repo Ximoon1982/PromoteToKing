@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.3 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.3" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.3.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.3.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.3" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.3","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.3.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v283">Promote to King v2.8.3</h1>
+
+<p>v2.8.3 is an in-place release built directly on <strong>v2.8.2 Hotfix 2</strong>. The Hotfix 1 Analytics insert correction and Hotfix 2 non-blocking/split Analytics refresh design are part of this baseline.</p>
+
+<h2 id="achievements">Achievements</h2>
+
+<ul>
+  <li>Achievement player cards show the number of achievements earned instead of Live rank.</li>
+  <li>Earned achievement details show the stored achievement date.</li>
+  <li>When the source can be reconstructed, achievement details also show the triggering event name and a direct link.</li>
+  <li>Match/game milestones retain the triggering team match as provenance.</li>
+  <li>Tournament medal milestones retain the triggering tournament as provenance.</li>
+  <li>Analytics schema 5 adds <code class="language-plaintext highlighter-rouge">source_type</code>, <code class="language-plaintext highlighter-rouge">source_name</code>, and <code class="language-plaintext highlighter-rouge">source_url</code> to persistent achievement unlocks.</li>
+</ul>
+
+<h2 id="tournament-medal-dates">Tournament medal dates</h2>
+
+<ul>
+  <li>Tournament archive rows now preserve Chess.com’s authoritative tournament <code class="language-plaintext highlighter-rouge">finish_time</code> as <code class="language-plaintext highlighter-rouge">finishAt</code>.</li>
+  <li>Tournament medal achievements use the tournament finish date, not the month/period bucket.</li>
+  <li>Existing derived tournament achievement rows are rebuilt automatically by the Analytics 4→5 migration.</li>
+  <li>Older archived tournaments without <code class="language-plaintext highlighter-rouge">finishAt</code> are queued for normal tournament refresh so their finish dates can be backfilled incrementally.</li>
+</ul>
+
+<h2 id="tournament-medalist-modal">Tournament medalist modal</h2>
+
+<ul>
+  <li>In the integrated dashboard, clicking a medalist now positions the modal inside the currently visible parent viewport instead of centering it in the full natural-height iframe document.</li>
+  <li>Standalone tournament-page modal behavior is unchanged.</li>
+</ul>
+
+<h2 id="dashboard-interaction">Dashboard interaction</h2>
+
+<ul>
+  <li>Dashboard metric cards that navigate to another view now use the same hover/focus treatment as Priority Calls.</li>
+</ul>
+
+<h2 id="club-points-projection">Club Points projection</h2>
+
+<ul>
+  <li>The current-year projection is now anchored to actual Club Points earned over the latest 90 calendar days.</li>
+  <li>The model explicitly uses three consecutive 30-day blocks.</li>
+  <li>The medium forecast is a near-linear continuation of that recent production rate.</li>
+  <li>A small trend bend is derived from the first-versus-third 30-day block and capped at ±8% at year end.</li>
+  <li>Low and High paths form ±10% bands around the medium trajectory.</li>
+</ul>
+
+<h2 id="insights-charts">Insights charts</h2>
+
+<ul>
+  <li>Removed the legacy fixed 230px chart-container height that caused native charts to spill outside their cards.</li>
+  <li>Monthly match activity now stays contained in its card on desktop and mobile.</li>
+  <li>Most played opponents is redesigned as a dedicated Top-15 horizontal chart with wider labels and contained dimensions.</li>
+  <li>Added <strong>Average boards per match</strong>, showing monthly evolution for finished matches.</li>
+  <li>Monthly active members now extends its time axis through the remaining months of the current year and marks <strong>Today · future →</strong>; future months are not plotted as zero activity.</li>
+  <li>The standalone Team Insights monthly active-player graph uses the same future boundary convention.</li>
+</ul>
+
+<h2 id="database-migration">Database migration</h2>
+
+<ul>
+  <li>Core remains schema <strong>4</strong>.</li>
+  <li>Analytics upgrades additively from schema <strong>4 to 5</strong>.</li>
+  <li>No database recreation, initializer, or seed reload is required.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.8.3.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

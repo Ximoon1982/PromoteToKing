@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Next release integration — Profile &amp; Achievement performance | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Next release integration — Profile &amp; Achievement performance" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/NEXT_RELEASE_INTEGRATION_PROFILE_ACHIEVEMENT_PERFORMANCE.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/NEXT_RELEASE_INTEGRATION_PROFILE_ACHIEVEMENT_PERFORMANCE.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Next release integration — Profile &amp; Achievement performance" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Next release integration — Profile &amp; Achievement performance","url":"https://ximoon1982.github.io/PromoteToKing/NEXT_RELEASE_INTEGRATION_PROFILE_ACHIEVEMENT_PERFORMANCE.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="next-release-integration--profile--achievement-performance">Next release integration — Profile &amp; Achievement performance</h1>
+
+<p>Baseline: Promote to King Standalone v2.8.4.
+Status: staged for the next numbered release. No release number has been assigned by this patch.
+Database schema: unchanged (Core 4 / Analytics 5).</p>
+
+<h2 id="goals">Goals</h2>
+
+<ul>
+  <li>Make Hall of Fame Achievements and unified Player Profile fast, predictable public reads.</li>
+  <li>Never rebuild Analytics or achievement projections in a user’s GET request.</li>
+  <li>Reuse already-materialized Analytics data and short-lived response/browser caches.</li>
+  <li>Keep operational/admin endpoints no-store.</li>
+</ul>
+
+<h2 id="staged-changes">Staged changes</h2>
+
+<h3 id="1-background-owned-materialization">1. Background-owned materialization</h3>
+
+<p><code class="language-plaintext highlighter-rouge">cron-club.php</code> owns general Analytics refresh with a 5-minute minimum interval.
+<code class="language-plaintext highlighter-rouge">cron-player.php</code> owns achievement projection refresh with a 30-minute minimum interval.</p>
+
+<p>CRON maintenance is performed before queue work. The remaining endpoint time budget is passed to the worker, so a due Analytics rebuild cannot blindly stack on top of a full worker segment and breach the hosting execution window.</p>
+
+<p>Profile and achievement GET methods no longer call <code class="language-plaintext highlighter-rouge">refreshAnalyticsForRead()</code> or <code class="language-plaintext highlighter-rouge">refreshAchievementsForRead()</code>.</p>
+
+<p>Expected freshness after deployment:</p>
+<ul>
+  <li>General Profile/Team Points projection: normally &lt;= 5 minutes behind Core.</li>
+  <li>Achievement unlock projection: normally &lt;= 30 minutes behind its sources.</li>
+</ul>
+
+<h3 id="2-dedicated-achievement-wall-endpoint">2. Dedicated Achievement-wall endpoint</h3>
+
+<p>New endpoint:</p>
+
+<p><code class="language-plaintext highlighter-rouge">server/team-points/public/achievement-players.php</code></p>
+
+<p>It reads directly from materialized Analytics tables, performs filtering/sorting/pagination in MariaDB, and returns only the fields required by the 12-player achievement cards.</p>
+
+<p>The achievement wall no longer invokes <code class="language-plaintext highlighter-rouge">members-insights.php</code>, which previously built all-member Core aggregates, monthly activity, rank distribution and then paginated in PHP.</p>
+
+<p>Default ordering remains:</p>
+<ol>
+  <li>achievement count descending;</li>
+  <li>username ascending.</li>
+</ol>
+
+<h3 id="3-faster-profile-query-path">3. Faster Profile query path</h3>
+
+<p>Unified Profile now prefers <code class="language-plaintext highlighter-rouge">p2k_an_player_totals</code> for totals and uses indexed SQL for team/category positions instead of loading/sorting the complete current-member leaderboard.</p>
+
+<p>Monthly progression comes from <code class="language-plaintext highlighter-rouge">p2k_an_player_monthly</code> instead of re-aggregating Core point events on every profile open.</p>
+
+<p>Achievement ownership counts are restricted to the player’s earned achievement keys instead of rebuilding the count map for every achievement type.</p>
+
+<p>The broad system <code class="language-plaintext highlighter-rouge">summary()</code> call has been removed from Profile/Achievement reads; current-member count is obtained with a small materialized count query.</p>
+
+<p>Recent matches and top opponents remain Core-backed because those are detail lists rather than projection-wide aggregates.</p>
+
+<h3 id="4-generation-based-public-cache-keys">4. Generation-based public cache keys</h3>
+
+<p>Public read cache generation tokens use the small <code class="language-plaintext highlighter-rouge">p2k_an_refresh_state</code> rows plus Live processing state. Public GETs do not call the expensive Core source-watermark COUNT/MAX scan.</p>
+
+<p>New class:</p>
+
+<p><code class="language-plaintext highlighter-rouge">server/team-points/src/ResponseCache.php</code></p>
+
+<p>Cache storage:</p>
+
+<p><code class="language-plaintext highlighter-rouge">data/runtime-v280/public-response-cache/</code></p>
+
+<p>This cache is separate from the Chess.com HTTP cache.</p>
+
+<h3 id="5-public-http-caching">5. Public HTTP caching</h3>
+
+<p>New <code class="language-plaintext highlighter-rouge">Http::jsonCacheable()</code> adds ETag and public cache controls only to selected public read endpoints.</p>
+
+<p>Staged TTLs:</p>
+<ul>
+  <li>Player Profile server response: 120 s; browser max-age 60 s; stale-while-revalidate 300 s.</li>
+  <li>Achievement player pages: 120 s; browser max-age 60 s; stale-while-revalidate 300 s.</li>
+  <li>Achievement catalogue: 300 s; browser max-age 300 s; stale-while-revalidate 900 s.</li>
+  <li>Player-card/avatar public responses: browser max-age 1 hour.</li>
+</ul>
+
+<p>Admin, session, queue, logs and write endpoints continue to use <code class="language-plaintext highlighter-rouge">Cache-Control: no-store</code>.</p>
+
+<h3 id="6-browsersession-reuse">6. Browser/session reuse</h3>
+
+<p>The integrated dashboard has a small in-memory cache for Profile/Achievement public payloads.</p>
+
+<ul>
+  <li>Profile: 2 minutes.</li>
+  <li>Achievement catalogue: 5 minutes.</li>
+  <li>Tournament archive in Profile: 5 minutes.</li>
+  <li>Avatar/player card: 1 hour.</li>
+</ul>
+
+<p>The standalone Achievement page has the same short request cache.</p>
+
+<h3 id="7-non-blocking-avatars-on-achievement-wall">7. Non-blocking avatars on Achievement wall</h3>
+
+<p>Achievement cards render as soon as the database rows are available. Avatar requests run afterward and progressively enhance the already-visible cards.</p>
+
+<p>A cold Chess.com avatar cache can therefore no longer hold the entire Achievement wall in its loading state.</p>
+
+<h2 id="no-database-migration">No database migration</h2>
+
+<p>No schema changes are needed. Do not reset or recreate either MariaDB database.</p>
+
+<p>The next numbered release only needs to deploy these code changes and keep the v2.8.4 Club/Player CRON schedules active.</p>
+
+<h2 id="validation">Validation</h2>
+
+<ul>
+  <li>Focused performance acceptance tests: 6/6 PASS.</li>
+  <li>Full Python regression suite: 73/73 PASS.</li>
+  <li>Static UI feature suite: PASS.</li>
+  <li>PHP lint: PASS for all PHP files in the staged tree.</li>
+  <li>JavaScript syntax checks: PASS.</li>
+</ul>
+
+<h2 id="files-added">Files added</h2>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/public/achievement-players.php</code></li>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/src/ResponseCache.php</code></li>
+  <li><code class="language-plaintext highlighter-rouge">tests/test_next_release_profile_achievement_performance.py</code></li>
+</ul>
+
+<h2 id="files-modified">Files modified</h2>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">TournamentAchievementBadgesDemo.html</code></li>
+  <li><code class="language-plaintext highlighter-rouge">assets/js/pages/dashboard-v2.js</code></li>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/public/achievements.php</code></li>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/public/cron.php</code></li>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/public/player-cards.php</code></li>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/public/player-profile.php</code></li>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/src/CronLoop.php</code></li>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/src/Http.php</code></li>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/src/Repository.php</code></li>
+</ul>
+
+<h2 id="release-integration-checklist">Release integration checklist</h2>
+
+<p>When this is folded into the next numbered standalone release:</p>
+
+<ol>
+  <li>Keep Core schema 4 / Analytics schema 5 unless another feature independently requires a migration.</li>
+  <li>Add the new endpoint/classes to the release manifest.</li>
+  <li>Update runtime/static asset version strings to the new release number.</li>
+  <li>Retain the existing split CRON setup (<code class="language-plaintext highlighter-rouge">cron-club.php</code> every 5 min, <code class="language-plaintext highlighter-rouge">cron-player.php</code> every 30 min).</li>
+  <li>Run the full regression/syntax/package validator after manifest regeneration.</li>
+  <li>Verify production timing for one cold Profile, one warm Profile, cold Achievement wall, and warm Achievement wall.</li>
+  <li>Verify public ETag/Cache-Control headers while admin/session endpoints still return no-store.</li>
+</ol>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/NEXT_RELEASE_INTEGRATION_PROFILE_ACHIEVEMENT_PERFORMANCE.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.21 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.21" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.21.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.21.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.21" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.21","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.21.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2921">Promote to King v2.9.21</h1>
+
+<h2 id="mca-processing-request-budget-fix-mprbf">MCA Processing Request Budget Fix (MPRBF)</h2>
+
+<p>v2.9.21 is a focused corrective release built from the exact frozen v2.9.20 release.</p>
+
+<p>The v2.9.20 MORCF correction allowed authenticated MCA profile verification to reach the shared OAuth transport, but the MCA administration page still inherited the generic Team Points 30-second request timeout. A legitimate full MCA rebuild or a profile batch running after adaptive OAuth backoff could therefore be aborted by the browser with:</p>
+
+<blockquote>
+  <p>The Team Points administration request timed out before the server-side operation completed.</p>
+</blockquote>
+
+<p>v2.9.21 corrects both sides of that request boundary:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">process_start</code> receives an explicit 110-second administration-client deadline instead of the generic 30-second default.</li>
+  <li>MCA OAuth <code class="language-plaintext highlighter-rouge">process_step</code> receives a 75-second client deadline.</li>
+  <li>Profile-check batches are dynamically sized from the currently learned OAuth CPS using a 12-second launch budget.</li>
+  <li>Each OAuth MCA profile batch is additionally capped at 32 profiles.</li>
+  <li><code class="language-plaintext highlighter-rouge">live-ranks-admin.php</code> independently enforces the same rate-derived limit, so a stale v2.9.20 browser cannot submit an oversized batch to the v2.9.21 backend.</li>
+  <li>The MCA progress message now shows the learned OAuth rate and the bounded batch size.</li>
+  <li>Existing stored MCA CSV source files remain reusable; no re-upload is required.</li>
+</ul>
+
+<p>This release does not change MCA scoring, MIAC/MIRA attribution semantics, OAuth credentials, ACDM, DMBHF, database schemas, or CRON cadence.</p>
+
+<h2 id="compatibility">Compatibility</h2>
+
+<ul>
+  <li>Core schema: 14 (unchanged)</li>
+  <li>Analytics schema: 7 (unchanged)</li>
+  <li>Achievement catalogue: 162 (unchanged)</li>
+  <li>No database reset, reseed or schema migration.</li>
+  <li>Existing 4 operational CRON cadences and the weekly backup remain unchanged.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.21.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

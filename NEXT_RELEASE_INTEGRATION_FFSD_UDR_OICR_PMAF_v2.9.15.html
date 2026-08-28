@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Post-v2.9.15 next-release integration — FFSD / UDR / OICR / PMAF | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Post-v2.9.15 next-release integration — FFSD / UDR / OICR / PMAF" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/NEXT_RELEASE_INTEGRATION_FFSD_UDR_OICR_PMAF_v2.9.15.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/NEXT_RELEASE_INTEGRATION_FFSD_UDR_OICR_PMAF_v2.9.15.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Post-v2.9.15 next-release integration — FFSD / UDR / OICR / PMAF" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Post-v2.9.15 next-release integration — FFSD / UDR / OICR / PMAF","url":"https://ximoon1982.github.io/PromoteToKing/NEXT_RELEASE_INTEGRATION_FFSD_UDR_OICR_PMAF_v2.9.15.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="post-v2915-next-release-integration--ffsd--udr--oicr--pmaf">Post-v2.9.15 next-release integration — FFSD / UDR / OICR / PMAF</h1>
+
+<p>Baseline: exact frozen Promote to King v2.9.15 standalone, SHA256 <code class="language-plaintext highlighter-rouge">83813c121c82b6c318e230065baaf52fd6930854ebdbb2723acb4159f0dc070e</code>.
+Source policy: internal source/package history only; GitHub is not used.</p>
+
+<h2 id="fast-fetch-stability--diagnostics-fix-ffsd">Fast Fetch Stability &amp; Diagnostics Fix (FFSD)</h2>
+
+<ul>
+  <li>Continuous Refresh / Fast Fetch work-class telemetry records HTTP status, timeout, gateway failure, cache/lease failure, abort and observation rejection reasons.</li>
+  <li>Observation delivery emits compact result events so a successful network fetch and a rejected observation are distinguishable.</li>
+  <li>Controller errors clear after healthy planning/cycles and a liveness reschedule prevents an unexpected early return from leaving the worker wedged.</li>
+  <li>Task Control separates canonical server checks due from browser-acquisition work claimable now.</li>
+  <li>Task Control high-frequency/detail/activity/queue/tracking rendering is null-safe; missing optional DOM sections cannot crash the refresh path.</li>
+  <li>Existing v2.9.15 throughput, OAuth pacing and P0 Interactive Survival limits are unchanged.</li>
+</ul>
+
+<h2 id="ui-v2-deep-link-routing-fix-udr">UI v2 Deep-Link Routing Fix (UDR)</h2>
+
+<ul>
+  <li>UI-v2 Administration links explicitly carry <code class="language-plaintext highlighter-rouge">ui=v2</code>, preventing <code class="language-plaintext highlighter-rouge">ui-version-gate.js</code> from redirecting them into the classic UI.</li>
+  <li>OAuth’s default UI-v2 return path carries <code class="language-plaintext highlighter-rouge">ui=v2</code>.</li>
+  <li>UI-v2 compatibility aliases retain other route dimensions rather than returning a partial navigation state.</li>
+  <li>Administration deep-link state is not discarded while asynchronous administrator resolution is pending; denied access still falls back safely.</li>
+</ul>
+
+<h2 id="opponent-intelligence-coverage--results-fix-oicr">Opponent Intelligence Coverage &amp; Results Fix (OICR)</h2>
+
+<ul>
+  <li>Opponent profile W/D/L totals are aggregated over full history, not the bounded 200-row detail list.</li>
+  <li>Result coverage is explicit: canonical results, missing finished results and coverage percentage are reported separately.</li>
+  <li><code class="language-plaintext highlighter-rouge">loss</code> maps explicitly to <code class="language-plaintext highlighter-rouge">losses</code>; dynamic pluralization can no longer create a <code class="language-plaintext highlighter-rouge">losss</code> bucket.</li>
+  <li>Win-rate / profile classifications use matches with known canonical results as denominator.</li>
+  <li>Analytics match facts can recover missing opponent/P2K strength points from canonical paired-board rating evidence, improving heatmap coverage without fabricating ratings.</li>
+  <li>The Analytics logic watermark changes while retaining the historical canonical-outcome marker, causing the normal derived Analytics rebuild path to refresh affected materializations.</li>
+  <li>Opponent Chess.com links are normalized to human <code class="language-plaintext highlighter-rouge">https://www.chess.com/club/&lt;slug&gt;</code> URLs at both persistence and read boundaries, repairing legacy PubAPI-form links without a database migration.</li>
+</ul>
+
+<h2 id="player-matches-archive-fallback-fix-pmaf">Player Matches Archive Fallback Fix (PMAF)</h2>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">/pub/player/{username}/matches</code> remains the primary authoritative discovery source.</li>
+  <li>Fallback activates only for a current known-valid P2K member when that endpoint is specifically unusable: HTTP 404/410 or a structurally unusable matches payload.</li>
+  <li>Retryable transport/gateway/429/5xx failures, and 401/403 authentication/authorization failures, never activate archive fan-out.</li>
+  <li>Fallback uses <code class="language-plaintext highlighter-rouge">/pub/player/{username}/games/archives</code> and schedules at most six archive months per durable queue generation by default.</li>
+  <li>A single bounded protected runtime ledger tracks fallback state, archive-index generations, pending/scheduled months, cooldown and primary re-probe time.</li>
+  <li>Personal archives are filtered against already-known P2K match IDs. Unknown unrelated club matches are never expanded into <code class="language-plaintext highlighter-rouge">sync_match</code> work.</li>
+  <li>When a known P2K match needs authoritative participation repair, PMAF queues normal <code class="language-plaintext highlighter-rouge">sync_match</code> verification and replays only the relevant month afterward.</li>
+  <li>Primary <code class="language-plaintext highlighter-rouge">/matches</code> is re-probed after the cooldown and immediately retires fallback state when healthy.</li>
+</ul>
+
+<h2 id="compatibility">Compatibility</h2>
+
+<ul>
+  <li>Core schema remains 13.</li>
+  <li>Analytics schema remains 6.</li>
+  <li>Four-task external CRON cadence is unchanged.</li>
+  <li>No production/private configuration is added to the release tree.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/NEXT_RELEASE_INTEGRATION_FFSD_UDR_OICR_PMAF_v2.9.15.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

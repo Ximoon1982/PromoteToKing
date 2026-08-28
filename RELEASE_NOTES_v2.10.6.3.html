@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.3 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.3" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.3.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.3.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.3" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.3","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.3.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v21063">Promote to King v2.10.6.3</h1>
+
+<h2 id="mca-pagination-traversal-corrective">MCA pagination traversal corrective</h2>
+
+<p>v2.10.6.3 extends the v2.10.6.2 MCA Results Auto-Sync corrective so both source discovery and arena standings can traverse Chess.com pagination without weakening the completeness checks.</p>
+
+<h3 id="mca-past-events-index">MCA past-events index</h3>
+<ul>
+  <li>The worker no longer assumes that the first <code class="language-plaintext highlighter-rouge">clubs/pastevents</code> page contains the complete MCA event index.</li>
+  <li>Pagination links are discovered from Chess.com navigation itself instead of hard-coding one query-string shape.</li>
+  <li>Index pages are fetched serially, one page per worker step, at the existing &gt;=1 second request spacing.</li>
+  <li>Arena identities are merged and deduplicated by monotonically increasing arena id before the normal missing/refresh queue is seeded.</li>
+  <li>Index traversal is durable across admin page reloads and CRON slices via protected runtime scratch state.</li>
+</ul>
+
+<h3 id="paginated-arena-player-results">Paginated arena Player Results</h3>
+<ul>
+  <li>When the initial arena HTML contains only the first standings page (commonly 25 rows), P2K discovers the exposed result-page navigation and enters a durable <code class="language-plaintext highlighter-rouge">results_pages</code> stage.</li>
+  <li>Exactly one additional results page is fetched per worker step.</li>
+  <li>Player rows are merged by normalized username and retained between steps.</li>
+  <li>P2K stores a generated Results-compatible CSV only when the unique parsed row count exactly equals the arena’s advertised player count.</li>
+  <li>Pagination exhaustion, row overrun and the 200-page safety ceiling remain explicit source-sync errors rather than silently accepting partial data.</li>
+  <li>The existing <code class="language-plaintext highlighter-rouge">Retry failed events</code> button restarts failed arenas at the page stage and therefore picks up the new pagination logic automatically.</li>
+</ul>
+
+<h3 id="event-date-sanity-corrective">Event-date sanity corrective</h3>
+<ul>
+  <li>Visible arena headers such as <code class="language-plaintext highlighter-rouge">127 players Aug 18, 2026, 7:30 PM</code> are preferred over generic page <code class="language-plaintext highlighter-rouge">&lt;time&gt;</code> metadata.</li>
+  <li>Explicit arena start fields remain supported.</li>
+  <li>Generic <code class="language-plaintext highlighter-rouge">&lt;time&gt;</code> elements are only a last-resort source and future dates are rejected for past events.</li>
+  <li>Impossible stored future MCA dates are cleared at the start of a source scan so they can be backfilled again from the authoritative arena page.</li>
+</ul>
+
+<h3 id="operations">Operations</h3>
+<ul>
+  <li>No database schema migration.</li>
+  <li>No database reset or reseed.</li>
+  <li>No Blue/Green routing change.</li>
+  <li>Existing MCA source CSV files and derived data are preserved.</li>
+  <li>The v2.10.6.2 Blue -&gt; Green MCA sync control is unchanged.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.3.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.5.5 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.5.5" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.5.5.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.5.5.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.5.5" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.5.5","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.5.5.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v21055">Promote to King v2.10.5.5</h1>
+
+<h2 id="scope">Scope</h2>
+
+<p>Corrective release whose final state is based on v2.10.5.4 and whose cumulative installer accepts either v2.10.5.3 or v2.10.5.4. It preserves all v2.10.5.4 UI, Zoned Density Heatmap,
+automatic tracking retirement, Green scheduling, GAB, GFFL and cutover behavior.</p>
+
+<h3 id="zoned-density-heatmap-visual-parity">Zoned Density Heatmap visual parity</h3>
+
+<p>The v2.10.5.4 chart already had the agreed half-size bins and one light 3x3 Gaussian smoothing pass,
+but it still painted each smoothed bin as a rectangular SVG cell. That final block renderer was the
+remaining source of the visibly pixelated look compared with the approved proof of concept.</p>
+
+<p>v2.10.5.5 keeps the smoothing parameters, all six density-zone thresholds, and the approved
+deep-blue → cyan → green → yellow → orange → red palette unchanged. It bilinearly interpolates the
+already-smoothed density field between bin centres and renders the zoned result at modest supersampled
+resolution before display. This produces the smoother contour-like zone boundaries from the proof while
+retaining the same raw bins, tooltips, filters, log-space match-size axis, reference lines and zoom/pan.</p>
+
+<h3 id="gab-compatibility-board-projection">GAB compatibility board projection</h3>
+
+<p>A Green match may retain more than one historical username row for the same board and side because
+<code class="language-plaintext highlighter-rouge">p2k_g_match_players</code> is keyed by <code class="language-plaintext highlighter-rouge">(match_id, username_key)</code>. The v2.10.5.4 compatibility projector
+joined those rows directly to the authoritative board table, allowing one board to be projected twice
+and causing MariaDB error 1062 on <code class="language-plaintext highlighter-rouge">uq_tp_board_match_number</code>.</p>
+
+<p>v2.10.5.5 projects exactly one deterministic lineup identity per authoritative board/side. Selection
+prefers point-event evidence, then the authoritative board payload, then canonical/trusted identity
+evidence. Compatibility games are gathered through <code class="language-plaintext highlighter-rouge">p2k_g_identity_map</code>, so old/new username aliases
+belonging to the same canonical player remain attached to one compatibility board/member.</p>
+
+<p>The production failure observed at match 1779702, board 11 is covered by this generic duplicate-lineup
+regression contract. No Green Core board/history rows are deleted by this corrective.</p>
+
+<h3 id="quick-cycle-transition-recovery">Quick-cycle transition recovery</h3>
+
+<p><code class="language-plaintext highlighter-rouge">quick_complete</code> is a transition marker, not a runnable phase. Previously, an exception between cycle
+completion and the later <code class="language-plaintext highlighter-rouge">quick_index_roster</code> stage write could leave the state at <code class="language-plaintext highlighter-rouge">quick_complete</code>.
+A subsequent worker could then start a new cycle in that unhandled stage indefinitely.</p>
+
+<p>v2.10.5.5 makes the safe next stage durable together with cycle completion, before analytics rebuilding.
+Existing persisted <code class="language-plaintext highlighter-rouge">quick_complete</code> states self-heal on the next Green worker invocation. If analytics
+rebuilding itself fails, the worker reports the error but the cycle state has already advanced safely.</p>
+
+<h2 id="safety">Safety</h2>
+
+<ul>
+  <li>No database schema change.</li>
+  <li>No database reset or Green reseed.</li>
+  <li>No CRON definition/cadence change.</li>
+  <li>Green worker remains 50 s soft / 55 s hard.</li>
+  <li>GFFL remains enabled-capable and finite-cycle fairness is unchanged.</li>
+  <li>Public reads remain Blue by default until the existing validation/GAB cutover gates pass.</li>
+  <li>Blue is not retired.</li>
+  <li>assets/images are unchanged.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.5.5.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

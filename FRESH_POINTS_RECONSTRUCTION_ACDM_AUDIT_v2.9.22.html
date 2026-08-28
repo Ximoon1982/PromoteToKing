@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>v2.9.22 Fresh Points Reconstruction / ACDM audit | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="v2.9.22 Fresh Points Reconstruction / ACDM audit" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/FRESH_POINTS_RECONSTRUCTION_ACDM_AUDIT_v2.9.22.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/FRESH_POINTS_RECONSTRUCTION_ACDM_AUDIT_v2.9.22.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="v2.9.22 Fresh Points Reconstruction / ACDM audit" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"v2.9.22 Fresh Points Reconstruction / ACDM audit","url":"https://ximoon1982.github.io/PromoteToKing/FRESH_POINTS_RECONSTRUCTION_ACDM_AUDIT_v2.9.22.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="v2922-fresh-points-reconstruction--acdm-audit">v2.9.22 Fresh Points Reconstruction / ACDM audit</h1>
+
+<h2 id="authority-boundary">Authority boundary</h2>
+
+<p>Fresh reconstruction uses existing Core facts only as discovery hints. Network-acquired reconstruction facts are stored in separate Core-15 staging tables. No canonical fact is changed during scanning. Explicit administrator approval is required and the apply operation takes the normal Club/Player worker advisory lane lock.</p>
+
+<h2 id="reconstruction-checkpoints-and-observability">Reconstruction checkpoints and observability</h2>
+
+<p>The run row stores overall/Club/Player progress, current phase, timestamps and client metric snapshots. Dedicated staging tables retain discovered/resolved match, member, board and game work. Task Control displays per-phase found/pending/processed/issues/progress counters and global match/member/board/game/API metrics.</p>
+
+<h2 id="apply-semantics">Apply semantics</h2>
+
+<p>Club approval promotes reconstructed match status/board counts/scores and recalculates Club Points, including explicit zero-point treatment for finished 0-0 void records. Player approval rebuilds the reconstructed closing-roster members’ board/game history and Player Points from staged results. Analytics is rebuilt after canonical promotion.</p>
+
+<p>Queue cleanup is scoped: work conclusively satisfied by the applied reconstruction is marked skipped/superseded with the reconstruction run ID. Unresolved, active, unrelated profile/stat and other maintenance work is retained.</p>
+
+<h2 id="acdm-correction">ACDM correction</h2>
+
+<p>The v2.9.20 telemetry showed that a healthy ~25 calls/s OAuth browser transport did not translate into comparable canonical queue drain: Club CRON was capped at 25 items per five-minute run and browser ACDM disappeared while Android suspended the page. v2.9.22 moves the principal correction into server worker policy: Club has 100-item capacity and a 34-second execution floor; browser ACDM adapts up to 64 items/pulse when awake. P0 foreground protection and shared OAuth adaptive pacing remain unchanged.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/FRESH_POINTS_RECONSTRUCTION_ACDM_AUDIT_v2.9.22.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

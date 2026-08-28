@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2106">Promote to King v2.10.6</h1>
+
+<p>v2.10.6 continues directly from the canonical v2.10.5.5 source tree. It is an additive release: no source path is deleted, no database is reset, and no Green reseed is required.</p>
+
+<h2 id="mca-results-auto-sync--date-backfill">MCA Results Auto-Sync &amp; Date Backfill</h2>
+
+<ul>
+  <li>Administration → MCA source data gains <strong>Grab missing Results CSV</strong> and resumable source-sync progress.</li>
+  <li>The source scan reads the Promote to King MCA past-events index, identifies arena IDs, acquires missing result CSV files, and backfills authoritative event start dates from arena pages.</li>
+  <li>All discovered arenas are checked for genuinely missing CSV files. Existing CSV files are not mass-refetched: only the recent 40-event overlap and files associated with <code class="language-plaintext highlighter-rouge">possible_renamed</code> identities are forcibly refreshed.</li>
+  <li>Source requests are serialized and server-enforced at a minimum one-second spacing between request starts.</li>
+  <li>Sync state and work queue are durable in Analytics schema 9, so browser and CRON execution can resume the same work.</li>
+  <li>Existing manual MCA CSV upload and processing remain available as a fallback; previously stored source data is retained.</li>
+  <li>A dedicated CRON runner and safe installer schedule the source sync twice daily. The sync itself also records a 12-hour next-scan gate.</li>
+</ul>
+
+<h2 id="dashboard-new-match-immediate-refresh">Dashboard new-match immediate refresh</h2>
+
+<ul>
+  <li>Clicking a match from the administrator <strong>New matches · 24 h</strong> list now performs an authoritative network-first Chess.com match fetch before opening the detail.</li>
+  <li>Blue uses the normal Team Points match ingestion path; Green stores the authoritative Green match and immediately refreshes the compatibility projection.</li>
+  <li>Other match-detail entry points remain database-first.</li>
+</ul>
+
+<h2 id="opponent-player-intelligence">Opponent player intelligence</h2>
+
+<ul>
+  <li>Compact board facts now retain the paired opponent username in addition to the paired ratings.</li>
+  <li>Opponent Insights now exposes opponent-player metrics including unique observed players, recent players, appearances, matches, observed ratings, and Promote to King W/D/L/game/point history against those players.</li>
+  <li>The feature uses already-ingested match/board facts; it does not require a profile request for every opponent player.</li>
+</ul>
+
+<h2 id="gabcrf--green-analytics-bootstrap-compatibility-reconciliation-fix">GABCRF — Green Analytics Bootstrap Compatibility Reconciliation Fix</h2>
+
+<ul>
+  <li>GAB gains a resumable <strong>compatibility reconciliation</strong> lane between compatibility projection and analytics build.</li>
+  <li>The lane repairs missing/stale compatibility match projections and board-count drift caused when authoritative Green facts change behind the normal ascending bootstrap cursor.</li>
+  <li>At end-of-pass it rechecks from ID zero; if newer Green writes landed behind the cursor, it resets the reconciliation cursor and converges another pass.</li>
+  <li>If final read parity detects projection drift, GAB reopens reconciliation + analytics + parity rather than terminally failing on a repairable projection mismatch.</li>
+  <li>Compatibility batch projection refreshes members once per batch instead of once per match.</li>
+</ul>
+
+<h2 id="database--scheduling">Database / scheduling</h2>
+
+<ul>
+  <li>Core schema: <strong>17</strong> — adds <code class="language-plaintext highlighter-rouge">opponent_username</code> to compact board facts.</li>
+  <li>Analytics schema: <strong>9</strong> — adds MCA source provenance, durable auto-sync state and queue.</li>
+  <li>Migrations are additive. No reset, reseed, or historical MCA deletion is performed.</li>
+  <li>New CRON: MCA source sync twice daily via <code class="language-plaintext highlighter-rouge">cron-mca-results-v2.10.6.sh</code> / <code class="language-plaintext highlighter-rouge">reset-install-mca-cron-v2.10.6.sh</code>.</li>
+</ul>
+
+<h2 id="preserved-v21055-behavior">Preserved v2.10.5.5 behavior</h2>
+
+<p>Canonical compatibility board projection, canonical identity game projection, durable <code class="language-plaintext highlighter-rouge">quick_complete</code> handling, finite-cycle fairness, and the approved Zoned Density Heatmap rendering remain intact.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

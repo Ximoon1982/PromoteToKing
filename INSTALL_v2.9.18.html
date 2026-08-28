@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Install Promote to King v2.9.18 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Install Promote to King v2.9.18" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.18.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.18.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Install Promote to King v2.9.18" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Install Promote to King v2.9.18","url":"https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.18.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="install-promote-to-king-v2918">Install Promote to King v2.9.18</h1>
+
+<h2 id="upgrade-from-canonical-v2917">Upgrade from canonical v2.9.17</h2>
+
+<p>Place these two files together in the current P2K site root:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">PromoteToKing_v2.9.17_to_v2.9.18_INCREMENTAL.zip</code></li>
+  <li><code class="language-plaintext highlighter-rouge">update-v2.9.17-to-v2.9.18.sh</code></li>
+</ul>
+
+<p>Do <strong>not</strong> manually unzip the incremental package. Run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">chmod</span> +x update-v2.9.17-to-v2.9.18.sh
+./update-v2.9.17-to-v2.9.18.sh
+</code></pre></div></div>
+
+<p>The updater validates the payload before touching production, creates compact rollback archives, preserves protected configuration/OAuth/shared-server values, upgrades the additive database schemas, installs the MIAC initialization seed into <code class="language-plaintext highlighter-rouge">data/miac/seed/</code>, replaces only managed P2K CRON entries, and verifies four operational v2.9.18 dispatcher entries plus one weekly backup entry.</p>
+
+<h2 id="fresh-standalone-installation">Fresh standalone installation</h2>
+
+<p>Use <code class="language-plaintext highlighter-rouge">PromoteToKing_Standalone_v2.9.18.zip</code> with the normal protected configuration/database workflow. After protected configuration is present, run once:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">chmod</span> +x install-miac-seed-v2.9.18.sh reset-install-cron-v2.9.18.sh
+./install-miac-seed-v2.9.18.sh
+./reset-install-cron-v2.9.18.sh
+</code></pre></div></div>
+
+<p>The schema bootstrap imports the compact MIAC seed idempotently. The original <code class="language-plaintext highlighter-rouge">resources/miac/seed.zip</code> remains immutable provenance; runtime confirmations/rejections are stored separately and are not overwritten by later seed installation.</p>
+
+<h2 id="weekly-backup">Weekly backup</h2>
+
+<p>The installed CRON schedule includes:</p>
+
+<pre><code class="language-cron">37 3 * * 0 .../weekly-backup-v2.9.18.sh
+</code></pre>
+
+<p>It writes one archive per ISO week directly under <code class="language-plaintext highlighter-rouge">_backup/</code>. Set <code class="language-plaintext highlighter-rouge">P2K_WEEKLY_BACKUP_KEEP</code> in the CRON environment if a retention other than 52 archives is required.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALL_v2.9.18.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.15 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.15" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.15.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.15.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.15" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.15","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.15.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2915">Promote to King v2.9.15</h1>
+
+<h2 id="scope">Scope</h2>
+
+<p>v2.9.15 is a corrective release built directly on the canonical v2.9.14 release. It changes no database schema, achievement catalogue, external CRON cadence, OAuth tuning namespace, or queue architecture. Its functional scope is limited to the telemetry-driven corrections prepared after v2.9.14.</p>
+
+<h2 id="corrections">Corrections</h2>
+
+<ul>
+  <li><strong>P0 ACSR authoritative pulse viability.</strong> Continuous Refresh requests a 34-second Club/Member worker pulse through a 45-second admin request envelope. The control endpoint derives/enforces a viable minimum from the configured outbound request timeout instead of accepting the structurally impossible 6-second pulse. The worker outbound safety guard itself is unchanged.</li>
+  <li><strong>Archive acquisition backpressure.</strong> ACAMR and Continuous Refresh share one locked automatic archive fallback budget of 12 archive requests per 600 seconds. Archive work is fallback-only, a slot is consumed only when an archive request is actually emitted, and speculative previous-month planner acquisition is removed.</li>
+  <li><strong>ISRE batching/render/log corrections.</strong> Continuous Refresh batches persistence/UI-event/log telemetry at cycle level, bounds failure logging, throttles repetitive empty-plan logs to at most once per minute, and Task Control high-frequency rendering is null-safe.</li>
+  <li><strong>Member CRON exit-28 margin.</strong> The Player/Member endpoint is capped at 38 seconds and recomputes remaining wall-clock budget before each optional maintenance class, preserving margin under the existing 55-second dispatcher curl ceiling.</li>
+</ul>
+
+<h2 id="unchanged">Unchanged</h2>
+
+<ul>
+  <li>Core schema: <strong>13</strong></li>
+  <li>Analytics schema: <strong>6</strong></li>
+  <li>Achievement catalogue: <strong>162</strong></li>
+  <li>External CRON cadence: unchanged (4 tasks)</li>
+  <li>Fresh real-OAuth startup/adaptive-learning design: unchanged from v2.9.14</li>
+  <li>Canonical queue coalescing: unchanged from v2.9.14</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.15.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.18 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.18" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.18.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.18.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.18" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.18","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.18.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v210618">Promote to King v2.10.6.18</h1>
+
+<h2 id="scope">Scope</h2>
+
+<p>Cumulative Green compatibility and Opponent Insights historical-coverage corrective based on v2.10.6.17.</p>
+
+<h3 id="mutable-registration-lineup-correctness">Mutable registration lineup correctness</h3>
+
+<p>Chess.com daily team-match registration lineups are mutable until the match starts. A player may move from one board to another as registrations change, and a username alias may also change between observations. <code class="language-plaintext highlighter-rouge">p2k_g_match_players</code> is now treated explicitly as the <strong>current authoritative lineup snapshot</strong>, not as lineup history.</p>
+
+<p>When an authoritative match-detail payload contains a non-empty side lineup, Green retires rows for that side that are no longer present before upserting the latest players. Games and point events are preserved as immutable/historical evidence.</p>
+
+<p>The compatibility projector also adds a defensive global canonical-member assignment: one canonical P2K member can produce at most one compatibility board row per match. Mutable registration/in-progress rows prefer the newest authoritative match observation; finished rows continue to prefer game/board evidence. GABCRF drift/parity board counts use canonical member-match counts rather than raw historical board positions.</p>
+
+<p>This corrects <code class="language-plaintext highlighter-rouge">uq_tp_board_member_match</code> failures such as duplicate member/match rows caused by registration board movement.</p>
+
+<h3 id="accelerated-historical-heatmap-backfill">Accelerated historical heatmap backfill</h3>
+
+<p>Opponent heatmaps require paired-board rating provenance. Quick mode does not perform a complete historical discovery/refresh, so historical coverage could remain frozen indefinitely.</p>
+
+<p>v2.10.6.18 adds Administration → Green Team Points → <strong>Historical heatmap backfill</strong>. It queues only already-known, finished, non-void P2K daily matches whose compatibility metadata is still missing paired ratings. No Deep ID scan is used.</p>
+
+<p>The Green Accelerator consumes this queue as a dedicated <code class="language-plaintext highlighter-rouge">HEATMAP</code> browser lane, after genuine external GAB work and before GFFL bulk debt, while the existing finite-cycle reserve protects Quick-cycle progress. Successful match-detail observations update Green, project compatibility immediately and mark the heatmap work item completed. Transient/terminal failures are tracked independently from GAB.</p>
+
+<p>Task Control exposes paired-rating coverage plus queue pending/completed/failed counts. Opponent Insights also replaces the old six-hour browser heatmap snapshot with a five-minute cache generation so backfilled data becomes visible promptly after compatibility analytics refresh.</p>
+
+<h2 id="safety">Safety</h2>
+
+<ul>
+  <li>No database schema version change.</li>
+  <li>No database reset or reseed.</li>
+  <li>No CRON definition/cadence change.</li>
+  <li>No Blue/Green routing change.</li>
+  <li>No scoring change.</li>
+  <li>No artwork/image change.</li>
+  <li>v2.10.6.16 cycle/runtime protections and v2.10.6.17 canonical game-sequence projection are preserved.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.18.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

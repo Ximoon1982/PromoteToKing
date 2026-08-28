@@ -434,14 +434,15 @@ final class AnalyticsBuilder
 
         // Match milestones and league participation use the first known match timestamp.
         $q = $this->core->prepare(
-            "SELECT COALESCE(im.canonical_username_key,u.username_key) username_key,m.match_id,m.match_name,m.match_url,m.is_league,m.start_time,m.end_time,m.status,m.rules,m.board_count,m.opponent_slug,m.result,m.p2k_score,m.opponent_score,o.country_code,
+            "SELECT COALESCE(im.canonical_username_key,u.username_key) username_key,m.match_id,m.match_name,m.match_url,m.is_league,m.start_time,m.end_time,m.status,m.rules,m.board_count,COALESCE(oa.canonical_slug,m.opponent_slug) opponent_slug,m.result,m.p2k_score,m.opponent_score,o.country_code,
                     COALESCE(m.start_time,m.end_time,m.last_verified_at) event_at,COALESCE(SUM(g.points_x2),0) player_points_x2
              FROM p2k_tp_boards b JOIN p2k_tp_members u ON u.member_id=b.member_id
              LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0
              JOIN p2k_tp_match_metadata m ON m.club_slug=u.club_slug AND m.match_id=b.match_id
              LEFT JOIN p2k_tp_games g ON g.board_id=b.board_id
-             LEFT JOIN p2k_tp_opponents o ON o.club_slug=m.club_slug AND o.opponent_slug=m.opponent_slug
-             WHERE u.club_slug=? AND m.is_void=0 GROUP BY COALESCE(im.canonical_username_key,u.username_key),m.match_id,m.match_name,m.match_url,m.is_league,m.start_time,m.end_time,m.status,m.rules,m.board_count,m.opponent_slug,m.result,m.p2k_score,m.opponent_score,o.country_code,event_at
+             LEFT JOIN p2k_tp_opponent_aliases oa ON oa.club_slug=m.club_slug AND oa.alias_slug=m.opponent_slug
+             LEFT JOIN p2k_tp_opponents o ON o.club_slug=m.club_slug AND o.opponent_slug=COALESCE(oa.canonical_slug,m.opponent_slug)
+             WHERE u.club_slug=? AND m.is_void=0 GROUP BY COALESCE(im.canonical_username_key,u.username_key),m.match_id,m.match_name,m.match_url,m.is_league,m.start_time,m.end_time,m.status,m.rules,m.board_count,COALESCE(oa.canonical_slug,m.opponent_slug),m.result,m.p2k_score,m.opponent_score,o.country_code,event_at
              ORDER BY username_key,event_at,m.match_id"
         );
         $q->execute([$clubSlug]);
@@ -566,8 +567,14 @@ final class AnalyticsBuilder
         $pointThresholds=['daily-pawn'=>20,'daily-knight'=>40,'daily-bishop'=>100,'daily-rook'=>200,'daily-queen'=>300,'daily-king'=>500,'daily-bronze-king'=>1000,'daily-silver-king'=>2000,'daily-gold-king'=>3000,'daily-platinum-king'=>4000,'daily-amethyst-king'=>6000,'daily-topaz-king'=>8000,'daily-emerald-king'=>11000,'daily-sapphire-king'=>14000,'daily-ruby-king'=>17000,'daily-diamond-king'=>20000];
         while($r=$q->fetch(PDO::FETCH_ASSOC)){
             $u=(string)$r['username_key']; $at=(string)$r['game_end_utc']; $px=(int)$r['points_x2'];
-            if(!isset($state[$u]))$state[$u]=['games'=>0,'wins'=>0,'points'=>0,'league_points'=>[]];
+            if(!isset($state[$u]))$state[$u]=['games'=>0,'wins'=>0,'points'=>0,'league_points'=>[],'period_keys'=>[],'period_points'=>[]];
             $st=&$state[$u]; $st['games']++; if($px===2)$st['wins']++; $st['points']+=$px;
+            $ts=strtotime($at.' UTC');
+            if($ts!==false){
+                $periods=['day'=>gmdate('Y-m-d',$ts),'week'=>gmdate('o-\WW',$ts),'month'=>gmdate('Y-m',$ts),'year'=>gmdate('Y',$ts)];
+                $thresholds=['day'=>[[4,'team-points-day-2'],[10,'team-points-day-5']],'week'=>[[20,'team-points-week-10'],[40,'team-points-week-20']],'month'=>[[50,'team-points-month-25'],[100,'team-points-month-50']],'year'=>[[200,'team-points-year-100'],[500,'team-points-year-250']]];
+                foreach($periods as $period=>$periodKey){if(($st['period_keys'][$period]??null)!==$periodKey){$st['period_keys'][$period]=$periodKey;$st['period_points'][$period]=0;}$st['period_points'][$period]+=$px;foreach($thresholds[$period] as $threshold)if($st['period_points'][$period]>=$threshold[0])$record($u,$threshold[1],$at,'game-time','match',(string)$r['match_name'],(string)$r['match_url']);}
+            }
             if($st['points']>0)$record($u,'first-point',$at,'game-time','match',(string)$r['match_name'],(string)$r['match_url']);
             foreach([100,500,1000,5000,10000] as $n)if($st['games']===$n)$record($u,'games-'.$n,$at,'game-time','match',(string)$r['match_name'],(string)$r['match_url']);
             foreach([50,250,1000] as $n)if($st['wins']===$n)$record($u,'wins-'.$n,$at,'game-time','match',(string)$r['match_name'],(string)$r['match_url']);

@@ -25,8 +25,8 @@
   });
 
   window.P2K_SITE_CONFIG = Object.freeze({
-    version: "2.10.6.24",
-    builtAt: "2026-08-26T23:06:16Z",
+    version: "2.10.6.25",
+    builtAt: "2026-08-27T12:53:58Z",
     schemaVersion: 6,
     siteName: existing.siteName || branding.title || "Promote to King",
     siteDescription: existing.siteDescription || branding.subtitle || "Play together. Improve together. Promote to King.",

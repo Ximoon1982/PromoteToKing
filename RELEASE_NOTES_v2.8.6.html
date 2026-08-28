@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King Standalone v2.8.6 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King Standalone v2.8.6" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.6.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.6.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King Standalone v2.8.6" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King Standalone v2.8.6","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.6.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-standalone-v286">Promote to King Standalone v2.8.6</h1>
+
+<p>v2.8.6 is a public-user experience and progressive-loading release built on v2.8.5. It preserves the v2.8.5 synchronization, cache, avatar, Analytics-generation and 0–0 void-match correctness work while moving non-visible public data off the first-render critical path.</p>
+
+<h2 id="dashboard-responsive-first-automatic-enrichment-second">Dashboard: responsive first, automatic enrichment second</h2>
+
+<ul>
+  <li>The first visible Dashboard now waits only for the materialized Team database summary, plus the logged-in player’s local Team Points when applicable.</li>
+  <li>Database values are applied immediately; one slow secondary request no longer holds unrelated cards behind a <code class="language-plaintext highlighter-rouge">Promise.all</code> barrier.</li>
+  <li>After the first paint, the second wave automatically starts current Chess.com club members/profile/matches, Live team/player facts, personal current-match activity and Match Assistant recommendations.</li>
+  <li>Nothing in the former on-demand Dashboard category requires an extra click: it still preloads automatically, but never blocks first render.</li>
+  <li>The Dashboard reuses a short session snapshot while revalidating current data.</li>
+  <li>Once visible content is settled and the connection permits it, only two small same-origin responses are idle-prefetched: Achievement players page 1 and Team Insights summary.</li>
+</ul>
+
+<h2 id="progressive-insights">Progressive Insights</h2>
+
+<ul>
+  <li>Team Insights is split into cached sections: summary + cumulative activity first; progression/daily boards next; outcome/size/monthly charts after that; rolling/activity/concentration deepest.</li>
+  <li>Members Insights loads summary + monthly active members first, rank distribution near the viewport, and the first 25 table rows only as the table approaches.</li>
+  <li>Match Insights loads summary + monthly activity first; result, duration, dimension, highlight and first-table-page sections are viewport-triggered independently.</li>
+  <li>Opponent Insights loads the summary + Top 15 first and defers the 25-row table until it approaches the viewport.</li>
+  <li>Table search/sort/pagination requests retrieve table data only and do not recompute unrelated charts.</li>
+  <li>Lower-card failures are local to that card/section instead of blanking an otherwise usable Insights page.</li>
+</ul>
+
+<h2 id="hall-of-fame-and-profiles">Hall of Fame and profiles</h2>
+
+<ul>
+  <li>Achievement wall page 1 (12 players) renders before tournament summary, medal enrichment, missing-avatar checks or the full achievement catalogue.</li>
+  <li>The achievement catalogue is requested only when it is opened.</li>
+  <li>Missing avatars and medal counts are resolved only for the visible Achievement batch and do not block card rendering.</li>
+  <li>Daily Hall initially returns rank summaries only; expanding a rank retrieves 25 detailed members at a time.</li>
+  <li>Live Hall similarly returns summary/rank counts first and pages expanded rank members by 25.</li>
+  <li>Rank ladders share Previous/Next pagination controls.</li>
+  <li>Unified Hall search now uses one lightweight same-origin <code class="language-plaintext highlighter-rouge">hall-search.php</code> request rather than waiting on several independent browser datasets.</li>
+  <li>Player Profile renders the database profile first. Tournament history and the one-player Chess.com avatar revalidation run afterward and update only their own areas.</li>
+  <li>Profile <code class="language-plaintext highlighter-rouge">mode=modal</code> skips recent-match and top-opponent queries that the modal does not display; legacy <code class="language-plaintext highlighter-rouge">mode=full</code> remains available.</li>
+</ul>
+
+<h2 id="tournaments">Tournaments</h2>
+
+<ul>
+  <li>Default Podium Ranking is server-paged at 25 rows.</li>
+  <li>The public page no longer downloads the complete tournament archive to show the first ranking page.</li>
+  <li>Tournament rows are requested only after the Tournaments subtab is selected, also in 25-row pages.</li>
+  <li>Player tournament history is fetched only when a player is opened.</li>
+  <li>Search, sort, year/type filters and medal exclusions are applied server-side before the page is returned.</li>
+</ul>
+
+<h2 id="browsercacherendering-changes">Browser/cache/rendering changes</h2>
+
+<ul>
+  <li>Public materialized reads use normal browser cache revalidation and server ETags instead of forcing <code class="language-plaintext highlighter-rouge">no-store</code>.</li>
+  <li>Admin/session/task operations remain uncached where appropriate.</li>
+  <li>A shared progressive-loader provides viewport preloading (~600 px ahead), a two-request low-priority concurrency cap, idle scheduling, session snapshots and data-saver/2G prefetch avoidance.</li>
+  <li>Native Insights chart code has been split out of the initial Dashboard bundle and is loaded only on first chart use.</li>
+  <li>The main Dashboard controller is therefore smaller and avoids parsing the full chart engine before it is needed.</li>
+</ul>
+
+<h2 id="compatibility--database--cron">Compatibility / database / CRON</h2>
+
+<ul>
+  <li>Core schema: <strong>5</strong> (unchanged).</li>
+  <li>Analytics schema: <strong>5</strong> (unchanged).</li>
+  <li><strong>No database migration or reset is required from v2.8.5.</strong></li>
+  <li>CRON schedule is unchanged from v2.8.5; the release includes <code class="language-plaintext highlighter-rouge">reset-install-cron-v2.8.6.sh</code> for a full current-user crontab replacement when desired.</li>
+  <li>Existing standalone URLs remain valid. Progressive API endpoints retain backward-compatible full responses when no <code class="language-plaintext highlighter-rouge">section</code>/mode is supplied.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.8.6.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

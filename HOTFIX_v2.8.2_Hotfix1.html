@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.2 — Hotfix 1 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.2 — Hotfix 1" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/HOTFIX_v2.8.2_Hotfix1.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/HOTFIX_v2.8.2_Hotfix1.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.2 — Hotfix 1" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.2 — Hotfix 1","url":"https://ximoon1982.github.io/PromoteToKing/HOTFIX_v2.8.2_Hotfix1.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v282--hotfix-1">Promote to King v2.8.2 — Hotfix 1</h1>
+
+<p>This hotfix fixes Team Insights and Opponents Insights failing with:</p>
+
+<p><code class="language-plaintext highlighter-rouge">SQLSTATE[21S01]: Insert value list does not match column list: 1136 Column count doesn't match value count at row 1</code></p>
+
+<h2 id="minimal-deployment">Minimal deployment</h2>
+
+<p>Upload this corrected file over the existing v2.8.2 file:</p>
+
+<p><code class="language-plaintext highlighter-rouge">server/team-points/src/AnalyticsBuilder.php</code></p>
+
+<p>No database reset, initializer, seed import or manual SQL is required. The next Team Insights or Opponents Insights request will retry the Analytics refresh from authoritative Core data.</p>
+
+<h2 id="cause">Cause</h2>
+
+<p>The v2.8.2 match-facts Analytics insert listed 25 columns and bound 25 values, but its SQL <code class="language-plaintext highlighter-rouge">VALUES(...)</code> clause contained only 23 placeholders. Hotfix 1 restores the missing two placeholders for <code class="language-plaintext highlighter-rouge">max_rating</code> and <code class="language-plaintext highlighter-rouge">first_discovered_at</code>.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/HOTFIX_v2.8.2_Hotfix1.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Queue deduplication audit — v2.9.13 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Queue deduplication audit — v2.9.13" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/QUEUE_AUDIT_v2.9.13.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/QUEUE_AUDIT_v2.9.13.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Queue deduplication audit — v2.9.13" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Queue deduplication audit — v2.9.13","url":"https://ximoon1982.github.io/PromoteToKing/QUEUE_AUDIT_v2.9.13.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="queue-deduplication-audit--v2913">Queue deduplication audit — v2.9.13</h1>
+
+<h2 id="finding">Finding</h2>
+
+<p>Before v2.9.13, queue uniqueness was based on <code class="language-plaintext highlighter-rouge">(job_id,item_type,item_key)</code>. Many producers intentionally embedded source, batch, repair or freshness identifiers in <code class="language-plaintext highlighter-rouge">item_key</code>, so logically identical work could accumulate as independent active tickets. This explains how a dataset with roughly 15,000 matches can coexist with an order-of-magnitude larger queue history/outstanding set.</p>
+
+<h2 id="corrective-model">Corrective model</h2>
+
+<p>Outstanding work now has a canonical scope and canonical key. Only active states (<code class="language-plaintext highlighter-rouge">pending</code>, <code class="language-plaintext highlighter-rouge">running</code>, <code class="language-plaintext highlighter-rouge">retry</code>) participate in canonical uniqueness. Terminal rows remain audit history.</p>
+
+<p>A new request either creates one canonical active item, merges/promotes an existing pending/retry item, or records one requested continuation generation on a running item. Priority/freshness requirements are merged conservatively; provenance is retained in coalesced sources.</p>
+
+<h2 id="scheduler-safety">Scheduler safety</h2>
+
+<p>Freshness deadlines receive the strongest queue priority. Canonical membership merging cannot weaken the hourly authoritative member-list guarantee: deadline-bearing membership work forces a network fetch. Club match-index deadline work remains authoritative. Deduplication therefore reduces redundant work without allowing ordinary backlog to mask the two hourly freshness floors.</p>
+
+<h2 id="benchmark">Benchmark</h2>
+
+<p>Synthetic mixed backlog:</p>
+
+<ul>
+  <li>Input requests: 150,002.</li>
+  <li>Canonical outstanding work: 25,001.</li>
+  <li>Coalesced duplicates: 125,001.</li>
+  <li>Reduction: 83.33%.</li>
+  <li>First scheduler items after compaction: club match index and club members deadlines.</li>
+  <li>100,000 duplicate requests while one item was running: one requested continuation generation.</li>
+</ul>
+
+<p>The benchmark is deterministic and implemented in <code class="language-plaintext highlighter-rouge">tests/simulate_queue_dedup_v2913.py</code> with release assertions in <code class="language-plaintext highlighter-rouge">tests/test_v2913_queue_dedup.py</code>.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/QUEUE_AUDIT_v2.9.13.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

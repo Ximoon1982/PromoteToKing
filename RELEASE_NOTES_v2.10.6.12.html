@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.12 — Administration shell reorganization | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.12 — Administration shell reorganization" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.12.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.12.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.12 — Administration shell reorganization" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.12 — Administration shell reorganization","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.12.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v210612--administration-shell-reorganization">Promote to King v2.10.6.12 — Administration shell reorganization</h1>
+
+<h2 id="scope">Scope</h2>
+
+<p>v2.10.6.12 is an <strong>admin-only UI release</strong> on top of the authoritative v2.10.6.11 source. It reorganizes the authenticated Dashboard Admin view without changing the public Dashboard, Hall of Fame or Insights surfaces and without replacing the existing administration tools.</p>
+
+<h2 id="1-six-top-level-administration-views">1. Six top-level administration views</h2>
+
+<p>The authenticated Admin toggle now opens a shell organized as:</p>
+
+<ul>
+  <li><strong>Competitions</strong> — Daily Matches, Multi Club Arenas, Tournaments.</li>
+  <li><strong>Members</strong> — Team Depth, Chronology, Aliases &amp; name changes.</li>
+  <li><strong>Team</strong> — Club intelligence.</li>
+  <li><strong>Opponents</strong> — Opponent intelligence.</li>
+  <li><strong>Admin &amp; maintenance</strong> — Diagnostics, Scheduled Task Control, Logs, Storage &amp; Capacity, Performance, Freshness, Traffic &amp; visitors.</li>
+  <li><strong>Misc</strong> — Lost &amp; found catalogue.</li>
+</ul>
+
+<p>The selected tab is preserved in the existing navigation state through <code class="language-plaintext highlighter-rouge">adminCategory</code>.</p>
+
+<h2 id="2-live-operational-metric-cards">2. Live operational metric cards</h2>
+
+<p>The new cards reuse existing authoritative P2K endpoints and data products rather than introducing another backend layer. Cards surface concise operational metrics from Green Core/Analytics, MCA data, tournament data, Club Intelligence, protected runtime telemetry and first-party traffic analytics.</p>
+
+<p>Each card shows:</p>
+
+<ul>
+  <li>current <strong>status</strong>;</li>
+  <li><strong>freshness</strong> / observation age or live-read state;</li>
+  <li>explicit <strong>source/provenance</strong>;</li>
+  <li>direct links into the existing detailed tool or filtered administration context.</li>
+</ul>
+
+<p>A manual <strong>Refresh live cards</strong> action is provided. Automatic card reloads are guarded by the existing authenticated-admin path and a short client-side refresh interval.</p>
+
+<h2 id="3-existing-tools-remain-authoritative">3. Existing tools remain authoritative</h2>
+
+<p>The shell is an entry/navigation layer only. Existing admin pages, iframes, APIs and operational controls are preserved.</p>
+
+<p>In particular:</p>
+
+<ul>
+  <li>Scheduled Task Control remains the existing implementation, including the <strong>Green accelerator control</strong>.</li>
+  <li>Production Migration remains available and is deep-linked from Scheduled Task Control.</li>
+  <li>MCA source-data, match creation, team depth, member chronology, aliases, diagnostics, reconciliation, storage, Club Intelligence, Opponent Intelligence and other detailed tools continue to use their existing implementations.</li>
+</ul>
+
+<h2 id="4-lost--found-catalogue">4. Lost &amp; found catalogue</h2>
+
+<p>The <strong>Misc → Lost &amp; found tools</strong> view renders the complete pre-existing administrator tool catalogue. The validated catalogue remains <strong>36 tools</strong>; none is removed by the new shell.</p>
+
+<h2 id="5-regression-lock">5. Regression lock</h2>
+
+<p>The public user-facing surfaces are intentionally outside this release scope:</p>
+
+<ul>
+  <li>Dashboard public section: unchanged from v2.10.6.11.</li>
+  <li>Hall of Fame section: unchanged from v2.10.6.11.</li>
+  <li>Insights section: unchanged from v2.10.6.11.</li>
+</ul>
+
+<p>The focused release regression test fingerprints those sections and fails if they change.</p>
+
+<h2 id="deployment-impact">Deployment impact</h2>
+
+<ul>
+  <li>No database schema migration.</li>
+  <li>No database reset or reseed.</li>
+  <li>No CRON definition change.</li>
+  <li>No Green/Blue routing change.</li>
+  <li>No Team Points scoring change.</li>
+  <li>No image/artwork change.</li>
+  <li>No existing source file removed.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.12.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

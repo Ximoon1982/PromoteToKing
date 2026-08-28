@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>v2.10.6.22 — GABCRF deadlock resilience + Admin modal/label corrective | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="v2.10.6.22 — GABCRF deadlock resilience + Admin modal/label corrective" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/CHANGELOG.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/CHANGELOG.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="v2.10.6.22 — GABCRF deadlock resilience + Admin modal/label corrective" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"v2.10.6.22 — GABCRF deadlock resilience + Admin modal/label corrective","url":"https://ximoon1982.github.io/PromoteToKing/CHANGELOG.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h2 id="v210622--gabcrf-deadlock-resilience--admin-modallabel-corrective">v2.10.6.22 — GABCRF deadlock resilience + Admin modal/label corrective</h2>
+<ul>
+  <li>Treats MariaDB 40001/1213 GABCRF deadlocks as transient bounded retries/yields while preserving convergence state.</li>
+  <li>Auto-recovers an already-stored GABCRF deadlock; Start/resume no longer resets its cursor/counters.</li>
+  <li>Fixes the New matches · 24 h transient loading modal reappearing after closing the real match profile.</li>
+  <li>Renames Admin &amp; maintenance to Maintenance.</li>
+</ul>
+
+<h1 id="v210621">v2.10.6.21</h1>
+
+<ul>
+  <li>Reuses the public <code class="language-plaintext highlighter-rouge">dashboard-page-tabs</code> component for the six Admin view categories, including matching SVG icons and the same 620 px two-column mobile collapse.</li>
+  <li>Removes the Administration / Administrator dashboard introductory heading block.</li>
+  <li>Moves OAuth/local admin and Refresh live cards directly below the Admin category menu.</li>
+  <li>Admin-only UI/cache-generation release; no runtime, DB, CRON, routing, scoring, heatmap, or artwork change.</li>
+</ul>
+
+<h1 id="v210619">v2.10.6.19</h1>
+
+<ul>
+  <li>Corrected historical heatmap provenance to use stored/board game ratings rather than ratingless historical match details.</li>
+  <li>Restored bounded background OAuth acceleration and admin/P0 responsiveness; removed accelerator JSONP fan-out.</li>
+  <li>Corrected paired-board rating invariant and GAB/heatmap telemetry separation.</li>
+</ul>
+
+<h2 id="v210611--green-live-freshness-corrective">v2.10.6.11 — Green live freshness corrective</h2>
+<ul>
+  <li>Dashboard Team Points and match-state lists use live Green Core when Green is selected; Chess.com match-list overwrite removed.</li>
+  <li>Team Points browser-memory/public fetch caching no longer masks newer DB generations.</li>
+  <li>Migration Green headline totals/top players are live Core; analytics snapshot retained separately.</li>
+  <li>Green derived analytics minimum rebuild cadence reduced from 300s to 30s.</li>
+  <li>Match Creation Analyzer and Match Assistant embedded pages now use v2.10.6.11 cache generation.</li>
+  <li>Match Assistant shell-ready and full-ready states are separated to eliminate the stale loading layer race.
+    <h2 id="v210610--registrationtrackingassistant-corrective">v2.10.6.10 — Registration/tracking/assistant corrective</h2>
+  </li>
+  <li>Registration 15-day chart now uses the same canonical registered-match records/date keys as the registered-by-start-date table; localized table text is no longer reparsed.</li>
+  <li>Continuous tracked-match monitoring now stops at match start + 24 hours for automatic, manual and legacy sources, while preserving history and allowing one-off recording.</li>
+  <li>Dashboard Match Assistant loading/preparation visibility is normalized so filtered assistants cannot open with a stale loader behind them.</li>
+  <li>No DB schema/reset/reseed, CRON-definition, Green routing, scoring or image changes.</li>
+</ul>
+
+<h2 id="v21069--green-authoritative-live-reads">v2.10.6.9 — Green authoritative live reads</h2>
+
+<ul>
+  <li>Makes native Green Club Points and signed-in player Team Points authoritative immediately after Green cutover.</li>
+  <li>Projects Green worker/browser observations into public compatibility contracts regardless of GAB status and fixes browser observation identity propagation.</li>
+  <li>Rebuilds public compatibility analytics during GAB convergence so Opponent Insights/heatmaps and other analytics-backed pages use current Green data.</li>
+  <li>Replaces Blue Team Points production-health warnings with Green runtime/analytics health when public reads are Green.</li>
+  <li>No schema, reset, reseed, CRON or image change.</li>
+</ul>
+
+<h2 id="v21068--green-operational-cutover">v2.10.6.8 — Green operational cutover</h2>
+
+<ul>
+  <li>Replaces bootstrap-era queue-empty cutover gates with technical-only Green routing prerequisites; continuous queue/GAB/GFFL conditions are advisory.</li>
+  <li>Adds one-click Switch reads to Green, Make Green primary and Rollback reads to Blue actions in Scheduled Task Control.</li>
+  <li>Keeps both Blue and Green maintenance active after the first Green-read switch and exposes compact cutover health metrics.</li>
+  <li>Removes the public read router requirement for <code class="language-plaintext highlighter-rouge">gab_status=ready</code> while retaining fail-closed behavior for real Green connection/schema failures.</li>
+  <li>No schema, reset, reseed, CRON or image change.</li>
+</ul>
+
+<h2 id="v2916--post-v2915-resilience-opponent-coverage-pmaf-and-league-artwork">v2.9.16 — post-v2.9.15 resilience, opponent coverage, PMAF and league artwork</h2>
+
+<ul>
+  <li>Integrated DRR, MLP, FFSD, UDR, OICR and PMAF.</li>
+  <li>Normalized Opponent Intelligence club links to human Chess.com URLs.</li>
+  <li>Integrated approved artwork for all 35 league-specific achievements.</li>
+  <li>Removed progress bars from the general achievement catalogue while retaining player progress.</li>
+  <li>Core 13 / Analytics 6 / four-task CRON cadence unchanged.</li>
+</ul>
+
+<h2 id="v2915--telemetry-corrective-release">v2.9.15 — telemetry corrective release</h2>
+
+<ul>
+  <li>Fixes the structurally impossible 6-second ACSR authoritative worker pulse with a viable 34-second worker budget and 45-second control envelope while retaining the existing outbound safety guard.</li>
+  <li>Caps automatic archive repair behind one shared ACAMR/Continuous Refresh 12-per-10-minute fallback budget and removes speculative previous-month planner fetches.</li>
+  <li>Batches Continuous Refresh persistence/UI/log telemetry by cycle, throttles empty-plan logs and makes high-frequency Task Control rendering null-safe.</li>
+  <li>Caps the Member endpoint at 38 seconds and recomputes optional maintenance budgets to retain margin beneath the existing 55-second dispatcher curl ceiling.</li>
+  <li>Core 13 / Analytics 6 / catalogue 162 / four-task CRON cadence unchanged.</li>
+</ul>
+
+<h2 id="v2914--active-convergence-interactive-survival-and-filesystem-hardening">v2.9.14 — active convergence, interactive survival and filesystem hardening</h2>
+
+<ul>
+  <li>Promotes the Active Convergence &amp; Self-Refresh (ACSR) Pack with Leader/Standby coordination, due-now/scheduled-later diagnostics, operational/canonical convergence and bounded browser-assisted worker pulses.</li>
+  <li>Adds P0 Interactive Survival: automatic acquisition is background traffic, one OAuth gateway POST lane is reserved for foreground work, background admission yields to queued foreground work, and Task Control exposes foreground wait/suppression diagnostics.</li>
+  <li>Resets fresh real-OAuth transport startup to 30 paced requests/s with connection cap 3, then continues adaptive learning of both rate and cap through the shared server rate authority.</li>
+  <li>Hardens filesystem usage with compact updater state backups, bounded caches/runtime ledgers/retention and hosting file-count metrics.</li>
+  <li>Corrects Achievements/Hall/Dashboard/Team Insights layout, family folding, progressive bars, challenge criterion hover, action placement, and rejected match/team-point artwork placeholders.</li>
+  <li>Core schema remains 13; Analytics remains 6; achievement catalogue remains 162; four-task CRON cadence is unchanged.</li>
+</ul>
+
+<h2 id="v2913">v2.9.13</h2>
+
+<ul>
+  <li>Added Core 13 canonical outstanding-work deduplication, merge/promotion and one-generation continuation coalescing.</li>
+  <li>Added legacy active backlog compaction and housekeeping recovery.</li>
+  <li>Preserved hourly authoritative roster/club-index freshness priority and v2.9.12 transport behavior.</li>
+</ul>
+
+<h2 id="v2912--transportcache-corrective-release">v2.9.12 — transport/cache corrective release</h2>
+
+<ul>
+  <li>Shared one-clock OAuth rate coordinator across pages/frames, hybrid PI/D + hard 429 boundary, endpoint-class latency baselines.</li>
+  <li>Removes queued-request timeout/retry collapse, gateway wave bubbles and permanent-4xx false congestion.</li>
+  <li>Adds foreground/background fairness, bulk cache reads, batched cache writes and long-lived finished-match cache reuse.</li>
+  <li>Removes Match Creation O(N²) feeder scans and large-run progress rescans.</li>
+  <li>Validated against a hard 50 req/s fake upstream and a 700-detail Match Creation browser workload.</li>
+</ul>
+
+<h2 id="v2911--adaptive-authenticated-rate-convergence">v2.9.11 — adaptive authenticated rate convergence</h2>
+
+<p>Authenticated traffic is now paced by a learned safe calls-per-second controller with safe/unsafe boundary convergence and endpoint-class latency baselines. Match Creation no longer mistakes inherently slow detail responses for transport congestion. Core remains 12 / Analytics 6; no schema or CRON cadence change.</p>
+
+<h2 id="v2910">v2.9.10</h2>
+<ul>
+  <li>
+    <p>Site-wide persistent real OAuth readiness, universal opportunistic ingest with provenance separation, hourly authoritative roster/index CRON deadlines, and restored Challenge Assistant active-team context.</p>
+  </li>
+  <li><strong>v2.9.9</strong> — end-to-end real-OAuth throughput audit: exact <code class="language-plaintext highlighter-rouge">oauth=2</code> propagation, startup auth readiness, deep adaptive batching, and removal of feature-level serial/4/8/12-worker bottlenecks across analyzers, CRON Control, ACAMR, recruitment, challenges, tournaments, Live Ranks and opponent maintenance.</li>
+  <li><strong>v2.9.8</strong> — production <code class="language-plaintext highlighter-rouge">?oauth=2</code>, server-side adaptive Bearer gateway/throughput telemetry, Core-11 claim-bound ACAMR observations, Insights/Hall/heatmap corrections.</li>
+</ul>
+
+<h1 id="v297">v2.9.7</h1>
+
+<ul>
+  <li>Corrects Member Points Player Matches starvation with bounded fair scheduling.</li>
+  <li>Makes authoritative player-match freshness commit mandatory before queue completion.</li>
+  <li>Fixes lane-specific Task Control queue diagnostics and adds per-type activity timestamps.</li>
+  <li>Hardens Runtime Diagnostics timeout isolation and CRON transport margin.</li>
+  <li>Adds persistent protected OAuth POC configuration/installer.</li>
+  <li>Restores full Live Rook rendering and adds player-catalogue group progress bars.</li>
+</ul>
+
+<h1 id="v295">v2.9.5</h1>
+
+<ul>
+  <li>Preserves all 133 v2.9.4 achievement keys and adds 29 new achievements across collection depth, rivalries, global opposition, Chess960 specialization, activity continuity, large matches, rating upsets, single-match performance, tournament versatility and rivalry turnaround.</li>
+  <li>Freezes the historical v2.9.0 breadth universe to its original 21 categories; later families cannot redefine old breadth unlocks.</li>
+  <li>Adds Core schema 10 for opponent country and paired board-rating provenance; Analytics remains schema 6.</li>
+  <li>Retains the isolated real Chess.com OAuth POC on <code class="language-plaintext highlighter-rouge">?oauth=2</code>, plus v2.9.4 Hall and Opponents heatmap corrections.</li>
+</ul>
+
+<h1 id="v294--2026-08-10">v2.9.4 — 2026-08-10</h1>
+
+<ul>
+  <li>Corrected achievement lineage preservation: all 128 v2.9.1 catalogue keys remain in their original order, including the shipped legacy <code class="language-plaintext highlighter-rouge">groups-5</code> / <code class="language-plaintext highlighter-rouge">groups-10</code> / <code class="language-plaintext highlighter-rouge">groups-15</code> / <code class="language-plaintext highlighter-rouge">groups-all</code> entries.</li>
+  <li>Added the requested 1/5/10/15/20 distinct-group breadth ladder under five new <code class="language-plaintext highlighter-rouge">breadth-groups-*</code> keys, producing 133 total achievements without deleting or repurposing a historical key.</li>
+  <li>Fixed Hall of Fame unified player search on desktop: the result now spans the full content width, displays Daily/Live/Tournaments/Achievements as four cards on one row, and contains long content without horizontal spill.</li>
+  <li>Optimized Insights · Opponents all-match heatmaps with parallel loading, session snapshot reuse, stable 15-minute server caching, compact tuple/dictionary transport, no chronological filesort, and lighter client aggregation.</li>
+  <li>Retained the isolated Chess.com OAuth POC1 behind <code class="language-plaintext highlighter-rouge">?oauth=2</code>, including the local HTTPS/download correction.</li>
+  <li>No schema change: Core 9 / Analytics 6.</li>
+</ul>
+
+<h1 id="v293--2026-08-10">v2.9.3 — 2026-08-10</h1>
+
+<ul>
+  <li>Moved the single aggregate Opponent Balance heatmap pair into Insights · Opponents, where it was originally requested, and removed the duplicate/wrong Club Intelligence Balance tab.</li>
+  <li>Heatmap source population now means all stored non-void matches with boards; paired-board rating coverage explicitly reports which rows are plottable.</li>
+  <li>Made achievement breadth strictly additive in the player read path: persisted unlocks are unioned with profile-derived earned achievements instead of suppressing them.</li>
+  <li>Added regression invariants for 124 pre-breadth achievements + 5 breadth meta-achievements = 129 catalogue entries.</li>
+  <li>No schema change: Core 9 / Analytics 6.</li>
+</ul>
+
+<h1 id="v292--2026-08-10">v2.9.2 — 2026-08-10</h1>
+
+<ul>
+  <li>Corrective release audited against the actual v2.9.1 package rather than its overstated release notes.</li>
+  <li>Hall of Fame now precedes Insights; Administration deep-link/history state and integrated Admin Tool routing are completed.</li>
+  <li>Opponent Balance Analyzer is one aggregate two-heatmap set across all included matches, with shared filters and paired-board rating provenance/coverage.</li>
+  <li>Achievement breadth is 1/5/10/15/20; seven high-confidence recovered originals are normalized and mapped; unresolved art uses explicit per-achievement placeholders.</li>
+  <li>Monthly-current-month shading, exact maximized-chart scroll restoration, seven-day underfilled warnings, human match URLs, traffic-light health markers and identical-run endpoint retention are corrected.</li>
+  <li>Match Creation chart drill-down selectively acquires only missing contributing match detail.</li>
+  <li>Durable Work Report separates total, committed, remaining backlog, pending, claimed/running, retry-waiting and failed states.</li>
+  <li>Core schema 9 / Analytics schema 6 add nullable <code class="language-plaintext highlighter-rouge">rated_board_count</code>; no reset or re-seed.</li>
+  <li>Full Python and browser regression gates pass without page errors.</li>
+</ul>
+
+<h1 id="v2811">v2.8.11</h1>
+
+<ul>
+  <li>Reworked Member Points convergence into a sustainable due-aware service: 10-minute Player lane, 7-day bulk player-match freshness, 3-day stats freshness, successful-check timestamps for unrated members, migration reuse of existing <code class="language-plaintext highlighter-rouge">rating_updated_at</code> evidence for stats freshness, and a bounded 75-item Player ceiling under the existing execution-time budget.</li>
+  <li>Fixed ACAMR roster starvation by rotating across the full member-id space, issuing multiple distinct due-aware claims per pulse, and requesting only the work each member actually needs.</li>
+  <li>Hardened opportunistic browser observations: accepted/queued server work is measured separately from failed delivery; transient sends retry once; browser observations remain non-authoritative.</li>
+  <li>Task Control now reports Member Points convergence from authoritative match/stats freshness instead of lifetime recurring queue ratios.</li>
+  <li>Match Insights lazy sections render independently so later partial responses cannot erase already-rendered charts.</li>
+  <li>Unified graph containment/touch behavior: mobile tap values, pinch zoom on zoomable native/Team charts, today treated as future/incomplete, and hide/show series for Daily Boards and Club Points.</li>
+  <li>Improved Opponent Insights readability, name-then-logo layout and persistent canonical-alias icon repair for legacy/non-ASCII opponent names.</li>
+  <li>Removed Member Intelligence presentation from Dashboard/Profile while retaining its backend data for Recruitment/Admin/internal consumers; Achievement Challenges remain.</li>
+  <li>Player achievement catalogue adds non-zero metric progress, removes ownership counts from player cards, and Profile achievements are newest-first.</li>
+  <li>Repaired the physically truncated Live Rook source artwork and regenerated its derivatives; full-decode asset regression added.</li>
+  <li>Hall overall search is full-width with four desktop cards; redundant search Clear controls are suppressed and Search stays inline on mobile.</li>
+  <li>Dashboard Admin Analyze opens P2K-scoped One Match Analyzer; standalone analyzer no longer shows an Open standalone button.</li>
+  <li>Core schema 8 / Analytics schema 5. Player CRON cadence changes from 30 minutes to 10 minutes; Club 5 minutes, Tournament 10 minutes and Match Tracking hourly remain.</li>
+</ul>
+
+<h1 id="v2810">v2.8.10</h1>
+
+<ul>
+  <li>Canonical score-derived match outcomes and real Opponent Intelligence W/D/L repair, with semantic win/draw/loss/void fixtures.</li>
+  <li>Dashboard Core/all-history source-of-truth protection without changing the stable v2.8.9 startup/auth graph.</li>
+  <li>Tournament/Match Tracking action-header, task-key, display/state-recovery and Task Control fixes.</li>
+  <li>Tournament status maintenance on every 10-minute invocation, structured freshness parsing and recovery-aware BrowseIndex signatures.</li>
+  <li>Non-destructive runtime packaging; no shipped live secrets/tournament archive/tracking registry.</li>
+  <li>Secretless runtime-token CRON dispatcher, token recovery/automatic secure generation, atomic installer and shell/HTTP diagnostics.</li>
+  <li>Expanded Club Intelligence freshness/activity/contribution/opponent/snapshot/telemetry surfaces.</li>
+  <li>Removed duplicate personalized-home requests/full-roster single-player lookup and aligned outer-router admin recognition with Dashboard behavior.</li>
+  <li>Core schema 7 / Analytics schema 5; no reset/reseed; standard CRON schedules unchanged.</li>
+</ul>
+
+<h1 id="v289">v2.8.9</h1>
+
+<ul>
+  <li>Fixed the production-confirmed v2.8.7 Dashboard startup regression: startup no longer references the lazy-module-owned <code class="language-plaintext highlighter-rouge">integratedFrameIds</code>; integrated frames are discovered from the DOM.</li>
+  <li>Restored the missing <code class="language-plaintext highlighter-rouge">clubMembersAPI</code> dependency required by the v2.8.6 Dashboard second-wave loader.</li>
+  <li>Retained immediate configured/local admin recognition and embedded Administration race/retry hardening.</li>
+  <li>Re-enabled ACAMR after browser reproduction proved the startup failure occurs before ACAMR participates.</li>
+  <li>Retained the complete v2.8.8 feature/fix set, Core 6 / Analytics 5 and unchanged CRON cadence.</li>
+  <li>Added a browser startup/ACAMR execution gate to release validation.</li>
+</ul>
+
+<h2 id="v2883--2026-08-08">v2.8.8.3 — 2026-08-08</h2>
+
+<ul>
+  <li>Confirmed Dashboard data regression boundary at v2.8.7.</li>
+  <li>Restored v2.8.6 Dashboard data loading and public Dashboard repository contract.</li>
+  <li>Restored pre-ACAMR normal API-client observation behavior.</li>
+  <li>Disabled ACAMR client loading/planning and rejected stale ACAMR observations.</li>
+  <li>Retained independent v2.8.8.x correctness/UI/Intelligence fixes.</li>
+</ul>
+
+<h2 id="v2882--2026-08-08">v2.8.8.2 — 2026-08-08</h2>
+<ul>
+  <li>Fixed the Dashboard startup regression first introduced in v2.8.7: public Dashboard/read-metadata GETs are read-only again and no longer create Core state rows.</li>
+  <li>Restored the first Dashboard historical KPI read to the materialized Analytics club-total projection while retaining authoritative Core roster freshness.</li>
+  <li>Detached the initial Team Points database request from the automatic current/Live second wave so a delayed PHP/DB request cannot freeze Dashboard startup.</li>
+  <li>Retains all v2.8.8.1 admin, modal, rank-image, Opponent Intelligence and Team Insights fixes.</li>
+</ul>
+
+<h2 id="v2881--2026-08-08">v2.8.8.1 — 2026-08-08</h2>
+<ul>
+  <li>Startup/Admin loading reliability hotfix with bounded DB/lazy-frame retries and immediate configured-admin recognition.</li>
+  <li>Unified Profile nested-modal async isolation and rank-image clipping fix.</li>
+  <li>Opponent Intelligence W/D/L corrected from canonical match summaries with one forced Analytics logic rebuild.</li>
+  <li>Team Insights adds all-history Club Points score progression through today + six-month Low/Medium/High projection.</li>
+</ul>
+
+<h2 id="v288--club-intelligence-hallprofile-fixes-and-opponent-logos">v2.8.8 — Club Intelligence, Hall/Profile fixes and opponent logos</h2>
+
+<ul>
+  <li>Added Club Intelligence, adaptive ACAMR telemetry/allocation, member activity/availability/contribution, snapshots, anomaly/action queue and explainable forecasts.</li>
+  <li>Unified player profile extended across Hall, Insights, Recruitment, Tournaments and Club Intelligence; Hall defaults to Achievements; nested modal restoration fixed.</li>
+  <li>Achievement source links normalize to Chess.com web URLs; Top Opponents adds cached Chess.com club logos.</li>
+  <li>Core schema 6 / Analytics schema 5; CRON cadence unchanged.</li>
+</ul>
+
+<h1 id="v287--2026-08-08">v2.8.7 — 2026-08-08</h1>
+
+<ul>
+  <li>Added ACAMR (Authenticated Client-Assisted Member Refresh), a low-pulse authenticated-browser accelerator for Club Points, Member Points, member archives, relevant board discovery, ratings and roster freshness.</li>
+  <li>Real OAuth activates ACAMR regardless of the simulated-OAuth flag; simulated authentication activates ACAMR only when that flag is enabled.</li>
+  <li>Explicitly excluded tournaments and match-registration/recruitment monitoring from ACAMR.</li>
+  <li>Distributed current-member work across active clients with protected filesystem claims and one-leader-per-browser scheduling; browser data remains non-authoritative.</li>
+  <li>ACAMR archive observations can route known P2K participations directly to authoritative board verification instead of forcing a complete server archive refetch merely for discovery.</li>
+  <li>Integrated the post-v2.8.6 audit: canonical Dashboard historical totals, Core/Analytics freshness fixes, cheaper club resolution, shared Insights range/base calculations, SQL-paged Hall summaries, materialized Tournament browse index, smoother automatic Dashboard second wave and lazy Hall/Insights modules.</li>
+  <li>Retained the authoritative finished 0–0 <code class="language-plaintext highlighter-rouge">is_void=1</code> exclusion, demand-driven avatars, split Club/Player workers, failed-board recovery and tournament achievement-date Revision 2.</li>
+  <li>Core schema 5 / Analytics schema 5 unchanged; no database migration and no server CRON cadence change.</li>
+</ul>
+
+<h1 id="v286--2026-08-08">v2.8.6 — 2026-08-08</h1>
+
+<ul>
+  <li>Made the public Dashboard first-screen path materialized/local and moved current Chess.com, Live and Match Assistant work to an automatic post-paint second wave.</li>
+  <li>Added progressive/viewport loading for Team, Member, Match and Opponent Insights, including table-only pagination requests.</li>
+  <li>Server-paged Tournament ranking/list views at 25 rows; player tournament history is fetched only when opened.</li>
+  <li>Achievement wall now renders the first 12 players before catalogue/tournament/avatar/medal enrichment; catalogue is click-loaded.</li>
+  <li>Daily and Live Hall rank summaries no longer transmit every detailed player initially; expanded ranks page 25 members at a time.</li>
+  <li>Added one-request unified Hall search and progressive Profile tournament/avatar enrichment; modal Profile mode skips hidden detail queries.</li>
+  <li>Public materialized reads honor browser/ETag caching; shared progressive loader adds viewport scheduling, two-request low-priority concurrency and small idle prefetches.</li>
+  <li>Split the native Insights chart engine from the initial Dashboard bundle and load it on first chart use.</li>
+  <li>Core schema 5 / Analytics schema 5 unchanged; no DB migration and no CRON cadence change.</li>
+</ul>
+
+<h1 id="v285--2026-08-08">v2.8.5 — 2026-08-08</h1>
+
+<ul>
+  <li>Guaranteed time-bucketed Club match-index discovery every five-minute Club CRON invocation, even inside long jobs.</li>
+  <li>Added independent 30-minute lightweight roster freshness and server-verified opportunistic roster/profile/rating refresh triggering.</li>
+  <li>Moved urgent Club work ahead of Analytics and removed read-time Analytics/achievement rebuilds from public pages.</li>
+  <li>Added Core generation state, persistent avatar/profile snapshots, SQL-paginated materialized Profile/Achievement/Members reads, response-cache locking/cleanup and cheaper gateway cache status.</li>
+  <li>Staggered Tournament CRON to 10 minutes and added public tournament ETag/Last-Modified caching.</li>
+  <li>Excluded authoritative finished 0–0 void matches from all public analytics/graphs and participation achievements while retaining raw records.</li>
+  <li>Core schema 5 / Analytics schema 5; additive migration only.</li>
+</ul>
+
+<h1 id="v284--2026-08-07">v2.8.4 — 2026-08-07</h1>
+
+<ul>
+  <li>Split Team Points into fast Club Points (5-minute) and lower-priority Player Points (30-minute) CRON lanes with independent jobs/locks/health.</li>
+  <li>Fixed board parsing for both Chess.com <code class="language-plaintext highlighter-rouge">games</code> and <code class="language-plaintext highlighter-rouge">game</code> forms and string/object player payloads.</li>
+  <li>Added one-time routing/recovery of pre-fix failed board tasks and stricter synchronization completion/coverage reporting.</li>
+  <li>Added opportunistic browser-to-server Chess.com observations, routed by Club/Player urgency without trusting client-derived points.</li>
+  <li>Integrated tournament-achievement date Revision 2: no synthetic period-start dates; exact finish date or pending refresh.</li>
+  <li>Achievement cards sort by achievement count; Achievements is the first Hall of Fame tab.</li>
+  <li>Podium ranking is the first Tournament tab and medal displays use 🥇 🥈 🥉.</li>
+  <li>Core schema 4 / Analytics schema 5 unchanged.</li>
+</ul>
+
+<h1 id="v283--2026-08-07">v2.8.3 — 2026-08-07</h1>
+
+<ul>
+  <li>v2.8.2 Hotfix 1 + Hotfix 2 are included in the baseline.</li>
+  <li>Achievement counts replace Live rank on achievement player cards; earned details add dates and event provenance.</li>
+  <li>Tournament medal dates use authoritative tournament finish time and the integrated medalist modal is viewport-aware.</li>
+  <li>Linked dashboard cards share the Priority Calls hover/focus treatment.</li>
+  <li>Club Points forecast now uses the latest three 30-day actual point blocks with a near-linear capped trend.</li>
+  <li>Reworked Most played opponents and Monthly match activity containment.</li>
+  <li>Added monthly average boards per match and future boundary on monthly active members.</li>
+  <li>Core schema 4 unchanged; Analytics schema 5 adds achievement provenance.</li>
+</ul>
+
+<h1 id="v282--2026-08-07">v2.8.2 — 2026-08-07</h1>
+
+<ul>
+  <li>Completed the 24-point dashboard, administration, monitoring, tournament, Insights, profile, Hall-of-Fame and artwork acceptance checklist.</li>
+  <li>Added durable match first-discovery time and match maximum-rating dimensions; Core/Analytics schema revision is 4.</li>
+  <li>Restored the tracked-match explorer inside CRON-compatible Match monitoring.</li>
+  <li>Unified mobile widths/gutters across integrated tabs while preserving desktop layouts.</li>
+  <li>Replaced 56 original 1254×1254 rank/achievement PNGs in place with 640×640 versions and resolved orphan/missing artwork mappings.</li>
+  <li>Added a dedicated v2.8.2 regression suite covering all 24 requested points.</li>
+</ul>
+
+<h1 id="v281-hotfix-2--2026-08-07">v2.8.1 Hotfix 2 — 2026-08-07</h1>
+
+<ul>
+  <li>Reconciled v2.8.1 Hotfix1 with RecoveryFix7 instead of replacing either branch.</li>
+  <li>Advanced the combined Core/Analytics schema to revision 3 with idempotent convergence from schema 1 or either historical schema-2 branch.</li>
+  <li>Added opportunistic Daily/Chess960 ratings, split last-game dates, RM-2 stored-rating recruitment and the RecoveryFix7 Team Insights projections/visual accents.</li>
+  <li>Retained v2.8.1 tracked-lineup, Administration, opponent-intelligence, profile and achievement-history improvements.</li>
+  <li>Recovered 18 shipped achievement artwork mappings.</li>
+  <li>Unified mobile width/spacing across Insights, Hall of Fame and Administration while leaving desktop dimensions unchanged; wide tables now scroll locally.</li>
+</ul>
+
+<h1 id="v281--2026-08-07">v2.8.1 — 2026-08-07</h1>
+
+<ul>
+  <li>Added live-ended lineup/win-probability history with real UTC timescale, zoom, hover, keyboard timeslot navigation and win-probability deltas.</li>
+  <li>Integrated Live-ranks computation, Open Match Analyzer and Storage &amp; capacity into Administration with natural-height embedded pages.</li>
+  <li>Made the public Promote to King club API the primary administrator list, with local branding allow-list as outage fallback only.</li>
+  <li>Restored tournament medal styling and improved Team/Member/Match/Opponent Insights layouts.</li>
+  <li>Replaced the opponent treemap with Top 25 + Others and added zoomable monthly W/D/L, time-control win rates and rating-bracket win rates.</li>
+  <li>Improved unified player rank/progression display and persisted achievement unlock timestamps/member counts in Analytics.</li>
+  <li>Added automatic in-place Core/Analytics schema version 2 migration; no initializer or seed import is required.</li>
+</ul>
+
+<h1 id="v280--2026-08-07">v2.8.0 — 2026-08-07</h1>
+
+<ul>
+  <li>Split Team Points storage into fresh compact Core and rebuildable Analytics MariaDB databases.</li>
+  <li>Moved shared Chess.com API response caching to protected bounded gzip filesystem storage.</li>
+  <li>Removed SQL HTTP-cache and SQL seed-staging architecture.</li>
+  <li>Added fresh dual-database initializer using the checksum-verified 2026-08-06 snapshot.</li>
+  <li>Added storage/capacity administration with 80% alerts, monthly history and 80%/100% projections.</li>
+  <li>Retained v2.7.3 database-independent administrator page admission.</li>
+</ul>
+
+<h1 id="changelog">Changelog</h1>
+
+<h2 id="272--2026-08-06">2.7.2 — 2026-08-06</h2>
+
+<ul>
+  <li>Rebuilt Team Insights on authoritative match/game timestamps and durable daily facts.</li>
+  <li>Corrected 30-calendar-day rolling calculations and duration analytics.</li>
+  <li>Added hover, legends and range zoom to time-series Insights charts.</li>
+  <li>Added match-size, league/friendly, duration, rules and time-control visualizations.</li>
+  <li>Added active-member and Daily-rank charts.</li>
+  <li>Added opponent treemap, compact desktop table and admin plain-text result copy.</li>
+  <li>Added schema 13 and Seed Importer v1.2.0 with stored match dimensions.</li>
+  <li>CRON endpoints and cadence unchanged.</li>
+</ul>
+
+<h1 id="promote-to-king-v271--2026-08-06">Promote to King v2.7.1 — 2026-08-06</h1>
+
+<ul>
+  <li>Added a checksum-verified standalone seed utility with the six updated source files embedded; no CSV selection is required at runtime.</li>
+  <li>Validated 4,473 members, 17,091 discovered matches, 104,761 member/board rows and a 371,168-point club total.</li>
+  <li>Preserved findings-only match 1983076 as unknown and queued its authoritative metadata repair.</li>
+  <li>Added HMAC staging and atomic Team Points replacement while clearing obsolete Team Points scheduler history.</li>
+  <li>Added seeded incremental roster/match/monthly-archive synchronization.</li>
+  <li>Removed routine all-member history and raw global-ID scans; retained both as explicit repairs.</li>
+  <li>Added schema 12, seed/algorithm administration status and five-minute Team Points/tournament scheduler ticks.</li>
+  <li>Added complete CRON pause/delete/install and rollback instructions.</li>
+</ul>
+
+<h1 id="promote-to-king-v262--2026-08-06">Promote to King v2.6.2 — 2026-08-06</h1>
+
+<ul>
+  <li>Changed match monitoring to an hourly scheduler tick with per-match adaptive due times.</li>
+  <li>Samples matches hourly during their first 24 hours, every 12 hours normally, every 6 hours inside 96 hours of start, and hourly inside 48 hours.</li>
+  <li>Added due/deferred and sampling-phase reporting to unified maintenance.</li>
+  <li>Omitted consecutive graph points for identical registered players and ratings while preserving every archive record.</li>
+  <li>Added rating-change rows to lineup-evolution details.</li>
+  <li>Preserved the existing match-tracking endpoint, token, archive and follow-state compatibility.</li>
+</ul>
+
+<h1 id="promote-to-king-v261--2026-08-06">Promote to King v2.6.1 — 2026-08-06</h1>
+
+<ul>
+  <li>Added a shared MariaDB-backed Chess.com API gateway used by Team Points, tournament maintenance and league match tracking.</li>
+  <li>Added a unified server-side task registry, per-task execution locks, health states, runs and logs.</li>
+  <li>Added <code class="language-plaintext highlighter-rouge">TaskControl.html</code> with Start/Resume, safe Pause, Refresh, gateway health, work reports and unified logs.</li>
+  <li>Preserved the existing Team Points, tournament and match-tracking CRON URLs and legacy administration actions through compatibility adapters.</li>
+  <li>Moved Team Points execution ownership to the server; the browser can request one bounded compatibility segment but no longer owns an endless processing loop.</li>
+  <li>Corrected the hosting timeout contract to a 48-second endpoint target and 35-second Worker segment.</li>
+  <li>Added deadline-aware resumable checkpoints for historical match-ID discovery, league-match tracking and tournament batches.</li>
+  <li>Added automatic MariaDB/schema/gateway/task-registry initialization during secured administrator login, including a bounded verified-cache fallback during temporary Chess.com outages.</li>
+  <li>Added centralized false-404 protection, global request serialization, shared caching, ETag/Last-Modified revalidation and health probing.</li>
+  <li>Set health expectations to Team Points every 5 minutes, league match tracking every 6 hours and tournaments every 24 hours.</li>
+  <li>Made dashboard System Health rows link directly to the relevant task or gateway maintenance section.</li>
+  <li>Upgraded the additive database schema to version 11.</li>
+</ul>
+
+<h1 id="promote-to-king-v260--2026-08-05">Promote to King v2.6.0 — 2026-08-05</h1>
+
+<ul>
+  <li>Added database provenance and direct DB endpoints for Team, Members, Matches and Opponents Insights.</li>
+  <li>Added Members Insights and unified player profiles.</li>
+  <li>Added Team period comparison, rolling activity, unique-player and concentration analytics.</li>
+  <li>Added Match drill-down, result/size, duration, category and notable-match analytics.</li>
+  <li>Added opponent profiles and history.</li>
+  <li>Added administrator recruitment demand, league/season and Insights health tools.</li>
+  <li>Replaced the fictive achievement demo with a database/tournament-backed Hall section.</li>
+  <li>Added win probability to high-priority administrator match actions.</li>
+  <li>Enforced integer Club Points throughout Insights.</li>
+  <li>No schema or CRON endpoint change.</li>
+</ul>
+
+<h1 id="promote-to-king-changelog">Promote to King changelog</h1>
+
+<h2 id="251--2026-08-05">2.5.1 — 2026-08-05</h2>
+
+<ul>
+  <li>Released the database/API-backed Insights work as standalone version 2.5.1.</li>
+  <li>Connected Team, Matches and Opponents Insights to public Team Points database endpoints, including server-side filtering, sorting and pagination where relevant.</li>
+  <li>Renamed dashboard rank actions and Live-team metrics, and aligned both rank buttons with Hall of Fame player focusing.</li>
+  <li>Standardized public terminology on MCA and retained CSV wording only for administrative MCA source-data operations.</li>
+  <li>Updated runtime identifiers, cache-busting parameters, manifests, deployment guides and validation tests from 2.5.0 to 2.5.1.</li>
+  <li>Fixed Find more matches by promoting the hidden recommendation-engine iframe to the visible Match Assistant class before opening it.</li>
+</ul>
+
+<h2 id="250--2026-08-05">2.5.0 — 2026-08-05</h2>
+
+<ul>
+  <li>Connected Team, Matches and Opponents Insights to the public database API; opponent search, filters, sorting and pagination now execute server-side.</li>
+  <li>Updated Daily/Live rank navigation so both buttons open Hall of Fame on the correct page and focus the logged-in player.</li>
+  <li>Revised public MCA wording: Arenas played, Unique players and Total arena points; removed total participations from the team card.</li>
+  <li>Corrected complete dashboard Team data loading.</li>
+  <li>Added unified Daily/Live player and team card modes with arena placement and team metrics.</li>
+  <li>Added schema 10 Live placement/per-arena aggregates and fixed schema-9-to-10 detection.</li>
+  <li>Added persistent resumable issue-only database audits and arithmetic repair batches.</li>
+  <li>Added manual tournament entry, 50-row pagination and Hall tournament/podium deep links.</li>
+  <li>Standardized English UI formatting with browser-local timezone.</li>
+</ul>
+
+<h1 id="promote-to-king-v2423">Promote to King v2.4.23</h1>
+
+<h2 id="2423--2026-08-05">2.4.23 — 2026-08-05</h2>
+
+<ul>
+  <li>Removed the dashboard-wide progress bar and retained section-level loading/error states.</li>
+  <li>Replaced the separate recommendation/full Match Assistant frames with one reusable frame and a final-layout readiness handshake.</li>
+  <li>Added SQL filtering, sorting and pagination to Match Insights.</li>
+  <li>Compacted the public Live-ranks payload and added a focused public player endpoint.</li>
+  <li>Added a Daily/Live toggle to the player card and schema-9 optional arena metrics.</li>
+  <li>Corrected CSV parsing so “Most wins” is treated as a per-arena maximum rather than a total-wins column.</li>
+  <li>Added the server-validated red administrator priority/action card without a second match scan.</li>
+  <li>Added an off-by-default simulated-profile toggle for sequential versus adaptive concurrent Chess.com API access.</li>
+  <li>HTTP 429 now halves adaptive concurrency down to one, honors Retry-After and recovers gradually after successful requests.</li>
+</ul>
+
+<h1 id="promote-to-king-v2423-1">Promote to King v2.4.23</h1>
+
+<ul>
+  <li>Extracted one shared rank-ladder component used by both Daily ranks and Live ranks.</li>
+  <li>Live ranks now use exactly the same summary layout, collapsed cards, expanded framed panel, member table, keyboard/button behavior, and URL-backed selection as Daily ranks.</li>
+  <li>Replaced the Live-rank summary with Current members, Ranked members, Team leader, and Your position.</li>
+  <li>Public Live ranks list current Promote to King members only; former, closed, and possible-renamed accounts remain available in Administration for correction.</li>
+  <li>Live-rank collapsed icons use the existing 192 px frameless WebP thumbnails and expanded panels use the 640 px framed WebP thumbnails, with full PNG files only as error fallbacks.</li>
+  <li>Updated the standalone Live ranks page to use the same shared component and styles as UI v2.</li>
+  <li>No database schema or CRON endpoint changes.</li>
+</ul>
+
+<h1 id="v2421">v2.4.21</h1>
+
+<ul>
+  <li>Audited and repaired tournament podium resolution. Player-tournament URLs now accept API and www forms, round-level players are included, and final-group standings provide a safe fallback.</li>
+  <li>Replaced quota-heavy persistent tournament response caching with bounded in-memory caching and compact cursor-only repair checkpoints.</li>
+  <li>Added a podium-only repair action for already discovered finished tournaments.</li>
+  <li>Live ranks now use the same collapsed/expanded interaction as Daily ranks: frameless piece icon while closed, framed rank panel and full player table when opened.</li>
+  <li>Live-rank CSV usernames are matched case-insensitively against the lower-case Chess.com roster while retaining a stable display name.</li>
+  <li>Made final-group points and tie-break standings the primary podium source and preserved multiple medalists sharing the same score/tie-break.</li>
+  <li>Added explicit unresolved-podium reporting and cache-busted the embedded Tournament Management page.</li>
+</ul>
+
+<h1 id="promote-to-king-v2421">Promote to King v2.4.21</h1>
+
+<ul>
+  <li>Consolidated v2.4.19.1 and v2.4.19.2 Team Points routing fixes into the main baseline.</li>
+  <li>Added v2.4.19.3 large-pack Live-rank CSV uploads as sequential ten-file batches with retry and omission detection.</li>
+  <li>Updated package/cache identifiers and deployment guides to v2.4.21.</li>
+  <li>No database schema or CRON endpoint changes.</li>
+</ul>
+
+<blockquote>
+  <p><strong>v2.4.19.2 hotfix:</strong> fixes same-origin Team Points API routing in UI v2. Matches, Opponents, Live ranks and Hall-wide searches now use authenticated same-origin fetch requests; the restricted PubAPI client remains reserved for Chess.com.</p>
+</blockquote>
+
+<blockquote>
+  <p><strong>v2.4.19.1 hotfix:</strong> consolidates Matches, Opponents and Live ranks through the established Team Points public endpoint; Live ranks now render natively in UI v2.</p>
+</blockquote>
+
+<h1 id="promote-to-king-v2419">Promote to King v2.4.19</h1>
+
+<h2 id="ui-v2">UI v2</h2>
+<ul>
+  <li>Corrected authoritative finished-match help text.</li>
+  <li>Persisted public/admin navigation, subtabs, searches, filters, sorting, pagination, date ranges, rank selection, and Match Assistant state in URL history.</li>
+  <li>Limited the global loader to essential team/database data.</li>
+  <li>Calculated Administration tool counts dynamically.</li>
+</ul>
+
+<h2 id="native-insights">Native Insights</h2>
+<ul>
+  <li>Activated the database-backed Matches subtab.</li>
+  <li>Migrated Opponents from iframe integration to a native UI v2 panel.</li>
+  <li>Added a reusable accessible shared table component for both pages.</li>
+</ul>
+
+<h2 id="hall-of-fame">Hall of Fame</h2>
+<ul>
+  <li>Added one search across Daily ranks, Live ranks, and tournament podiums.</li>
+  <li>Added a separate tournament-achievement badge proposal demo.</li>
+</ul>
+
+<h2 id="demos">Demos</h2>
+<ul>
+  <li>Added a standalone representative UI v2 demo using fake static data.</li>
+</ul>
+
+<h1 id="promote-to-king-v2418">Promote to King v2.4.18</h1>
+
+<h2 id="opponent-insights">Opponent insights</h2>
+<ul>
+  <li>Activated the Opponents Insights subtab.</li>
+  <li>Added database-backed summary cards and searchable/sortable opponent statistics.</li>
+  <li>Added canonical opponent/alias metadata, serial name refresh, rename/disabled detection, bulk apply, and CSV export.</li>
+</ul>
+
+<h2 id="live-ranks">Live ranks</h2>
+<ul>
+  <li>Activated Live ranks in Hall of Fame with six thresholds and matching framed artwork/miniatures.</li>
+  <li>Added CSV pack selection/drop, protected storage, filename-based replacement, checksums, and full-pack aggregation.</li>
+  <li>Added current-member and account-state classification without blocking on possible renamed usernames.</li>
+</ul>
+
+<h2 id="team-points-discovery">Team Points discovery</h2>
+<ul>
+  <li>Added the club match endpoint as a first discovery source.</li>
+  <li>Added resumable bounded raw numeric match-ID scans for forward gaps and historical backfill.</li>
+  <li>Added authoritative match-detail ingestion for opponent metadata and former-member boards.</li>
+  <li>Preserved mandatory authoritative finished status and the two DB audit/correction tools.</li>
+</ul>
+
+<h2 id="retained-platform-work">Retained platform work</h2>
+<ul>
+  <li>Preserved URL page/subtab state, full tournament/podium reinitialization, Match Assistant state fixes, database graphs, and RetryableException autoloading.</li>
+</ul>
+
+<h1 id="promote-to-king-v2416">Promote to King v2.4.16</h1>
+
+<h2 id="tournament-archive">Tournament archive</h2>
+<ul>
+  <li>Restored exact title-derived discovery from 2024 onward for monthly Top 10/32, quarterly rank and Christmas tournaments.</li>
+  <li>Moved full manual discovery and medalist validation to the browser.</li>
+  <li>Added normalized <code class="language-plaintext highlighter-rouge">client-import</code> persistence and removed the legacy long-running PHP manual mode.</li>
+  <li>Kept CRON discovery server-side in bounded candidate and status batches; full podium work remains in the browser manual scan.</li>
+  <li>Protected discovery cursors from cancelled or partial browser scans.</li>
+</ul>
+
+<h2 id="match-assistant">Match Assistant</h2>
+<ul>
+  <li>Prevented iframe reparenting/reload when opening the full assistant.</li>
+  <li>Removed the intermediate recommendation-engine appearance.</li>
+  <li>Restored recommendations from the cached DOM without rescanning or restarting dashboard progress.</li>
+</ul>
+
+<h2 id="team-insights">Team Insights</h2>
+<ul>
+  <li>Generates chart-ready date series from the Team Points database endpoint.</li>
+  <li>Uses a separate right-hand scale for in-progress matches.</li>
+  <li>Uses actual database dates in yearly-comparison hover information and no longer exposes a synthetic year 2000.</li>
+</ul>
+
+<h2 id="reliability">Reliability</h2>
+<ul>
+  <li>Includes the <code class="language-plaintext highlighter-rouge">RetryableException.php</code> Team Points autoload fix.</li>
+</ul>
+
+<h1 id="promote-to-king-2415">Promote to King 2.4.15</h1>
+
+<ul>
+  <li>Integrated the Team Insights Team subtab with database-backed activity, outcome, board-size and competition-point charts.</li>
+  <li>Added the public tournament archive and podium ranking with sortable columns and medalist detail modal.</li>
+  <li>Added Tournament management to Administration, incremental discovery, status refresh CRON and manual fair-play/abuse medalist validation.</li>
+  <li>Unified match, Team Points database and tournament runs in the Scheduled Tasks log with task-type filtering.</li>
+  <li>Removed the Match Assistant view jump and restored recommendations from cached DOM state without rescanning.</li>
+  <li>Preserved the Team Points <code class="language-plaintext highlighter-rouge">RetryableException.php</code> autoload hotfix.</li>
+</ul>
+
+<h1 id="changelog-1">Changelog</h1>
+
+<h2 id="2414--2026-08-04">2.4.14 — 2026-08-04</h2>
+
+<ul>
+  <li>Smoothed the dashboard loading indicator with weighted endpoint progress and live Match Assistant analysis counts.</li>
+  <li>Added the P2K club join date below the authenticated member name.</li>
+  <li>Refined Hall of Fame navigation, labels, rank expansion scrolling and ranked-member summary.</li>
+  <li>Standardized the three dashboard panel titles and increased data-vignette subtext readability.</li>
+  <li>Added shared blue hover/click information controls to Team Points, club points, finished-match totals and readiness gauges.</li>
+  <li>Renamed the recommendation panel and simplified its explanatory copy.</li>
+  <li>Replaced the Hall of Fame tab trophy with a star and removed the public Classic UI link.</li>
+</ul>
+
+<h2 id="2413--2026-08-04">2.4.13 — 2026-08-04</h2>
+
+<ul>
+  <li>Added icons to the Dashboard, Team insights, Hall of Fame and Tournaments tabs.</li>
+  <li>Added purpose-sized WebP rank-image derivatives for card, ladder and expanded Hall of Fame usage.</li>
+  <li>Retained all original 1254×1254 PNG rank assets for archival and full-resolution fallback.</li>
+  <li>Removed the forced smooth scroll and vertical translate during public-tab changes to reduce visible layout jumps.</li>
+</ul>
+
+<h2 id="2412--2026-08-04">2.4.12 — 2026-08-04</h2>
+
+<ul>
+  <li>Corrected Pawn to begin at 10 Team Points; members below 10 points remain unranked.</li>
+  <li>
+    <p>Replaced the dashboard recommendation orange information control with the shared blue UI v1 information popover.</p>
+  </li>
+  <li>Removed administrator controls from initial UI v2 markup and create them only after server-verified club-admin authentication.</li>
+  <li>Kept all protected administrator operations behind the HttpOnly session and CSRF checks.</li>
+  <li>Replaced Suggested additions with top-level full-page Dashboard, Team insights, Hall of Fame and Tournaments tabs.</li>
+  <li>Made Hall of Fame opening from the player vignette focus and highlight the authenticated player automatically.</li>
+  <li>Added schema-v5 immutable match summaries and constant-time club totals.</li>
+  <li>Made duplicate point-event discovery preserve previously stored result codes and points.</li>
+  <li>Added bounded worker-driven historical summary backfill and an optional supporting event index.</li>
+  <li>Preserved all existing jobs, queue payloads, CRON state and configuration.</li>
+</ul>
+
+<h2 id="2411--2026-08-04">2.4.11 — 2026-08-04</h2>
+
+<ul>
+  <li>Restored spacing below the player/team dashboard row.</li>
+  <li>Fixed Diamond King range fallback and long-description overflow.</li>
+  <li>Moved embedded Match Assistant detailed analysis to a visible parent-shell modal in both UI variants.</li>
+  <li>Made the detailed-analysis page accessible as a public Match Assistant drill-down.</li>
+  <li>Reworked public Team Points reads to use legacy-compatible participation and event data.</li>
+  <li>Added a safe single-club stored-slug fallback to prevent false zero dashboards.</li>
+  <li>Restricted the UI v2 Admin toggle to live Chess.com club-profile administrator verification.</li>
+</ul>
+
+<h2 id="2410--2026-08-04">2.4.10 — 2026-08-04</h2>
+
+<ul>
+  <li>Aligned the Public UI v2 player and team panels and simplified the dashboard header/copy.</li>
+  <li>Moved the Public/Admin switch beside the avatar and hid the completed loading indicator.</li>
+  <li>Preferred the authoritative club profile member total over potentially truncated members arrays.</li>
+  <li>Expanded Hall of Fame framed artwork and rank details.</li>
+  <li>Reused the loaded Match Assistant results in a full-width, borderless, headerless embedded view.</li>
+  <li>Added DB-backed finished match/board/game totals.</li>
+  <li>Corrected club competition points to 5 × boards for team wins and 2 × boards for team draws.</li>
+  <li>Added a backwards-compatible front-of-queue team-member and member-match discovery action.</li>
+</ul>
+
+<h2 id="245--2026-08-03">2.4.5 — 2026-08-03</h2>
+
+<ul>
+  <li>Added a database-backed UI v2 Hall of Fame with all 16 Team Points ranks ordered from Diamond King to Pawn.</li>
+  <li>Rank categories expand in place, switch from frameless to larger framed artwork and show members ordered by points with category/team positions and match/game/W-D-L statistics.</li>
+  <li>Added member search that collapses the rank ladder to the matching category and highlights the member.</li>
+  <li>Added the signed-in player’s overall team position to the Team Points vignette.</li>
+  <li>Embedded the Match Assistant in the recommendation panel only after Find more matches is clicked; the original first five recommendations remain the default.</li>
+  <li>Retained automatic secured Team Points access, diagnostics alignment, live dashboard statistics, continuous CRON, board rediscovery and legacy queue/schema compatibility.</li>
+</ul>
+
+<h2 id="243--2026-08-03">2.4.3 — 2026-08-03</h2>
+
+<ul>
+  <li>Changed Team Points CRON from a six-hour/fixed external cadence to a lease-protected self-scheduling chain.</li>
+  <li>Each CRON execution runs serial bounded worker segments for up to about 285 seconds, then invokes itself 60 seconds after completion.</li>
+  <li>Added additive schema v4 <code class="language-plaintext highlighter-rouge">p2k_tp_cron_state</code> to prevent duplicate continuous chains without changing existing jobs or queue payloads.</li>
+  <li>Preserved manual/CRON advisory locking, per-item commits, safe pause, retries and board rediscovery.</li>
+</ul>
+
+<h2 id="242--2026-08-03">2.4.2 — 2026-08-03</h2>
+
+<ul>
+  <li>Added persistent board-state classification to Team Points: complete/immutable, potentially incomplete, failed/malformed, recent/in-progress, and newly discovered.</li>
+  <li>Skips Chess.com board requests permanently once two finished game events are stored for that member and board.</li>
+  <li>Rechecks one-game boards, failed/malformed boards, and recent/in-progress boards according to configurable schedules.</li>
+  <li>Added database-backed rediscovery so due boards are retried even after they disappear from Chess.com’s rolling player match lists or the member leaves the current roster.</li>
+  <li>Added an additive schema-v3 migration and automatic in-place upgrade for existing installations.</li>
+  <li>Preserved existing jobs, queue rows, queue item types, item keys, and legacy <code class="language-plaintext highlighter-rouge">sync_board</code> payloads.</li>
+  <li>Uses the board-state row as the fast lookup path and avoids repeated board-wide event searches.</li>
+</ul>
+
+<h2 id="241--2026-08-03">2.4.1 — 2026-08-03</h2>
+
+<ul>
+  <li>Corrected the release version after the dashboard and Team Points maintenance build.</li>
+  <li>Dashboard recommendations use the Match Assistant’s exact default pipeline and show its first five ranked results for the authenticated player.</li>
+  <li>Restored the v1-style login/avatar and Log off controls in Public UI v2.</li>
+  <li>Compacted dashboard recommendation cards and added rating-range and rules tags plus an information control for justification.</li>
+  <li>Team Points now combines player <code class="language-plaintext highlighter-rouge">finished</code> and <code class="language-plaintext highlighter-rouge">in_progress</code> match lists with board URL deduplication.</li>
+</ul>
+
+<h2 id="240--2026-08-03">2.4.0 — 2026-08-03</h2>
+
+<ul>
+  <li>Added an optional responsive Public/Admin dashboard selected strictly with <code class="language-plaintext highlighter-rouge">?ui=v2</code>; missing <code class="language-plaintext highlighter-rouge">ui</code> and <code class="language-plaintext highlighter-rouge">?ui=v1</code> continue into the previous interface.</li>
+  <li>Reused the existing branding, OAuth session, configured-club administrator verification, API client and current administrator tool routes.</li>
+  <li>Added automatic public club indicators and five current match recommendations, with the Match Assistant retained for full recommendation analysis.</li>
+  <li>Added 32 team-rank PNG assets under <code class="language-plaintext highlighter-rouge">assets/images/ranks/</code> for future use.</li>
+</ul>
+
+<h2 id="231--2026-08-03">2.3.1 — 2026-08-03</h2>
+
+<ul>
+  <li>Integrated Team Points as a normal administrator-only website tool in the complete package and advanced all cache-busting/runtime metadata from 2.3.0 to 2.3.1.</li>
+  <li>Replaced the single manual batch action with <strong>Run update continuously</strong>. The browser automatically chains bounded server invocations until completion, safe pause or failure while keeping every PHP request below the configured hosting time budget.</li>
+  <li>Added final safe-pause acknowledgement when a stop request arrives between bounded invocations.</li>
+  <li>Added partial member-name search to totals, monthly rows, individual event previews and CSV export.</li>
+  <li>Added clickable sortable result columns with ascending/descending database ordering.</li>
+  <li>Added persistent per-job process logs covering member synchronization, player-match discovery, board/game processing, retries, failures, waiting and completion.</li>
+  <li>Added process overview, current task/item, queue breakdown, next retry, API-cache size, worker history and per-task discovery statistics.</li>
+  <li>Advanced the Team Points MariaDB schema to version 2 with <code class="language-plaintext highlighter-rouge">p2k_tp_job_logs</code>; the installer is idempotent and can be rerun to upgrade an existing v2.3.0 installation.</li>
+  <li>Updated the Python/SQLite simulator, PHP backend, tests, setup documentation and complete user manual for the v2.3.1 workflow.</li>
+</ul>
+
+<h2 id="230--2026-08-02">2.3.0 — 2026-08-02</h2>
+
+<ul>
+  <li>Renamed recruitment-change details to <strong>Lineup evolution</strong> and added Previous/Next navigation through every stored recording of the same match, in both analyzer graphs and Match Data Management.</li>
+  <li>Forces the configured club’s modeled win probability to <strong>0%</strong> whenever its eligible lineup does not meet the match minimum-player requirement.</li>
+  <li>Added <strong>New challenge / Rematch opportunities</strong> modes to Challenge recommendation. Rematch mode scans the configured club’s available finished-match summaries chronologically from a selected historical match, extracts unique opponents, and evaluates them with the same challenge criteria.</li>
+  <li>Added task type, task ID, unique run ID, start/end timestamps, stored match IDs, failed match IDs, and run details to scheduled/manual tracking logs. Existing entries without identifiers remain readable as legacy tracking records.</li>
+  <li>Added Scheduled Tasks filtering by task type.</li>
+  <li>Stops queued API work and synchronized background refresh when an embedded tool loses focus. Hidden tools are not preloaded.</li>
+  <li>Blocks administration-only standalone pages unless the explicit <code class="language-plaintext highlighter-rouge">admin</code> flag is present or a currently OAuth-enabled logged-in user is verified against the configured club’s administrator list.</li>
+  <li>Ignores previously stored OAuth sessions for automatic administration access when the OAuth flag is not currently enabled.</li>
+</ul>
+
+<h2 id="228--2026-07-31">2.2.8 — 2026-07-31</h2>
+
+<ul>
+  <li>Moved the Upcoming Matches analysis status and progress block directly below <strong>Analyze</strong> and above the <strong>Matches / Players</strong> subtabs, matching the Match Creation layout.</li>
+  <li>The progress indicator remains visible when switching between Upcoming Matches subtabs during or after analysis.</li>
+</ul>
+
+<h2 id="228">2.2.8</h2>
+
+<ul>
+  <li>Displayed Scheduled Tasks timestamps as human-readable UTC dates and times.</li>
+  <li>Automatically enables administration features for an authenticated user listed as an administrator by the configured club profile endpoint; the <code class="language-plaintext highlighter-rouge">admin</code> URL flag remains supported.</li>
+  <li>Moved the Upcoming Matches <strong>Analyze</strong> button above the Matches/Players subtabs.</li>
+  <li>Added failure-detail modals with exact match/API call, error category, HTTP status, message, and plain-text copy for analyzer failures.</li>
+  <li>Added sortable Upcoming Players column headers and per-player registered-match drill-down.</li>
+  <li>Split player timeout reporting into Classical and Chess960 timeout columns. Match-sheet timeout values are treated as percentage points (<code class="language-plaintext highlighter-rouge">1</code> = <code class="language-plaintext highlighter-rouge">1%</code>).</li>
+</ul>
+
+<h2 id="226--2026-07-31">2.2.6 — 2026-07-31</h2>
+
+<ul>
+  <li>Added <strong>Matches</strong> and <strong>Players</strong> subtabs to Upcoming Matches.</li>
+  <li>Added an aggregated Promote to King player list using only the already loaded match sheets, with separate Classical and Chess960 rating observations, timeout rate, registration counts, search, and sorting.</li>
+  <li>Added an information mark and <strong>View larger</strong> action to the recruitment tracking graph.</li>
+  <li>The enlarged tracking graph retains clickable archive intervals and player-change details.</li>
+  <li>Highlighted only the newest Challenge Assistant recommendation batch in green; requesting more recommendations restores previous cards to the normal amber treatment.</li>
+  <li>When Recruitment Assistant is embedded from the index, it recruits only for the club configured in <code class="language-plaintext highlighter-rouge">config/site-branding.js</code> and hides the team selector. Direct standalone use still permits team selection.</li>
+  <li>Added configurable <code class="language-plaintext highlighter-rouge">clubSlug</code> and <code class="language-plaintext highlighter-rouge">clubUrl</code> values to the branding file.</li>
+  <li>Made the main header logo link to the configured club’s Chess.com page.</li>
+</ul>
+
+<h2 id="225--2026-07-31">2.2.5 — 2026-07-31</h2>
+
+<ul>
+  <li>Added <code class="language-plaintext highlighter-rouge">config/site-branding.js</code> as the single editable source for the main title, subtitle, logo path, and logo alternative text.</li>
+  <li>Restored <strong>Promote to King</strong> as the default main title.</li>
+  <li>Added the default subtitle: “Play together. Improve together. Promote to King.”</li>
+  <li>Applies configured branding to the visible header, browser title, metadata description, favicon, logo accessibility text, and navigation label.</li>
+  <li>Retained matching Promote to King values in <code class="language-plaintext highlighter-rouge">index.html</code> as a no-script fallback.</li>
+  <li>Replaced the red circular × on Match creation chart match lists with the same compact amber <strong>Close</strong> button treatment used by other project chart modals.</li>
+  <li>Preserved the v2.1.2 site shell and all v2.2.4 behavior.</li>
+</ul>
+
+<h2 id="224--2026-07-31">2.2.4 — 2026-07-31</h2>
+
+<ul>
+  <li>Renamed the overall website to <strong>Chess Pursuit</strong>.</li>
+  <li>Updated the site description to: “A suite of tools for chess players and clubs, built around the pursuit of improvement, competition, and mastery.”</li>
+  <li>Limited the non-administration index to the <strong>Match Assistant</strong> tab only; the complete tab set is restored when the <code class="language-plaintext highlighter-rouge">admin</code> parameter is enabled.</li>
+  <li>Prevented hidden administration tools from being preloaded in public mode.</li>
+  <li>Made every non-empty bar in both Match creation charts selectable by mouse or keyboard.</li>
+  <li>Added a chart-contained overlay listing the exact matches represented by a selected registration or started-date bucket.</li>
+  <li>Included match title, opponent, status, UTC start time, board count, and a direct Chess.com match link.</li>
+  <li>Preserved the v2.1.2 site shell and existing match-tracking functionality.</li>
+</ul>
+
+<h2 id="223--2026-07-31">2.2.3 — 2026-07-31</h2>
+
+<ul>
+  <li>Restored recruitment-change details as a compact overlay over the tracking graph rather than a panel below it.</li>
+  <li>Kept the overlay positioned inside the graph container, avoiding viewport-centered or iframe-level placement.</li>
+  <li>Increased table typography for desktop and handheld readability while reducing the maximum panel width from 700 px to 560 px.</li>
+  <li>Tightened responsive column proportions and spacing so the required two-team layout fits narrow phone screens.</li>
+  <li>Added <strong>Copy text</strong> to copy the displayed teams, signed player additions/removals, archived ratings, timeout rates, and totals as plain text.</li>
+  <li>Preserved the original v2.1.2 site shell and <code class="language-plaintext highlighter-rouge">assets/css/site.css</code> unchanged.</li>
+</ul>
+
+<h2 id="222--2026-07-31">2.2.2 — 2026-07-31</h2>
+
+<ul>
+  <li>Anchored recruitment-change details directly below their tracking graph instead of centering a full-screen overlay inside the analyzer iframe.</li>
+  <li>Applied the same graph-local behavior to Match data management.</li>
+  <li>Reduced dialog width, padding, table row height, headers, totals, and maximum player-list height for handheld displays.</li>
+  <li>Preserved the required two-team columns while allowing long player names to truncate safely rather than widening the popup offscreen.</li>
+  <li>Added automatic nearest scrolling when the graph-local panel opens outside the visible portion of the page.</li>
+  <li>Kept the original v2.1.2 site shell and <code class="language-plaintext highlighter-rouge">assets/css/site.css</code> unchanged.</li>
+</ul>
+
+<h2 id="221--2026-07-31">2.2.1 — 2026-07-31</h2>
+
+<ul>
+  <li>Restored <strong>Record data now</strong> inside Match data management with the v2.1.2 wording, button treatment, modal geometry, and per-match progress.</li>
+  <li>Refreshes the visible Match Assistant or Scheduled tasks log every time Logs or its subtab is accessed.</li>
+  <li>Added a dedicated Refresh button to each log subtab.</li>
+  <li>Added a transparent migration from v2.1.2 <code class="language-plaintext highlighter-rouge">data/match-history</code> snapshots and the previous follow registry into <code class="language-plaintext highlighter-rouge">data/match-tracking</code>.</li>
+  <li>Removes successfully converted legacy files and registry after verifying the unified copies; invalid files are quarantined.</li>
+  <li>Reconstructs migrated archived matches as followed unless they were explicitly unfollowed.</li>
+  <li>Allows an archived match to be followed again even when Chess.com now returns 404; follow state is retained and the missing fresh snapshot is reported as a warning.</li>
+  <li>Keeps the original v2.1.2 <code class="language-plaintext highlighter-rouge">site.css</code> unchanged.</li>
+</ul>
+
+<h2 id="220--2026-07-31">2.2.0 — 2026-07-31</h2>
+
+<h3 id="fresh-v212-based-implementation">Fresh v2.1.2-based implementation</h3>
+
+<ul>
+  <li>Preserved the exact v2.1.2 site shell and <code class="language-plaintext highlighter-rouge">assets/css/site.css</code>, including the dark background and borderless transparent embedded frames.</li>
+  <li>Fixed Scheduled Tasks logs so null or empty payloads safely produce an empty entries list.</li>
+  <li>Added a manual-recording progress bar and split recording into summary discovery followed by per-match capture.</li>
+  <li>Prefiltered registered match summaries by league acronym before requesting full Chess.com match data; explicitly followed active matches remain included.</li>
+  <li>Grouped Match Assistant and Scheduled Tasks under separate subtabs of <strong>Logs</strong>.</li>
+  <li>Renamed <strong>Challenge List</strong> to <strong>Challenge Assistant</strong> and placed <strong>Challenge recommendation</strong> first.</li>
+  <li>Added Match data management search, status/follow filters, size/date/name sorting, add-and-capture, follow again, confirmed unfollow, per-match archive deletion, and confirmed finished-data cleanup.</li>
+  <li>Added tracking-graph buttons and clickable archive points with compact two-column player additions/removals, profile links, archived ratings, timeout rates, and added/removed/balance totals.</li>
+  <li>Implemented matching local Python and online PHP endpoints with a persistent follow registry.</li>
+</ul>
+
+<h2 id="212--2026-07-30">2.1.2 — 2026-07-30</h2>
+
+<h3 id="scheduled-task-logs">Scheduled task logs</h3>
+
+<ul>
+  <li>Added one protected JSONL execution log per UTC day for authorized cron and manual match-history recording runs.</li>
+  <li>Recorded UTC start/end timestamps, duration, trigger type, success/partial/error status, and recorded/skipped/failed match counts.</li>
+  <li>Added fatal-error logging while excluding invalid cron-token attempts from execution history.</li>
+  <li>Added the Administration <strong>Scheduled tasks</strong> tab with UTC date-range, errors-only, and scheduled/manual entry-type filters.</li>
+  <li>Added matching Python-local and PHP-online read APIs at <code class="language-plaintext highlighter-rouge">/api/scheduled-task-logs/</code>.</li>
+</ul>
+
+<h2 id="211--2026-07-30">2.1.1 — 2026-07-30</h2>
+
+<h3 id="match-data-management">Match data management</h3>
+
+<ul>
+  <li>Renamed the Administration tab from <strong>Match data cleanup</strong> to <strong>Match data management</strong>.</li>
+  <li>Added <strong>Record data now</strong>, which invokes the same league-match snapshot routine as the scheduled cron without exposing the cron token to the browser.</li>
+  <li>Added same-origin manual tracking support to both the local Python server and online PHP backend.</li>
+  <li>Refreshes the tracked-match inventory after a manual recording and reports stored, skipped, and failed match counts.</li>
+  <li>Stabilized the Administration dialog height and anchored it to the top of the viewport so tab changes no longer recenter it; any unavoidable growth extends downward.</li>
+</ul>
+
+<h2 id="210--2026-07-30">2.1.0 — 2026-07-30</h2>
+
+<h3 id="league-match-history-and-administration">League-match history and Administration</h3>
+
+<ul>
+  <li>Added protected Python and PHP HTTP GET cron endpoints that snapshot every registered Promote to King league match with a server-generated UTC timestamp.</li>
+  <li>Added per-match immutable storage under <code class="language-plaintext highlighter-rouge">data/match-history/</code> and read-only client history aggregation.</li>
+  <li>Added conditional registration-history charts below the rating-bracket chart, using existing P2K/opponent colors, minimum-player reference, P2K win probability, and hover/tap values.</li>
+  <li>Kept the chart completely absent when no usable tracking data exists.</li>
+  <li>Renamed the admin modal to Administration and split it into Logs, Diagnostics, and Match data cleanup tabs.</li>
+  <li>Added tracked-match inventory, file counts, upcoming/started state, and confirmed deletion of all snapshots for one match.</li>
+  <li>Added IONOS cron setup and token-rotation documentation.</li>
+  <li>Updated Upcoming model version to <code class="language-plaintext highlighter-rouge">UA-45</code> and added match-history model <code class="language-plaintext highlighter-rouge">MH-1</code>.</li>
+</ul>
+
+<h2 id="2012--2026-07-30">2.0.12 — 2026-07-30</h2>
+
+<h3 id="administration-visibility-and-retained-tab-presentation">Administration visibility and retained-tab presentation</h3>
+
+<ul>
+  <li>Added the <code class="language-plaintext highlighter-rouge">admin</code> URL flag for the Diagnostics button, Match Recruitment tab, and Challenge List tab.</li>
+  <li>Kept administration-only controls hidden by default so they do not flash before JavaScript initializes.</li>
+  <li>Moved Match Assistant usage logs above the runtime diagnostic cards.</li>
+  <li>Linked logged usernames to their Chess.com profile pages in user totals and matching entries.</li>
+  <li>Kept newly loading tool frames hidden until the embedded presentation override is installed, removing the standalone-border flash.</li>
+  <li>Removed release query parameters from Ctrl-click and middle-click standalone tab navigation while retaining versioned internal frames and assets.</li>
+</ul>
+
+<h2 id="2011--2026-07-30">2.0.11 — 2026-07-30</h2>
+
+<ul>
+  <li>Added a packaged PHP implementation of the Challenge List default-storage and Match Assistant usage-log APIs for online Apache/PHP hosting.</li>
+  <li>Kept the exact same extensionless API contract as the local Python launcher.</li>
+  <li>Added endpoint directories so online hosting does not depend on frontend PHP filenames.</li>
+  <li>Protected raw <code class="language-plaintext highlighter-rouge">data/</code> and <code class="language-plaintext highlighter-rouge">logs/</code> content with packaged Apache rules.</li>
+  <li>Reworded server-unavailable errors to cover both incomplete online deployment and local static-only serving.</li>
+  <li>Added online deployment instructions and PHP backend regression tests.</li>
+</ul>
+
+<h2 id="2010--2026-07-30">2.0.10 — 2026-07-30</h2>
+
+<h3 id="online-mixed-version-asset-fix">Online mixed-version asset fix</h3>
+
+<ul>
+  <li>Fixed the online Match Assistant failure <code class="language-plaintext highlighter-rouge">P2K_API_CLIENT.prioritizeMatchReferences is not a function</code> caused by a newer page controller being combined with an older cached API client.</li>
+  <li>Moved league-first match/reference ordering into the transport-independent <code class="language-plaintext highlighter-rouge">assets/js/shared/match-priority.js</code> module.</li>
+  <li>Kept backwards-compatible ordering methods on <code class="language-plaintext highlighter-rouge">P2K_API_CLIENT</code> while removing direct ordering dependencies from Match Assistant, Upcoming Matches, and Match Creation.</li>
+  <li>Added release-version query tokens to every local JavaScript and stylesheet reference and to retained/standalone tool-page navigation.</li>
+  <li>Added Apache cache headers that keep HTML release shells fresh while allowing safely versioned JavaScript and CSS to be cached.</li>
+  <li>Added regression checks for independent match ordering, obsolete-client compatibility, and complete asset versioning.</li>
+</ul>
+
+<h2 id="209--2026-07-30">2.0.9 — 2026-07-30</h2>
+
+<h3 id="match-assistant-usage-logging">Match Assistant usage logging</h3>
+
+<ul>
+  <li>Added transparent server-side logging for completed user-initiated Match Assistant analyses.</li>
+  <li>Stored one JSON-lines file per UTC calendar day under <code class="language-plaintext highlighter-rouge">logs/match-assistant/</code>.</li>
+  <li>Logged the server-generated UTC timestamp, canonical username, and number of matches found under the active filters.</li>
+  <li>Excluded synchronized background refreshes, cancelled runs, and failed validations from usage logging.</li>
+  <li>Added a Diagnostics log explorer with a default seven-day UTC aggregate, date and username filters, seven-day history expansion, daily totals, user totals, matching entries, and distinct-username counts.</li>
+  <li>Protected log files from direct static access and restricted remote log exploration by default.</li>
+</ul>
+
+<h2 id="208--2026-07-30">2.0.8 — 2026-07-30</h2>
+
+<h3 id="challenge-club-slug-validation">Challenge club-slug validation</h3>
+
+<ul>
+  <li>Relaxed browser and Python server validation so valid Chess.com club slugs may begin or end with hyphens.</li>
+  <li>Continued to allow only lowercase ASCII letters, digits, and hyphens, with at least one letter or digit and a 128-character limit.</li>
+  <li>Added regression coverage for <code class="language-plaintext highlighter-rouge">-persian-gulf-forever</code>, trailing hyphens, duplicate removal, and all-hyphen rejection.</li>
+  <li>Updated the Challenge validation model identifier to <code class="language-plaintext highlighter-rouge">CL-4</code>.</li>
+</ul>
+
+<h2 id="207--2026-07-30">2.0.7 — 2026-07-30</h2>
+
+<h3 id="challenge-list-server-default">Challenge List server default</h3>
+
+<ul>
+  <li>Upgraded <code class="language-plaintext highlighter-rouge">serve_local.py</code> into a dependency-free static and JSON application server.</li>
+  <li>Added <code class="language-plaintext highlighter-rouge">GET</code> and <code class="language-plaintext highlighter-rouge">PUT /api/challenge-club-list</code> for one ordered shared default list.</li>
+  <li>Added automatic loading into untouched Challenge Assistant inputs and active-tab save/load controls.</li>
+  <li>Added ordered slug normalization, duplicate removal, revision conflict protection, atomic writes, and one-file backup.</li>
+  <li>Restricted writes to same-origin loopback clients by default and blocked direct static access to the stored JSON.</li>
+  <li>Kept all Challenge Assistant tools functional when the storage API is unavailable.</li>
+  <li>Added end-to-end Python tests for read, save, conflict, validation, and protected storage behavior.</li>
+</ul>
+
+<h2 id="206--2026-07-30">2.0.6 — 2026-07-30</h2>
+
+<h3 id="match-recruitment-assistant-runtime-fix">Match Recruitment Assistant runtime fix</h3>
+
+<ul>
+  <li>Renamed the index tab to <strong>Match recruitment assistant</strong>.</li>
+  <li>Fixed the recruitment scan startup error caused by an obsolete <code class="language-plaintext highlighter-rouge">readRecruitmentFilters()</code> call.</li>
+  <li>Restored use of the existing validated timeout and current-games filter reader.</li>
+  <li>Added a regression check preventing the obsolete undefined function name from returning.</li>
+</ul>
+
+<h2 id="205--2026-07-30">2.0.5 — 2026-07-30</h2>
+
+<h3 id="challenge-recommendation-and-visible-copy-dialogs">Challenge recommendation and visible copy dialogs</h3>
+
+<ul>
+  <li>Integrated the latest Challenge Assistant recommendation tab with ordered rotation, configurable P2K-opponent exclusion, recent average-board qualification, pause/stop, initial ten recommendations, and five-result continuation.</li>
+  <li>Kept the feature on the repository’s explicit shared API client and current structured error/runtime architecture.</li>
+  <li>Positioned Upcoming Matches copy and chart dialogs inside the portion of a retained iframe that is actually visible in the parent viewport.</li>
+  <li>Repositioned open dialogs during parent/child scrolling, resizing, zooming, and orientation changes.</li>
+  <li>Updated friendly-match recruitment to stop only when P2K meets the minimum-player requirement, matches the opponent usable lineup count, and has at least the opponent projected win probability.</li>
+  <li>Kept recruitment active whenever P2K is below the match minimum or has fewer eligible players than the opposing usable lineup.</li>
+</ul>
+
+<h2 id="204--2026-07-30">2.0.4 — 2026-07-30</h2>
+
+<h3 id="tab-visibility-regression-fix">Tab visibility regression fix</h3>
+
+<ul>
+  <li>Restored the intended single-tab display on <code class="language-plaintext highlighter-rouge">index.html</code>.</li>
+  <li>Added explicit hidden-state CSS for preloaded tool frames and the loading indicator.</li>
+  <li>Prevented author <code class="language-plaintext highlighter-rouge">display</code> declarations from overriding the HTML <code class="language-plaintext highlighter-rouge">hidden</code> attribute.</li>
+  <li>Added a browser regression check covering tab switching, retained frames, and loading-message dismissal.</li>
+</ul>
+
+<h2 id="203--2026-07-30">2.0.3 — 2026-07-30</h2>
+
+<h3 id="concise-hover-guidance">Concise hover guidance</h3>
+
+<ul>
+  <li>Added one shared nonvisual control-hint layer for concise native hover text on useful controls that previously lacked guidance.</li>
+  <li>Covered site navigation, diagnostics, analyzer actions and filters, chart controls, recruitment settings, challenge-list actions, dynamically rendered tabs, searches, and expansion controls.</li>
+  <li>Preserved every existing title and excluded information buttons and all content inside information popovers.</li>
+  <li>Added no new visible icons, panels, spacing, or styling.</li>
+</ul>
+
+<h2 id="202--2026-07-29">2.0.2 — 2026-07-29</h2>
+
+<h3 id="information-popovers">Information popovers</h3>
+
+<ul>
+  <li>Replaced the Match Assistant’s fixed centered recommendation box with a viewport-aware popover anchored to the triggering information button.</li>
+  <li>Replaced CSS pseudo-element tooltips in Upcoming Matches, detailed match analysis, and single-match analysis with the same shared accessible component.</li>
+  <li>Added automatic above/below placement, horizontal viewport clamping, embedded-frame viewport awareness, and repositioning during scroll, resize, and orientation changes.</li>
+  <li>Added reliable outside-tap and Escape dismissal, focus restoration, and one-open-popover-at-a-time behavior.</li>
+  <li>Standardized all analytical information buttons and popovers on the Match Assistant’s blue visual style while retaining the existing orange detailed-analysis action.</li>
+</ul>
+
+<h2 id="201--2026-07-29">2.0.1 — 2026-07-29</h2>
+
+<h3 id="diagnostics">Diagnostics</h3>
+
+<ul>
+  <li>Added centrally defined analytical model versions to the Diagnostics panel and copied support snapshot.</li>
+  <li>Added model identifiers for Match Assistant eligibility/recommendation, Upcoming lineup/recruitment, Match Creation scoring, in-progress projection, recruitment eligibility, and Challenge List validation.</li>
+  <li>Added <code class="language-plaintext highlighter-rouge">docs/MODEL_VERSIONS.md</code> with the model-versioning rules and current source revisions.</li>
+</ul>
+
+<h2 id="200--2026-07-29">2.0.0 — 2026-07-29</h2>
+
+<h3 id="reliability-and-correctness">Reliability and correctness</h3>
+
+<ul>
+  <li>Fixed the duplicated Match Assistant element ID that could bind search behavior to the wrong element.</li>
+  <li>Reworked corrupted-cache recovery so malformed entries are removed before a network retry.</li>
+  <li>Added ordinary CORS retry before JSONP when conditional revalidation fails.</li>
+  <li>Hardened cross-tab request claims, completion races, lease renewal, cleanup, and shared-request cancellation.</li>
+  <li>Added quota recovery and an in-memory LRU cache fallback.</li>
+  <li>Added transient/permanent Challenge List classifications and retry of temporary failures.</li>
+  <li>Added separate pending, failed, and settled states to Recruitment Assistant scans.</li>
+  <li>Preserved partial results and retry-only-failed behavior throughout bulk analyzers.</li>
+</ul>
+
+<h3 id="networking-and-performance">Networking and performance</h3>
+
+<ul>
+  <li>Kept all Chess.com requests on the explicit <code class="language-plaintext highlighter-rouge">P2K_API_CLIENT</code>; the package never replaces <code class="language-plaintext highlighter-rouge">window.fetch</code>.</li>
+  <li>Added adaptive bounded priority-first processing, priority aging, global rate-limit pauses, jitter, and a transient-failure circuit pause.</li>
+  <li>Restricted API requests and JSONP fallback to configured approved origins.</li>
+  <li>Disabled scheduled IndexedDB pruning pending real usage calibration.</li>
+  <li>Added endpoint-specific freshness, long-lived match retention, stale-if-error support, and emergency quota pruning that protects recent match records.</li>
+  <li>Added cross-tab analysis completion coordination so Match Assistant, Upcoming Matches, and Match Creation can refresh shared data.</li>
+</ul>
+
+<h3 id="architecture-and-maintenance">Architecture and maintenance</h3>
+
+<ul>
+  <li>Externalized Match Assistant and Match Creation JavaScript and CSS without restoring any legacy loader.</li>
+  <li>Consolidated Upcoming Matches and detailed-modal logic into one shared analysis core.</li>
+  <li>Replaced HTML replay/document-write tab loading with retained same-origin iframes, preserving tab state when switching.</li>
+  <li>Centralized routes, club identity, league acronyms, request settings, cache calibration values, and feature flags.</li>
+  <li>Removed obsolete page-level JSONP helpers.</li>
+  <li>Added a Content Security Policy, configurable analytics module, release metadata, local server launcher, diagnostics panel, and automated package checks.</li>
+</ul>
+
+<h3 id="user-visible-behavior">User-visible behavior</h3>
+
+<ul>
+  <li>Added the Diagnostics panel.</li>
+  <li>Completed analyses now rename their main action to a refresh equivalent.</li>
+  <li>Switching tabs no longer discards loaded data.</li>
+  <li>Completing Match Assistant, Upcoming Matches, or Match Creation analysis requests synchronized refreshes of the other compatible retained tabs.</li>
+</ul>
+
+<h2 id="266--achievements-live-profiles-and-sequential-games">2.6.6 — Achievements, Live profiles and sequential games</h2>
+
+<ul>
+  <li>Added the complete achievement catalogue and first ten dedicated artwork files.</li>
+  <li>Paginated achievement player cards and added shared-gateway Chess.com avatars.</li>
+  <li>Added Live ranks and MCA metrics to achievements and unified profiles.</li>
+  <li>Kept Team Points half-point precision in profile and achievement displays.</li>
+  <li>Made unified profiles viewport-safe and parent-modal aware when opened from embedded achievement content.</li>
+  <li>Treated a missing second game as normal while the first game of a one-concurrent-game match is still in progress.</li>
+</ul>
+
+<h2 id="210623--2026-08-25">2.10.6.23 — 2026-08-25</h2>
+
+<ul>
+  <li>Consolidated correlated rename lifecycle records into one authoritative name-change event.</li>
+  <li>Added full known-tournament status listing to Tournament Management.</li>
+  <li>Unified the Dashboard New matches · 24 h unknown/loading value to <code class="language-plaintext highlighter-rouge">—</code>.</li>
+  <li>Added admin-only Member lookup with identity, lifecycle, rating, activity, achievement and MCA information.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/CHANGELOG.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

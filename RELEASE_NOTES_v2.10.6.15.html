@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.15 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.15" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.15.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.15.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.15" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.15","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.15.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v210615">Promote to King v2.10.6.15</h1>
+
+<h2 id="green-scheduled-task-control-reachability-corrective">Green Scheduled Task Control reachability corrective</h2>
+
+<p>v2.10.6.15 is a cumulative corrective release from the canonical v2.10.6.14 source tree.</p>
+
+<h3 id="corrected">Corrected</h3>
+
+<ul>
+  <li>Restores <code class="language-plaintext highlighter-rouge">Scheduled tasks / Green Team Points</code> as the native navigation owned by <code class="language-plaintext highlighter-rouge">TaskControl.html</code>, including when Task Control is embedded.</li>
+  <li>Replaces the v2.10.6.14 Admin-detail duplication with a parent-level <code class="language-plaintext highlighter-rouge">Task Control / Production migration</code> split. Green remains a native Task Control surface rather than a separate parent iframe tab.</li>
+  <li>Scheduled Task Control card shortcuts can still open either Scheduled tasks or Green Team Points directly.</li>
+  <li>Persists the native Task Control subtab in <code class="language-plaintext highlighter-rouge">adminToolTab</code> for the new Admin shell.</li>
+  <li>Restores Green reachability through legacy <code class="language-plaintext highlighter-rouge">page=administration&amp;adminTool=tasks</code>, including Lost &amp; found links and existing bookmarks.</li>
+  <li>Legacy Administration now propagates Task Control tab changes into the parent URL and restores the selected tab on Refresh / Back / Forward.</li>
+  <li>Direct <code class="language-plaintext highlighter-rouge">TaskControl.html?tab=green</code> behavior remains supported.</li>
+</ul>
+
+<h3 id="green-operational-functionality-preserved">Green operational functionality preserved</h3>
+
+<p>The corrective explicitly retains the authoritative Green operations surface, including:</p>
+
+<ul>
+  <li>Green scheduler/runtime and cutover metrics;</li>
+  <li>migration phase, worker/browser routing and force-mode controls;</li>
+  <li>GAB start/resume, slice execution, metrics and per-phase progress;</li>
+  <li>GFFL enable/disable/freshness-target controls and metrics;</li>
+  <li>Green Accelerator Start / Run once / Stop, metrics and log;</li>
+  <li>current cycle/phase progress and recent Green worker invocations.</li>
+</ul>
+
+<p>Production Migration remains a separate advanced/emergency diagnostic surface.</p>
+
+<h3 id="regression-locks">Regression locks</h3>
+
+<ul>
+  <li>Public Dashboard DOM/layout unchanged from v2.10.6.14.</li>
+  <li>Public Hall of Fame DOM/layout unchanged from v2.10.6.14.</li>
+  <li>Public Insights DOM/layout unchanged from v2.10.6.14.</li>
+  <li>UTC timestamp behavior from v2.10.6.13/v2.10.6.14 retained.</li>
+  <li>No database schema/reset/reseed change.</li>
+  <li>No CRON change.</li>
+  <li>No Blue/Green routing or scoring change.</li>
+  <li>No artwork change.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.15.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

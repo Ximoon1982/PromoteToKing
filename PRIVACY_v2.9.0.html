@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.0 — Traffic analytics privacy design | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.0 — Traffic analytics privacy design" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/PRIVACY_v2.9.0.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/PRIVACY_v2.9.0.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.0 — Traffic analytics privacy design" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.0 — Traffic analytics privacy design","url":"https://ximoon1982.github.io/PromoteToKing/PRIVACY_v2.9.0.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v290--traffic-analytics-privacy-design">Promote to King v2.9.0 — Traffic analytics privacy design</h1>
+
+<p>Promote to King v2.9.0 uses optional <strong>first-party, self-hosted, cookieless traffic analytics</strong>. It does not set analytics cookies, localStorage/sessionStorage identifiers, advertising IDs, or cross-site identifiers, and it does not use Statcounter, Google Analytics, or another third-party audience tracker.</p>
+
+<p>The server may transiently process the request IP address to derive a country (or broad region when a trusted local GeoIP source is configured). The raw IP is not written to analytics files. Full external referrer URLs and query strings are not retained: only normalized internal paths and external source hostnames are stored.</p>
+
+<p>A short-lived rotating HMAC pseudonym may be derived server-side from the transient network address only to estimate a visit/session and daily unique visitors. Browser/User-Agent entropy is deliberately excluded from the pseudonym to avoid fingerprinting; shared/NAT addresses can therefore undercount uniques. That pseudonym is retained for no more than 24 hours and is not linked to Chess.com usernames, authenticated identities, achievements, recruitment, ACAMR, or member intelligence. Daily aggregate files are compacted to remove pseudonymous visitor/session keys. Because pseudonyms rotate daily, multi-day reports deliberately show latest-day uniques, average daily uniques, and unique visitor-days rather than claiming a period-wide de-duplicated unique visitor count.</p>
+
+<p>Approximate duration is calculated from first/last activity and cookieless page lifecycle signals. Do Not Track (<code class="language-plaintext highlighter-rouge">DNT: 1</code>) and Global Privacy Control (<code class="language-plaintext highlighter-rouge">Sec-GPC: 1</code>) are honored as opt-out signals, and obvious bots/crawlers are excluded.</p>
+
+<p>This design minimizes personal data but does not claim that transient collection is legally anonymous. The site operator remains responsible for the applicable privacy notice, legal basis, retention policy, and data-subject rights under applicable EU/Luxembourg law.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/PRIVACY_v2.9.0.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

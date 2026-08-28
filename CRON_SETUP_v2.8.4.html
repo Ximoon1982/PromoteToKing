@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.4 CRON setup | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.4 CRON setup" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/CRON_SETUP_v2.8.4.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/CRON_SETUP_v2.8.4.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.4 CRON setup" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.4 CRON setup","url":"https://ximoon1982.github.io/PromoteToKing/CRON_SETUP_v2.8.4.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v284-cron-setup">Promote to King v2.8.4 CRON setup</h1>
+
+<p>v2.8.4 splits Team Points into two independent server workers so slow member-history work cannot delay Club Points.</p>
+
+<h2 id="recommended-schedule">Recommended schedule</h2>
+
+<pre><code class="language-cron"># BEGIN PROMOTE TO KING v2.8.4
+*/5 * * * * /usr/bin/curl --fail --silent --show-error --max-time 55 'https://YOUR-DOMAIN/server/team-points/public/cron-club.php?token=TEAM_POINTS_CRON_TOKEN'
+7,37 * * * * /usr/bin/curl --fail --silent --show-error --max-time 55 'https://YOUR-DOMAIN/server/team-points/public/cron-player.php?token=TEAM_POINTS_CRON_TOKEN'
+17 * * * * /usr/bin/curl --fail --silent --show-error --max-time 55 'https://YOUR-DOMAIN/api/track-upcoming-league-matches/?token=SHARED_CRON_TOKEN'
+2-59/5 * * * * /usr/bin/curl --fail --silent --show-error --max-time 55 'https://YOUR-DOMAIN/server/tournaments/public/cron.php?token=SHARED_CRON_TOKEN'
+# END PROMOTE TO KING v2.8.4
+</code></pre>
+
+<ul>
+  <li><strong>Club Points</strong>: every 5 minutes. Always performs fresh club-match discovery and prioritizes new/open/recently finished matches and urgent boards.</li>
+  <li><strong>Player Points</strong>: every 30 minutes. Roster, ratings, monthly archives and bounded historical reconciliation.</li>
+  <li>Match monitoring: hourly.</li>
+  <li>Tournaments: every 5 minutes, offset from Club Points.</li>
+</ul>
+
+<p><code class="language-plaintext highlighter-rouge">server/team-points/public/cron.php</code> is retained as a compatibility alias for the <strong>Club Points</strong> lane. Do not schedule both <code class="language-plaintext highlighter-rouge">cron.php</code> and <code class="language-plaintext highlighter-rouge">cron-club.php</code>; use <code class="language-plaintext highlighter-rouge">cron-club.php</code> for new installations.</p>
+
+<p>Both Team Points workers share the same Core database, HTTP cache and Chess.com gateway. They use separate leases, so a Player Points pass cannot prevent a Club Points pass from starting. The shared gateway still serializes/throttles outbound Chess.com requests.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/CRON_SETUP_v2.8.4.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

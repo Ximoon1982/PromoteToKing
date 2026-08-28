@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.8 release notes | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.8 release notes" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.8.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.8.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.8 release notes" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.8 release notes","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.8.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v288-release-notes">Promote to King v2.8.8 release notes</h1>
+
+<h2 id="hall-achievements-and-profiles">Hall, achievements and profiles</h2>
+
+<ul>
+  <li>Achievement trigger links are normalized to human-facing <code class="language-plaintext highlighter-rouge">https://www.chess.com/...</code> URLs. Legacy stored API URLs are corrected at read time; new achievement records are normalized before persistence.</li>
+  <li>Hall of Fame now opens on <strong>Achievements</strong> by default. Explicit Daily/Live rank navigation still opens the requested rank view.</li>
+  <li>Both authenticated Daily and Live Dashboard views expose the unified player profile.</li>
+  <li>Daily/Live Hall rank cards have dedicated narrow-mobile layout rules so text/counts no longer spill across adjacent rank artwork.</li>
+  <li>Nested dashboard modals now preserve DOM nodes, focus and scroll state. Closing an Achievement opened from a Profile restores the original live Profile DOM/event handlers, allowing the next Achievement to open correctly.</li>
+  <li>The unified player profile is the cross-feature player surface for Hall, Achievements, Insights, embedded Recruitment, embedded Tournaments and Club Intelligence.</li>
+  <li>Unified profiles and the personalized authenticated home add member activity, availability/load, contribution and nearest achievement challenges.</li>
+</ul>
+
+<h2 id="club-intelligence-center">Club Intelligence Center</h2>
+
+<p>A new Administration → <strong>Club Intelligence</strong> tool center consolidates the new operational/member intelligence features. Corresponding tools are also present in the Administration tool collection.</p>
+
+<ul>
+  <li>Team depth visualization by 100-rating-point Daily/Classical and Chess960 bands.</li>
+  <li>Data freshness / coverage dashboard for roster, ratings, avatars, boards and worker queues.</li>
+  <li>Automatic anomaly detector and linked admin action queue.</li>
+  <li>Member activity monitoring and activity classes.</li>
+  <li>Member availability / overload score from activity, data freshness and current board load.</li>
+  <li>Member contribution profiles: Club Points share, points/game and win rate.</li>
+  <li>Opponent intelligence profiles from the canonical opponent projection.</li>
+  <li>Compact daily historical snapshots / time travel.</li>
+  <li>Explainable Low / Medium / High Club Points forecast with visible drivers.</li>
+  <li>Performance telemetry by Team Points public endpoint (calls/errors/p50/p95/max/peak memory).</li>
+  <li>ACAMR effectiveness dashboard.</li>
+  <li>Achievement challenges for nearest unearned Daily, Live and MCA milestones.</li>
+</ul>
+
+<h2 id="recruitment-and-acamr">Recruitment and ACAMR</h2>
+
+<ul>
+  <li>Recruitment Assistant now displays an explainable confidence score using stored-rating freshness, opponent-lineup coverage, candidate availability and projected board coverage.</li>
+  <li>Candidate rows expose activity, availability and current load while retaining strongest-first recruitment semantics.</li>
+  <li>ACAMR work allocation is adaptive: stale member data, recent activity and incomplete/in-progress point work receive higher priority. Existing cross-session claims continue to suppress duplicate work.</li>
+  <li>ACAMR scope is unchanged: Club/Member Points support is included; tournaments and match-registration monitoring are excluded.</li>
+  <li>Real OAuth authentication activates ACAMR regardless of the simulated-OAuth flag; simulated authentication activates it only when that flag is enabled.</li>
+</ul>
+
+<h2 id="opponents-insights">Opponents Insights</h2>
+
+<ul>
+  <li>Top Opponents graph can display the opponent Chess.com club logo.</li>
+  <li>Opponent club icons are persisted in Core with long-lived cache metadata and can be populated by normal opponent maintenance or bounded on-demand icon refresh.</li>
+</ul>
+
+<h2 id="operations">Operations</h2>
+
+<ul>
+  <li>Core schema <strong>6</strong> (from 5): adds opponent icon/profile cache columns only.</li>
+  <li>Analytics schema remains <strong>5</strong>.</li>
+  <li>No database reset/re-seed.</li>
+  <li>CRON cadence unchanged; no new CRON entry.</li>
+  <li>Daily Intelligence snapshot and internally hourly-gated anomaly maintenance reuse the existing Club worker when time budget remains.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.8.8.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,202 @@
+#!/usr/bin/env bash
+# Promote to King v2.10.6.25 complete source-first installer.
+# Installs only after verifying the staged complete source archive and the
+# supported predecessor. Runtime data/local configuration are never copied.
+set -Eeuo pipefail
+
+TARGET_VERSION="2.10.6.25"
+PREDECESSOR_VERSION="2.10.6.24"
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+TARGET="${1:-${P2K_SITE_ROOT:-$PWD}}"
+ARCHIVE="${P2K_SOURCE_ARCHIVE:-$SELF_DIR/PromoteToKing_v2.10.6.25_SOURCE.tar.gz}"
+MANIFEST_NAME="SOURCE_MANIFEST_v2.10.6.25.json"
+
+fail(){ echo "ERROR: $*" >&2; exit 2; }
+command -v python3 >/dev/null 2>&1 || fail "python3 is required."
+command -v php >/dev/null 2>&1 || fail "PHP CLI is required. Set PATH to the IONOS PHP CLI before installing."
+command -v tar >/dev/null 2>&1 || fail "tar is required."
+[[ -d "$TARGET" ]] || fail "Target directory does not exist: $TARGET"
+TARGET="$(cd "$TARGET" && pwd -P)"
+[[ -f "$ARCHIVE" ]] || fail "Complete source archive not found: $ARCHIVE"
+
+CURRENT=""
+[[ -f "$TARGET/VERSION" ]] && CURRENT="$(tr -d '\r\n' < "$TARGET/VERSION")"
+case "$CURRENT" in
+  "$PREDECESSOR_VERSION"|"$TARGET_VERSION") ;;
+  *) fail "Unsupported target VERSION '${CURRENT:-missing}'. Expected $PREDECESSOR_VERSION (or $TARGET_VERSION for an idempotent replay)." ;;
+esac
+
+STAGE="$(mktemp -d "${TMPDIR:-/tmp}/p2k-v210625-stage.XXXXXX")"
+BACKUP="$(mktemp -d "${TMPDIR:-/tmp}/p2k-v210625-backup.XXXXXX")"
+CRON_BEFORE="$BACKUP/crontab.before"
+NEW_LIST="$BACKUP/new-files.txt"
+ROLLBACK_ARMED=0
+cleanup(){ rm -rf "$STAGE" "$BACKUP"; }
+
+restore_files(){
+  python3 - "$TARGET" "$BACKUP" "$NEW_LIST" <<'PY'
+from pathlib import Path
+import shutil, sys
+root=Path(sys.argv[1]); backup=Path(sys.argv[2]); new_list=Path(sys.argv[3])
+if new_list.exists():
+    for raw in reversed(new_list.read_text(encoding='utf-8').splitlines()):
+        if not raw: continue
+        p=root/raw
+        try:
+            if p.is_symlink() or p.is_file(): p.unlink()
+            elif p.is_dir(): shutil.rmtree(p)
+        except FileNotFoundError: pass
+src=backup/'files'
+if src.exists():
+    for p in sorted(src.rglob('*')):
+        rel=p.relative_to(src); dst=root/rel
+        if p.is_dir(): dst.mkdir(parents=True, exist_ok=True)
+        elif p.is_symlink():
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            try: dst.unlink()
+            except FileNotFoundError: pass
+            dst.symlink_to(p.readlink())
+        else:
+            dst.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(p,dst)
+PY
+}
+restore_cron(){
+  command -v crontab >/dev/null 2>&1 || return 0
+  if [[ -f "$CRON_BEFORE" ]]; then
+    if [[ -s "$CRON_BEFORE" ]]; then crontab "$CRON_BEFORE" || true; else crontab -r 2>/dev/null || true; fi
+  fi
+}
+on_error(){
+  rc=$?
+  if [[ "$ROLLBACK_ARMED" == 1 ]]; then
+    echo "Installation failed; rolling back application files and CRON..." >&2
+    restore_files || true
+    restore_cron || true
+  fi
+  cleanup
+  exit "$rc"
+}
+trap on_error ERR INT TERM
+trap cleanup EXIT
+
+echo "[1/7] Extracting complete v$TARGET_VERSION source to staging..."
+tar -xzf "$ARCHIVE" -C "$STAGE"
+[[ "$(tr -d '\r\n' < "$STAGE/VERSION")" == "$TARGET_VERSION" ]] || fail "Staged VERSION is not $TARGET_VERSION."
+[[ -f "$STAGE/$MANIFEST_NAME" ]] || fail "Staged source manifest is missing."
+
+echo "[2/7] Verifying staged source hashes..."
+python3 - "$STAGE" "$STAGE/$MANIFEST_NAME" <<'PY'
+from pathlib import Path
+import hashlib, json, sys
+root=Path(sys.argv[1]); manifest=json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
+assert manifest.get('version')=='2.10.6.25', 'manifest version mismatch'
+for row in manifest['files']:
+    p=root/row['path']
+    if not p.is_file(): raise SystemExit(f"missing staged file: {row['path']}")
+    h=hashlib.sha256(p.read_bytes()).hexdigest()
+    if h!=row['sha256']: raise SystemExit(f"staged hash mismatch: {row['path']}")
+print(f"verified {len(manifest['files'])} source files")
+PY
+
+echo "[3/7] Running staged syntax/preflight checks..."
+for f in \
+  server/team-points/bin/mca-results-sync.php \
+  server/team-points/public/live-ranks-admin.php \
+  server/team-points/src/LiveRanksService.php \
+  server/team-points/src/McaIndexParser.php \
+  server/team-points/src/McaResultsCronService.php \
+  server/team-points-green/public/api.php \
+  server/team-points-green/src/GreenRepository.php; do
+  php -l "$STAGE/$f" >/dev/null
+done
+bash -n "$STAGE/cron-mca-results-v2.10.6.25.sh"
+bash -n "$STAGE/reset-install-mca-cron-v2.10.6.25.sh"
+if command -v node >/dev/null 2>&1; then
+  for f in assets/js/pages/challenge-list-assistant.js assets/js/pages/team-points-admin.js assets/js/pages/team-points-features.js assets/js/site-config.js; do node --check "$STAGE/$f" >/dev/null; done
+fi
+
+# Snapshot only source paths that actually differ. This keeps rollback small even
+# though the deployment archive is a complete source tree.
+echo "[4/7] Preparing transactional rollback set..."
+python3 - "$TARGET" "$STAGE" "$STAGE/$MANIFEST_NAME" "$BACKUP" "$NEW_LIST" <<'PY'
+from pathlib import Path
+import hashlib, json, shutil, sys
+root,stage,manifest_path,backup,new_list=map(Path,sys.argv[1:])
+manifest=json.loads(manifest_path.read_text(encoding='utf-8'))
+back=backup/'files'; new=[]
+def digest(p):
+    h=hashlib.sha256()
+    with p.open('rb') as f:
+        for block in iter(lambda:f.read(1024*1024),b''): h.update(block)
+    return h.hexdigest()
+for row in manifest['files']:
+    rel=Path(row['path']); dst=root/rel
+    if dst.is_file() or dst.is_symlink():
+        if dst.is_file() and digest(dst)==row['sha256']: continue
+        out=back/rel; out.parent.mkdir(parents=True,exist_ok=True)
+        if dst.is_symlink(): out.symlink_to(dst.readlink())
+        else: shutil.copy2(dst,out)
+    elif not dst.exists(): new.append(rel.as_posix())
+# The manifest intentionally cannot hash/include itself. It is still part of
+# the installed release and therefore must participate in rollback explicitly.
+rel=Path('SOURCE_MANIFEST_v2.10.6.25.json'); dst=root/rel; staged=stage/rel
+if dst.is_file() or dst.is_symlink():
+    same=dst.is_file() and staged.is_file() and digest(dst)==digest(staged)
+    if not same:
+        out=back/rel; out.parent.mkdir(parents=True,exist_ok=True)
+        if dst.is_symlink(): out.symlink_to(dst.readlink())
+        else: shutil.copy2(dst,out)
+elif not dst.exists(): new.append(rel.as_posix())
+new_list.write_text('\n'.join(new)+'\n',encoding='utf-8')
+print(f"backup prepared; {sum(1 for p in back.rglob('*') if p.is_file() or p.is_symlink()) if back.exists() else 0} overwritten files saved, {len(new)} new files tracked")
+PY
+if command -v crontab >/dev/null 2>&1; then crontab -l > "$CRON_BEFORE" 2>/dev/null || : > "$CRON_BEFORE"; fi
+ROLLBACK_ARMED=1
+
+echo "[5/7] Installing complete source overlay (runtime data/local config protected)..."
+python3 - "$STAGE" "$TARGET" <<'PY'
+from pathlib import Path
+import shutil, sys
+src=Path(sys.argv[1]); dst=Path(sys.argv[2])
+def protected(rel:Path):
+    parts=rel.parts
+    name=rel.name.lower()
+    if parts and parts[0]=='data': return True
+    if '.git' in parts or '.pytest_cache' in parts or '__pycache__' in parts: return True
+    if name.endswith('.pyc') or name.startswith('.env'): return True
+    if name.endswith('.local.php') or name.endswith('.local.json') or name.endswith('.local.js'): return True
+    return False
+for p in src.rglob('*'):
+    rel=p.relative_to(src)
+    if protected(rel): continue
+    out=dst/rel
+    if p.is_dir(): out.mkdir(parents=True,exist_ok=True)
+    elif p.is_symlink():
+        out.parent.mkdir(parents=True,exist_ok=True)
+        try: out.unlink()
+        except FileNotFoundError: pass
+        out.symlink_to(p.readlink())
+    else:
+        out.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(p,out)
+PY
+chmod 755 "$TARGET/cron-mca-results-v2.10.6.25.sh" "$TARGET/reset-install-mca-cron-v2.10.6.25.sh" "$TARGET/PromoteToKing_v2.10.6.25_SOURCE_INSTALLER.run" "$TARGET/install-promote-to-king-2.10.6.25.sh" 2>/dev/null || true
+
+echo "[6/7] Verifying installed source and installing MCA scheduler..."
+python3 - "$TARGET" "$TARGET/$MANIFEST_NAME" <<'PY'
+from pathlib import Path
+import hashlib, json, sys
+root=Path(sys.argv[1]); manifest=json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
+for row in manifest['files']:
+    p=root/row['path']
+    if not p.is_file(): raise SystemExit(f"missing installed file: {row['path']}")
+    if hashlib.sha256(p.read_bytes()).hexdigest()!=row['sha256']: raise SystemExit(f"installed hash mismatch: {row['path']}")
+PY
+for f in server/team-points/bin/mca-results-sync.php server/team-points/public/live-ranks-admin.php server/team-points/src/LiveRanksService.php server/team-points/src/McaIndexParser.php server/team-points/src/McaResultsCronService.php server/team-points-green/public/api.php server/team-points-green/src/GreenRepository.php; do php -l "$TARGET/$f" >/dev/null; done
+bash "$TARGET/reset-install-mca-cron-v2.10.6.25.sh" "$TARGET"
+
+echo "[7/7] Final release verification..."
+[[ "$(tr -d '\r\n' < "$TARGET/VERSION")" == "$TARGET_VERSION" ]]
+ROLLBACK_ARMED=0
+trap - ERR INT TERM
+echo "Promote to King v$TARGET_VERSION installed successfully from the complete source archive."
+echo "Runtime data and local configuration were preserved; unrelated CRON entries were preserved."

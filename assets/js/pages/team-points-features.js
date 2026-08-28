@@ -6,7 +6,7 @@
   const client = () => window.P2K_TEAM_POINTS_CLIENT;
   const opponentEndpoint = 'server/team-points/public/opponents-admin.php';
   const liveEndpoint = 'server/team-points/public/live-ranks-admin.php';
-  const state = { opponentInventory: [], opponentResults: [], selectedFiles: [], liveRunning: false, mcaSyncRunning: false, mcaSync: {} };
+  const state = { opponentInventory: [], opponentResults: [], selectedFiles: [], liveRunning: false, mcaSyncRunning: false, mcaSync: {}, mcaDateSyncRunning: false, mcaDateSync: {} };
   const MCA_REBUILD_TIMEOUT_MS = 110_000;
   const MCA_PROFILE_STEP_TIMEOUT_MS = 75_000;
   const MCA_PROFILE_LAUNCH_BUDGET_SECONDS = 12;
@@ -135,11 +135,12 @@
     const progress = Math.max(0, Math.min(100, Number(sync.progress_percent || 0)));
     const progressNode = $('liveRanksSyncProgress'); if (progressNode) progressNode.value = progress;
     if ($('liveRanksSyncPercent')) $('liveRanksSyncPercent').textContent = `${progress.toFixed(1)}%`;
-    const queue = sync.queue || {};
+    const queue = sync.queue || sync.hydration_queue || {};
     const metrics = [
-      ['Known files needing dates', sync.total_events || 0], ['Checked', sync.checked_events || 0],
-      ['Dates added', sync.dates_added || 0], ['Errors', sync.error_count || 0],
-      ['Requests', sync.request_count || 0], ['Next scan', sync.next_scan_at || '—']
+      ['New arenas discovered', sync.total_events || 0], ['Index entries checked', sync.checked_events || 0],
+      ['Results CSVs added', sync.csv_added || 0], ['Pending downloads', Number(queue.pending || 0) + Number(queue.running || 0)],
+      ['Download errors', queue.error || 0], ['Historical dates missing', sync.historical_missing_dates || 0],
+      ['Requests this cycle', sync.request_count || 0], ['Next scheduled scan', sync.next_scan_at || '—']
     ];
     if ($('liveRanksSyncMetrics')) $('liveRanksSyncMetrics').innerHTML = metrics.map(([label,value]) => `<div class="p2k-tp-metric"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join('');
     const errors = Array.isArray(sync.errors) ? sync.errors : [];
@@ -147,27 +148,65 @@
     if (errorWrap) errorWrap.hidden = errors.length === 0;
     if (errorRows) errorRows.innerHTML = errors.map(row => `<tr>
       <td><a href="${esc(row.arena_url || '#')}" target="_blank" rel="noopener noreferrer"><strong>#${fmt(row.arena_id,0)}</strong><br><small>${esc(row.arena_slug || '')}</small></a></td>
+      <td>${esc(row.stage || 'page')}</td><td>${fmt(row.attempts || 0,0)}</td><td><small>${esc(row.error || 'Unable to retrieve Results CSV')}</small></td><td>${esc(row.updated_at || '—')}</td>
+    </tr>`).join('');
+    const workflow = String(sync.workflow_status || 'current');
+    const current = sync.current_stage ? ` · ${sync.current_stage}` : '';
+    const remaining = Number(queue.pending || 0) + Number(queue.running || 0);
+    const text = workflow === 'discovery'
+      ? `MCA index discovery is running${current}. The cursor is durable; stopping or refreshing will resume from this page.`
+      : workflow === 'hydration'
+      ? `Downloading ${fmt(remaining,0)} missing Results CSV file(s). Requests are serial and server-paced at ≥1 second apart.`
+      : workflow === 'discovery_attention'
+      ? `MCA index discovery paused on ${sync.current_stage || 'the current page'}: ${sync.last_error || 'source error'}. The cursor was not advanced; use Resume synchronization to retry this page.`
+      : workflow === 'attention'
+      ? `Synchronization reached ${fmt(errors.length,0)} failed Results download(s). Successful sources were kept and processed; failed items require an explicit retry.`
+      : workflow === 'failed'
+      ? `MCA Results synchronization failed: ${sync.last_error || 'unknown error'}`
+      : `MCA Results sources are current for the latest completed scan. Next scheduled discovery: ${sync.next_scan_at || 'not scheduled yet'}.`;
+    message('liveRanksSyncStatus', text, ['failed','attention','discovery_attention'].includes(workflow) ? 'error' : workflow === 'current' ? 'success' : '');
+    if ($('liveRanksSyncStart')) $('liveRanksSyncStart').disabled = state.mcaSyncRunning || ['discovery','discovery_attention','hydration','attention'].includes(workflow);
+    if ($('liveRanksSyncResume')) $('liveRanksSyncResume').disabled = state.mcaSyncRunning || !['discovery','discovery_attention','hydration'].includes(workflow);
+    if ($('liveRanksSyncRetry')) $('liveRanksSyncRetry').disabled = state.mcaSyncRunning || errors.length === 0;
+  }
+
+  function renderMcaDateSync(sync = {}) {
+    state.mcaDateSync = sync || {};
+    const progress = Math.max(0, Math.min(100, Number(sync.progress_percent || 0)));
+    if ($('liveRanksDateSyncProgress')) $('liveRanksDateSyncProgress').value = progress;
+    if ($('liveRanksDateSyncPercent')) $('liveRanksDateSyncPercent').textContent = `${progress.toFixed(1)}%`;
+    const queue = sync.queue || {};
+    const metrics = [
+      ['Known files needing dates', sync.total_events || 0], ['Checked', sync.checked_events || 0],
+      ['Dates added', sync.dates_added || 0], ['Errors', sync.error_count || 0],
+      ['Requests', sync.request_count || 0]
+    ];
+    if ($('liveRanksDateSyncMetrics')) $('liveRanksDateSyncMetrics').innerHTML = metrics.map(([label,value]) => `<div class="p2k-tp-metric"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join('');
+    const errors = Array.isArray(sync.errors) ? sync.errors : [];
+    if ($('liveRanksDateSyncErrorsWrap')) $('liveRanksDateSyncErrorsWrap').hidden = errors.length === 0;
+    if ($('liveRanksDateSyncErrorRows')) $('liveRanksDateSyncErrorRows').innerHTML = errors.map(row => `<tr>
+      <td><a href="${esc(row.arena_url || '#')}" target="_blank" rel="noopener noreferrer"><strong>#${fmt(row.arena_id,0)}</strong><br><small>${esc(row.arena_slug || '')}</small></a></td>
       <td>${esc(row.stage || 'page')}</td><td>${fmt(row.attempts || 0,0)}</td><td><small>${esc(row.error || 'Unable to recover event date')}</small></td><td>${esc(row.updated_at || '—')}</td>
     </tr>`).join('');
     const active = sync.status === 'running';
-    const current = sync.current_arena_id ? ` · arena #${fmt(sync.current_arena_id,0)}` : '';
     const remaining = Number(queue.pending || 0) + Number(queue.running || 0);
     const text = active
-      ? `Date backfill running${current}. ${fmt(remaining,0)} stored arena(s) remain; requests are serial and server-paced at ≥1 second apart.`
+      ? `Historical date repair running. ${fmt(remaining,0)} stored arena(s) remain.`
       : sync.status === 'failed'
-      ? `Date backfill failed: ${sync.last_error || 'unknown error'}`
+      ? `Historical date repair failed: ${sync.last_error || 'unknown error'}`
       : sync.status === 'completed'
-      ? `Date backfill completed. ${fmt(sync.checked_events || 0,0)} stored arena(s) checked${Number(sync.dates_added||0) ? `, ${fmt(sync.dates_added,0)} date(s) added` : ''}${Number(sync.error_count||0) ? `, ${fmt(sync.error_count,0)} error(s)` : ''}.`
-      : 'Ready to timestamp stored MCA source files whose actual event date is still unknown.';
-    message('liveRanksSyncStatus', text, sync.status === 'failed' ? 'error' : sync.status === 'completed' && !Number(sync.error_count||0) ? 'success' : '');
-    if ($('liveRanksSyncStart')) $('liveRanksSyncStart').disabled = state.mcaSyncRunning;
-    if ($('liveRanksSyncResume')) $('liveRanksSyncResume').disabled = state.mcaSyncRunning || !active;
-    if ($('liveRanksSyncRetry')) $('liveRanksSyncRetry').disabled = state.mcaSyncRunning || errors.length === 0;
+      ? `Historical date repair completed: ${fmt(sync.dates_added || 0,0)} date(s) added, ${fmt(sync.error_count || 0,0)} error(s).`
+      : 'Historical date repair is idle. It is manual-only and never part of the MCA Results CRON.';
+    message('liveRanksDateSyncStatus', text, sync.status === 'failed' ? 'error' : sync.status === 'completed' && !Number(sync.error_count||0) ? 'success' : '');
+    if ($('liveRanksDateSyncStart')) $('liveRanksDateSyncStart').disabled = state.mcaDateSyncRunning;
+    if ($('liveRanksDateSyncResume')) $('liveRanksDateSyncResume').disabled = state.mcaDateSyncRunning || !active;
+    if ($('liveRanksDateSyncRetry')) $('liveRanksDateSyncRetry').disabled = state.mcaDateSyncRunning || errors.length === 0;
   }
 
   function renderLive(payload) {
     const files = payload.files || [], players = payload.players || [], summary = payload.summary || {}, processing = payload.processing || {};
     renderMcaSync(payload.sync || {});
+    renderMcaDateSync(payload.date_sync || {});
     $('liveRanksFileRows').innerHTML = files.length ? files.map(file => {
       const approx = file.event_date_approximate ? ' <small>(approximative date)</small>' : '';
       const editLabel = file.actual_event_date ? 'Edit actual date' : 'Set actual date';
@@ -341,18 +380,25 @@
     state.mcaSyncRunning = true; renderMcaSync(state.mcaSync || {});
     let payload = null;
     try {
-      if (force || state.mcaSync?.status !== 'running') {
-        message('liveRanksSyncStatus', 'Building the timestamp queue from stored MCA CSV files with missing dates…');
-        payload = await endpoint(liveEndpoint, { action: 'sync_start', method: 'POST', body: { force }, timeoutMs: 45_000 });
+      message('liveRanksSyncStatus', force ? 'Starting MCA index discovery from page 1…' : 'Resuming MCA Results synchronization…');
+      payload = await endpoint(liveEndpoint, { action: 'sync_discovery', method: 'POST', body: { force, max_seconds: 25 }, timeoutMs: 45_000 });
+      renderLive(payload);
+      while ((payload.sync?.workflow_status || state.mcaSync?.workflow_status) === 'discovery') {
+        payload = await endpoint(liveEndpoint, { action: 'sync_discovery', method: 'POST', body: { force: false, max_seconds: 25 }, timeoutMs: 45_000 });
         renderLive(payload);
+        if (payload.sync?.last_error) break;
       }
-      while ((payload?.sync || state.mcaSync || {}).status === 'running') {
-        payload = await endpoint(liveEndpoint, { action: 'sync_step', method: 'POST', body: {}, timeoutMs: 45_000 });
+      while (Number(payload.sync?.queue?.pending || 0) + Number(payload.sync?.queue?.running || 0) > 0) {
+        payload = await endpoint(liveEndpoint, { action: 'sync_hydrate', method: 'POST', body: { max_seconds: 25 }, timeoutMs: 45_000 });
         renderLive(payload);
       }
       const finalSync = payload?.sync || state.mcaSync || {};
-      if (finalSync.status === 'completed') {
-        message('liveRanksSyncStatus', `MCA date backfill completed: ${fmt(finalSync.dates_added || 0,0)} date(s) added, ${fmt(finalSync.error_count || 0,0)} error(s). No arena discovery or CSV download was performed.`, Number(finalSync.error_count||0) ? 'error' : 'success');
+      if (finalSync.workflow_status === 'discovery_attention') {
+        message('liveRanksSyncStatus', `Discovery paused without advancing the cursor: ${finalSync.last_error || 'source error'}. Resume explicitly to retry the same index page.`, 'error');
+      } else if (finalSync.workflow_status === 'attention') {
+        message('liveRanksSyncStatus', `Synchronization finished with ${fmt(finalSync.queue?.error || 0,0)} failed download(s). Successful Results files were retained; retry errors explicitly when ready.`, 'error');
+      } else if (finalSync.workflow_status === 'current') {
+        message('liveRanksSyncStatus', `MCA Results synchronization complete: ${fmt(finalSync.csv_added || 0,0)} new Results CSV file(s) added.`, 'success');
       }
     } catch (error) {
       message('liveRanksSyncStatus', error.message, 'error');
@@ -365,11 +411,43 @@
   async function retryMcaSourceErrors() {
     if (state.mcaSyncRunning) return;
     try {
-      message('liveRanksSyncStatus', 'Re-queueing failed timestamp lookups for stored MCA arenas…');
-      const payload = await endpoint(liveEndpoint, { action: 'sync_retry_errors', method: 'POST', body: {}, timeoutMs: 45_000 });
+      message('liveRanksSyncStatus', 'Re-queueing failed MCA Results downloads…');
+      const payload = await endpoint(liveEndpoint, { action: 'sync_retry_download_errors', method: 'POST', body: {}, timeoutMs: 45_000 });
       renderLive(payload);
-      if (payload.sync?.status === 'running') await runMcaSourceSync(false);
+      if (Number(payload.sync?.queue?.pending || 0) > 0) await runMcaSourceSync(false);
     } catch (error) { message('liveRanksSyncStatus', error.message, 'error'); }
+  }
+
+  async function runMcaDateSync(force = false) {
+    if (state.mcaDateSyncRunning) return;
+    state.mcaDateSyncRunning = true; renderMcaDateSync(state.mcaDateSync || {});
+    let payload = null;
+    try {
+      if (force || state.mcaDateSync?.status !== 'running') {
+        message('liveRanksDateSyncStatus', 'Building the historical timestamp queue from stored MCA CSV files with missing dates…');
+        payload = await endpoint(liveEndpoint, { action: 'date_sync_start', method: 'POST', body: { force }, timeoutMs: 45_000 });
+        renderLive(payload);
+      }
+      while ((payload?.date_sync || state.mcaDateSync || {}).status === 'running') {
+        payload = await endpoint(liveEndpoint, { action: 'date_sync_step', method: 'POST', body: {}, timeoutMs: 45_000 });
+        renderLive(payload);
+      }
+    } catch (error) {
+      message('liveRanksDateSyncStatus', error.message, 'error');
+      try { await loadLive(); } catch (_) {}
+    } finally {
+      state.mcaDateSyncRunning = false; renderMcaDateSync(state.mcaDateSync || {});
+    }
+  }
+
+  async function retryMcaDateErrors() {
+    if (state.mcaDateSyncRunning) return;
+    try {
+      message('liveRanksDateSyncStatus', 'Re-queueing failed historical date lookups…');
+      const payload = await endpoint(liveEndpoint, { action: 'date_sync_retry_errors', method: 'POST', body: {}, timeoutMs: 45_000 });
+      renderLive(payload);
+      if (payload.date_sync?.status === 'running') await runMcaDateSync(false);
+    } catch (error) { message('liveRanksDateSyncStatus', error.message, 'error'); }
   }
 
   async function syncMcaBlueToGreen() {
@@ -407,6 +485,9 @@
     $('liveRanksSyncStart')?.addEventListener('click', () => runMcaSourceSync(true));
     $('liveRanksSyncResume')?.addEventListener('click', () => runMcaSourceSync(false));
     $('liveRanksSyncRetry')?.addEventListener('click', retryMcaSourceErrors);
+    $('liveRanksDateSyncStart')?.addEventListener('click', () => runMcaDateSync(true));
+    $('liveRanksDateSyncResume')?.addEventListener('click', () => runMcaDateSync(false));
+    $('liveRanksDateSyncRetry')?.addEventListener('click', retryMcaDateErrors);
     $('liveRanksBlueGreen')?.addEventListener('click', syncMcaBlueToGreen);
     $('liveRanksExportCorrections').addEventListener('click', exportCorrections);
     loadOpponents(); loadLive();

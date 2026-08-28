@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Browser support | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Browser support" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/docs/BROWSER_SUPPORT.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/docs/BROWSER_SUPPORT.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Browser support" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Browser support","url":"https://ximoon1982.github.io/PromoteToKing/docs/BROWSER_SUPPORT.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="browser-support">Browser support</h1>
+
+<p>The package targets current desktop and mobile versions of Chromium-based browsers, Firefox, and Safari.</p>
+
+<p>Core requirements:</p>
+
+<ul>
+  <li>ES2020 JavaScript features</li>
+  <li><code class="language-plaintext highlighter-rouge">fetch</code>, <code class="language-plaintext highlighter-rouge">AbortController</code>, <code class="language-plaintext highlighter-rouge">URL</code>, <code class="language-plaintext highlighter-rouge">Promise</code>, and <code class="language-plaintext highlighter-rouge">CustomEvent</code></li>
+  <li>same-origin iframes</li>
+  <li>modern CSS grid/flexbox</li>
+</ul>
+
+<p>Progressive enhancements:</p>
+
+<ul>
+  <li>IndexedDB: persistent API cache; an in-memory LRU cache is used when unavailable</li>
+  <li>BroadcastChannel: cross-tab request and analysis coordination; each page still works independently when unavailable</li>
+  <li>Storage Estimate API: quota-aware emergency cleanup; static fallback ceilings are used otherwise</li>
+  <li>Clipboard API: direct copying; existing manual-copy fallbacks remain</li>
+  <li>ResizeObserver: automatic retained-frame height; normal iframe scrolling remains possible without it</li>
+  <li>Visual Viewport API: more precise mobile popover placement around the on-screen keyboard and zoomed viewport; window dimensions are used when unavailable</li>
+</ul>
+
+<p>The tools should be served through HTTP or HTTPS. <code class="language-plaintext highlighter-rouge">file://</code> execution is not supported.</p>
+
+<p>Information popovers require standard pointer, focus, DOM geometry, and MutationObserver support available in the targeted current browsers. Same-origin retained frames additionally observe parent scroll/resize events; standalone and cross-origin embedding fall back to the local document viewport.</p>
+
+<h2 id="local-server-default-support">Local server-default support</h2>
+
+<p>No browser extension or additional Python package is required. Start the included <code class="language-plaintext highlighter-rouge">serve_local.py</code> with Python 3.9 or newer. The static website remains usable through another HTTP server, but server-default Challenge Assistant list saving, usage logs, and match-history tracking require the packaged PHP backend or another implementation of the same API. Apache/PHP deployments use the included <code class="language-plaintext highlighter-rouge">api/</code> endpoint directories automatically.</p>
+
+<h2 id="versioned-assets">Versioned assets</h2>
+
+<p>Production deployments should include the packaged <code class="language-plaintext highlighter-rouge">.htaccess</code> where Apache-compatible hosting is used. HTML is revalidated on each visit; JavaScript and CSS are loaded with a release query token so a browser cannot silently combine different repository versions.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/docs/BROWSER_SUPPORT.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

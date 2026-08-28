@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.9 — Green authoritative live reads | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.9 — Green authoritative live reads" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.9.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.9.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.9 — Green authoritative live reads" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.9 — Green authoritative live reads","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.9.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v21069--green-authoritative-live-reads">Promote to King v2.10.6.9 — Green authoritative live reads</h1>
+
+<p>v2.10.6.9 makes Green the authoritative public-data path after Green cutover. It removes the remaining bootstrap-era behavior where public pages could be routed to the Green databases while still consuming stale compatibility materializations that were waiting for GAB to finish.</p>
+
+<h2 id="what-changes">What changes</h2>
+
+<ul>
+  <li><strong>Dashboard Club Points are native Green.</strong> When the effective public source is Green, the Dashboard club aggregate is computed from authoritative <code class="language-plaintext highlighter-rouge">p2k_g_matches</code> and <code class="language-plaintext highlighter-rouge">p2k_g_players</code> instead of waiting for <code class="language-plaintext highlighter-rouge">p2k_tp_club_totals</code> to catch up.</li>
+  <li><strong>Signed-in player Team Points are native Green.</strong> Player points, games and W/D/L are computed from Green point events/current Green identity data after cutover; the existing Green player-total materialization is used only for ranking position.</li>
+  <li><strong>Green compatibility projection is live during GAB.</strong> Green worker observations, browser observations, terminal match responses and terminal board responses project into the mature public <code class="language-plaintext highlighter-rouge">p2k_tp_*</code> contracts immediately. GAB is now historical completeness/reconciliation, not a freshness gate.</li>
+  <li><strong>Browser accelerator observations now identify their changed object.</strong> <code class="language-plaintext highlighter-rouge">match_detail</code> returns <code class="language-plaintext highlighter-rouge">match_id</code>, <code class="language-plaintext highlighter-rouge">board_detail</code> returns <code class="language-plaintext highlighter-rouge">match_id</code> + <code class="language-plaintext highlighter-rouge">board_no</code>, and player profile observations return <code class="language-plaintext highlighter-rouge">username</code>, allowing the compatibility projector to refresh the affected public object immediately.</li>
+  <li><strong>Insights analytics continue rebuilding during GAB.</strong> <code class="language-plaintext highlighter-rouge">p2k_an_*</code> and related public analytics materializations refresh on their normal throttle while GABCRF is still converging. Opponent Insights and heatmaps therefore use the current Green projection rather than a partial bootstrap snapshot.</li>
+  <li><strong>Dashboard health follows Green after cutover.</strong> Blue <code class="language-plaintext highlighter-rouge">team-points-club</code> / <code class="language-plaintext highlighter-rouge">team-points-player</code> task cadence is no longer reported as a production incident when Green is the effective public source. A Green Team Points runtime health line reports the current Green cycle/stage, worker freshness and public analytics freshness instead.</li>
+  <li><strong>Scheduled Task Control shows Green provenance.</strong> The Green cutover metrics explicitly show <code class="language-plaintext highlighter-rouge">GREEN NATIVE + LIVE</code> and the last Green public-analytics rebuild.</li>
+</ul>
+
+<h2 id="production-behavior">Production behavior</h2>
+
+<ul>
+  <li>Existing Green public routing is preserved by the installer. If production is already on Green, it stays on Green.</li>
+  <li>Blue data and Blue Team Points maintenance are not deleted. Under <code class="language-plaintext highlighter-rouge">Green reads · both maintained</code>, Blue remains the rollback source.</li>
+  <li>GAB/GABCRF continues in the background after cutover and may still report reconciliation work. It no longer delays live Green public freshness.</li>
+  <li>No public read is intentionally sourced from Blue while the effective public source is Green. Mature compatibility schemas remain in use where they are the stable API contract, but those tables are populated from Green and refreshed during convergence.</li>
+</ul>
+
+<h2 id="no-infrastructure-migration">No infrastructure migration</h2>
+
+<ul>
+  <li>Core schema unchanged: 17.</li>
+  <li>Analytics schema unchanged: 9.</li>
+  <li>No database reset.</li>
+  <li>No reseed.</li>
+  <li>No CRON definition/cadence change.</li>
+  <li>No image change.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.9.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

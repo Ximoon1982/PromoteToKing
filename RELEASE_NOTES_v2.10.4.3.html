@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.4.3 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.4.3" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.4.3.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.4.3.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.4.3" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.4.3","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.4.3.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v21043">Promote to King v2.10.4.3</h1>
+
+<p>Maintenance hotfix for administrator propagation on the Blue/Green migration panel and Achievement Condition Integrity.</p>
+
+<h2 id="team-points-migration-administrator-authority">Team Points Migration administrator authority</h2>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">TeamPointsMigration.html</code> now uses the same secured Team Points administrator session as Live Ranks, Storage &amp; Capacity and the other administrator surfaces.</li>
+  <li>Green browser API endpoints accept the secured <code class="language-plaintext highlighter-rouge">P2KTPSESSID</code> + <code class="language-plaintext highlighter-rouge">X-P2K-CSRF</code> authority through <code class="language-plaintext highlighter-rouge">P2K\TeamPoints\Auth</code>.</li>
+  <li>The historical <code class="language-plaintext highlighter-rouge">X-P2K-Admin-Token</code> / <code class="language-plaintext highlighter-rouge">app.admin_token</code> path remains available only as an explicit compatibility fallback for manual/server tooling.</li>
+  <li>A saved legacy token is no longer automatically activated after a reload.</li>
+  <li>The migration panel refreshes immediately using the real OAuth administrator session.</li>
+  <li>The stale visible migration build label is corrected to v2.10.4.3.</li>
+  <li>Auth/client/guard cache-busters are refreshed across guarded administrator pages so deployment cannot appear unchanged because of cached v2.10.4.1/2 scripts.</li>
+</ul>
+
+<h2 id="acif2--achievement-condition-integrity">ACIF2 — Achievement Condition Integrity</h2>
+
+<p>v2.10.4 introduced progress metrics for the new achievement families, but the persisted unlock projection could remain stale. This created impossible catalogue states such as <code class="language-plaintext highlighter-rouge">130 / 100</code> while the 100-opponent achievement still appeared unearned.</p>
+
+<p>v2.10.4.3 enforces the invariant that an authoritative threshold metric at or above its target is earned:</p>
+
+<ul>
+  <li>Consecutive match-start days</li>
+  <li>Match Impact — decisive winners and match savers</li>
+  <li>Photo finish / close calls</li>
+  <li>Winning Side</li>
+  <li>Opponent Variety</li>
+  <li>Rematch / Old Foes</li>
+</ul>
+
+<p>Protection exists at two levels:</p>
+
+<ol>
+  <li>The historical achievement rebuild has a final threshold reconciliation pass. The achievement logic watermark is bumped to <code class="language-plaintext highlighter-rouge">logic:achievement-v21043-acif2</code>, forcing a new persistence rebuild.</li>
+  <li>Dashboard and standalone Achievement catalogue apply an immediate read-side reconciliation from the same authoritative progress rows. A completed threshold therefore cannot be displayed as unearned while a persistence rebuild is pending. Earned achievements do not show progress bars.</li>
+</ol>
+
+<p>Normal chronological reconstruction still provides the exact historical completion date. The emergency reconciliation fallback does not invent an achievement date when an exact crossing timestamp is unavailable.</p>
+
+<h2 id="preserved-behavior">Preserved behavior</h2>
+
+<ul>
+  <li>Public Team Points remains Blue-hardwired.</li>
+  <li>Blue engine baseline remains v2.9.22.10.</li>
+  <li>No Core or Analytics schema migration.</li>
+  <li>No Green reset/reseed/state reset.</li>
+  <li>No CRON change; GSCF remains as installed by v2.10.4.</li>
+  <li>GICL and GQAC are unchanged.</li>
+  <li>v2.10.4.2 signed OAuth → Team Points administrator handoff is retained.</li>
+  <li><code class="language-plaintext highlighter-rouge">?name=</code> remains display-only and cannot grant real server authority.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.4.3.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

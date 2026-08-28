@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.7.1 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.7.1" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.7.1.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.7.1.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.7.1" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.7.1","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.7.1.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v271">Promote to King v2.7.1</h1>
+
+<h2 id="embedded-clean-team-points-initialization">Embedded clean Team Points initialization</h2>
+
+<ul>
+  <li>Added a standalone Python <code class="language-plaintext highlighter-rouge">.pyz</code> seed utility containing the six updated source files supplied on 6 August 2026. The operator does not select or provide CSV files at runtime.</li>
+  <li>Every embedded raw file and compressed resource is verified by SHA-256 before parsing.</li>
+  <li>The embedded snapshot contains 4,473 members, 17,091 authoritative discovered match IDs, 15,997 finished matches, 1,019 in-progress matches, 74 registration matches and 104,761 member/board rows.</li>
+  <li>One findings-only match (<code class="language-plaintext highlighter-rouge">1983076</code>) has no supplied metadata. It is preserved as <code class="language-plaintext highlighter-rouge">unknown</code> and queued for an authoritative match-detail refresh after import.</li>
+  <li>Local validation checks duplicate/conflicting members, matches and boards, references, timestamps, result codes, finished-match authority, void 0–0 matches and recomputed club points.</li>
+  <li>The normalized snapshot contains 96,691 complete two-game boards, 4,725 one-game boards, 3,345 zero-game boards, 198,107 finished game events and 371,168 club competition points.</li>
+  <li>Added signed, nonce-protected, gzip batch staging through <code class="language-plaintext highlighter-rouge">server/team-points/public/seed-import.php</code>.</li>
+  <li>Production rows are replaced only after complete server validation and the exact confirmation phrase.</li>
+  <li>The final replacement acquires the Team Points worker lock and runs in one database transaction; failed staging or validation leaves production unchanged.</li>
+  <li>Apply clears obsolete Team Points jobs, queue items, leases and Team Points task-run/log history, then creates one paused incremental catch-up job.</li>
+  <li>Team Points remains paused after Apply so totals can be inspected before catch-up.</li>
+</ul>
+
+<h2 id="seeded-incremental-synchronization">Seeded incremental synchronization</h2>
+
+<ul>
+  <li>Routine roster refresh uses one club-member request and no longer queues every member’s <code class="language-plaintext highlighter-rouge">/matches</code> endpoint.</li>
+  <li>Routine match discovery uses the club match index and fetches only new, changed or due match details.</li>
+  <li>Current and previous player monthly archives are the primary fast path for recent finished game events and exact <code class="language-plaintext highlighter-rouge">end_time</code> values.</li>
+  <li>Individual board endpoints remain available as unresolved-data fallbacks.</li>
+  <li>Complete two-game boards remain immutable and are skipped permanently.</li>
+  <li>Full member-history scans and numeric raw match-ID scans are retained only as explicit, confirmed repair actions.</li>
+  <li>Club totals are rebuilt from immutable non-void match summaries; authoritative finished 0–0 matches remain stored as void.</li>
+</ul>
+
+<h2 id="administration-and-cron-control">Administration and CRON control</h2>
+
+<ul>
+  <li>Scheduled Tasks Control displays the Team Points operating algorithm, latest seed state and separate incremental/member-history/raw-ID actions.</li>
+  <li>The administrator dashboard reports seed and algorithm health alongside scheduler status.</li>
+  <li>Team Points and tournament scheduler ticks are five minutes; match monitoring remains hourly with per-match adaptive due times.</li>
+  <li>Added complete instructions to pause tasks, remove old host entries, install the new three-task schedule, test it and perform an emergency stop.</li>
+</ul>
+
+<h2 id="database-and-compatibility">Database and compatibility</h2>
+
+<ul>
+  <li>Team Points schema advances from 11 to <strong>12</strong> with additive seed-staging, void-match and due-detail scheduling structures.</li>
+  <li>Existing URLs, tokens, tournament data, Live-rank/MCA data and shared gateway storage remain compatible.</li>
+  <li>The release is built from the complete v2.7.0 standalone baseline and retains its achievements, profiles, tournament stages and adaptive match monitoring.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.7.1.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

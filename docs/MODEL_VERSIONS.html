@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Analytical model versions | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Analytical model versions" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/docs/MODEL_VERSIONS.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/docs/MODEL_VERSIONS.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Analytical model versions" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Analytical model versions","url":"https://ximoon1982.github.io/PromoteToKing/docs/MODEL_VERSIONS.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="analytical-model-versions">Analytical model versions</h1>
+
+<p>The Administration Diagnostics tab reports model identifiers separately from the package release. These identifiers describe the calculation, eligibility, projection, or classification logic currently in use; they are not browser-cache versions and they do not replace the repository version in <code class="language-plaintext highlighter-rouge">VERSION</code>.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Identifier</th>
+      <th>Model</th>
+      <th>Current source revision</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">FM-32</code></td>
+      <td>Match Assistant eligibility and recommendation</td>
+      <td>FindMatch v32</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">UA-45</code></td>
+      <td>Upcoming lineup comparison, win probability, recruitment recommendation, and historical snapshot summarization</td>
+      <td>Upcoming Matches Analyzer v45</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">MC-23</code></td>
+      <td>Match Creation scoring, secured results, and pending-points calculations</td>
+      <td>Match Creation Analyzer v23</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">AM-3</code></td>
+      <td>In-progress match score projection from start-time ratings and completed games</td>
+      <td>Analyze Match v3</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">RM-1</code></td>
+      <td>Recruitment candidate eligibility</td>
+      <td>Recruit Match v1</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">CL-4</code></td>
+      <td>Challenge validation, error classification, ordered recommendation, and permissive safe slug parsing</td>
+      <td>Challenge validation and recommendation model v4</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">MH-1</code></td>
+      <td>Match registration history and probability evolution</td>
+      <td>Match history model v1</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="versioning-rule">Versioning rule</h2>
+
+<p>A model identifier changes only when its calculation rules, eligibility rules, probability/scoring formula, or result classification changes. Refactoring, caching, diagnostics, documentation, styling, or transport changes do not require a model-version change when outputs remain equivalent.</p>
+
+<p>The registry is defined once in <code class="language-plaintext highlighter-rouge">assets/js/site-config.js</code>, exposed in copied diagnostics, and displayed in the Administration Diagnostics tab.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/docs/MODEL_VERSIONS.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

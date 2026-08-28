@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.10 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.10" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.10.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.10.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.10" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.10","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.10.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2910">Promote to King v2.9.10</h1>
+
+<p>v2.9.10 fixes real-OAuth persistence/propagation, makes interface observations universally useful to server-side discovery/freshness, guarantees hourly authoritative club roster and match-index refresh under CRON, and restores Challenge Assistant analysis context.</p>
+
+<h2 id="real-oauth-everywhere">Real OAuth everywhere</h2>
+<ul>
+  <li>A valid server-side real OAuth session is detected even on clean URLs without <code class="language-plaintext highlighter-rouge">oauth=2</code>.</li>
+  <li>All shared-client pages, lazy panels, embedded frames and admin guards wait for the same OAuth readiness decision.</li>
+  <li>Explicit <code class="language-plaintext highlighter-rouge">oauth=1</code> remains simulated and serial.</li>
+  <li><code class="language-plaintext highlighter-rouge">P2KOAUTH</code> is a Secure/HttpOnly/SameSite=Lax opaque persistent session cookie retained slightly beyond the access-token lifetime; the Bearer token never enters browser JavaScript.</li>
+  <li>Existing session cookies are refreshed on access so a previously browser-session-only login becomes persistent.</li>
+</ul>
+
+<h2 id="universal-opportunistic-ingest">Universal opportunistic ingest</h2>
+<ul>
+  <li>Successful interface fetches of relevant Chess.com data are forwarded through one bounded same-origin observation pipeline regardless of originating page/tool.</li>
+  <li>Covered data includes club profile/member count, club roster, club match index (registered, in progress and finished), individual matches, player profiles, player stats, player match indexes and game archives.</li>
+  <li>New match IDs seen by the interface are registered immediately with <code class="language-plaintext highlighter-rouge">first_discovered_at</code>, fixing delayed “New matches · 24 h” updates.</li>
+  <li>Browser observations write observed/discovery state only. Canonical membership, match status/results/boards/points and other authoritative facts still require server verification.</li>
+  <li>Cached/stale responses do not earn new observation freshness; only actual network refreshes do.</li>
+  <li>Observation handoff is widened to 48 observations per batch with bounded server-side rate protection so high-throughput OAuth fetches do not outrun ingest.</li>
+</ul>
+
+<h2 id="cron-freshness-floor">CRON freshness floor</h2>
+<ul>
+  <li>Core schema advances 11 → 12; Analytics remains 6.</li>
+  <li>Roster and club-index now have separate observed and authoritative-verified clocks.</li>
+  <li>While normal CRON is running, authoritative roster and match-index work is deadline-protected so each is fetched at least once per hour.</li>
+  <li>Deadline work is promoted before the 60-minute boundary, cannot be starved by historical backlog, and cannot permanently fail. 429/transport/server failures retain capped Retry-After/exponential backoff and remain overdue until success.</li>
+  <li>Browser observations do not satisfy the authoritative CRON deadline.</li>
+</ul>
+
+<h2 id="challenge-assistant">Challenge Assistant</h2>
+<ul>
+  <li>Restores live context showing the team or teams currently being analyzed while preserving authenticated parallel analysis.</li>
+</ul>
+
+<h2 id="preserved-contracts">Preserved contracts</h2>
+<ul>
+  <li>Core schema 12 / Analytics schema 6; achievement catalogue remains 162.</li>
+  <li>Existing four-task external CRON cadence is unchanged.</li>
+  <li>Logged-out and simulated OAuth traffic remain serial.</li>
+  <li>CRON/CLI does not borrow or persist a user’s OAuth Bearer token.</li>
+  <li>Protected deployment configuration is excluded from release payloads and preserved by the incremental updater.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.10.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

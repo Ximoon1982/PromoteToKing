@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.7.1 — installation, clean Team Points seed and upgrade | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.7.1 — installation, clean Team Points seed and upgrade" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.7.1.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.7.1.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.7.1 — installation, clean Team Points seed and upgrade" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.7.1 — installation, clean Team Points seed and upgrade","url":"https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.7.1.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v271--installation-clean-team-points-seed-and-upgrade">Promote to King v2.7.1 — installation, clean Team Points seed and upgrade</h1>
+
+<p>This release upgrades the v2.7.0 standalone baseline. It adds a validated clean Team Points import, seeded incremental synchronization and explicit repair modes while retaining existing URLs and production tokens.</p>
+
+<h2 id="1-back-up-production">1. Back up production</h2>
+
+<p>Before uploading or importing, save:</p>
+
+<ul>
+  <li>a complete MariaDB/MySQL export;</li>
+  <li>the hosted website folder;</li>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/config/config.local.php</code>;</li>
+  <li><code class="language-plaintext highlighter-rouge">data/server-config.json</code>;</li>
+  <li><code class="language-plaintext highlighter-rouge">data/tournaments/archive.json</code>;</li>
+  <li>the current CRON list or IONOS scheduled-task screenshots.</li>
+</ul>
+
+<p>Never overwrite <code class="language-plaintext highlighter-rouge">config.local.php</code> with <code class="language-plaintext highlighter-rouge">config.example.php</code>.</p>
+
+<h2 id="2-upload-the-standalone-website">2. Upload the standalone website</h2>
+
+<p>Upload the complete <code class="language-plaintext highlighter-rouge">PromoteToKing_Standalone_v2.7.1</code> contents over the existing website while preserving hidden <code class="language-plaintext highlighter-rouge">.htaccess</code> files and the protected production files listed above.</p>
+
+<p>PHP must be able to write to:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>data/tournaments/
+data/tournaments/locks/
+data/tournaments/backups/
+data/live-ranks/uploads/
+logs/scheduled-tasks/
+</code></pre></div></div>
+
+<p>Open once:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://YOUR-DOMAIN/YOUR-PATH/server/team-points/public/public.php?action=team
+</code></pre></div></div>
+
+<p>Then sign in as an administrator and open:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://YOUR-DOMAIN/YOUR-PATH/TaskControl.html?admin=1
+</code></pre></div></div>
+
+<p>The first database-backed request upgrades Team Points to schema <strong>12</strong> and creates the seed-staging tables and incremental match-detail scheduling fields. The migration is additive; the current data is not deleted by the website upload.</p>
+
+<h2 id="3-pause-the-old-team-points-process">3. Pause the old Team Points process</h2>
+
+<p>In <strong>Administration → Scheduled Tasks Control</strong>:</p>
+
+<ol>
+  <li>select <strong>Team Points</strong>;</li>
+  <li>press <strong>Pause</strong>;</li>
+  <li>wait until the task shows <strong>Paused</strong> rather than <strong>Running</strong>;</li>
+  <li>do not run a manual Team Points update during the import.</li>
+</ol>
+
+<p>Also disable or delete the existing Team Points CRON before the final seed replacement. Instructions are in <code class="language-plaintext highlighter-rouge">CRON_SETUP_v2.7.1.md</code>.</p>
+
+<p>Tournament and match-monitoring tasks do not need to be paused for the Team Points seed, although pausing all three during deployment gives the quietest upgrade window.</p>
+
+<h2 id="4-validate-the-embedded-updated-snapshot-locally">4. Validate the embedded updated snapshot locally</h2>
+
+<p>Use the separate <code class="language-plaintext highlighter-rouge">P2K_TeamPoints_Seed_Importer_v1.1.0.zip</code> package.</p>
+
+<p>The six updated files supplied on 6 August 2026 are checksum-verified and embedded inside the <code class="language-plaintext highlighter-rouge">.pyz</code> executable. No source files or source folder are required at runtime.</p>
+
+<p>Run:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>VALIDATE_EMBEDDED_DATA.bat
+</code></pre></div></div>
+
+<p>The validation checks:</p>
+
+<ul>
+  <li>all embedded raw and compressed SHA-256 values;</li>
+  <li>4,473 current members and 17,091 authoritative discovered match IDs;</li>
+  <li>15,997 finished, 1,019 in-progress, 74 registration and one unknown match;</li>
+  <li>duplicate or conflicting members, matches and boards;</li>
+  <li>valid match and board references;</li>
+  <li>timestamp order and result consistency;</li>
+  <li>finished-match authority and 0–0 void matches;</li>
+  <li>complete, one-game and zero-game board coverage;</li>
+  <li>371,168 recomputed club competition points;</li>
+  <li>known pending-placeholder normalization.</li>
+</ul>
+
+<p>The findings-only match <code class="language-plaintext highlighter-rouge">1983076</code> is intentionally stored as <code class="language-plaintext highlighter-rouge">unknown</code> and placed in the post-seed detail-repair queue. No metadata is invented.</p>
+
+<p>The tool writes <code class="language-plaintext highlighter-rouge">p2k_seed_validation_report.json</code> beside itself. No server or database request is made in validation-only mode.</p>
+
+<h2 id="5-stage-and-atomically-replace-team-points-data">5. Stage and atomically replace Team Points data</h2>
+
+<p>Run:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>RUN_SEED_IMPORT.bat
+</code></pre></div></div>
+
+<p>The tool asks only for:</p>
+
+<ol>
+  <li>the website root URL, using HTTPS;</li>
+  <li>the existing Team Points administrator token, hidden while typed;</li>
+  <li>the two exact safety confirmations below.</li>
+</ol>
+
+<p>It does not ask for CSV files or a folder.</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>UPLOAD
+REPLACE-TEAM-POINTS-DATA
+</code></pre></div></div>
+
+<p>Before the second confirmation, all normalized rows are only in staging tables. Production Team Points data remains untouched.</p>
+
+<p>On Apply, the server:</p>
+
+<ul>
+  <li>verifies the signed upload, nonce, embedded-source manifest and staged counts;</li>
+  <li>verifies Team Points is paused;</li>
+  <li>obtains the Team Points worker lock;</li>
+  <li>replaces Team Points domain rows in one database transaction;</li>
+  <li>removes stale Team Points jobs, queue items, scheduler leases and old Team Points task-run/log history;</li>
+  <li>stores complete game events and durable board states;</li>
+  <li>records 0–0 finished matches as void;</li>
+  <li>rebuilds immutable match summaries and the club total;</li>
+  <li>creates one paused incremental catch-up job containing the club index, roster and findings-only detail repair;</li>
+  <li>preserves tournament, Live-rank/MCA, shared-gateway configuration and the other scheduled-task domains.</li>
+</ul>
+
+<p>A failed validation or failed transaction leaves the previous production data intact. The tool writes <code class="language-plaintext highlighter-rouge">p2k_seed_apply_result.json</code> after a successful replacement.</p>
+
+<h2 id="6-inspect-before-resuming">6. Inspect before resuming</h2>
+
+<p>While Team Points remains paused, verify:</p>
+
+<ul>
+  <li>seed status and snapshot time in Scheduled Tasks Control;</li>
+  <li>members, matches, finished matches, boards and game-event counts;</li>
+  <li>club total against the local validation report;</li>
+  <li>several known member point totals;</li>
+  <li>Hall of Fame Daily ranks and achievements;</li>
+  <li>Insights → Matches and Opponents.</li>
+</ul>
+
+<p>The imported CSV snapshot is authoritative up to its snapshot date. The first resumed incremental job catches up new roster, match and game changes.</p>
+
+<h2 id="7-install-the-v271-cron-entries">7. Install the v2.7.1 CRON entries</h2>
+
+<p>Follow <code class="language-plaintext highlighter-rouge">CRON_SETUP_v2.7.1.md</code>. The expected scheduler ticks are:</p>
+
+<ul>
+  <li>Team Points: every 5 minutes;</li>
+  <li>Match monitoring: every hour;</li>
+  <li>Tournament maintenance: every 5 minutes.</li>
+</ul>
+
+<p>After the new entries are installed, resume Team Points in Scheduled Tasks Control. The routine algorithm is now:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>club roster once → club match index → changed/due match details
+→ current/previous monthly player archives for unresolved participants
+→ board endpoints only for unresolved fallbacks
+</code></pre></div></div>
+
+<p>Routine refreshes do <strong>not</strong> scan every member’s complete team-match history and do <strong>not</strong> scan global match IDs.</p>
+
+<h2 id="8-repair-modes">8. Repair modes</h2>
+
+<p>Scheduled Tasks Control exposes three Team Points actions:</p>
+
+<ul>
+  <li><strong>Incremental refresh</strong> — normal operation;</li>
+  <li><strong>Full member-history repair</strong> — explicitly queues <code class="language-plaintext highlighter-rouge">/player/{username}/matches</code> work for recovery;</li>
+  <li><strong>Raw match-ID repair</strong> — explicitly scans only the entered numeric range.</li>
+</ul>
+
+<p>The two repair modes are intentionally manual and display confirmations. Do not schedule them as recurring CRON work.</p>
+
+<h2 id="9-rollback">9. Rollback</h2>
+
+<p>If validation after replacement fails:</p>
+
+<ol>
+  <li>pause Team Points and disable its CRON;</li>
+  <li>restore the pre-upgrade database export;</li>
+  <li>restore the previous hosted website folder if required;</li>
+  <li>restore the prior CRON entries;</li>
+  <li>inspect the seed validation/apply JSON files before trying again.</li>
+</ol>
+
+<p>Keep the database backup until at least one complete incremental catch-up and one manual audit have succeeded.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALL_v2.7.1.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

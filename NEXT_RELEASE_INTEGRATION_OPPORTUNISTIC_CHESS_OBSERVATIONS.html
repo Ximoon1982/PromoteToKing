@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Next release integration — opportunistic Chess.com observations | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Next release integration — opportunistic Chess.com observations" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/NEXT_RELEASE_INTEGRATION_OPPORTUNISTIC_CHESS_OBSERVATIONS.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/NEXT_RELEASE_INTEGRATION_OPPORTUNISTIC_CHESS_OBSERVATIONS.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Next release integration — opportunistic Chess.com observations" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Next release integration — opportunistic Chess.com observations","url":"https://ximoon1982.github.io/PromoteToKing/NEXT_RELEASE_INTEGRATION_OPPORTUNISTIC_CHESS_OBSERVATIONS.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="next-release-integration--opportunistic-chesscom-observations">Next release integration — opportunistic Chess.com observations</h1>
+
+<p>Baseline: v2.8.3 plus Tournament Achievement Date Integration Revision 2.</p>
+
+<h2 id="purpose">Purpose</h2>
+<p>When the browser already downloads useful public Chess.com JSON, it asynchronously sends the raw response to the same-origin server. This adds no extra Chess.com request from the browser and never delays rendering.</p>
+
+<h2 id="server-behavior">Server behavior</h2>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/public/observe.php</code> accepts same-origin batches only, max 12 observations / 2 MiB, with a protected runtime rate limiter.</li>
+  <li><code class="language-plaintext highlighter-rouge">club/{P2K}/matches</code>: extracts match IDs/status buckets only as hints and queues authoritative match details when the database says they are due; the browser does not write match metadata.</li>
+  <li><code class="language-plaintext highlighter-rouge">club/{P2K}/members</code>: queues the existing authoritative roster refresh; the browser does not alter membership flags.</li>
+  <li><code class="language-plaintext highlighter-rouge">player/{username}/matches</code>: accepts only entries explicitly pointing at the configured P2K club and queues authoritative match/board work without writing points or results.</li>
+  <li><code class="language-plaintext highlighter-rouge">player/{username}/stats</code>: for a current member, queues an authoritative server-side stats refresh which stores the Daily/Chess960 rating snapshot.</li>
+  <li><code class="language-plaintext highlighter-rouge">match/{id}</code>: treats the ID as a hint and queues the normal authoritative match fetch.</li>
+  <li>player monthly archive URLs: queue the normal authoritative archive task.</li>
+  <li>profile responses are accepted as observations but do not write arbitrary profile fields.</li>
+</ul>
+
+<h2 id="client-behavior">Client behavior</h2>
+<p>The shared Chess.com API client detects useful responses, deduplicates each URL per page load, batches up to four observations, and POSTs them without awaiting the result. Payloads below ~60 KiB use <code class="language-plaintext highlighter-rouge">keepalive</code>; larger payloads use an ordinary non-blocking POST.</p>
+
+<h2 id="trust-boundary">Trust boundary</h2>
+<p>No client-computed points, match results, probabilities, ranks, or achievement facts are accepted. Browser observations only identify what should be checked; canonical match/member/rating/point facts are written by the existing authoritative server worker after its own Chess.com request.</p>
+
+<h2 id="database">Database</h2>
+<p>No schema change. This is a next-release baseline integration change.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/NEXT_RELEASE_INTEGRATION_OPPORTUNISTIC_CHESS_OBSERVATIONS.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

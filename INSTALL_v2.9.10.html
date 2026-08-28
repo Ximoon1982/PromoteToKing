@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Install Promote to King v2.9.10 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Install Promote to King v2.9.10" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.10.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.10.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Install Promote to King v2.9.10" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Install Promote to King v2.9.10","url":"https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.10.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="install-promote-to-king-v2910">Install Promote to King v2.9.10</h1>
+
+<h2 id="upgrade-from-v299">Upgrade from v2.9.9</h2>
+<p>Place <code class="language-plaintext highlighter-rouge">PromoteToKing_v2.9.9_to_v2.9.10_INCREMENTAL.zip</code> and <code class="language-plaintext highlighter-rouge">update-v2.9.9-to-v2.9.10.sh</code> in the production site root, make the updater executable, and run it without arguments.</p>
+
+<p>The updater verifies the incremental manifest, backs up configuration/data/logs/crontab under <code class="language-plaintext highlighter-rouge">_backup</code>, preserves protected local/OAuth/shared-server configuration byte-for-byte, installs the payload, validates source/runtime contracts, and reinstalls the unchanged four-task CRON cadence using the v2.9.10 dispatcher.</p>
+
+<p>Core schema 11 → 12 is additive and is applied automatically when the Team Points repository initializes against the production database. Analytics remains schema 6.</p>
+
+<h2 id="fresh-install">Fresh install</h2>
+<p>Extract <code class="language-plaintext highlighter-rouge">PromoteToKing_Standalone_v2.9.10.zip</code> into the site root, restore/create the protected local configuration files, then run <code class="language-plaintext highlighter-rouge">reset-install-cron-v2.9.10.sh</code> after validating the deployment-specific CRON tokens.</p>
+
+<p>Never copy <code class="language-plaintext highlighter-rouge">server/team-points/config/oauth.local.php</code> from a release archive; it is deployment-specific and intentionally excluded.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALL_v2.9.10.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

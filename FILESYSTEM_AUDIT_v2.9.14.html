@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.14 — Filesystem / inode hardening audit | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.14 — Filesystem / inode hardening audit" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/FILESYSTEM_AUDIT_v2.9.14.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/FILESYSTEM_AUDIT_v2.9.14.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.14 — Filesystem / inode hardening audit" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.14 — Filesystem / inode hardening audit","url":"https://ximoon1982.github.io/PromoteToKing/FILESYSTEM_AUDIT_v2.9.14.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2914--filesystem--inode-hardening-audit">Promote to King v2.9.14 — Filesystem / inode hardening audit</h1>
+
+<h1 id="v2914-filesystem-count-hardening-development-note">v2.9.14 Filesystem-Count Hardening Development Note</h1>
+
+<p>Status: <strong>development branch only</strong>. The tree intentionally remains <code class="language-plaintext highlighter-rouge">VERSION=2.9.13</code> and is not a numbered release.</p>
+
+<h2 id="goal">Goal</h2>
+
+<p>Keep steady-state P2K filesystem-object growth bounded by configuration instead of by elapsed time, API request count, observation count, or repeated updater runs. This work is motivated by hosting environments with contractual file/inode limits around 200,000 objects.</p>
+
+<h2 id="implemented-in-this-branch">Implemented in this branch</h2>
+
+<h3 id="compact-future-updater-backups">Compact future updater backups</h3>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">tools/release/p2k-state-backup.sh</code> creates one compressed state archive plus one SHA-256 sidecar rather than recursively copying mutable trees into <code class="language-plaintext highlighter-rouge">_backup</code>.</li>
+  <li>Default retention is three compact backup archives.</li>
+  <li>Reconstructible/ephemeral runtime trees are excluded, including API caches, browser-observation limiter state, ACAMR ledgers, telemetry, fresh-init transient state, CRON shell state, and tournament cache/locks.</li>
+  <li>Durable match history, protected configuration, Live Ranks sources, tournament durable state, reconciliation/intelligence state, and logs remain restorable.</li>
+  <li><code class="language-plaintext highlighter-rouge">tools/release/p2k-state-restore.sh</code> validates and restores compact archives.</li>
+  <li><code class="language-plaintext highlighter-rouge">tools/release/p2k-consolidate-legacy-backups.sh</code> is dry-run by default and can convert legacy directory-style <code class="language-plaintext highlighter-rouge">_backup</code> entries into verified archives before removing the source directory.</li>
+</ul>
+
+<p>These helpers are <strong>not wired into any numbered updater yet</strong>.</p>
+
+<h3 id="browser-observation-limiter">Browser-observation limiter</h3>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">server/shared/BoundedRateLimiter.php</code> replaces one-file-per-IP-per-minute limiter buckets with one locked state file.</li>
+  <li>Subject count and idle lifetime are bounded.</li>
+  <li>Concurrent-process tests verify the 300/window limit remains atomic.</li>
+  <li>Housekeeping removes legacy <code class="language-plaintext highlighter-rouge">rate-*.txt</code> limiter files in bounded batches.</li>
+</ul>
+
+<h3 id="acamr-and-client-continuous-refresh">ACAMR and Client continuous refresh</h3>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">AcamrClaimStore</code> is the single claim/lease implementation for both ACAMR and Task Control’s <code class="language-plaintext highlighter-rouge">Client continuous refresh</code> planner.</li>
+  <li>New claims use at most 256 fixed claim-ledger shards.</li>
+  <li>New member leases use at most 256 fixed member-ledger shards.</li>
+  <li>New traffic therefore cannot create one file per claim or one file per member.</li>
+  <li>Fixed shard files are retained rather than unlink/recreated when empty, avoiding concurrent unlink/recreate races.</li>
+  <li>Legacy <code class="language-plaintext highlighter-rouge">claim-*.json</code> and <code class="language-plaintext highlighter-rouge">member-*.json</code> files remain readable long enough to expire and are cleaned opportunistically and by housekeeping.</li>
+  <li>Member-lease acquisition is process-safe; contention tests confirm one winner for the same member.</li>
+</ul>
+
+<h3 id="chesscom-filesystem-cache">Chess.com filesystem cache</h3>
+
+<ul>
+  <li>Independent entry ceiling in addition to byte ceiling; default 30,000 entries.</li>
+  <li>New writes default to one shard level (up to 256 first-level directories) instead of the old two-level directory fan-out.</li>
+  <li>Old two-level entries remain readable and are removed when rewritten through the new path.</li>
+  <li>Housekeeping may remove up to 50,000 cache files per pass so an already oversized production cache converges quickly toward its ceiling.</li>
+</ul>
+
+<h3 id="public-response-cache">Public response cache</h3>
+
+<ul>
+  <li>Independent entry ceiling (default 2,000) plus byte ceiling (default 128 MiB).</li>
+  <li>Old lock files are cleaned and ordinary lock files are removed after use.</li>
+</ul>
+
+<h3 id="match-tracking-history">Match-tracking history</h3>
+
+<ul>
+  <li>Tiered snapshot retention preserves dense recent history and progressively thins old history.</li>
+  <li>First snapshot, latest snapshot, and detected match-status transitions are preserved.</li>
+  <li>Default hard cap is 1,200 snapshots per match.</li>
+</ul>
+
+<h3 id="other-runtime-histories">Other runtime histories</h3>
+
+<p>Housekeeping now bounds:</p>
+
+<ul>
+  <li>runtime telemetry: default 30 days / 35 files;</li>
+  <li>reconciliation batches: default 365 days / 250 batches;</li>
+  <li>Club Intelligence daily snapshots: default 730 days / 730 files;</li>
+  <li>top-level scheduled-task JSONL logs: default 30 days / 35 files;</li>
+  <li>traffic aggregate history: default 400 days / 400 files (the UI can report at most 366 days);</li>
+  <li>fresh-init nonce receipts: default 2 days / 500 files;</li>
+  <li>fresh-init coverage runs: default 90 days / 20 runs;</li>
+  <li>deliberate tournament archive backups: default 10 years / 100 files.</li>
+</ul>
+
+<h3 id="durable-live-ranks-uploads">Durable Live Ranks uploads</h3>
+
+<ul>
+  <li>Existing filenames remain replaceable as before.</li>
+  <li>New distinct source filenames are refused after the configurable ceiling (default 5,000) instead of silently deleting durable source data.</li>
+</ul>
+
+<h3 id="file-count-observability">File-count observability</h3>
+
+<p><code class="language-plaintext highlighter-rouge">StorageMetricsService</code> and Team Points Administration’s <strong>Storage &amp; capacity</strong> section now expose:</p>
+
+<ul>
+  <li>hosting files;</li>
+  <li>directories;</li>
+  <li>total filesystem objects;</li>
+  <li>configured hosting file contract (default 200,000);</li>
+  <li>file-contract percentage/status;</li>
+  <li>Chess.com cache entry count and entry ceiling.</li>
+</ul>
+
+<p>The whole-site object scan is cached for 15 minutes to avoid turning UI polling into filesystem pressure.</p>
+
+<h3 id="package-hygiene">Package hygiene</h3>
+
+<p><code class="language-plaintext highlighter-rouge">tests/validate_package.py</code> now rejects <code class="language-plaintext highlighter-rouge">.pytest_cache</code>, <code class="language-plaintext highlighter-rouge">__pycache__</code>, and <code class="language-plaintext highlighter-rouge">.pyc</code> artifacts so development test caches cannot be shipped accidentally in a future standalone package.</p>
+
+<h2 id="development-validation">Development validation</h2>
+
+<p>At branch freeze:</p>
+
+<ul>
+  <li>Python regression suite: <strong>382/382 PASS</strong>.</li>
+  <li>v2.9.14 filesystem-specific suite includes limiter concurrency, fixed ACAMR shard bounds, cache migration/entry eviction, tiered match retention, runtime-history retention, compact backup/restore, legacy-backup consolidation, Client continuous refresh integration, Live Ranks cap, storage metrics, and package-hygiene checks.</li>
+  <li>Chromium startup/admin gate: PASS, 0 page errors.</li>
+  <li>Chromium transport/cache stress gate: PASS; 700 Match Creation details, 150 finished-match cache hits, 50 network misses, six active gateway posts, 0 page errors.</li>
+  <li>Changed PHP files lint clean.</li>
+  <li>Team Points Admin JavaScript syntax check PASS.</li>
+  <li>Future backup/restore/consolidation shell scripts pass <code class="language-plaintext highlighter-rouge">bash -n</code>.</li>
+</ul>
+
+<h2 id="deliberately-not-done-yet">Deliberately not done yet</h2>
+
+<p>This branch is not a release. Before promotion to a future numbered version:</p>
+
+<ol>
+  <li>Decide final configuration defaults after inspecting production file counts.</li>
+  <li>Wire the compact state-backup helper into the future incremental updater and remove recursive mutable-tree backup behavior there.</li>
+  <li>Decide whether legacy <code class="language-plaintext highlighter-rouge">_backup</code> consolidation should remain a separate administrator action or become an explicitly opt-in updater step. It must never silently destroy legacy backups before verified archive conversion.</li>
+  <li>Add release/version/cache-bust metadata only during promotion.</li>
+  <li>Regenerate <code class="language-plaintext highlighter-rouge">site-manifest.json</code> from the clean release tree.</li>
+  <li>Run the complete numbered-release validation matrix, exact baseline delta build, protected-config preservation replay, CRON preservation replay, and final archive checksum freeze.</li>
+</ol>
+
+<p>No v2.9.14 files, updater, ZIP, migration notes, or release notes are generated by this development work.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/FILESYSTEM_AUDIT_v2.9.14.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

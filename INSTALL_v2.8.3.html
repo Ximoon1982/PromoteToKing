@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.3 — upgrade | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.3 — upgrade" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.8.3.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.8.3.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.3 — upgrade" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.3 — upgrade","url":"https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.8.3.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v283--upgrade">Promote to King v2.8.3 — upgrade</h1>
+
+<p>v2.8.3 is an in-place upgrade from v2.8.2/Hotfix 1/Hotfix 2. <strong>Hotfix 2 is already included in this package.</strong></p>
+
+<ol>
+  <li>Back up the website files and both MariaDB databases.</li>
+  <li>Pause the Promote to King scheduled tasks during the file upload.</li>
+  <li>Upload the v2.8.3 files over the existing site while preserving production secrets/configuration, especially <code class="language-plaintext highlighter-rouge">server/team-points/config/config.local.php</code> and <code class="language-plaintext highlighter-rouge">data/server-config.json</code>.</li>
+  <li>Do <strong>not</strong> run the fresh initializer and do <strong>not</strong> reload the historical seed.</li>
+  <li>Open an administrator Team Points/Insights page once. The normal repository migration upgrades Analytics schema 4→5; Core remains schema 4.</li>
+  <li>Verify Team Insights and Opponent Insights load normally. The v2.8.2 Hotfix 1 placeholder correction and Hotfix 2 non-blocking Analytics refresh are part of v2.8.3.</li>
+  <li>Open Achievements and verify player cards show achievement counts and earned details show dates/source links where available.</li>
+  <li>Run a manual tournament update or let the tournament CRON continue normally. Finished historical tournament rows lacking <code class="language-plaintext highlighter-rouge">finishAt</code> are incrementally refreshed from Chess.com; medal achievement dates converge to the authoritative tournament finish time.</li>
+  <li>Verify Tournaments → Podium ranking, including a medalist modal from the integrated dashboard.</li>
+  <li>Verify Team/Member/Match/Opponent Insights charts, especially Monthly match activity, Most played opponents, Average boards per match, Monthly active members, and the current-year Club Points forecast.</li>
+  <li>Resume the existing scheduled tasks. Endpoint URLs and cadence are unchanged.</li>
+</ol>
+
+<p>No production database reset is required.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALL_v2.8.3.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

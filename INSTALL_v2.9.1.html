@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.1 — installation / upgrade | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.1 — installation / upgrade" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.1.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.1.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.1 — installation / upgrade" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.1 — installation / upgrade","url":"https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.9.1.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v291--installation--upgrade">Promote to King v2.9.1 — installation / upgrade</h1>
+
+<h2 id="recommended-production-upgrade-from-v290">Recommended production upgrade from v2.9.0</h2>
+
+<p>Upload these two files into the production site root (<code class="language-plaintext highlighter-rouge">~/PromoteToKing</code>):</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">PromoteToKing_v2.9.0_to_v2.9.1_INCREMENTAL.zip</code></li>
+  <li><code class="language-plaintext highlighter-rouge">update-v2.9.0-to-v2.9.1.sh</code></li>
+</ul>
+
+<p>Then run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> ~/PromoteToKing
+<span class="nb">chmod</span> +x update-v2.9.0-to-v2.9.1.sh
+./update-v2.9.0-to-v2.9.1.sh
+</code></pre></div></div>
+
+<p>The updater validates every payload SHA-256 before touching production; backs up configuration, data, logs, the previous crontab and every replaced file under <code class="language-plaintext highlighter-rouge">_backup</code>; applies only the verified incremental payload; validates PHP/shell/version markers; performs a root HTTP check when <code class="language-plaintext highlighter-rouge">curl</code> is available; and installs/verifies the four v2.9.1 CRON entries. Validation failure triggers best-effort rollback to the saved files/crontab.</p>
+
+<h2 id="full-standalone">Full standalone</h2>
+
+<p><code class="language-plaintext highlighter-rouge">PromoteToKing_v2.9.1_FULL_STANDALONE.zip</code> is a root-flat standalone deployment package. It deliberately does not contain mutable production secrets/data such as <code class="language-plaintext highlighter-rouge">data/server-config.json</code>, Team Points <code class="language-plaintext highlighter-rouge">config.local.php</code>, live logs or runtime databases.</p>
+
+<h2 id="database">Database</h2>
+
+<p>No destructive reset/re-seed is required. Existing additive schema/migration logic remains in force.</p>
+
+<h2 id="ionos-php">IONOS PHP</h2>
+
+<p>Do not invoke IONOS <code class="language-plaintext highlighter-rouge">/usr/bin/php</code> as the worker CLI. The release scripts detect and verify a real CLI using <code class="language-plaintext highlighter-rouge">PHP_SAPI === "cli"</code>; <code class="language-plaintext highlighter-rouge">/usr/bin/php8.5-cli</code> is preferred when available.</p>
+
+<h2 id="data-reconciliation">Data Reconciliation</h2>
+
+<p>After upgrade, use Administration → Administration tools → Data Reconciliation to upload/check reconciliation CSV batches. Run <strong>Check only</strong> first. Canonical conflict correction is authoritative-queue based; the apply action requires the exact displayed <code class="language-plaintext highlighter-rouge">APPLY &lt;batch-id&gt;</code> confirmation.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALL_v2.9.1.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

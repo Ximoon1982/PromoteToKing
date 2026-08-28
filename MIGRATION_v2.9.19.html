@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.19 migration | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.19 migration" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.9.19.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.9.19.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.19 migration" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.19 migration","url":"https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.9.19.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2919-migration">Promote to King v2.9.19 migration</h1>
+
+<p>v2.9.19 requires <strong>no database schema migration</strong>.</p>
+
+<h2 id="database">Database</h2>
+
+<ul>
+  <li>Core remains schema <strong>14</strong>.</li>
+  <li>Analytics remains schema <strong>7</strong>.</li>
+  <li>Existing Core canonical match, board, game, point and member facts are retained.</li>
+  <li>Existing MIAC seed and review state are retained; the v2.9.18 seed is not replaced or re-imported destructively.</li>
+</ul>
+
+<h2 id="identity-derived-refresh">Identity-derived refresh</h2>
+
+<p>The behavioral migration is generation-driven. MIAC identity-map generation is now included in general Analytics and Achievement source watermarks. A confirmed topology/conflict change therefore makes affected derived projections stale and lets the existing bounded CMDI maintenance path rebuild them from canonical Core/MCA source evidence.</p>
+
+<p>Historical MCA and Daily-board substitution evidence can create confirmed MIAC edges under the strict one-to-one rules documented in the release notes. Evidence is stored before source/ownership replacement; explicit rejections and contradictory known <code class="language-plaintext highlighter-rouge">player_id</code> values remain blocking conditions.</p>
+
+<h2 id="cron">CRON</h2>
+
+<p>The managed schedule remains five entries: four operational jobs plus the weekly long-life backup. The v2.9.19 installer replaces the managed v2.9.18 script names while retaining the exact cadences and preserving unrelated CRON entries.</p>
+
+<p>No manual SQL, database recreation, or CSV reseed is required.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/MIGRATION_v2.9.19.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

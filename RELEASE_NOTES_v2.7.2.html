@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.7.2 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.7.2" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.7.2.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.7.2.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.7.2" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.7.2","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.7.2.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v272">Promote to King v2.7.2</h1>
+
+<h2 id="database-correct-insights">Database-correct Insights</h2>
+
+<p>This release replaces the remaining ingestion-time approximations in Team Insights with authoritative database dates:</p>
+
+<ul>
+  <li>match starts use <code class="language-plaintext highlighter-rouge">p2k_tp_match_metadata.start_time</code>;</li>
+  <li>match finishes use <code class="language-plaintext highlighter-rouge">p2k_tp_match_metadata.end_time</code>;</li>
+  <li>game/player activity uses <code class="language-plaintext highlighter-rouge">p2k_tp_point_events.game_end_utc</code>;</li>
+  <li><code class="language-plaintext highlighter-rouge">participations.first_seen_at</code> and <code class="language-plaintext highlighter-rouge">match_summaries.finalized_at</code> are no longer used as chess-event dates.</li>
+</ul>
+
+<p>Schema 13 adds a durable daily fact table (<code class="language-plaintext highlighter-rouge">p2k_tp_insight_daily</code>) and its refresh state (<code class="language-plaintext highlighter-rouge">p2k_tp_insight_cache_state</code>). Facts are rebuilt only when source tables change. User-selected date ranges, exact unique-player counts, rolling windows, outcomes and distributions remain live database calculations.</p>
+
+<h2 id="team-insights">Team Insights</h2>
+
+<ul>
+  <li>Correct cumulative started/finished activity with in-progress matches on an independent scale.</li>
+  <li>Complete calendar series, including zero-activity days.</li>
+  <li>Rolling activity uses 30 actual calendar days rather than 30 non-empty rows.</li>
+  <li>Daily boards now displays boards started, boards finished and Club Points.</li>
+  <li>Year-over-year lines stop at the last available date instead of plotting missing future data.</li>
+  <li>Relevant legends, hover details, drag-to-zoom selection and reset controls.</li>
+  <li>Client-side point dropping was removed; long periods are rendered from complete database series.</li>
+</ul>
+
+<h2 id="match-insights">Match Insights</h2>
+
+<ul>
+  <li>Match-size share pie and W/D/L distribution.</li>
+  <li>League/friendly share pie with explicit wins / draws / losses.</li>
+  <li>Corrected average and median duration fields.</li>
+  <li>Duration calculations exclude void 0–0 matches and invalid/non-positive timestamp ranges.</li>
+  <li>Duration trend hover shows valid-match count and monthly minimum/maximum.</li>
+  <li>Duration distribution.</li>
+  <li>Standard/Chess960 distribution.</li>
+  <li>Human-readable daily time controls such as <code class="language-plaintext highlighter-rouge">3 days / move</code>.</li>
+  <li>Stored <code class="language-plaintext highlighter-rouge">rules</code>, <code class="language-plaintext highlighter-rouge">time_control</code> and <code class="language-plaintext highlighter-rouge">is_league</code> dimensions in match metadata and seed staging.</li>
+  <li>Match profiles expose type, time control and league/friendly category.</li>
+</ul>
+
+<h2 id="member-insights">Member Insights</h2>
+
+<ul>
+  <li>Monthly active-member chart from distinct players with completed games.</li>
+  <li>Hover includes monthly games and Team Points without mixing those larger values onto the active-member scale.</li>
+  <li>Daily-rank distribution from database Team Points.</li>
+</ul>
+
+<h2 id="opponent-insights">Opponent Insights</h2>
+
+<ul>
+  <li>Compact fixed-layout desktop table; horizontal scrolling remains available below desktop width.</li>
+  <li>Most-played-opponents treemap with match volume and W/D/L/ongoing details.</li>
+  <li>
+    <p>Administrator-only plain-text copy action in opponent intelligence:</p>
+
+    <p><code class="language-plaintext highlighter-rouge">Promote to King vs TeamX: 10w / 5d / 2l, 3 ongoing.</code></p>
+  </li>
+</ul>
+
+<h2 id="schema-and-importer">Schema and importer</h2>
+
+<ul>
+  <li>Team Points schema: <strong>13</strong>.</li>
+  <li>Seed Importer: <strong>v1.2.0</strong>.</li>
+  <li>The embedded snapshot remains 4,473 members, 17,091 matches, 104,761 boards, 198,107 game events and 371,168 Club Points.</li>
+  <li>The importer additionally retains 16,586 Standard matches, 504 Chess960 matches, seven known daily time controls and 1,139 league-tagged matches.</li>
+  <li>The administrator token is shown in clear with length and SHA-256 fingerprint before signing, matching the diagnostic behavior requested during v2.7.1 deployment.</li>
+</ul>
+
+<h2 id="cron">CRON</h2>
+
+<p>The CRON endpoints and cadence are unchanged from v2.7.1. Existing working v2.7.1 CRON wrapper entries do not need to be replaced.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.7.2.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Install Promote to King v2.10.5.2 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Install Promote to King v2.10.5.2" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.10.5.2.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.10.5.2.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Install Promote to King v2.10.5.2" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Install Promote to King v2.10.5.2","url":"https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.10.5.2.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="install-promote-to-king-v21052">Install Promote to King v2.10.5.2</h1>
+
+<p>Install v2.10.5.2 over v2.10.5.1 using the released cumulative corrective/updater from the PromoteToKing document root.</p>
+
+<p>The updater verifies its payload, backs up overwritten/new files, applies the additive Green schema upgrade, preserves protected local configuration, and rolls source changes back on failure. It does not reseed Green Core, reset either Green database, or replace the existing five-entry Green CRON schedule.</p>
+
+<h2 id="after-installation">After installation</h2>
+
+<ol>
+  <li>Hard-refresh the site and Administration pages.</li>
+  <li>Open <strong>Administration → Scheduled Task Control → Green control</strong>.</li>
+  <li>Confirm public reads are still <strong>BLUE</strong> and migration phase is the expected current phase.</li>
+  <li>Set/confirm <code class="language-plaintext highlighter-rouge">shadow_writing</code> while Blue remains the rollback source.</li>
+  <li>Start/resume <strong>GAB</strong>.</li>
+  <li>Start <strong>Green Accelerator</strong> while authenticated with real OAuth. P0 interactive traffic remains first; GAB receives first background priority.</li>
+  <li>Let GAB reach <code class="language-plaintext highlighter-rouge">ready</code>. Use its lane bars/errors plus GFFL/cycle telemetry to resolve any blocking item.</li>
+  <li>Run <strong>Validate Green</strong>. Current-match readiness is checked against the configured GFFL SLO (default 1,200 s).</li>
+  <li>When validation and read parity are ready, set <code class="language-plaintext highlighter-rouge">green_validated</code>.</li>
+  <li>Advance to <code class="language-plaintext highlighter-rouge">green_reads_both_writing</code>. All routed public Team Points displays now read Green while Blue remains maintained for rollback.</li>
+  <li>Exercise Dashboard, player profiles, achievements, Hall of Fame, matches/boards/statistics, opponent/team/member insights, league seasons, recent matches and Live Ranks/MCA.</li>
+  <li>If stable, advance to <code class="language-plaintext highlighter-rouge">green_primary</code>. Green becomes the normal read/write/background authority and legacy Blue browser ACAMR is disabled. Blue remains frozen/available for rollback; do not delete it yet.</li>
+</ol>
+
+<p>The legacy TeamPointsMigration page is not required for these controls; the normal operational surface is Scheduled Task Control.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALL_v2.10.5.2.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

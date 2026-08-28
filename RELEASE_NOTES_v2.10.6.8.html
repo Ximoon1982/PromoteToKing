@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.6.8 — Green operational cutover | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.6.8 — Green operational cutover" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.8.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.8.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.6.8 — Green operational cutover" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.6.8 — Green operational cutover","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.10.6.8.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v21068--green-operational-cutover">Promote to King v2.10.6.8 — Green operational cutover</h1>
+
+<p>v2.10.6.8 converts the Green migration control from bootstrap-era hard readiness gates to an operational production switch suitable for the continuously cycling Green runtime.</p>
+
+<h2 id="green-cutover-behavior">Green cutover behavior</h2>
+
+<ul>
+  <li>Adds one-click <strong>Switch reads to Green</strong> in Administration → Scheduled Task Control → Green.</li>
+  <li>The switch sets public reads to Green while keeping <strong>worker routing = Both</strong> and <strong>browser ingest = Both</strong>, preserving Blue as the live rollback source.</li>
+  <li>Adds separate <strong>Make Green primary</strong> and <strong>Rollback reads to Blue</strong> actions.</li>
+  <li>Rollback restores Blue public reads with both maintenance paths active; it does not delete or reset Green.</li>
+  <li>Green primary keeps Green public reads, routes Team Points maintenance to Green, and requests pause of the Blue Team Points workers. Blue data is not deleted.</li>
+</ul>
+
+<h2 id="readiness-semantics">Readiness semantics</h2>
+
+<p>Continuous-cycle conditions no longer prevent cutover. In particular, ordinary non-zero values for unknown matches, pending boards, GFFL due/hot work, GABCRF convergence, or compatibility smoke findings are surfaced as <strong>advisories</strong> rather than hard blockers.</p>
+
+<p>The only hard cutover prerequisites are technical ability to serve Green safely:</p>
+
+<ul>
+  <li>Green Core connection/state available with schema 17 or newer.</li>
+  <li>Green Analytics available with schema 9 or newer.</li>
+</ul>
+
+<p>The public read router no longer requires <code class="language-plaintext highlighter-rouge">gab_status=ready</code>. Once Green is explicitly selected it still remains fail-closed for actual Green connection/schema failures; it never silently falls back to Blue after a Green cutover.</p>
+
+<h2 id="migration-panel-simplification">Migration panel simplification</h2>
+
+<p>The main cutover card now focuses on useful production metrics:</p>
+
+<ul>
+  <li>effective public read source;</li>
+  <li>whether the Green switch is technically available;</li>
+  <li>whether Blue rollback maintenance is active;</li>
+  <li>advisory count;</li>
+  <li>unknown matches / pending boards as live workload;</li>
+  <li>current-match facts over the GFFL SLO;</li>
+  <li>GFFL due/hot counts;</li>
+  <li>GABCRF remaining drift/pass/attempts;</li>
+  <li>compatibility smoke status;</li>
+  <li>latest completed cycle duration.</li>
+</ul>
+
+<p>The detailed phase/worker/ingest/mode selectors remain available under a collapsed <strong>Advanced routing controls</strong> section.</p>
+
+<h2 id="compatibility-health-checks">Compatibility health checks</h2>
+
+<p><strong>Validate Green</strong> now runs the compatibility smoke test on demand even while GAB is still converging. Its findings are displayed as advisory health information and do not prevent the operator from selecting Green public reads.</p>
+
+<h2 id="unchanged">Unchanged</h2>
+
+<ul>
+  <li>No database schema migration.</li>
+  <li>No database reset or reseed.</li>
+  <li>No CRON change.</li>
+  <li>No source CSV or image change.</li>
+  <li>GABCRF, GFFL, GQAC and normal Green quick/deep cycles continue after cutover.</li>
+  <li>Blue remains available until the administrator deliberately makes Green primary or otherwise changes advanced routing.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.10.6.8.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

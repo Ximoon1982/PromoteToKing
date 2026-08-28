@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>v2.8.0 post-cutover decommission checklist | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="v2.8.0 post-cutover decommission checklist" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/DECOMMISSION_v2.8.0.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/DECOMMISSION_v2.8.0.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="v2.8.0 post-cutover decommission checklist" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"v2.8.0 post-cutover decommission checklist","url":"https://ximoon1982.github.io/PromoteToKing/DECOMMISSION_v2.8.0.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="v280-post-cutover-decommission-checklist">v2.8.0 post-cutover decommission checklist</h1>
+
+<p>Do not delete old data until the v2.8.0 website, Core DB and Analytics DB have been validated and at least one normal Team Points CRON cycle has completed successfully.</p>
+
+<h2 id="safe-to-remove-after-successful-cutover">Safe to remove after successful cutover</h2>
+
+<h3 id="old-database">Old database</h3>
+
+<p>Once rollback is no longer required, the complete old v2.7.x Team Points database is no longer referenced by v2.8.0. It can be deleted from IONOS after taking/retaining a final backup.</p>
+
+<h3 id="emergencyone-time-server-scripts-left-by-older-deployments">Emergency/one-time server scripts left by older deployments</h3>
+
+<p>Delete these <strong>if they exist on the server and are not part of another retained rollback directory</strong>:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/public/p2k-delete-only-cleanup.php</code></li>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/public/one-time-import.php</code></li>
+  <li>any pre-v2.8 temporary seed-import endpoint copied under another name</li>
+  <li><code class="language-plaintext highlighter-rouge">tools/P2K_TeamPoints_Seed_Importer/</code> from v2.7.x deployments</li>
+</ul>
+
+<p>The v2.8.0 package itself contains <code class="language-plaintext highlighter-rouge">server/team-points/public/seed-import.php</code> only as a deliberate HTTP-410 retirement stub. Leave that packaged stub in place.</p>
+
+<h3 id="old-local-importer-copies-in-the-web-root">Old local importer copies in the web root</h3>
+
+<p>Any manually uploaded copies of these can be removed from the web server after v2.8 initialization:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">FinishedMatches-P2K*.csv</code></li>
+  <li><code class="language-plaintext highlighter-rouge">ActiveMatches-P2K*.csv</code></li>
+  <li><code class="language-plaintext highlighter-rouge">parseddata*.csv</code></li>
+  <li><code class="language-plaintext highlighter-rouge">parsedmembers*.csv</code></li>
+  <li><code class="language-plaintext highlighter-rouge">allmembers*.csv</code></li>
+  <li><code class="language-plaintext highlighter-rouge">findings*.txt</code></li>
+  <li>old importer ZIP/PYZ files</li>
+</ul>
+
+<p>The v2.8 initializer carries its own checksum-verified compressed snapshot locally; these source CSV/TXT files are not required in the production web root.</p>
+
+<h3 id="disposable-cachelog-content">Disposable cache/log content</h3>
+
+<p>Pre-v2.8 API cache files can be removed once no rollback deployment uses them. v2.8 creates its own <code class="language-plaintext highlighter-rouge">data/runtime-v280/</code> cache tree.</p>
+
+<p>Old application logs may be archived or deleted according to your retention policy.</p>
+
+<h2 id="keep--preserve">Keep / preserve</h2>
+
+<p>Do <strong>not</strong> delete these just because Team Points moved databases:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">data/server-config.json</code> — shared site/CRON configuration.</li>
+  <li><code class="language-plaintext highlighter-rouge">config/site-branding.js</code> — site/OAuth/admin branding configuration.</li>
+  <li><code class="language-plaintext highlighter-rouge">data/tournaments/archive.json</code> and <code class="language-plaintext highlighter-rouge">data/tournaments/backups/</code> — tournament history remains filesystem-backed.</li>
+  <li><code class="language-plaintext highlighter-rouge">data/match-tracking/</code> — tracked-match snapshots/history.</li>
+  <li><code class="language-plaintext highlighter-rouge">data/live-ranks/</code> — Live Rank CSV source storage and backups; the new Analytics DB begins fresh, so retain/re-upload the source CSV pack as needed.</li>
+  <li>achievement/rank image assets.</li>
+  <li>the v2.8 <code class="language-plaintext highlighter-rouge">server/team-points/config/config.local.php</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">data/runtime-v280/</code> — this is the new protected runtime/cache tree.</li>
+  <li><code class="language-plaintext highlighter-rouge">data/archive-v280/</code> if you use the optional archive path.</li>
+</ul>
+
+<h2 id="cron-wrapper">CRON wrapper</h2>
+
+<p>The endpoint URLs and cadence are unchanged. An existing SSH wrapper created for v2.7.1/v2.7.2 can continue to call the same endpoints if its tokens are still correct. You may rename/recreate it for clarity, but this is not technically required.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/DECOMMISSION_v2.8.0.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

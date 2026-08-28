@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King deep audit — v2.8.5 through v2.8.10 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King deep audit — v2.8.5 through v2.8.10" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/AUDIT_v2.8.5_TO_v2.8.10.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/AUDIT_v2.8.5_TO_v2.8.10.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King deep audit — v2.8.5 through v2.8.10" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King deep audit — v2.8.5 through v2.8.10","url":"https://ximoon1982.github.io/PromoteToKing/AUDIT_v2.8.5_TO_v2.8.10.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-deep-audit--v285-through-v2810">Promote to King deep audit — v2.8.5 through v2.8.10</h1>
+
+<h2 id="executive-result">Executive result</h2>
+
+<p>v2.8.10 retains the production-confirmed v2.8.9 startup/auth fix and repairs the most important semantic and operational gaps found by comparing the exact release trees and the requested behavior since v2.8.5. The audit deliberately distinguishes presence of code from verified behavior.</p>
+
+<h3 id="corrected-in-v2810">Corrected in v2.8.10</h3>
+
+<ul>
+  <li>Canonical score-derived W/D/L and historical result repair; Opponent Intelligence zero-loss bug addressed at the source.</li>
+  <li>Dashboard Core member count and all-history Finished KPIs protected from Chess.com second-wave overwrites.</li>
+  <li>Redundant Dashboard club-members/profile calls removed without changing startup ordering.</li>
+  <li>Tournament/Match Tracking protected mutation headers fixed centrally.</li>
+  <li>Match Tracking task-key/panel mismatch fixed.</li>
+  <li>Tournament archive and Match Tracking registry conservative recovery added.</li>
+  <li>Release package no longer ships destructive empty runtime files or production shared-secret file.</li>
+  <li>CRON installer/dispatcher redesigned around runtime token reads, secretless crontab and two-layer invocation diagnostics.</li>
+  <li>Tournament cadence metadata corrected consistently to 10 minutes.</li>
+  <li>Club Intelligence freshness thresholds aligned to 5m Club / 30m roster / 10m Tournament operational contracts.</li>
+  <li>Finished-board verification separated from active backlog.</li>
+  <li>Activity/contribution/opponent/snapshot/personal-home/ACAMR/performance telemetry enriched.</li>
+  <li>ACAMR label and Administration tool card corrected.</li>
+</ul>
+
+<h2 id="v285-foundational-contracts">v2.8.5 foundational contracts</h2>
+
+<p>Status: <strong>retained</strong>.</p>
+
+<ul>
+  <li>Separate Club and Player workers; Club discovery cannot be starved by Player history.</li>
+  <li>5-minute Club discovery / ~30-minute roster freshness.</li>
+  <li>Browser observations remain non-authoritative hints; canonical facts require server verification.</li>
+  <li>Demand-driven avatar/profile persistence; Achievement visible batch only.</li>
+  <li>Core generation freshness and materialized public reads.</li>
+  <li>Finished authoritative 0–0 stored as void and excluded analytically.</li>
+  <li>Public GET paths do not perform DDL/migrations.</li>
+</ul>
+
+<h2 id="v286-progressive-ux">v2.8.6 progressive UX</h2>
+
+<p>Status: <strong>retained</strong>.</p>
+
+<ul>
+  <li>Database-first Dashboard with automatic post-paint current/Live enrichment.</li>
+  <li>Progressive Team/Member/Match/Opponent Insights.</li>
+  <li>Achievement first batch 12 and incremental avatar/medal/catalog enrichment.</li>
+  <li>Daily/Live rank paging, unified Hall search, progressive Profile.</li>
+  <li>Server-paged Tournament browsing and click-loaded player history.</li>
+</ul>
+
+<h2 id="v287-audit--acamr">v2.8.7 audit / ACAMR</h2>
+
+<p>Status after v2.8.10: <strong>safe portions retained; dangerous startup coupling remains removed</strong>.</p>
+
+<p>Retained: Core/Profile freshness overlay, efficient club resolution, paused-Player roster pass, shared Members/Team projections, bounded Hall queries, Tournament BrowseIndex, Hall tournament index, ACAMR with original trust/scope boundaries, Hall/Insights lazy modules isolated from startup.</p>
+
+<p>Not restored: the v2.8.7 low-priority Dashboard startup scheduler. It is unnecessary for correctness and previously shared too much startup state. The working v2.8.9/v2.8.6 startup path is intentionally kept.</p>
+
+<p>Restored safely in v2.8.10 outside startup: Core member source of truth, protection of all-history Finished totals, and removal of redundant normal Dashboard members/profile requests.</p>
+
+<h2 id="v288-explicit-uifix-requests">v2.8.8 explicit UI/fix requests</h2>
+
+<ul>
+  <li>Human Chess.com achievement links: <strong>implemented for stored match/tournament sources</strong>.</li>
+  <li>Exact historical MCA/arena trigger URL: <strong>historical limitation</strong>; aggregate MCA imports do not preserve the source event URL.</li>
+  <li>Unified player Profile from Daily/Live and cross-feature surfaces: <strong>implemented</strong>.</li>
+  <li>Mobile Hall rank containment: <strong>implemented</strong>.</li>
+  <li>Nested Profile→Achievement modal restoration: <strong>implemented</strong>.</li>
+  <li>Hall defaults to Achievements: <strong>implemented</strong>.</li>
+  <li>Opponent logos with persistent long cache: <strong>implemented</strong>.</li>
+  <li>Team Insights first-day→today→+6-month Low/Medium/High progression above YoY: <strong>implemented</strong>.</li>
+  <li>Profile rank artwork clipping correction: <strong>implemented</strong>.</li>
+  <li>Immediate configured/local admin recognition + iframe/lazy retry: <strong>implemented and browser-tested</strong>.</li>
+</ul>
+
+<h2 id="intelligence-feature-audit">Intelligence feature audit</h2>
+
+<h3 id="team-depth">Team depth</h3>
+<p>Implemented with Daily/Classical and Chess960 100-rating bands, member/active/available/overloaded counts.</p>
+
+<h3 id="acamr-effectiveness">ACAMR effectiveness</h3>
+<p>Improved in v2.8.10: active sessions (30m), distinct sessions, distinct claimed members, plans, claims, accepted observations, authoritative queue work, tasks, conflicts and yield. A “time saved” estimate is intentionally absent because there is no valid counterfactual CRON-only baseline.</p>
+
+<h3 id="freshness--coverage">Freshness / coverage</h3>
+<p>Implemented with member/rating/avatar coverage, finished-board verification, separate active backlog, oldest unresolved finished board, oldest rating, queue age, Core→Analytics lag, Club/roster/Tournament freshness and operational thresholds.</p>
+
+<h3 id="anomaly-detector--admin-action-queue">Anomaly detector / Admin action queue</h3>
+<p>Implemented for stale Club/roster/Tournament, failed board/job work, rating aging, finished-board coverage/age, Analytics lag and Club Points snapshot regression. The queue links to the correct current task keys.</p>
+
+<h3 id="member-activity--availability--contribution">Member activity / availability / contribution</h3>
+<p>Implemented with overall + Standard + Chess960 activity, load/availability, Club Points share, points/game/board, league points, Standard/960 points, transparent rating-strength adjustment and six-month consistency.</p>
+
+<h3 id="recruitment-confidence">Recruitment confidence</h3>
+<p>Implemented from measurable current inputs: rating freshness, opponent rated-lineup coverage, recommended-player availability and projected board coverage. Historical conversion probability is <strong>not</strong> fabricated because historical recommendation→join outcomes were never labelled/stored. A future model should begin storing recommendation/outcome observations before fitting probability.</p>
+
+<h3 id="opponent-intelligence">Opponent Intelligence</h3>
+<p>v2.8.10 repairs W/D/L canonically and adds typical board count, opponent average rating, league/friendly mix, 90-day frequency, score margin and current registration/in-progress overlap. Historical registration acceleration/late-registration behavior cannot be reconstructed for matches that were not snapshot-tracked; future tracked snapshots can support it.</p>
+
+<h3 id="historical-snapshots--time-travel">Historical snapshots / time travel</h3>
+<p>Daily aggregate snapshots include members, Club Points, W/D/L, finished matches/boards, overall/Standard/960 activity, rating and finished-board coverage; previous/~7d/~30d deltas are shown. Detailed historical per-member lineups/ranks from before snapshot capture are not inferred.</p>
+
+<h3 id="explainable-forecasts">Explainable forecasts</h3>
+<p>Implemented: recent 90 days in three blocks, capped trend bend, Low/Medium/High scenarios and visible drivers; same forecast engine is reused by Team Insights projections.</p>
+
+<h3 id="cross-feature-player-modal--personalized-home--challenges">Cross-feature player modal / personalized home / challenges</h3>
+<p>Unified Profile is retained. Personalized home now includes overall/Standard/960 activity, recent 7-day points/games/W-D-L vs previous week, current registered/live match counts, availability/load, contribution/league points, points/board, win rate, consistency and nearest challenge. Historical rank movement/medal delta is not reported unless an authoritative historical observation exists.</p>
+
+<h3 id="endpoint-performance-telemetry">Endpoint performance telemetry</h3>
+<p>Latency/error/call counts, memory, response sizes and 304 rate are measured. Direct PDO query time is not separately instrumented and is explicitly identified as a limitation rather than estimated.</p>
+
+<h2 id="tournament--match-tracking--cron-audit">Tournament / Match Tracking / CRON audit</h2>
+
+<p>The v2.8.9 package could overwrite <code class="language-plaintext highlighter-rouge">data/server-config.json</code> with a placeholder and replace live Tournament/Match Tracking state with empty files. Existing crontab lines would still contain the prior token, causing protected Tournament/Match Tracking endpoints to fail authentication. The unified Task Control helper also omitted required <code class="language-plaintext highlighter-rouge">X-Club-Tools-Request</code> headers, and its Match Tracking panel used a mismatched task key.</p>
+
+<p>v2.8.10 removes mutable state from the release package, adds backup/cache/history recovery, fixes request headers and task-key mapping, and replaces embedded-secret cron URLs with a runtime-token dispatcher plus shell-level heartbeat diagnostics.</p>
+
+<h2 id="redundancy--maintainability-findings">Redundancy / maintainability findings</h2>
+
+<ul>
+  <li>Historical compatibility alias <code class="language-plaintext highlighter-rouge">match-monitoring</code> remains only to keep old URLs working; canonical registry key is <code class="language-plaintext highlighter-rouge">match-tracking</code>.</li>
+  <li>Legacy <code class="language-plaintext highlighter-rouge">team-points</code> task remains a hidden compatibility alias; normal scheduling uses separate Club/Player keys.</li>
+  <li>Legacy <code class="language-plaintext highlighter-rouge">?token=</code> CRON authentication remains accepted for upgrade compatibility, while new jobs use the protected header.</li>
+  <li>Historical release/install/CRON documents and old installer scripts remain intentionally for traceability; they are not active runtime dependencies.</li>
+  <li>Hall/Insights remain lazy but startup-owned dependencies are DOM/main-controller owned, preventing the v2.8.7 undefined-symbol failure class.</li>
+</ul>
+
+<h2 id="cross-chat-request-reconciliation-v285--v2810">Cross-chat request reconciliation (v2.8.5 → v2.8.10)</h2>
+
+<p>This matrix checks the current code against the user-requested behavior, not merely against intermediate release notes.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Request / retained contract</th>
+      <th>v2.8.10 audit result</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Club discovery remains frequent even during backlog; Club/Player workers stay separate</td>
+      <td><strong>Complete</strong> — 5-minute Club and 30-minute Player/roster lanes remain separate and independently observable.</td>
+    </tr>
+    <tr>
+      <td>Authoritative finished 0–0 remains stored but excluded from every analytic surface</td>
+      <td><strong>Complete</strong> — Core 7 migration preserves/repairs void state and canonical views/Analytics exclude it.</td>
+    </tr>
+    <tr>
+      <td>Achievement avatars only resolve for visible 12-player batch; no bulk crawler; stale/persistent cache is acceptable</td>
+      <td><strong>Complete</strong> — demand-driven Hall/Profile behavior retained.</td>
+    </tr>
+    <tr>
+      <td>Dashboard visible DB values first; secondary current/Live data automatic, never click-gated</td>
+      <td><strong>Complete</strong> — production-proven v2.8.9/v2.8.6 startup graph retained.</td>
+    </tr>
+    <tr>
+      <td>Dashboard current members and all-history Finished metrics remain canonical/local</td>
+      <td><strong>Complete after v2.8.10 repair</strong> — Chess.com members/profile no longer overwrite member count and bounded finished list cannot overwrite historical KPIs.</td>
+    </tr>
+    <tr>
+      <td>Hall/Profile: Achievements default, unified profile from Daily/Live, mobile containment, nested Profile→Achievement reliability</td>
+      <td><strong>Complete</strong> — retained and browser/startup-tested.</td>
+    </tr>
+    <tr>
+      <td>Achievement event links use normal Chess.com URLs</td>
+      <td><strong>Complete for stored match/tournament provenance; partial historically for MCA/arena</strong> — old aggregate MCA data did not retain exact triggering event URL.</td>
+    </tr>
+    <tr>
+      <td>Team Insights: first-day→today→+6 months projection above YoY, same Low/Medium/High model</td>
+      <td><strong>Complete</strong> — shared forecast engine retained.</td>
+    </tr>
+    <tr>
+      <td>Team depth / activity / availability / contribution / freshness / anomaly / action queue / forecasts / snapshots / personalized home</td>
+      <td><strong>Substantially complete and expanded</strong> — v2.8.10 adds missing freshness, Std/960, points/board, league, consistency, week-over-week and operational semantics. Historical member-level state before snapshot collection cannot be reconstructed.</td>
+    </tr>
+    <tr>
+      <td>Opponent Intelligence W/D/L including losses</td>
+      <td><strong>Complete after v2.8.10 repair</strong> — score-derived canonical outcome, historical migration and semantic win/draw/loss/void fixtures.</td>
+    </tr>
+    <tr>
+      <td>Opponent Intelligence broader behavior</td>
+      <td><strong>Improved but historically bounded</strong> — boards, rating, league/friendly, 90-day frequency, score margin and current overlap are present; registration acceleration/late-registration requires tracked historical lineups.</td>
+    </tr>
+    <tr>
+      <td>Opponent logos cached persistently/long-lived</td>
+      <td><strong>Complete</strong> — Core-backed opponent profile/icon cache retained.</td>
+    </tr>
+    <tr>
+      <td>Recruitment: choose Standard/960 rating category; stored current members; remove already registered, unrated, below lowest opponent, opponent-club members; strongest-first significant advantage; progress</td>
+      <td><strong>Complete/retained</strong> — current implementation and UI contract explicitly preserve these filters and top-player semantics.</td>
+    </tr>
+    <tr>
+      <td>Recruitment confidence</td>
+      <td><strong>Complete for measurable current inputs; historical probability intentionally not fabricated</strong> — recommendation→registration outcomes were never historically labelled.</td>
+    </tr>
+    <tr>
+      <td>ACAMR real OAuth always, simulated only with flag; Club/Member Points included; tournaments and registration tracking excluded; server authoritative</td>
+      <td><strong>Complete</strong> — re-enabled and browser-tested independently of startup.</td>
+    </tr>
+    <tr>
+      <td>ACAMR effectiveness/adaptive allocation</td>
+      <td><strong>Improved</strong> — active/distinct sessions, claims/members, observations, queued work/conflicts/yield and adaptive work priority. Counterfactual time-saved estimate intentionally omitted without evidence.</td>
+    </tr>
+    <tr>
+      <td>Tournament discovery/status/podium stored server-side, paged display, tied medalists, fair-play/abuse exclusions</td>
+      <td><strong>Complete/retained</strong> — status now actually checked every 10-minute Tournament invocation; discovery/podium staged extras; recovery/cache coherence fixed.</td>
+    </tr>
+    <tr>
+      <td>Tournament manual refresh from Admin works</td>
+      <td><strong>Complete after v2.8.10 repair</strong> — required <code class="language-plaintext highlighter-rouge">X-Club-Tools-Request</code> action header is sent and browser-tested.</td>
+    </tr>
+    <tr>
+      <td>Match Tracking follow/unfollow/record/history/snapshots/display; existing snapshots retained on unfollow; destructive deletion separate</td>
+      <td><strong>Complete/retained</strong> — Task Control key/header/state recovery repaired without replacing tracking semantics.</td>
+    </tr>
+    <tr>
+      <td>Scheduled tasks visible and diagnosable; CRON schedules unchanged</td>
+      <td><strong>Complete and hardened</strong> — shell heartbeat + endpoint status distinguish daemon absence from HTTP/auth failure; installer is atomic and secretless.</td>
+    </tr>
+    <tr>
+      <td>In-place release must not destroy production Tournament/Match Tracking/config state</td>
+      <td><strong>Complete after v2.8.10 repair</strong> — mutable live files removed from package; backup/history recovery added.</td>
+    </tr>
+    <tr>
+      <td>Configured/local admin must not wait on remote Chess.com verification</td>
+      <td><strong>Complete</strong> — Dashboard, embedded Admin guard and outer site router are aligned.</td>
+    </tr>
+    <tr>
+      <td>Public reads must not perform schema/DDL or unnecessary writes</td>
+      <td><strong>Retained</strong> — migrations remain worker/admin maintenance paths; public materialized reads stay read-only.</td>
+    </tr>
+    <tr>
+      <td>No unnecessary DB reset/reseed</td>
+      <td><strong>Complete</strong> — Core 6→7 is additive; Analytics remains 5.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="exact-package-delta">Exact package delta</h3>
+
+<p>Relative to the finalized v2.8.5 tree, v2.8.10 contains <strong>668 project files vs 582</strong>, with <strong>91 added, 79 modified and 5 removed</strong> (175 changed paths). The five removals are deliberate: the three mutable production files <code class="language-plaintext highlighter-rouge">data/server-config.json</code>, <code class="language-plaintext highlighter-rouge">data/tournaments/archive.json</code>, <code class="language-plaintext highlighter-rouge">data/match-tracking/index.json</code>, plus two stray packaging test files (<code class="language-plaintext highlighter-rouge">testwrite</code>, <code class="language-plaintext highlighter-rouge">testwrite2</code>).</p>
+
+<h2 id="remaining-honest-limitations--next-data-collection-opportunities">Remaining honest limitations / next data-collection opportunities</h2>
+
+<ol>
+  <li>Preserve an actual arena/event URL in future MCA import formats so future arena-triggered achievements can link to the exact triggering event.</li>
+  <li>Store recruitment recommendation snapshots and eventual registration outcomes if a calibrated historical recruitment probability is desired.</li>
+  <li>If detailed member-level time travel is desired, define a compact/gzipped daily member snapshot retention policy before collecting it; do not retroactively invent old ranks/activity.</li>
+  <li>If database-time attribution is needed per endpoint, add explicit PDO/query timing instrumentation rather than inferring it from total request latency.</li>
+  <li>Registration-acceleration/late-registration opponent behavior becomes reliable only for matches with sufficient tracked lineup snapshots; expose sample size when added.</li>
+</ol>
+
+<h2 id="final-post-fix-operational--redundancy-audit">Final post-fix operational / redundancy audit</h2>
+
+<ul>
+  <li><strong>Tournament status cadence:</strong> fixed. The previous staged worker rotated discovery/status/podium, effectively checking unfinished tournament status only every third 10-minute invocation. Status maintenance is now performed every Tournament invocation; discovery/podium remain staged extras.</li>
+  <li><strong>Tournament freshness parsing:</strong> fixed. <code class="language-plaintext highlighter-rouge">lastStatusRefresh</code> is structured metadata, not necessarily a raw timestamp. Intelligence now reads maintenance/status timestamps explicitly and exposes both ages.</li>
+  <li><strong>Tournament recovery cache coherence:</strong> fixed. BrowseIndex signatures include primary/backup recovery-candidate metadata, so a recovered archive cannot remain hidden behind an ETag derived only from an accidentally empty primary.</li>
+  <li><strong>Outer-site admin recognition:</strong> fixed for consistency. The site router now accepts configured/local admin authorization before remote Chess.com profile verification, matching the Dashboard and embedded Admin guard.</li>
+  <li><strong>Personalized-home redundancy:</strong> fixed. Concurrent authenticated renders coalesce the same member-intelligence request; the backend resolves a single requested member with a keyed query rather than rebuilding the full ~4,000-member intelligence table. Bulk rows are request-cached for aggregate intelligence views.</li>
+  <li><strong>CRON clean-install recovery:</strong> hardened. If neither protected config nor a recoverable legacy token exists, the argument-less installer generates a protected 256-bit shared token rather than stopping for manual editing.</li>
+  <li><strong>Browser coverage:</strong> expanded beyond startup. The execution gate now renders Tournament Management stored data/logs and successfully performs status refresh with the required action header; it also renders recovered Match Tracking data, the correct management panel, and shell/HTTP diagnostics.</li>
+</ul>
+
+<h3 id="retained-earlier-behavior-checked-against-the-request-history">Retained earlier behavior checked against the request history</h3>
+
+<ul>
+  <li>Recruitment still selects the proper Daily/Classical vs Chess960 rating category, excludes already registered/unrated/below-opponent-floor/opponent-club members, keeps strongest-first semantics, current availability/load/confidence context and progress reporting.</li>
+  <li>Match Tracking still supports follow/unfollow, record-now, separate destructive stored-data deletion, retained history/snapshots, filtering/sorting and accelerated near-start capture cadence; v2.8.10 repairs the Task Control key/header/state/CRON paths around those behaviors rather than replacing them.</li>
+  <li>Tournament podium handling still supports tied medalists and fair-play/abuse exclusions. Full browser repair/podium workflows retain account-status validation; the lightweight scheduled/manual status maintenance remains intentionally bounded and does not perform an exhaustive profile crawl on every 10-minute invocation.</li>
+</ul>
+
+<h2 id="validation-philosophy-change">Validation philosophy change</h2>
+
+<p>The largest failures between v2.8.7 and v2.8.9 passed syntax/structural tests. v2.8.10 therefore adds semantic gates: execute score outcomes, recover real temporary filesystem state, install a fake crontab and verify secretless dispatcher lines/token recovery, and execute Dashboard/admin/ACAMR/request-header flows in Chromium. Future correctness tests should prefer known input→observable output over checking for the presence of a particular SQL alias or function name.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/AUDIT_v2.8.5_TO_v2.8.10.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Team Points and scheduled-maintenance architecture — v2.7.3 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Team Points and scheduled-maintenance architecture — v2.7.3" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/docs/TEAM_POINTS_ARCHITECTURE.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/docs/TEAM_POINTS_ARCHITECTURE.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Team Points and scheduled-maintenance architecture — v2.7.3" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Team Points and scheduled-maintenance architecture — v2.7.3","url":"https://ximoon1982.github.io/PromoteToKing/docs/TEAM_POINTS_ARCHITECTURE.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="team-points-and-scheduled-maintenance-architecture--v273">Team Points and scheduled-maintenance architecture — v2.7.3</h1>
+
+<h2 id="end-to-end-flow">End-to-end flow</h2>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Existing CRON URL or admin command
+              │
+              ▼
+     Unified Task Registry
+   p2k_control_tasks/runs/logs
+              │ same-task lock
+              ▼
+     Domain worker/adapter
+              │
+              ▼
+  Shared Chess.com API Gateway
+ shared DB cache + health + rate limit
+              │
+              ▼
+       Chess.com PubAPI
+              │ normalized results
+              ▼
+ Domain storage (MariaDB or archive files)
+</code></pre></div></div>
+
+<p>The browser is a status-and-command client. It does not call MariaDB, does not own the Team Points processing loop, and is not required for scheduled work.</p>
+
+<h2 id="compatibility">Compatibility</h2>
+
+<p>Existing endpoints remain valid:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>server/team-points/public/cron.php
+api/track-upcoming-league-matches/
+server/tournaments/public/cron.php
+</code></pre></div></div>
+
+<p>Existing Team Points API actions also remain valid. They delegate into the shared task registry and domain queues rather than bypassing central control.</p>
+
+<h2 id="unified-task-registry">Unified task registry</h2>
+
+<p><code class="language-plaintext highlighter-rouge">server/shared/TaskRegistry.php</code> stores:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>p2k_control_tasks
+p2k_control_task_runs
+p2k_control_task_logs
+</code></pre></div></div>
+
+<p>Expected health cadences are:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Team Points              5 minutes
+Match monitoring         1 hour
+Tournaments              5 minutes
+</code></pre></div></div>
+
+<p>Warning begins after the expected interval; critical begins after 150% of it. A partial, safely checkpointed run counts as a successful freshness checkpoint.</p>
+
+<p>Each task has its own MariaDB advisory lock. Two invocations of the same task cannot execute simultaneously. Different tasks may run concurrently at the controller level, but their outbound Chess.com requests are serialized by the shared gateway.</p>
+
+<h2 id="shared-gateway">Shared gateway</h2>
+
+<p><code class="language-plaintext highlighter-rouge">server/shared/SharedChessGateway.php</code> owns:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>p2k_shared_http_cache
+p2k_shared_gateway_state
+</code></pre></div></div>
+
+<p>It centralizes:</p>
+
+<ul>
+  <li>URL-keyed response caching;</li>
+  <li>conditional HTTP revalidation;</li>
+  <li>one global request lock and minimum delay;</li>
+  <li>health state and known-valid probes;</li>
+  <li>retries and Retry-After handling;</li>
+  <li>abnormal 404/410 incident protection;</li>
+  <li>consumer-specific cache TTLs;</li>
+  <li>controlled stale-cache fallback.</li>
+</ul>
+
+<p>A numerical match 404 is not treated as conclusive while the known-valid PubAPI health probe is failing.</p>
+
+<h2 id="team-points-queue">Team Points queue</h2>
+
+<p>The existing domain tables and queue are retained:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>p2k_tp_jobs
+p2k_tp_job_items
+p2k_tp_members
+p2k_tp_participations
+p2k_tp_board_states
+p2k_tp_point_events
+p2k_tp_match_metadata
+p2k_tp_match_summaries
+p2k_tp_club_totals
+p2k_tp_job_logs
+p2k_tp_worker_runs
+</code></pre></div></div>
+
+<p>Normal queue stages are <code class="language-plaintext highlighter-rouge">sync_members</code>, <code class="language-plaintext highlighter-rouge">sync_club_matches</code>, <code class="language-plaintext highlighter-rouge">sync_match</code>, <code class="language-plaintext highlighter-rouge">sync_player_archive</code>, and <code class="language-plaintext highlighter-rouge">sync_board</code>. Explicit repair actions may add <code class="language-plaintext highlighter-rouge">sync_player</code> or <code class="language-plaintext highlighter-rouge">discover_match_ids</code>. Unique keys and upserts make every stage idempotent.</p>
+
+<h2 id="timeout-and-checkpoint-model">Timeout and checkpoint model</h2>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Hosting hard ceiling       about 60 seconds
+Endpoint target            48 seconds
+Worker segment             35 seconds
+Response/commit margin     at least 12 seconds
+</code></pre></div></div>
+
+<p>Before starting another outbound request, workers reserve enough time for the configured HTTP timeout plus cleanup. Multi-request operations persist their cursor before returning:</p>
+
+<ul>
+  <li>Team Points historical ID discovery persists the exact next ID.</li>
+  <li>Match monitoring runs on an hourly scheduler tick and persists a rotating reference cursor. Individual matches are fetched only when their adaptive due time is reached.</li>
+  <li>Tournament discovery/status work persists batch and status cursors.</li>
+</ul>
+
+<p>The next compatible CRON invocation continues from that cursor.</p>
+
+<h2 id="administration-authentication">Administration authentication</h2>
+
+<p>A login candidate is verified server-side. The session bootstrap connects to MariaDB, ensures schema v12, initializes the gateway/task registry, and verifies the club administrator list. A recent verified cached club profile may bridge a temporary Chess.com outage. The simulated username alone never grants access.</p>
+
+<h2 id="unified-control-page">Unified control page</h2>
+
+<p><code class="language-plaintext highlighter-rouge">TaskControl.html</code> and <code class="language-plaintext highlighter-rouge">server/control/public/api.php</code> expose:</p>
+
+<ul>
+  <li>task health and cadence;</li>
+  <li>start/resume, safe pause and refresh;</li>
+  <li>work summaries and queue details;</li>
+  <li>gateway health and probe action;</li>
+  <li>compatibility endpoint mapping;</li>
+  <li>unified task runs and logs.</li>
+</ul>
+
+<p>Dashboard System Health rows deep-link to the relevant selected task or gateway maintenance section.</p>
+
+<h2 id="v271-clean-seed-and-incremental-operating-mode">v2.7.1 clean seed and incremental operating mode</h2>
+
+<p>Schema 12 adds staging tables, void-match tracking and due match-detail fields. The standalone seed client verifies and validates the embedded updated snapshot and sends signed batches to <code class="language-plaintext highlighter-rouge">public/seed-import.php</code>. Staged rows do not affect public totals. Apply requires a paused Team Points task, obtains the worker lock and replaces Team Points domain rows in one transaction.</p>
+
+<p>Normal recurring work is intentionally different from repair work:</p>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">sync_members</code> reconciles the current club roster with one club-members response.</li>
+  <li><code class="language-plaintext highlighter-rouge">sync_club_matches</code> reads the club match index and queues only new, changed or due match details.</li>
+  <li>Match details store participations and queue current/previous monthly archives for unresolved players.</li>
+  <li><code class="language-plaintext highlighter-rouge">sync_player_archive</code> stores completed games with exact end timestamps.</li>
+  <li><code class="language-plaintext highlighter-rouge">sync_board</code> runs later as a fallback and skips its API request when archive events already made the board complete.</li>
+  <li><code class="language-plaintext highlighter-rouge">sync_player</code> and <code class="language-plaintext highlighter-rouge">discover_match_ids</code> remain available only through explicit full-member-history and bounded raw-ID repair actions.</li>
+</ol>
+
+<p>Complete two-game boards and finalized non-void match summaries are immutable. Club totals are rebuilt from those summaries, not from a new historical API scan.</p>
+
+<h2 id="schema-13-insights-facts">Schema 13 Insights facts</h2>
+
+<p>The Team Insights data path is database-only. Authoritative event times come from <code class="language-plaintext highlighter-rouge">p2k_tp_match_metadata.start_time</code>, <code class="language-plaintext highlighter-rouge">p2k_tp_match_metadata.end_time</code>, and <code class="language-plaintext highlighter-rouge">p2k_tp_point_events.game_end_utc</code>; ingestion timestamps are never used as match dates.</p>
+
+<p><code class="language-plaintext highlighter-rouge">p2k_tp_insight_daily</code> permanently stores refreshable daily facts for matches, boards, games, active players and Club Points. <code class="language-plaintext highlighter-rouge">p2k_tp_insight_cache_state</code> records source freshness. Facts are rebuilt under a MariaDB advisory lock only when source tables change. Date-range unique-member counts, rolling windows, outcomes and interactive distributions remain live queries so filters stay exact.</p>
+
+<p>Match metadata also permanently stores <code class="language-plaintext highlighter-rouge">rules</code>, <code class="language-plaintext highlighter-rouge">time_control</code>, and <code class="language-plaintext highlighter-rouge">is_league</code>. Valid duration analytics exclude void 0–0 matches and non-positive timestamp ranges.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/docs/TEAM_POINTS_ARCHITECTURE.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

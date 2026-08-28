@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.5 — release notes | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.5 — release notes" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.5.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.5.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.5 — release notes" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.5 — release notes","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.5.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v295--release-notes">Promote to King v2.9.5 — release notes</h1>
+
+<p>v2.9.5 is an additive achievement-expansion release built on the validated v2.9.4 baseline. It preserves all 133 v2.9.4 achievement identities and adds 29 new achievements, for a catalogue of 162. It also retains the Chess.com OAuth proof of concept and every v2.9.4 Hall/heatmap correction.</p>
+
+<h2 id="new-achievements--29">New achievements — 29</h2>
+
+<h3 id="collection-depth--5">Collection depth — 5</h3>
+<ul>
+  <li>Achievement Collector — 25 achievements.</li>
+  <li>Achievement Curator — 50 achievements.</li>
+  <li>Achievement Hunter — 75 achievements.</li>
+  <li>Century Collector — 100 achievements.</li>
+  <li>Grand Collector — 125 achievements.</li>
+</ul>
+
+<p>Collector achievements do not count toward their own Collector ladder.</p>
+
+<h3 id="rivalries--4">Rivalries — 4</h3>
+<ul>
+  <li>Familiar Foe — 5 team matches against the same opponent club.</li>
+  <li>Recurring Rival — 10.</li>
+  <li>Rivalry Veteran — 25.</li>
+  <li>Old Adversary — 50.</li>
+</ul>
+
+<h3 id="global-opposition--3">Global opposition — 3</h3>
+<ul>
+  <li>Globetrotter — opponent clubs from 10 distinct stored countries/regions.</li>
+  <li>World Challenger — 25.</li>
+  <li>Global Ambassador — 50.</li>
+</ul>
+
+<p>Only stored Chess.com opponent-country evidence counts. Missing historical country metadata is never guessed.</p>
+
+<h3 id="chess960-specialization--3">Chess960 specialization — 3</h3>
+<ul>
+  <li>Chess960 Initiate — 10 P2K Chess960 team matches.</li>
+  <li>Chess960 Specialist — 50.</li>
+  <li>Chess960 Veteran — 100.</li>
+</ul>
+
+<h3 id="activity-continuity--3">Activity continuity — 3</h3>
+<ul>
+  <li>Steady Presence — participate in at least one P2K team match in 3 consecutive UTC calendar months.</li>
+  <li>Evergreen — 6 consecutive months.</li>
+  <li>Year-Round Player — 12 consecutive months.</li>
+</ul>
+
+<h3 id="large-matches--3">Large matches — 3</h3>
+<ul>
+  <li>Big Match Player — participate in a 100+ board match.</li>
+  <li>Giant Battle — 200+ boards.</li>
+  <li>Titanic Battle — 500+ boards.</li>
+</ul>
+
+<h3 id="rating-upsets--3">Rating upsets — 3</h3>
+<ul>
+  <li>Punching Up — win against an opponent whose stored paired board rating is at least 100 points higher.</li>
+  <li>Against the Odds — +200.</li>
+  <li>Giant Slayer — +400.</li>
+</ul>
+
+<p>The evaluator uses paired ratings stored for the same board. Match-lineup ratings take priority; a board-game rating may safely backfill older boards when no lineup rating was captured. No team-average or current-rating approximation is used.</p>
+
+<h3 id="one-match-performance--3">One-match performance — 3</h3>
+<ul>
+  <li>Unbeaten Pair — at least 1.5/2 across both completed games of one team-match board.</li>
+  <li>Perfect Pair — 2/2.</li>
+  <li>Draw Specialist — two draws.</li>
+</ul>
+
+<p>Incomplete boards never qualify.</p>
+
+<h3 id="tournament-versatility--1">Tournament versatility — 1</h3>
+<ul>
+  <li>Podium Variety — earn at least one gold, one silver and one bronze tournament medal.</li>
+</ul>
+
+<h3 id="rivalry-turnaround--1">Rivalry turnaround — 1</h3>
+<ul>
+  <li>Old Rival, New Victory — participate in a P2K win against a club after previously participating in a P2K loss against that same club.</li>
+</ul>
+
+<h2 id="breadth-compatibility">Breadth compatibility</h2>
+
+<p>The historical v2.9.0 breadth achievements remain unchanged. Their eligible universe is frozen to the original 21 achievement categories, so later catalogue expansion cannot silently make <code class="language-plaintext highlighter-rouge">groups-all</code> harder or allow new categories to redefine an old unlock.</p>
+
+<p>The separate additive <code class="language-plaintext highlighter-rouge">breadth-groups-1/5/10/15/20</code> ladder may recognize newly introduced behavioral categories. Collector achievements are excluded from breadth calculations.</p>
+
+<h2 id="progress-display">Progress display</h2>
+
+<p>Player achievement catalogues retain the v2.9.4 rules: earned achievements have no progress bar, while meaningful non-zero progress is shown for unearned achievements. v2.9.5 adds progress metrics for Collector, rivalry, opponent-country, Chess960, consecutive-month, large-match, rating-upset and two-game performance families where authoritative data exists.</p>
+
+<h2 id="data-and-schema">Data and schema</h2>
+
+<ul>
+  <li>Core schema: <strong>10</strong> (was 9).</li>
+  <li>Analytics schema: <strong>6</strong> (unchanged).</li>
+  <li>Additive migration only; no database reset or reseed.</li>
+  <li>Core stores opponent club country metadata and paired P2K/opponent board ratings with source/capture provenance.</li>
+  <li>Club-lane maintenance hydrates missing/stale opponent profile metadata in a bounded low-priority task. Missing-country profiles are not hammered repeatedly; a checked profile is allowed to age before another attempt.</li>
+</ul>
+
+<p>Historical country/rating-dependent achievements converge as authoritative matches/opponent profiles are naturally revalidated. Unknown data does not create unlocks.</p>
+
+<h2 id="oauth-proof-of-concept-retained">OAuth proof of concept retained</h2>
+
+<p>The isolated Chess.com OAuth POC is included unchanged in scope:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">OAuthTest.php</code> only renders for exact <code class="language-plaintext highlighter-rouge">?oauth=2</code>;</li>
+  <li>Log in and Log out actions;</li>
+  <li>success/failure state;</li>
+  <li>authenticated Chess.com username display;</li>
+  <li>authorization-code + PKCE flow with server-side token exchange;</li>
+  <li>tokens are not rendered to page JavaScript/HTML;</li>
+  <li>it remains separate from simulated <code class="language-plaintext highlighter-rouge">?oauth=1</code> and does not grant P2K administrator access.</li>
+</ul>
+
+<p>Production <code class="language-plaintext highlighter-rouge">config/oauth-test.php</code> values are preserved by the v2.9.4 → v2.9.5 updater.</p>
+
+<h2 id="retained-v294-corrections">Retained v2.9.4 corrections</h2>
+
+<ul>
+  <li>133-key v2.9.4 catalogue preserved byte-for-identity at the key level before the 29 additions.</li>
+  <li>Hall of Fame unified player search remains full-width with four contained cards per desktop row.</li>
+  <li>Insights · Opponents retains the single aggregate all-match heatmap pair and the v2.9.4 parallel/cache/compact-payload optimizations.</li>
+</ul>
+
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.5.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

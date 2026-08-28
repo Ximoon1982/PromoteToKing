@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Next release integration — tournament achievement dates | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Next release integration — tournament achievement dates" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/NEXT_RELEASE_INTEGRATION_TOURNAMENT_ACHIEVEMENT_DATES.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/NEXT_RELEASE_INTEGRATION_TOURNAMENT_ACHIEVEMENT_DATES.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Next release integration — tournament achievement dates" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Next release integration — tournament achievement dates","url":"https://ximoon1982.github.io/PromoteToKing/NEXT_RELEASE_INTEGRATION_TOURNAMENT_ACHIEVEMENT_DATES.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="next-release-integration--tournament-achievement-dates">Next release integration — tournament achievement dates</h1>
+
+<p>Prepared on top of v2.8.3. No release/version number is assigned by this patch.</p>
+
+<h2 id="behaviour">Behaviour</h2>
+
+<ul>
+  <li>Tournament achievements use only the tournament archive <code class="language-plaintext highlighter-rouge">finishAt</code> (Chess.com <code class="language-plaintext highlighter-rouge">finish_time</code>) as an exact earned date.</li>
+  <li><code class="language-plaintext highlighter-rouge">periodSort</code>, tournament period, start date and archive update time are never converted into an earned date.</li>
+  <li>Finished tournaments without <code class="language-plaintext highlighter-rouge">finishAt</code> retain the achievement and its tournament name/link, but expose <code class="language-plaintext highlighter-rouge">earned_at = null</code> with <code class="language-plaintext highlighter-rouge">earned_at_precision = tournament-pending</code>.</li>
+  <li>UI surfaces render <code class="language-plaintext highlighter-rouge">Date pending tournament refresh</code> instead of a synthetic date.</li>
+  <li>Finished tournaments missing <code class="language-plaintext highlighter-rouge">finishAt</code> are already part of the tournament service backfill queue.</li>
+  <li>When an authoritative finish time becomes available, the next achievement refresh upgrades the pending record to <code class="language-plaintext highlighter-rouge">tournament-finish</code>, updates the exact date and refreshes the triggering tournament metadata.</li>
+  <li>The achievement source watermark contains a logic-version token plus a watermark-aware refresh gate so deployment forces an immediate achievement rebuild even when the six-hour filesystem throttle is still fresh. This also clears legacy <code class="language-plaintext highlighter-rouge">tournament-period</code> synthetic dates from v2.8.3.</li>
+</ul>
+
+<h2 id="database">Database</h2>
+
+<p>No schema change is needed. Existing nullable <code class="language-plaintext highlighter-rouge">earned_at</code> and <code class="language-plaintext highlighter-rouge">earned_at_precision</code> fields support this behavior.</p>
+
+<h2 id="files-changed">Files changed</h2>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/src/AnalyticsBuilder.php</code></li>
+  <li><code class="language-plaintext highlighter-rouge">server/team-points/src/Repository.php</code></li>
+  <li><code class="language-plaintext highlighter-rouge">assets/js/pages/dashboard-v2.js</code></li>
+  <li><code class="language-plaintext highlighter-rouge">TournamentAchievementBadgesDemo.html</code></li>
+  <li><code class="language-plaintext highlighter-rouge">tests/test_next_release_tournament_achievement_dates.py</code></li>
+</ul>
+
+<h2 id="revision-2--propagation-fix">Revision 2 — propagation fix</h2>
+
+<ul>
+  <li>Fixed the refresh coordinator: a fresh filesystem marker no longer suppresses a rebuild when the persisted achievement watermark differs from the current logic/source watermark.</li>
+  <li>Bumped the logic token to <code class="language-plaintext highlighter-rouge">tournament-achievement-date-v3</code> so this revision is guaranteed to run once after deployment.</li>
+  <li>Before rebuilding, legacy <code class="language-plaintext highlighter-rouge">source_type=tournament</code> / <code class="language-plaintext highlighter-rouge">earned_at_precision=tournament-period</code> rows are explicitly cleared to <code class="language-plaintext highlighter-rouge">earned_at=NULL</code> and <code class="language-plaintext highlighter-rouge">tournament-pending</code>, even if an old tournament is not currently present in the archive.</li>
+  <li>Dashboard tournament medal event dates no longer fall back to tournament start dates.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/NEXT_RELEASE_INTEGRATION_TOURNAMENT_ACHIEVEMENT_DATES.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

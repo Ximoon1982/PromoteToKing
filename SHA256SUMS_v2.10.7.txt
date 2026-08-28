@@ -1,0 +1,2 @@
+76d776ab8aca62c0ee4e21b79c59da0daa5b3e38028a4b5f582eb6bcebab3f90  /mnt/data/PromoteToKing-v2.10.7-CLEAN-RELEASE/PromoteToKing_v2.10.7_INCREMENTAL_INSTALLER_CLEAN.run
+69d896d1b88a3f64b51bcfe57b09342ec9980862aeaa4825bcfbe45b0d7dc022  /mnt/data/PromoteToKing-v2.10.7-CLEAN-RELEASE/install-promote-to-king-2.10.7-clean.sh

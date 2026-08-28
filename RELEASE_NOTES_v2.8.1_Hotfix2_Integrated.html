@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.1 Hotfix 2 — RecoveryFix7 integrated | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.1 Hotfix 2 — RecoveryFix7 integrated" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.1_Hotfix2_Integrated.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.1_Hotfix2_Integrated.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.1 Hotfix 2 — RecoveryFix7 integrated" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.1 Hotfix 2 — RecoveryFix7 integrated","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.8.1_Hotfix2_Integrated.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v281-hotfix-2--recoveryfix7-integrated">Promote to King v2.8.1 Hotfix 2 — RecoveryFix7 integrated</h1>
+
+<p>This package reconciles the v2.8.1 Hotfix1 baseline with the later RecoveryFix7 work.
+The public/application version remains <strong>2.8.1</strong>; the combined Core/Analytics database
+schema advances to <strong>revision 3</strong> because the two source branches had independently
+used revision 2 for different additive changes.</p>
+
+<h2 id="integrated-recoveryfix7-work">Integrated RecoveryFix7 work</h2>
+
+<ul>
+  <li>Opportunistic storage of Daily and Chess960 member ratings through the shared Chess.com gateway.</li>
+  <li>Materialized last finished Standard and Chess960 game timestamps per member.</li>
+  <li>Match Recruitment Assistant RM-2 using the stored category-specific rating pool.</li>
+  <li>RM-2 excludes already registered, unrated, out-of-range, below-lowest-opponent, and opponent-club members,
+then recruits the strongest eligible members first until the significant-advantage target is reached.</li>
+  <li>Team Insights: best-fit Y scales after zoom, green Started / red Finished / gold In progress,
+rolling-future accentuation, and Low/Medium/High current-year Club Points projections.</li>
+  <li>18 already-shipped achievement image/miniature pairs are wired to their catalogue entries.</li>
+</ul>
+
+<h2 id="v281-features-retained">v2.8.1 features retained</h2>
+
+<ul>
+  <li>Live tracked-lineup history finishing at the current lineup, real UTC axis, hover, drag zoom and keyboard navigation.</li>
+  <li>Integrated Administration Live ranks, Storage &amp; Capacity, and Open Match Analyzer.</li>
+  <li>Public Chess.com club API as the primary administrator source with configured fallback.</li>
+  <li>Tournament medal styling, enlarged/fixed Insights visualizations, opponent intelligence,
+unified player-profile improvements, and persistent achievement unlock history.</li>
+</ul>
+
+<h2 id="responsive-tab-unification">Responsive tab unification</h2>
+
+<ul>
+  <li>Non-dashboard tabs now share the dashboard mobile content width and outer gutter.</li>
+  <li>Embedded Team Insights, Hall of Fame content and Administration tools cannot widen the parent page.</li>
+  <li>Wide tables retain their desktop columns but scroll inside their own table viewport on small screens.</li>
+  <li>Nested Hall/Insights/Administration tab bars stay compact and scroll horizontally instead of wrapping into oversized blocks.</li>
+  <li>Mobile cards, toolbars and filters use reduced spacing while desktop dimensions remain unchanged.</li>
+</ul>
+
+<h2 id="database-migration">Database migration</h2>
+
+<p>Existing <strong>v2.8.x Core + Analytics</strong> installations upgrade in place to schema revision 3.
+The new convergence migration is idempotent and covers both historical schema-2 variants:</p>
+
+<ul>
+  <li>a v2.8.1 / Hotfix1 database gets the RecoveryFix7 rating/activity fields;</li>
+  <li>a RecoveryFix7 database gets the v2.8.1 match-rating, MCA first-place, and achievement-unlock fields;</li>
+  <li>an original v2.8 schema-revision-1 database gets both sets.</li>
+</ul>
+
+<p>No fresh initializer or seed reload is required for an existing v2.8.x database.
+Pre-v2.8 single-database installations remain outside the supported migration path.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.8.1_Hotfix2_Integrated.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

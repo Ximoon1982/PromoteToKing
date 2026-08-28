@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.18 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.18" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.18.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.18.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.18" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.18","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.18.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2918">Promote to King v2.9.18</h1>
+
+<h2 id="scope">Scope</h2>
+
+<p>v2.9.18 is built directly from the exact frozen internal v2.9.17 standalone SHA256 <code class="language-plaintext highlighter-rouge">b3153b30b74855fca8e6598fff607642afea8101ac412a83a6effeaccd2b6763</code>, using internal source/package history only. GitHub is not used.</p>
+
+<h2 id="achievement-artwork-integrity">Achievement artwork integrity</h2>
+
+<ul>
+  <li>Integrates <strong>43 approved new 640×640 achievement masters</strong> from the supplied Achievement Collector/Rivalries, MCA Streaks/Event Victories, MCA Participation/Placement, MCA Wins-in-one-arena/Same-day-starts, and Legacy/Distinct-group-breadth packs.</li>
+  <li>Each installed master has a matching <strong>128×128 WebP thumbnail</strong> and <strong>64×64 WebP miniature</strong>, including the compatibility <code class="language-plaintext highlighter-rouge">mini/&lt;key&gt;.webp</code> alias.</li>
+  <li>Rebuilds the derivatives for <strong>all 35 league-specific achievements</strong> (1WL, PCL, TCMAC, TMCL, KOTML) from the currently canonical master. This removes stale historical miniatures/thumbnails even where the master was already correct.</li>
+  <li>The release regression verifies derivative pixel lineage from the canonical master, not merely file existence.</li>
+</ul>
+
+<h2 id="cron-maintenance-deadline-isolation-fix-cmdi">CRON Maintenance Deadline Isolation Fix (CMDI)</h2>
+
+<ul>
+  <li>Canonical Club/Player queue work owns the primary invocation deadline and executes first.</li>
+  <li>Optional Analytics, intelligence, PIR, achievement, MIRA, housekeeping and storage maintenance is moved behind <code class="language-plaintext highlighter-rouge">CronMaintenanceCoordinator</code>.</li>
+  <li>Every optional maintenance class receives an independent local wall-clock slice, MariaDB statement-time ceiling and a hard return reserve.</li>
+  <li>Maintenance exceptions/timeouts are reported independently and cannot turn successfully completed canonical worker work into a failed CRON result.</li>
+  <li>Housekeeping/storage operations stop between bounded phases when their local deadline is exhausted.</li>
+</ul>
+
+<h2 id="point-integrity--reconciliation-fix-pir">Point Integrity &amp; Reconciliation Fix (PIR)</h2>
+
+<ul>
+  <li>Adds bounded, cursor-based integrity checks over canonical finished-match data.</li>
+  <li>Detects result/competition-point arithmetic mismatches, board-count/finished-game coverage problems, invalid point-event values and complete-board member-event totals inconsistent with the stored P2K team score.</li>
+  <li>Findings are durable and idempotent; resolved findings are closed rather than duplicated.</li>
+  <li>PIR <strong>never locally rewrites canonical scores, match results or point events</strong>. It queues forced authoritative <code class="language-plaintext highlighter-rouge">sync_match</code> / <code class="language-plaintext highlighter-rouge">sync_board</code> verification for repair.</li>
+</ul>
+
+<h2 id="member-identity--alias-chain-fix-miac">Member Identity &amp; Alias Chain Fix (MIAC)</h2>
+
+<ul>
+  <li>Adds an additive Core identity graph seeded from the supplied historical <code class="language-plaintext highlighter-rouge">seed.zip</code>.</li>
+  <li>Packaged seed provenance SHA256: <code class="language-plaintext highlighter-rouge">fbb0ad58132a65836e2a2c8c10f9f952dc727f41a668671cba69dc822f1b4310</code>.</li>
+  <li>Seed covers 6,956 historical usernames, 429 candidate rename edges and 292 probable chains while retaining board-only and former-roster identities.</li>
+  <li>Heuristic seed edges remain <strong>candidate/reviewable</strong> and are not automatically merged.</li>
+  <li>Matching verified non-null Chess.com <code class="language-plaintext highlighter-rouge">player_id</code> or an administrator-confirmed edge can establish canonical identity linkage.</li>
+  <li>Contradictory non-null <code class="language-plaintext highlighter-rouge">player_id</code> values create a <strong>hard conflict</strong> and block automatic merge.</li>
+  <li>Identity topology/conflict changes increment an identity-map generation; ordinary unique <code class="language-plaintext highlighter-rouge">player_id</code> hydration does not.</li>
+  <li>Club Intelligence adds an <strong>Aliases &amp; name changes</strong> view with evidence/status and confirm/reject review actions.</li>
+  <li><code class="language-plaintext highlighter-rouge">install-miac-seed-v2.9.18.sh</code> copies immutable seed inputs into protected <code class="language-plaintext highlighter-rouge">data/miac/seed/</code> without overwriting runtime review/confirmation state.</li>
+</ul>
+
+<h2 id="mca-identity-resolution--attribution-fix-mira">MCA Identity Resolution &amp; Attribution Fix (MIRA)</h2>
+
+<ul>
+  <li>MCA source CSV rows/usernames are retained as immutable normalized source evidence.</li>
+  <li>Every source row is attributed to a MIAC canonical identity with file, row number, raw username, canonical username, resolution reason, identity generation and conflict state.</li>
+  <li>Derived MCA points, participation, W/D/L, streaks, placements, victories, podiums, Top-10s, live ranks and MCA achievement inputs aggregate across confirmed aliases.</li>
+  <li>Distinct-event metrics are deduplicated by source event/canonical identity so two aliases in one event cannot double-count participation or placement/victory outcomes.</li>
+  <li>MIRA stores the MIAC identity-map generation used for derivation. A topology change makes MCA derived data stale and triggers a bounded rebuild from unchanged stored source rows.</li>
+  <li>Rebuilds are CMDI-deadline-aware and roll back rather than committing a partial attribution generation.</li>
+</ul>
+
+<h2 id="weekly-long-life-backup">Weekly long-life backup</h2>
+
+<ul>
+  <li>Adds one weekly CRON entry at <strong>Sunday 03:37</strong> server time/cron environment.</li>
+  <li>Creates a single archive directly in <code class="language-plaintext highlighter-rouge">_backup/</code> named <code class="language-plaintext highlighter-rouge">PromoteToKing_LongLife_&lt;ISO-year&gt;-W&lt;week&gt;.tar.gz</code>.</li>
+  <li>Covers generated long-life filesystem state including tournaments, live ranks/arenas, match tracking, traffic aggregates, MIAC data, archive history, intelligence/reconciliation snapshots and logs when those roots exist.</li>
+  <li>Excludes rebuildable caches/locks, nested backups and the large immutable MIAC source ZIP from each weekly archive.</li>
+  <li>Default retention is the newest 52 weekly archives and is configurable through <code class="language-plaintext highlighter-rouge">P2K_WEEKLY_BACKUP_KEEP</code>.</li>
+</ul>
+
+<h2 id="database--scheduling-compatibility">Database / scheduling compatibility</h2>
+
+<ul>
+  <li>Core schema: <strong>14</strong> (additive upgrade from 13).</li>
+  <li>Analytics schema: <strong>7</strong> (additive upgrade from 6).</li>
+  <li>Achievement catalogue: <strong>162 definitions</strong> (unchanged; approved artwork replaces placeholders/assets).</li>
+  <li>Existing four operational cadences are unchanged: Club 5 min; Tournaments 10 min offset 2; Player 10 min offset 4; Match Tracking hourly minute 17.</li>
+  <li>One additional weekly long-life backup entry is installed.</li>
+  <li>OAuth tuning namespace and v2.9.17 ACDC/CTAR/P0 Interactive Survival behavior remain intact.</li>
+  <li>No destructive reset or reseed.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.18.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

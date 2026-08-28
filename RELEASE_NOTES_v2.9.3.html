@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.3 release notes | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.3 release notes" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.3.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.3.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.3 release notes" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.3 release notes","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.3.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v293-release-notes">Promote to King v2.9.3 release notes</h1>
+
+<p>v2.9.3 is a focused corrective release over v2.9.2. It fixes two user-visible errors found after the v2.9.2 package was built. There is no schema change: Core schema remains 9 and Analytics schema remains 6, using the v2.9.2 additive migration files when an older installation still needs them.</p>
+
+<h2 id="insights--opponents-heatmaps">Insights · Opponents heatmaps</h2>
+
+<ul>
+  <li>The aggregate Opponent Balance heatmaps now live in the public <strong>Insights · Opponents</strong> panel, directly after <strong>Most played opponents</strong>.</li>
+  <li>The duplicate/wrongly placed <strong>Club Intelligence · Balance Analyzer</strong> tab is removed from the visible UI.</li>
+  <li>There is exactly one shared heatmap pair for the selected all-match population; filters re-bin those same two heatmaps rather than creating per-opponent heatmaps.</li>
+  <li>The source population is all stored non-void matches with boards, regardless of registration/ongoing/finished status.</li>
+  <li>Rating comparisons only plot rows where both teams have valid ratings on the same paired board positions. Coverage reports both the complete non-void match population and the paired-rating subset.</li>
+</ul>
+
+<h2 id="achievements--breadth-is-additive">Achievements · breadth is additive</h2>
+
+<ul>
+  <li>The 1 / 5 / 10 / 15 / 20 achievement-group breadth milestones remain <strong>additional meta-achievements</strong>. They do not replace any existing achievement family.</li>
+  <li>The catalogue invariant is now regression-tested as <strong>124 prior achievements + 5 breadth achievements = 129 total</strong>.</li>
+  <li>Player profiles now union persisted unlocks with profile-derived earned achievements. A newly persisted breadth unlock can therefore never suppress older match, game, win, Team Point or rank achievements that are still directly provable from the player’s profile.</li>
+  <li>The complete catalogue remains available through both the public achievement endpoint and the player catalogue.</li>
+  <li>Existing August 10 behaviour remains: earned achievements have no progress bar; unearned non-zero metrics may show progress; player catalogues hide global ownership counts; challenge rows deep-link to the specific achievement; player profiles sort earned achievements most-recent-first; tournament award dates remain authoritative/pending rather than synthetic.</li>
+</ul>
+
+<h2 id="operations">Operations</h2>
+
+<ul>
+  <li>No database reset or destructive migration.</li>
+  <li>Core schema: 9.</li>
+  <li>Analytics schema: 6.</li>
+  <li>v2.9.3 CRON dispatcher/installer preserve the four-task v2.9.2 schedule and only advance the release marker.</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.3.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.10.5 — Installation | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.10.5 — Installation" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.10.5.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.10.5.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.10.5 — Installation" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.10.5 — Installation","url":"https://ximoon1982.github.io/PromoteToKing/INSTALL_v2.10.5.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2105--installation">Promote to King v2.10.5 — Installation</h1>
+
+<h2 id="split-standalone-package">Split standalone package</h2>
+
+<p>The v2.10.5 standalone is delivered as two synchronized ZIP archives:</p>
+
+<ol>
+  <li>the main source archive, containing the complete release except <code class="language-plaintext highlighter-rouge">assets/images</code>;</li>
+  <li>the image-assets archive, containing <code class="language-plaintext highlighter-rouge">assets/images</code> at the same project-relative path.</li>
+</ol>
+
+<p>Extract both into the same document root. The split is packaging-only; the preserved project-level source tree contains every file.</p>
+
+<p>Do not overwrite protected local configuration with credentials from another environment. The release does not ship production <code class="language-plaintext highlighter-rouge">config.local.php</code>, <code class="language-plaintext highlighter-rouge">oauth.local.php</code>, <code class="language-plaintext highlighter-rouge">green.local.php</code>, database credentials, CRON tokens, runtime queues, logs or generated data.</p>
+
+<h2 id="cumulative-incremental-update">Cumulative incremental update</h2>
+
+<p>From the PromoteToKing document root, extract the incremental package and run its updater. It accepts any numbered v2.10.4.x migration baseline through v2.10.4.6 and is idempotent on v2.10.5.</p>
+
+<p>The updater:</p>
+
+<ul>
+  <li>backs up every existing source file it will replace;</li>
+  <li>copies the complete sanitized non-image v2.10.5 source overlay;</li>
+  <li>runs the idempotent Green schema migration when Green configuration is present;</li>
+  <li>installs the accepted five-entry Green scheduler when <code class="language-plaintext highlighter-rouge">crontab</code> is available;</li>
+  <li>preserves Blue and unrelated CRON entries;</li>
+  <li>never reseeds or resets either database.</li>
+</ul>
+
+<p>If the hosting shell does not expose <code class="language-plaintext highlighter-rouge">crontab</code>, the source update still succeeds and prints the scheduler command path for manual IONOS CRON management.</p>
+
+<h2 id="after-install">After install</h2>
+
+<ol>
+  <li>Hard-refresh the Dashboard and Administration pages.</li>
+  <li>Open Administration → Scheduled Task Control and confirm Green reports 50 s soft / 55 s hard and the five-entry one-per-minute scheduler contract.</li>
+  <li>Open Administration → Production Migration and verify the effective public source remains Blue.</li>
+  <li>Open Administration → Members and confirm the chronology panel loads.</li>
+  <li>Let a normal Quick cycle run and inspect GQAC retired/requeued/completion telemetry.</li>
+</ol>
+
+<p>Public Green-read cutover remains safety-gated in v2.10.5; do not bypass that gate by manually editing state.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/INSTALL_v2.10.5.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

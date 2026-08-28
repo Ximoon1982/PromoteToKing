@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.9.17 | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.9.17" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.17.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.17.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.9.17" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.9.17","url":"https://ximoon1982.github.io/PromoteToKing/RELEASE_NOTES_v2.9.17.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v2917">Promote to King v2.9.17</h1>
+
+<h2 id="scope">Scope</h2>
+
+<p>v2.9.17 is built directly from the exact frozen internal v2.9.16 standalone SHA256 <code class="language-plaintext highlighter-rouge">6eb50088ae0601172c71ca99ef8d6781eca35278504ee6e75e837381a3ba337d</code>, using internal source/package history only. GitHub is not used.</p>
+
+<h2 id="authoritative-convergence-and-throughput">Authoritative convergence and throughput</h2>
+
+<ul>
+  <li><strong>Authoritative Convergence &amp; Deadline Control Fix (ACDC Fix + audit expansion).</strong> One absolute request deadline now propagates through CRON maintenance, Worker, ChessApi and the shared gateway. Lock/connect/request budgets shrink to the actual remaining wall-clock time instead of pre-reserving a worst-case request + gateway-lock allowance. Canonical verification never accepts stale-if-error data. Player and Club queue fairness cursors persist across invocations; Club work explicitly alternates match and board opportunities. Fast Fetch authoritative pulses enforce a bounded canonical item quota. PMAF fallback freshness is written only after every required archive month in the current fallback generation has actually succeeded; failures remain explicit and browser planning respects the PMAF primary-endpoint cooldown. Continuous Refresh now has explicit <code class="language-plaintext highlighter-rouge">client_refresh</code> observation provenance while retaining claim verification. Worker telemetry separates execution attempts from terminal queue completion.</li>
+  <li><strong>Canonical Throughput &amp; Amplification Reduction Pack (CTAR Pack).</strong> Shared gateway pacing/state remains serialized only for launch reservation; the exclusive lock is released before the upstream HTTP transfer. Successful server-held OAuth gateway acquisitions seed a short-lived server-attested shared cache that canonical workers may reuse, while stale/error responses never earn verification. Per-board match finalization is replaced by local readiness checks and one authoritative finalization attempt per match/invocation. Club-index metadata/due checks use bulk reads, producer bursts use batched queue commits, duplicate member archive fan-out is coalesced, player continuation slices avoid building a combined match list, Analytics generation changes are coalesced for a short window, and empty Fast Fetch plans back off longer to reduce idle database churn.</li>
+</ul>
+
+<h2 id="insights-tournaments-and-chart-usability">Insights, tournaments and chart usability</h2>
+
+<ul>
+  <li><strong>Insights → Team → Daily boards and current active boards</strong> stops at the current UTC date; future registration/forecast dates are not drawn on that graph.</li>
+  <li>The explanatory “Daily facts are materialized…” paragraph is removed.</li>
+  <li>Tournament summary metrics no longer display <strong>Excluded accounts</strong>.</li>
+  <li>Shared chart maximize keeps the enlarged dialog inside the visible dynamic viewport, carries the chart legend into the maximized view, moves the original live chart DOM rather than cloning it, and therefore retains existing wheel/drag/pinch/double-click zoom handlers while maximized.</li>
+</ul>
+
+<h2 id="1wl-achievement-artwork">1WL achievement artwork</h2>
+
+<p>All seven approved 1WL achievement masters are the approved 640×640 files and have corresponding 128×128 and 64×64 derivatives. This explicitly includes replacing the historical <strong>1WL Competitor, Veteran and Legend</strong> artwork with the new approved masters; First Point, Scorer, Specialist and Master use the same approved pack.</p>
+
+<h2 id="compatibility">Compatibility</h2>
+
+<ul>
+  <li>Core schema: <strong>13</strong> (unchanged)</li>
+  <li>Analytics schema: <strong>6</strong> (unchanged)</li>
+  <li>Achievement catalogue: <strong>162</strong> definitions (unchanged)</li>
+  <li>External CRON cadence: <strong>4 tasks, unchanged</strong></li>
+  <li>OAuth tuning key/learning policy: unchanged</li>
+  <li>No database reset or reseed</li>
+</ul>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/RELEASE_NOTES_v2.9.17.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

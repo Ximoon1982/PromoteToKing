@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Promote to King v2.8.8 architecture delta | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Promote to King v2.8.8 architecture delta" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/ARCHITECTURE_v2.8.8.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/ARCHITECTURE_v2.8.8.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Promote to King v2.8.8 architecture delta" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Promote to King v2.8.8 architecture delta","url":"https://ximoon1982.github.io/PromoteToKing/ARCHITECTURE_v2.8.8.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="promote-to-king-v288-architecture-delta">Promote to King v2.8.8 architecture delta</h1>
+
+<p>v2.8.8 builds on the final v2.8.7 ACAMR architecture. Core becomes schema 6 solely to persist opponent-club icon/profile cache metadata; Analytics remains schema 5. Existing Club/Player/Tournament/league CRON cadence is unchanged.</p>
+
+<h2 id="club-intelligence-projection">Club Intelligence projection</h2>
+
+<p>A shared <code class="language-plaintext highlighter-rouge">ClubIntelligenceService</code> derives member activity, availability/load, contribution, team depth, freshness coverage, anomaly/action state, opponent intelligence, historical snapshots, achievement challenges and explainable Club Points forecasts from canonical Core/Analytics facts. It is a derived read layer, not a new source of truth.</p>
+
+<p>Compact daily historical snapshots live in protected runtime storage. The existing Club worker opportunistically captures the daily snapshot and runs an internally hourly-gated anomaly scan when execution budget remains. No new CRON job is required.</p>
+
+<h2 id="acamr-adaptive-allocation-and-telemetry">ACAMR adaptive allocation and telemetry</h2>
+
+<p>ACAMR keeps the v2.8.7 trust boundary and scope: Club/Member Points support and member data are included; tournaments and match-registration monitoring are excluded. Candidate work is now scored by rating/profile staleness, recent member activity and incomplete/in-progress point work. Protected filesystem claims still distribute work across authenticated sessions and prevent duplicate refreshes.</p>
+
+<p>Protected best-effort telemetry records ACAMR plan/claim/observation yield and Team Points public endpoint latency/status/memory. Telemetry never becomes canonical chess data and is used only for operational diagnostics.</p>
+
+<h2 id="unified-player-intelligence">Unified player intelligence</h2>
+
+<p>The existing unified player profile is the canonical cross-feature player surface. Hall, Achievements, Insights, embedded Recruitment, Tournaments and Club Intelligence can route into it. It progressively adds activity, availability/load, contribution and nearest achievement challenges while retaining Team Points, Daily/Live rank, tournament medals and progression.</p>
+
+<h2 id="opponent-club-icon-cache">Opponent club icon cache</h2>
+
+<p><code class="language-plaintext highlighter-rouge">p2k_tp_opponents</code> stores Chess.com club <code class="language-plaintext highlighter-rouge">icon</code> metadata with a long refresh TTL. Opponents Insights renders cached icons immediately and refreshes missing/stale icons through the server. Existing opponent maintenance also opportunistically refreshes the same cache.</p>
+
+<h2 id="modal-and-hall-behavior">Modal and Hall behavior</h2>
+
+<p>Nested dashboard modals preserve their actual DOM nodes in a stack rather than reconstructing <code class="language-plaintext highlighter-rouge">innerHTML</code>, preserving event listeners and scroll/focus state across Profile → Achievement → Profile transitions. Hall of Fame defaults to Achievements, while explicit Daily/Live navigation continues to open the requested rank view.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/ARCHITECTURE_v2.8.8.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

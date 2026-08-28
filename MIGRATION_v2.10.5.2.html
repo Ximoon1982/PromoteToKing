@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>v2.10.5.2 Green production cutover | PromoteToKing</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="v2.10.5.2 Green production cutover" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.10.5.2.html" />
+<meta property="og:url" content="https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.10.5.2.html" />
+<meta property="og:site_name" content="PromoteToKing" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="v2.10.5.2 Green production cutover" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"v2.10.5.2 Green production cutover","url":"https://ximoon1982.github.io/PromoteToKing/MIGRATION_v2.10.5.2.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/PromoteToKing/assets/css/style.css?v=c73dfab43457ede2956cb0f92046cf696788661e">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/PromoteToKing/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+      <h1><a href="https://ximoon1982.github.io/PromoteToKing/">PromoteToKing</a></h1>
+      
+
+      <h1 id="v21052-green-production-cutover">v2.10.5.2 Green production cutover</h1>
+
+<h2 id="intended-state-sequence">Intended state sequence</h2>
+
+<p><code class="language-plaintext highlighter-rouge">BLUE PRIMARY → SHADOW WRITING → GREEN VALIDATED → GREEN READS + BOTH WRITING → GREEN PRIMARY</code></p>
+
+<p>Blue retirement is deliberately later than Green display cutover. Keep Blue available through a proving/rollback window before archive/removal.</p>
+
+<h2 id="gab-readiness">GAB readiness</h2>
+
+<p>GAB is complete only when all bootstrap lanes are complete and Green compatibility smoke/read-contract checks pass. It migrates historical/imported data that canonical Green Core cannot recreate directly, then rebuilds current facts/read models from Green.</p>
+
+<h2 id="gffl-readiness">GFFL readiness</h2>
+
+<p>GFFL keeps current matches within a configurable freshness SLO. The default is 20 minutes server-only; the Green Accelerator can improve this. Duplicate match freshness obligations are factorized into one authoritative match fetch.</p>
+
+<h2 id="green-primary">Green primary</h2>
+
+<p>At Green primary:</p>
+
+<ul>
+  <li>public Team Points reads select Green;</li>
+  <li>Green workers are authoritative;</li>
+  <li>browser ingest selects Green Accelerator;</li>
+  <li>legacy Blue ACAMR planning/observation writes are disabled;</li>
+  <li>auxiliary Live Ranks/MCA, MIAC and opponent maintenance target the selected Green compatibility store;</li>
+  <li>Blue worker task flags are paused best-effort and Blue remains available as rollback/frozen data.</li>
+</ul>
+
+<p>Do not delete Blue databases during the initial Green-primary proving period.</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/Ximoon1982/PromoteToKing/edit/main/MIGRATION_v2.10.5.2.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>
