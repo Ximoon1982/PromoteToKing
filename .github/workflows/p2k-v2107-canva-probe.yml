@@ -1,0 +1,50 @@
+name: P2K v2.10.7 Canva binary transport probe
+
+on:
+  push:
+    branches:
+      - next/v2.10.7
+    paths:
+      - .p2k/v2107/CANVA_PROBE
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Probe signed Canva media variants
+        shell: bash
+        run: |
+          set -u
+          mkdir -p .p2k/v2107/probe
+          BASE='https://media.canva.com/v2/image-resize/format:JPG/height:200/quality:75/uri:ifs%3A%2F%2FM%2F96e5437c-8e85-469d-843d-8f6f40b2ae00/watermark:F/width:200?csig=AAAAAAAAAAAAAAAAAAAAANmuDkK0BxorDVlODDMFVCUqFbdzhVeXNAmQ_BV1x2yG&exp=1787898270&osig=AAAAAAAAAAAAAAAAAAAAABW5IxtRjk5zkuHCVg8r8t_54fY2D3HHR19JmKDuGS8N&signer=media-rpc&x-canva-quality=thumbnail'
+          U1="$BASE"
+          U2="${BASE/format:JPG\/height:200\/quality:75/format:PNG\/height:1254\/quality:100}"
+          U2="${U2/width:200/width:1254}"
+          U3="${BASE/height:200/height:1254}"
+          U3="${U3/width:200/width:1254}"
+          U4="${BASE/format:JPG\/height:200\/quality:75/format:PNG\/height:1254}"
+          U4="${U4/width:200/width:1254}"
+          : > .p2k/v2107/probe/results.txt
+          for n in 1 2 3 4; do
+            eval "u=\$U$n"
+            out=".p2k/v2107/probe/v$n.bin"
+            code="$(curl -L -sS -o "$out" -w '%{http_code}' "$u" || true)"
+            size="$(wc -c < "$out" 2>/dev/null || echo 0)"
+            hash="$(sha256sum "$out" 2>/dev/null | awk '{print $1}')"
+            type="$(file -b "$out" 2>/dev/null || true)"
+            printf 'v%s http=%s size=%s sha256=%s type=%s\n' "$n" "$code" "$size" "$hash" "$type" >> .p2k/v2107/probe/results.txt
+          done
+          cat .p2k/v2107/probe/results.txt
+          rm -f .p2k/v2107/probe/v*.bin
+          git config user.name 'P2K Release Automation'
+          git config user.email 'p2k-release@users.noreply.github.com'
+          git add .p2k/v2107/probe/results.txt
+          git commit -m 'chore: record v2.10.7 binary transport probe'
+          git push origin HEAD:next/v2.10.7
