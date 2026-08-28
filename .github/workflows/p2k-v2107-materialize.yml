@@ -5,7 +5,7 @@ on:
     branches:
       - next/v2.10.7
     paths:
-      - .p2k/v2107/PAYLOAD_URL
+      - .p2k/v2107/FULL_SOURCE_URL
 
 permissions:
   contents: write
@@ -13,21 +13,21 @@ permissions:
 jobs:
   materialize:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Download, verify and materialize exact v2.10.7 delta
+      - name: Download, verify and materialize exact v2.10.7 source
         shell: bash
         run: |
           set -Eeuo pipefail
-          EXPECTED_DELTA_SHA='300d8d5612dfe002d7cbbefe0b1cff9e2de3db8918dfd1a4734c1d6dbc8a278f'
-          URL="$(tr -d '\r\n' < .p2k/v2107/PAYLOAD_URL)"
+          EXPECTED_SOURCE_SHA='795d73792f1e68d308c4736670be51eb37fdc88bbbf69a6751db7c1faee3d8ed'
+          URL="$(tr -d '\r\n' < .p2k/v2107/FULL_SOURCE_URL)"
           test -n "$URL"
-          curl -fL --retry 3 --retry-delay 2 -o /tmp/p2k-v2107-delta.tar.gz "$URL"
-          echo "$EXPECTED_DELTA_SHA  /tmp/p2k-v2107-delta.tar.gz" | sha256sum -c -
-          tar -xzf /tmp/p2k-v2107-delta.tar.gz -C .
+          curl -fL --retry 3 --retry-delay 2 -o /tmp/PromoteToKing_v2.10.7_SOURCE_CLEAN.tar.gz "$URL"
+          echo "$EXPECTED_SOURCE_SHA  /tmp/PromoteToKing_v2.10.7_SOURCE_CLEAN.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/PromoteToKing_v2.10.7_SOURCE_CLEAN.tar.gz -C .
 
           python3 - <<'PY'
           import hashlib, json, pathlib, sys
@@ -65,6 +65,7 @@ jobs:
           php -l server/team-points/src/ClubIntelligenceService.php
           python3 tests/test_v2107_release.py
 
+          rm -f .p2k/v2107/FULL_SOURCE_URL
           rm -f .p2k/v2107/PAYLOAD_URL
           rm -rf .p2k/v2107/probe
           rm -f .p2k/v2107/CANVA_PROBE
