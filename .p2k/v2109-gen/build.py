@@ -8,6 +8,9 @@ def check(p,h):
  g=blob(p); print('OK blob',p,g)
  if g!=h: raise SystemExit(f'blob mismatch {p}: {g} != {h}')
 def sha(p): return hashlib.sha256((ROOT/p).read_bytes()).hexdigest()
+# restore immutable v2.10.8 inputs so reruns are deterministic
+for p in ['CHANGELOG.md','assets/js/pages/dashboard-v2.js','server/team-points/src/Repository.php']:
+ (ROOT/p).write_bytes(run('git','show',f'{BASE}:{p}'))
 # exact three text-source changes
 subprocess.run(['git','apply','--check',str(DATA/'core.patch')],check=True)
 subprocess.run(['git','apply',str(DATA/'core.patch')],check=True)
