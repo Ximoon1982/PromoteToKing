@@ -35,7 +35,11 @@ final class McaIndexParser
                     $identity = self::identityFromHref($href);
                     if ($identity === null) continue;
                     $date = self::dateNearNode($anchor);
-                    $events[$identity['arena_id']] = $identity + $date;
+                    $candidate = $identity + $date;
+                    $id = (int)$identity['arena_id'];
+                    if (!isset($events[$id]) || (($events[$id]['event_date'] ?? null) === null && ($candidate['event_date'] ?? null) !== null)) {
+                        $events[$id] = $candidate;
+                    }
                 }
             } finally {
                 libxml_clear_errors();
@@ -117,6 +121,67 @@ final class McaIndexParser
             }
         }
         return self::unknownDate();
+    }
+
+    /** @return array{event_start_at:?string,event_date:?string,date_precision:string} */
+    public static function extractDateFromHtml(string $html): array
+    {
+        // Prefer the visible tournament date when Chess.com renders it directly.
+        $decoded = html_entity_decode(str_replace(['\\/','\\"'], ['/','"'], $html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $visible = self::extractDateFromText($decoded);
+        if ($visible['event_date'] !== null) return $visible;
+
+        // Some historical arena pages expose the same start only in embedded application state.
+        $candidates = [];
+        if (preg_match_all('~["\'](?:startTime|start_time|startDate|start_date)["\']\s*:\s*["\']([^"\']+)["\']~i', $decoded, $m)) {
+            $candidates = array_merge($candidates, $m[1]);
+        }
+        if (preg_match_all('~["\'](?:startTime|start_time)["\']\s*:\s*(\d{10,13})~i', $decoded, $m)) {
+            $candidates = array_merge($candidates, $m[1]);
+        }
+        if (preg_match_all('~\bdata-start-(?:time|date)=["\']([^"\']+)["\']~i', $decoded, $m)) {
+            $candidates = array_merge($candidates, $m[1]);
+        }
+        foreach ($candidates as $candidate) {
+            $stamp = self::candidateStamp((string)$candidate);
+            if ($stamp !== null) {
+                return [
+                    'event_start_at' => gmdate('Y-m-d H:i:s', $stamp),
+                    'event_date' => gmdate('Y-m-d', $stamp),
+                    'date_precision' => 'arena-machine',
+                ];
+            }
+        }
+
+        // Generic <time datetime> is a safe last resort on a single arena page.
+        if (preg_match_all('~<time\b[^>]*\bdatetime=["\']([^"\']+)["\']~i', $decoded, $m)) {
+            foreach ($m[1] as $candidate) {
+                $stamp = self::candidateStamp((string)$candidate);
+                if ($stamp !== null) {
+                    return [
+                        'event_start_at' => gmdate('Y-m-d H:i:s', $stamp),
+                        'event_date' => gmdate('Y-m-d', $stamp),
+                        'date_precision' => 'arena-machine',
+                    ];
+                }
+            }
+        }
+        return self::unknownDate();
+    }
+
+    private static function candidateStamp(string $candidate): ?int
+    {
+        $candidate = trim(html_entity_decode($candidate, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        if ($candidate === '') return null;
+        if (ctype_digit($candidate)) {
+            $stamp = (int)$candidate;
+            if ($stamp > 20000000000) $stamp = (int)floor($stamp / 1000);
+        } else {
+            $parsed = strtotime($candidate);
+            if ($parsed === false) return null;
+            $stamp = (int)$parsed;
+        }
+        return self::plausible($stamp) ? $stamp : null;
     }
 
     private static function dateNearNode(\DOMElement $anchor): array
