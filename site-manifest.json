@@ -1,17 +1,19 @@
 {
   "schemaVersion": 8,
-  "version": "2.10.8",
-  "builtAt": "2026-08-28T10:04:36Z",
-  "baseline": "Promote to King v2.10.7 canonical source.",
+  "version": "2.10.9",
+  "builtAt": "2026-08-28T20:30:00Z",
+  "baseline": "Promote to King v2.10.8 canonical source.",
   "release": {
-    "corrective": true,
+    "corrective": false,
     "scope": [
-      "release diagnostics/version/cache convergence",
-      "achievement maintenance scheduling and logic watermark",
-      "canonical achievement counts and transient breadth-key cleanup"
+      "durable full MCA arena acquisition queue",
+      "Results CSV primary with HTML club/player fallback",
+      "paginated Pairings game acquisition",
+      "historical arena backlog seeding and new-arena priority",
+      "every-minute <=55s MCA worker with preserved unrelated CRON"
     ],
-    "sourceBaseline": "v2.10.7",
-    "databaseSchemaChange": false,
+    "sourceBaseline": "v2.10.8",
+    "databaseSchemaChange": true,
     "runtimeDataReset": false
   },
   "preservedPriorManifest": {
@@ -19,7 +21,7 @@
     "version": "2.10.6.24"
   },
   "releaseNotes": [
-    "RELEASE_NOTES_v2.10.8.md",
-    "RELEASE_NOTES_v2.10.7.md"
+    "RELEASE_NOTES_v2.10.9.md",
+    "RELEASE_NOTES_v2.10.8.md"
   ]
 }
