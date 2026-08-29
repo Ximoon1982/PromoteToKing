@@ -1,0 +1,181 @@
+{
+  "files": [
+    {
+      "path": "AnalyzeMatch.html",
+      "sha256": "060706c661c2ff04002151572931987889ea3ca289545de24444ecb50afcf74b",
+      "size": 4662
+    },
+    {
+      "path": "AnalyzeMatchModal.html",
+      "sha256": "59a5576452d2c0924de9fa28ca144b4930e1d91c1b78b9bc06a980865c3959c0",
+      "size": 7811
+    },
+    {
+      "path": "AnalyzeMatches.htm",
+      "sha256": "e72043ad1a40be4aaf710d73e69aeaf174fe4982f990f13c8abfb511aa532a86",
+      "size": 11348
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "163260866ac009eecc98538fa191dfb846224a3bb6ef95f7de72dde9632d611a",
+      "size": 71234
+    },
+    {
+      "path": "ChallengeListAssistant.html",
+      "sha256": "d0c632e062930431b8efc3bebb6e8d0db61cc878b899bad5e59c69880b8a311a",
+      "size": 17604
+    },
+    {
+      "path": "ClubIntelligence.html",
+      "sha256": "50eb55c5bde54b602505ad028e13c39eb1f2a50f576f9812a1721ef4245676a0",
+      "size": 2242
+    },
+    {
+      "path": "DataReconciliation.html",
+      "sha256": "9b4aca13e86fe803fccaae4ce8062cd63450f5a89cab947498945f8395d23fc6",
+      "size": 4307
+    },
+    {
+      "path": "FindMatch.htm",
+      "sha256": "fad3c6ec727fea98334d20356d0128eda8f17aa869ab65d9807005c577bc93d6",
+      "size": 8160
+    },
+    {
+      "path": "INSTALL_v2.10.9.1.md",
+      "sha256": "a6c78dade0a20d935bd8a3bcb8242384d8c3f4a1d9c489390c4c3041402f7f4e",
+      "size": 1061
+    },
+    {
+      "path": "InsightsHealth.html",
+      "sha256": "83a075dd13a5fe0bc9ebdecff390ae6a49dd6a0a41ddb23b769647e7dbc7f03f",
+      "size": 3535
+    },
+    {
+      "path": "LeagueSeasonCenter.html",
+      "sha256": "788e548539a4b46009ffc88d4f9551a91b18ceaf0c8afccfe1c91760d03be965",
+      "size": 4924
+    },
+    {
+      "path": "LiveRanks.html",
+      "sha256": "5df31b00c6bb0f1ff8e8eb49fecfe4cd17761f210ca327d9fef3870a06c765aa",
+      "size": 2271
+    },
+    {
+      "path": "MIGRATION_VERSION",
+      "sha256": "3583de0fad749bbe33947aa138f41fc4c207a69a6af060334ceb49b13f3c971c",
+      "size": 9
+    },
+    {
+      "path": "MatchCreationAnalyzer.htm",
+      "sha256": "fe78d8a7731f281a24d84b5813e800b6c39afd4d235255ceb54149c890a9a027",
+      "size": 4169
+    },
+    {
+      "path": "RELEASE_NOTES.md",
+      "sha256": "102d839c5d985b06146b60892a0f5bf0d2a2e88e56f6a0f7ffa9a30c96e6cb40",
+      "size": 1495
+    },
+    {
+      "path": "RELEASE_NOTES_v2.10.9.1.md",
+      "sha256": "102d839c5d985b06146b60892a0f5bf0d2a2e88e56f6a0f7ffa9a30c96e6cb40",
+      "size": 1495
+    },
+    {
+      "path": "RELEASE_v2.10.9.1.json",
+      "sha256": "46d83ab5f18dc4cf32048de308625e739dc75d57f73f6a25a34dfe1c37912b76",
+      "size": 291
+    },
+    {
+      "path": "RecruitMatch.html",
+      "sha256": "7e19eb18b275680c9ed1108118de2f4a00fade093b2dda1b4717773e7d416f50",
+      "size": 4782
+    },
+    {
+      "path": "RecruitmentDemandPlanner.html",
+      "sha256": "de61a2475f34b124ff964aa4102fc867123b6913c9a7ea8234f99d455a28f356",
+      "size": 12686
+    },
+    {
+      "path": "TaskControl.html",
+      "sha256": "a3543452936ebe2b37fed91895ed2d79f9c3c12f611f83d437bca25c081d4a33",
+      "size": 29085
+    },
+    {
+      "path": "TaskLogs.html",
+      "sha256": "65a1e1e6511da2ec6a6a8657313a23988bed96a48f031832f8646f6f1dd44093",
+      "size": 2421
+    },
+    {
+      "path": "TeamPointsAdmin.html",
+      "sha256": "8e9c7a9f87bfc90bfed1aca548e88637c6efec51d92422dbb484e562ab8fe25e",
+      "size": 25254
+    },
+    {
+      "path": "TeamPointsMigration.html",
+      "sha256": "d2091e584ac11316657f17559d601c26abc7650929ea21358b7d289b5918c5df",
+      "size": 8326
+    },
+    {
+      "path": "TournamentAchievementBadgesDemo.html",
+      "sha256": "f44b7eb9006acb7d4c15edd7d9b44d27cc54ab9fc2949b60f0395af21c231d4d",
+      "size": 37926
+    },
+    {
+      "path": "TournamentManagement.html",
+      "sha256": "2f8487f5537d4e3f9167afc9ad7d44192351abda05769b368d6166c7b5324471",
+      "size": 54670
+    },
+    {
+      "path": "VERSION",
+      "sha256": "3583de0fad749bbe33947aa138f41fc4c207a69a6af060334ceb49b13f3c971c",
+      "size": 9
+    },
+    {
+      "path": "assets/js/pages/dashboard-v2.js",
+      "sha256": "82eb6506b421c60a6bf7c933526ec66e3ed93c9104d7f401438024650a1d0809",
+      "size": 219966
+    },
+    {
+      "path": "assets/js/site-config.js",
+      "sha256": "7ecc4ecdf973583125e7831b8fa99272ca08bf07519d0f5592b7c641fbb0bd63",
+      "size": 7745
+    },
+    {
+      "path": "index.html",
+      "sha256": "bb2d988a4b229963e05cb888e46f4c2c07d850806d6b9276cc8a78c45c4daa7a",
+      "size": 15792
+    },
+    {
+      "path": "server/team-points/bin/mca-results-sync.php",
+      "sha256": "c0999b798db66a8bab991f807f6f9dde445454e0dc1b43371312e48eced39107",
+      "size": 1596
+    },
+    {
+      "path": "server/team-points/src/McaArenaParser.php",
+      "sha256": "a546edccb15c0a05254f30cc040e9aaaacba3a017e4766112b071fe34ef6a855",
+      "size": 13607
+    },
+    {
+      "path": "server/team-points/src/McaIndexParser.php",
+      "sha256": "405b3e169094150156f09b0fa92347bab65f318fef425fd03d2025a673bcf3d5",
+      "size": 10331
+    },
+    {
+      "path": "server/team-points/src/McaResultsCronService.php",
+      "sha256": "6c55104a566c30675c8eebbb3eb00c1ed5ba64c7e41a8b4ec8505e6d8b3e7f65",
+      "size": 35998
+    },
+    {
+      "path": "site-manifest.json",
+      "sha256": "22ab5b1efb8cfb992bc6ef803b75adc9eb882ec803e24055c09167c99c4879b4",
+      "size": 770
+    },
+    {
+      "path": "ui-v2.html",
+      "sha256": "de611ede84142c69e57ec625a2c0dfa78ab7ab028addc2990f50e94d6784e54b",
+      "size": 50781
+    }
+  ],
+  "predecessor": "2.10.9",
+  "version": "2.10.9.1"
+}
