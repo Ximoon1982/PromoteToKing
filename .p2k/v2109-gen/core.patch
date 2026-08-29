@@ -1,0 +1,32 @@
+--- a/assets/js/pages/dashboard-v2.js
++++ b/assets/js/pages/dashboard-v2.js
+@@ -707,7 +707,7 @@
+   },
+   maintenance: {
+     diagnostics: { title:"Diagnostics", tabs:[
+-      {key:"health",label:"Runtime diagnostics",src:"InsightsHealth.html?embedded=1&release=2.10.8"},
++      {key:"health",label:"Runtime diagnostics",src:"InsightsHealth.html?embedded=1&release=2.10.9"},
+       {key:"reconciliation",label:"Data reconciliation",src:"DataReconciliation.html?embedded=1&release=2.10.6.14"}
+     ]},
+     tasks: { title:"Scheduled Task Control", tabs:[
+--- a/server/team-points/src/Repository.php
++++ b/server/team-points/src/Repository.php
+@@ -10,7 +10,7 @@
+ final class Repository
+ {
+     private const CORE_SCHEMA_VERSION = 17;
+-    private const ANALYTICS_SCHEMA_VERSION = 9;
++    private const ANALYTICS_SCHEMA_VERSION = 10;
+     private PDO $pdo;
+     private ?PDO $analyticsPdo = null;
+     private bool $analyticsFailed = false;
+@@ -151,6 +151,9 @@
+         if ($analyticsVersion < 9) {
+             $this->executeSqlFile($this->analytics(), $root . '/sql/analytics-migration-v2.10.6.sql');
+         }
++        if ($analyticsVersion < 10) {
++            $this->executeSqlFile($this->analytics(), $root . '/sql/analytics-migration-v2.10.9.sql');
++        }
+         if ($this->schemaVersion() >= 14) {
+             try { (new MiacService($this->pdo, strtolower((string)(\p2k_tp_config()['app']['club_slug'] ?? 'promote-to-king'))))->importSeedIfNeeded(); } catch (\Throwable $miacSeedError) { error_log('P2K MIAC seed import: '.$miacSeedError->getMessage()); }
+         }
