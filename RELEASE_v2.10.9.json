@@ -1,0 +1,13 @@
+{
+  "version": "2.10.9",
+  "baseline": "2.10.8",
+  "scope": [
+    "durable full MCA arena acquisition queue",
+    "Results CSV primary with HTML club/player fallback",
+    "paginated Pairings game acquisition",
+    "historical arena backlog seeding and new-arena priority",
+    "every-minute <=55s MCA worker preserving unrelated CRON"
+  ],
+  "database_schema_change": true,
+  "runtime_data_reset": false
+}
