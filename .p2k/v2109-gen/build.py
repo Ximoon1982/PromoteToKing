@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import base64, hashlib, json, lzma, os, shutil, subprocess, sys, tempfile
+import base64, hashlib, json, lzma, os, subprocess, tempfile
 
 ROOT = Path.cwd()
 BASE = '1f2eccab9dd83a019947bbafe9be41bb26b9465a'
@@ -33,7 +33,8 @@ assert_blob('assets/js/pages/dashboard-v2.js','e0aa848d2a31e0e736427f70bbc023914
 assert_blob('server/team-points/src/Repository.php','f2ebef46f295b1e410e9e8e5b08c38a56e2fcc34')
 
 # 2. Recreate the exact v2.10.8 source manifest from the immutable v2.10.8 base commit.
-paths=lzma.decompress(base64.b64decode((DATA/'v2108-paths.xz.b64').read_bytes())).decode().splitlines()
+path_b64 = b''.join((DATA/f'v2108-paths.part-{i:02d}').read_bytes() for i in range(5))
+paths=lzma.decompress(base64.b64decode(path_b64)).decode().splitlines()
 rows=[]
 for i, rel in enumerate(paths,1):
     data=run('git','show',f'{BASE}:{rel}')
@@ -89,7 +90,8 @@ with tempfile.TemporaryDirectory() as td:
     gz=run('gzip','-n','-6','-c',str(raw_tar))
     if hashlib.sha256(gz).hexdigest()!='d073329bbf23741f30185673134945d6be36c7088c533c237f973bcfa6b9d651':
         raise SystemExit('gzip payload mismatch (runner gzip implementation differs)')
-    header=base64.b64decode((DATA/'installer-header.b64').read_bytes())
+    header_b64 = b''.join((DATA/f'installer-header.part-{i:02d}').read_bytes() for i in range(5))
+    header=base64.b64decode(header_b64)
     installer=ROOT/'PromoteToKing_v2.10.9_INCREMENTAL_INSTALLER.run'
     installer.write_bytes(header+gz)
     os.chmod(installer,0o755)
