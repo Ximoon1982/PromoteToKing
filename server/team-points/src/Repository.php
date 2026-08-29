@@ -10,7 +10,7 @@ use PDO;
 final class Repository
 {
     private const CORE_SCHEMA_VERSION = 17;
-    private const ANALYTICS_SCHEMA_VERSION = 9;
+    private const ANALYTICS_SCHEMA_VERSION = 10;
     private PDO $pdo;
     private ?PDO $analyticsPdo = null;
     private bool $analyticsFailed = false;
@@ -150,6 +150,9 @@ final class Repository
         }
         if ($analyticsVersion < 9) {
             $this->executeSqlFile($this->analytics(), $root . '/sql/analytics-migration-v2.10.6.sql');
+        }
+        if ($analyticsVersion < 10) {
+            $this->executeSqlFile($this->analytics(), $root . '/sql/analytics-migration-v2.10.9.sql');
         }
         if ($this->schemaVersion() >= 14) {
             try { (new MiacService($this->pdo, strtolower((string)(\p2k_tp_config()['app']['club_slug'] ?? 'promote-to-king'))))->importSeedIfNeeded(); } catch (\Throwable $miacSeedError) { error_log('P2K MIAC seed import: '.$miacSeedError->getMessage()); }

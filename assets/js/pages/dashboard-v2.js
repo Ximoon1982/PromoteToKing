@@ -707,7 +707,7 @@ const ADMIN_DETAIL_DEFS = {
   },
   maintenance: {
     diagnostics: { title:"Diagnostics", tabs:[
-      {key:"health",label:"Runtime diagnostics",src:"InsightsHealth.html?embedded=1&release=2.10.8"},
+      {key:"health",label:"Runtime diagnostics",src:"InsightsHealth.html?embedded=1&release=2.10.9"},
       {key:"reconciliation",label:"Data reconciliation",src:"DataReconciliation.html?embedded=1&release=2.10.6.14"}
     ]},
     tasks: { title:"Scheduled Task Control", tabs:[
