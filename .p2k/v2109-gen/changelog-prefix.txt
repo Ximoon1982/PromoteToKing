@@ -1,0 +1,10 @@
+# v2.10.9 — durable MCA full-arena acquisition
+
+- Replaces twice-daily Results-only hydration with a durable every-minute arena worker (<=55-second requested slice) while keeping discovery due-gated to 12 hours.
+- Seeds all existing MCA Results sources into a one-time historical backfill queue and prioritizes new arena discoveries.
+- Uses Results CSV as the primary Club/Player source, with independent paginated HTML fallback for missing Club or Player results.
+- Acquires every arena Pairings page for game ID/link, players, ratings and result; all pagination cursors are durable and resumable.
+- Uses arena-page timestamp first and the club index timestamp as a resumable fallback.
+- Advances Analytics schema to 10 with durable arena acquisition/club/player/game tables.
+- Replaces only the legacy MCA CRON block and preserves unrelated installed CRON entries.
+
