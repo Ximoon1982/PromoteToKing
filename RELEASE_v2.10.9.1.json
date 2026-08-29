@@ -1,0 +1,11 @@
+{
+  "version": "2.10.9.1",
+  "baseline": "2.10.9",
+  "scope": [
+    "robust MCA arena-page date extraction",
+    "exhaustive historical index date fallback",
+    "one-time automatic requeue of legacy date_index errors"
+  ],
+  "database_schema_change": false,
+  "runtime_data_reset": false
+}
