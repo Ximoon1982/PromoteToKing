@@ -1,0 +1,75 @@
+Promote to King v2.10.9.1 - FINAL production installer validation
+Date: 2026-08-29
+Baseline: deployed v2.10.9 installer payload
+Application version: 2.10.9.1
+Packaging: FINAL (supersedes faulty initial and R2 installers)
+
+CORRECTIVE SCOPE
+- Robust MCA arena-page date extraction.
+- Historical index date fallback follows pagination instead of stopping on a lower arena ID.
+- Legacy date_index failures using the old date-unavailable error wording are automatically requeued once.
+- No database schema change.
+- No CRON change.
+- No runtime-data reset.
+
+CODE TESTS
+PASS - tests/test_v21091_mca_date_recovery.py
+PASS - tests/test_v2109_mca_arena_acquisition.py
+PASS - tests/test_v2109_release.py
+PASS - 18 focused tests total.
+
+PRODUCTION PACKAGING CORRECTION
+The earlier packages incorrectly used repository/source-tree files as production boundary requirements.
+Those assumptions are removed completely from the FINAL installer.
+
+FINAL payload contains 35 deployable release files only.
+It contains NO:
+- tests/* files
+- SOURCE_MANIFEST_v2.10.9.json
+- repository-only boundary artifacts
+
+Preflight behavior:
+PASS - requires only deployed VERSION=2.10.9, or VERSION=2.10.9.1 for replay.
+PASS - verifies all embedded payload sizes and SHA-256 hashes.
+PASS - validates staged PHP syntax for the MCA parser/worker files.
+PASS - validates staged JSON release/site manifests.
+PASS - does not require exact predecessor hashes.
+PASS - does not require files that may exist only in the canonical development/source tree.
+
+PRODUCTION-FAITHFUL INSTALL TEST
+Test target was built directly from the embedded payload of the actual v2.10.9 incremental installer.
+The v2.10.9 payload manifest itself was removed after extraction, reproducing deployed production content rather than the repository tree.
+Confirmed before install:
+- VERSION=2.10.9
+- tests directory absent
+- SOURCE_MANIFEST_v2.10.9.json absent
+
+PASS - FINAL installer accepted VERSION=2.10.9.
+PASS - 35/35 payload files verified before installation.
+PASS - staged PHP/JSON validation passed.
+PASS - 31 existing files backed up; 4 new release files recorded as new on the minimal production-faithful target.
+PASS - 35/35 installed files hash-verified.
+PASS - VERSION advanced to 2.10.9.1.
+PASS - MIGRATION_VERSION advanced to 2.10.9.1.
+PASS - post-install PHP syntax validation passed.
+
+IDEMPOTENT REPLAY
+PASS - FINAL installer replayed successfully on VERSION=2.10.9.1.
+PASS - 35/35 installed hashes verified after replay.
+
+ROLLBACK
+PASS - injected failure after file-copy stage returned nonzero.
+PASS - VERSION restored exactly to 2.10.9.
+PASS - touched predecessor files restored from backup.
+PASS - new release files removed.
+
+FINAL ARTIFACT
+PromoteToKing_v2.10.9.1_INCREMENTAL_INSTALLER_FINAL.run
+SHA-256: 38416bbc8518b8443c75371bcfb5d6dec4361ee0fda1b933a7a8c9d6ec5820d2
+
+LAUNCHER
+install-promote-to-king-2.10.9.1-final.sh
+SHA-256: 32938d597169b6eb66021d1b10d5e8d0db8ff2901354ba2b28d8061fb62d99ef
+
+STATUS
+FINAL production installer validated. GitHub was not touched.
