@@ -4,11 +4,11 @@ import subprocess, json, tempfile, os, textwrap, base64
 ROOT=Path(__file__).resolve().parents[1]
 
 def test_release_identity():
-    assert (ROOT/'VERSION').read_text().strip()=='2.10.9'
-    assert (ROOT/'MIGRATION_VERSION').read_text().strip()=='2.10.9'
+    assert (ROOT/'VERSION').read_text().strip()=='2.10.9.1'
+    assert (ROOT/'MIGRATION_VERSION').read_text().strip()=='2.10.9.1'
     manifest=json.loads((ROOT/'site-manifest.json').read_text())
-    assert manifest['version']=='2.10.9'
-    assert manifest['release']['databaseSchemaChange'] is True
+    assert manifest['version']=='2.10.9.1'
+    assert manifest['release']['databaseSchemaChange'] is False
 
 def test_schema_10_and_arena_tables():
     repo=(ROOT/'server/team-points/src/Repository.php').read_text()
