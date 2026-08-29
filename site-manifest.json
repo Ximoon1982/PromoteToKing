@@ -1,16 +1,18 @@
 {
   "schemaVersion": 8,
-  "version": "2.10.9.1",
-  "builtAt": "2026-08-29T16:53:04Z",
-  "baseline": "Promote to King v2.10.9 canonical source.",
+  "version": "2.10.9.2",
+  "builtAt": "2026-08-29T20:41:15Z",
+  "baseline": "Promote to King v2.10.9.1 canonical source.",
   "release": {
     "corrective": true,
     "scope": [
-      "MCA arena-page date parser recovery for visible and machine timestamps",
-      "exhaustive paginated MCA index date fallback without unsafe arena-ID hard stop",
-      "automatic one-time retry of legacy date_index failures"
+      "HTML-boundary-safe MCA date parsing",
+      "DOM-independent index date recovery",
+      "manual Backfill missing dates uses canonical arena/index parsers with paginated fallback",
+      "browser-suffixed MCA CSV copies canonicalized by arena ID and excluded non-destructively from derived statistics",
+      "Admin source-integrity reconciliation with canonical rebuild detection"
     ],
-    "sourceBaseline": "v2.10.9",
+    "sourceBaseline": "v2.10.9.1",
     "databaseSchemaChange": false,
     "runtimeDataReset": false
   },
@@ -19,6 +21,7 @@
     "version": "2.10.6.24"
   },
   "releaseNotes": [
+    "RELEASE_NOTES_v2.10.9.2.md",
     "RELEASE_NOTES_v2.10.9.1.md",
     "RELEASE_NOTES_v2.10.9.md",
     "RELEASE_NOTES_v2.10.8.md"

@@ -1,0 +1,15 @@
+{
+  "version": "2.10.9.2",
+  "baseline": "2.10.9.1",
+  "scope": [
+    "HTML-boundary-safe MCA date parsing",
+    "DOM-independent MCA index date recovery",
+    "manual date backfill uses canonical arena/index parsers with paginated fallback",
+    "browser-suffixed MCA CSV copies canonicalized by arena ID",
+    "duplicate stored sources excluded non-destructively from derived MCA statistics",
+    "source-integrity reconciliation and canonical rebuild detection"
+  ],
+  "database_schema_change": false,
+  "runtime_data_reset": false,
+  "cron_change": false
+}

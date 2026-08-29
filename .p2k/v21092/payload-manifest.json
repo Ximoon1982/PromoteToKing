@@ -1,0 +1,86 @@
+{
+  "version": "2.10.9.2",
+  "predecessor": "2.10.9.1",
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "size": 72299,
+      "sha256": "d1f00b5b5b0b602b1493bd683bf454fd6bd7a634752d15c131ba7f0b46854585"
+    },
+    {
+      "path": "INSTALL_v2.10.9.2.md",
+      "size": 1220,
+      "sha256": "3e1506f173fcd89e1351daba2a1014da338d0d26567e0fa00ecd6ecafb7204de"
+    },
+    {
+      "path": "MIGRATION_VERSION",
+      "size": 9,
+      "sha256": "9ca58af802d1850689ccde3006d95843451871ffdc91a79e438a8a6b0250ab58"
+    },
+    {
+      "path": "RELEASE_NOTES.md",
+      "size": 3259,
+      "sha256": "470df819ee2edbde02fa6c712f2c687db36b6a0a0579cd48b0f1f6099625c690"
+    },
+    {
+      "path": "RELEASE_NOTES_v2.10.9.2.md",
+      "size": 3259,
+      "sha256": "470df819ee2edbde02fa6c712f2c687db36b6a0a0579cd48b0f1f6099625c690"
+    },
+    {
+      "path": "RELEASE_v2.10.9.2.json",
+      "size": 561,
+      "sha256": "834a69449b8b78419f33011c5e3c982a81a805c8b5318dca6e4b956d6e7fe3ac"
+    },
+    {
+      "path": "TeamPointsAdmin.html",
+      "size": 26352,
+      "sha256": "773256e02e38ee2b37c5c13896634f6d163d8c4def16c110d9fcbf272b0e8c13"
+    },
+    {
+      "path": "VERSION",
+      "size": 9,
+      "sha256": "9ca58af802d1850689ccde3006d95843451871ffdc91a79e438a8a6b0250ab58"
+    },
+    {
+      "path": "assets/js/pages/team-points-features.js",
+      "size": 34645,
+      "sha256": "52d77ead428f1549198db57960e1b3ead3006c614715064f5de25e86da5d177b"
+    },
+    {
+      "path": "assets/js/site-config.js",
+      "size": 7745,
+      "sha256": "2675ca17d9368e435743fb6d36d8f8156d7b0d7fa26c9f04376ad9ee933a2a80"
+    },
+    {
+      "path": "server/team-points/bin/mca-results-sync.php",
+      "size": 1596,
+      "sha256": "000e33eda41d0082025bec8e12690dde2fa9b1d14625e3133465dcf413280421"
+    },
+    {
+      "path": "server/team-points/src/LiveRanksService.php",
+      "size": 98666,
+      "sha256": "86e34b4ebe975ade7bfc1e7629dcea99f55bc97fe7c2dac41aacec695692fcee"
+    },
+    {
+      "path": "server/team-points/src/McaIndexParser.php",
+      "size": 12943,
+      "sha256": "794315a7eaa30f08ec365487f207697f2dc1a1d043e60b220df6a763b0d0190a"
+    },
+    {
+      "path": "server/team-points/src/McaResultsCronService.php",
+      "size": 36734,
+      "sha256": "b4b593b04d2d0242ed8294a952d1b7dc11473dc86d341a3c049692339d47de2e"
+    },
+    {
+      "path": "server/team-points/src/McaSourceCatalogue.php",
+      "size": 7332,
+      "sha256": "119e898576551d3432c2f65192c7421037eb5fa3a933a436ea699b7959fd6241"
+    },
+    {
+      "path": "site-manifest.json",
+      "size": 966,
+      "sha256": "6fb858d0f5d640808e7b12fe27c74956d2b5e3a5385e9d70bab996be69294936"
+    }
+  ]
+}

@@ -19,10 +19,10 @@ try {
     $discovery=$service->runDiscovery(min(10,max(5,$seconds-15)),false);
     $elapsed=(int)ceil(microtime(true)-$started);$remaining=max(8,$seconds-$elapsed);
     $acquisition=$service->runHydration($remaining);
-    fwrite(STDOUT,json_encode(['ok'=>true,'version'=>'2.10.9.1','discovery'=>$discovery,'acquisition'=>$acquisition,'sync'=>$service->status()],JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT).PHP_EOL);
+    fwrite(STDOUT,json_encode(['ok'=>true,'version'=>'2.10.9.2','discovery'=>$discovery,'acquisition'=>$acquisition,'sync'=>$service->status()],JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT).PHP_EOL);
     exit(0);
 } catch (ApiException $e) {
-    if($e->errorCode==='MCA_SYNC_BUSY'){fwrite(STDOUT,json_encode(['ok'=>true,'busy'=>true,'version'=>'2.10.9.1']).PHP_EOL);exit(0);}throw $e;
+    if($e->errorCode==='MCA_SYNC_BUSY'){fwrite(STDOUT,json_encode(['ok'=>true,'busy'=>true,'version'=>'2.10.9.2']).PHP_EOL);exit(0);}throw $e;
 } catch (Throwable $e) {
     fwrite(STDERR,'MCA arena synchronization failed: '.$e->getMessage().PHP_EOL);exit(1);
 }

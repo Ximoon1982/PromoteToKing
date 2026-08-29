@@ -1,0 +1,61 @@
+Promote to King v2.10.9.2 validation report
+Generated UTC: 2026-08-29T20:43:35+00:00
+
+Baseline
+- predecessor: v2.10.9.1
+- target: v2.10.9.2
+- local canonical source: /mnt/data/p2k-v21092/src
+- development/release source remained local; GitHub was not used.
+
+Scope
+1. MCA date recovery
+- Preserve HTML element boundaries before date parsing.
+- Normalize Unicode narrow/non-breaking spaces.
+- DOM-independent index date recovery.
+- Manual Backfill missing dates uses canonical arena/index parsers with resumable paginated fallback.
+- Current v2.10.9.1 date_index terminal errors are eligible for automatic requeue.
+
+2. MCA source integrity
+- Browser copies such as arena-123 (1).csv / (2).csv resolve to arena 123.
+- Exactly one canonical stored source per recognized arena ID participates in processing.
+- Legacy duplicate bytes remain retained and visible for audit.
+- Differing SHA-256 duplicate groups are flagged as conflicts.
+- New browser-suffixed uploads normalize to the canonical arena source instead of creating a new active event.
+- Historical seeding, manual date repair and durable acquisition use the same canonical identity.
+- Existing derived arena rows from excluded duplicates trigger canonical rebuild_required detection.
+- Admin separates canonical MCA sources from retained CSV records and duplicate/conflict counts.
+- Current-index count mismatches do not cause destructive deletion of historical local arenas.
+
+Schema / runtime
+- database schema change: NO (Analytics schema remains 10)
+- destructive runtime-data cleanup: NO
+- CRON definition change: NO
+- retained CSV duplicate bytes: PRESERVED
+
+Focused validation
+- pytest tests/test_v21092_mca_date_recovery.py: 12/12 PASS
+- PHP lint: McaIndexParser.php PASS
+- PHP lint: McaSourceCatalogue.php PASS
+- PHP lint: LiveRanksService.php PASS
+- PHP lint: McaResultsCronService.php PASS
+- PHP lint: mca-results-sync.php PASS
+- JavaScript syntax: assets/js/pages/team-points-features.js PASS
+- JSON parse: site-manifest.json PASS
+- JSON parse: RELEASE_v2.10.9.2.json PASS
+
+Installer
+- production payload files: 16
+- payload/source byte equality: PASS
+- clean v2.10.9.1 -> v2.10.9.2 install: PASS
+- idempotent v2.10.9.2 replay: PASS
+- injected post-copy failure rollback: PASS
+- rollback restored all touched predecessor hashes: PASS
+- runtime data sentinel preserved on install and rollback: PASS
+- launcher install: PASS
+- installer SHA-256: 79fa9e7df8e9c6711c8bdfe28ebe1c037682159aac2dffe854e0c02f97273991
+- launcher SHA-256: f41036e589a120b96798baf6a0ff619165c4824d1b477eff20b65954c03368ac
+
+Production boundary policy
+- Installer checks deployed VERSION only: 2.10.9.1, or 2.10.9.2 for replay.
+- No production dependency on repository tests, source manifests, or predecessor source-tree-only files.
+- Installer backs up every touched destination, installs atomically, verifies installed hashes and rolls back file changes on failure.
