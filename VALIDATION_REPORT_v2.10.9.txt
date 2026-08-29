@@ -1,0 +1,115 @@
+Promote to King v2.10.9 validation report
+=========================================
+Baseline: v2.10.8
+Release: 2.10.9
+Scope: durable MCA full-arena acquisition/backfill, Results CSV primary + HTML fallback, Pairings game acquisition, every-minute <=55s worker, Analytics schema 10.
+
+1. Source / release identity
+----------------------------
+PASS  VERSION = 2.10.9
+PASS  MIGRATION_VERSION = 2.10.9
+PASS  site-manifest version = 2.10.9; site schemaVersion remains 8; databaseSchemaChange=true
+PASS  assets/js/site-config.js = 2.10.9
+PASS  all 21 active root HTML/HTM consumers load assets/js/site-config.js?v=2.10.9
+PASS  runtime diagnostics routes/scripts use the v2.10.9 release marker
+PASS  v2.10.8 achievement scheduler/counting invariants retained
+
+2. Dedicated automated tests
+----------------------------
+PASS  tests/test_v2109_mca_arena_acquisition.py: 8/8
+PASS  tests/test_v2109_release.py: 4/4
+Total current-release tests: 12/12 PASS.
+
+The MCA suite verifies:
+- Analytics schema 10 and all four durable arena tables
+- one-time historical backlog seeding
+- new-arena priority over historical backlog
+- resumable Club / Player / Pairings / index-date cursors
+- >=1 second request-start spacing
+- 12-hour discovery due gate
+- remaining-slice-bounded HTTP timeout
+- Results CSV primary parsing with Club + Player tables
+- HTML Club/Player fallback
+- Pairings always acquired from HTML
+- schema upgrade CLI is network-free
+- every-minute CRON generation and unrelated-crontab preservation
+- synthetic arena HTML and two-table Results CSV parsing
+
+3. Real Chess.com HTML fixture parser proof
+-------------------------------------------
+PASS  Parser was exercised locally against the user-supplied saved CW Live 2026 - Q3#8 arena HTML.
+Recovered from that fixture:
+- event date/time: 2026-08-22 18:00:00
+- rating: Open
+- advertised players: 192
+- max eligible scorers: 12
+- pagination totals: 2 Club / 7 Player / 16 Pairings pages
+- explicit /download-results URL
+- P2K Club Results row: rank 4, 7 players, score 105
+- Liz-1 Player Results: rating 1312, score 143, 46 W / 3 D / 21 L, bye 0, streak 7
+- first Pairing: game 181727901711, Liz-1 (1312) 0-1 Flickas (1680)
+The private/authenticated HTML fixture is NOT included in the release tree or archive.
+
+4. Syntax / static validation
+------------------------------
+PASS  PHP lint: McaArenaParser.php
+PASS  PHP lint: McaResultsCronService.php
+PASS  PHP lint: Repository.php
+PASS  PHP lint: mca-results-sync.php
+PASS  PHP lint: upgrade-schema-v2.10.9.php
+PASS  bash -n: cron-mca-arena-v2.10.9.sh
+PASS  bash -n: reset-install-mca-cron-v2.10.9.sh
+PASS  bash -n: install-promote-to-king-2.10.9.sh
+PASS  installer shell header syntax (payload excluded from shell parse)
+PASS  JavaScript syntax: assets/js/pages/team-points-features.js
+PASS  JavaScript syntax: assets/js/site-config.js
+PASS  site-manifest.json JSON validation
+PASS  private-fixture/cache cleanup and targeted new-file secret scan
+
+5. Broader inherited regression comparison
+-------------------------------------------
+A selected inherited suite covering Admin routing/navigation, Arenas/artwork, Green cycle boundary, GAB canonicalization and GFFL terminal debt produced:
+- v2.10.9: 32 passed, 6 failed
+- untouched v2.10.8 baseline: 32 passed, 6 failed
+The failure set is identical. It consists of immutable old exact-version assertions plus two already-stale assertions present in v2.10.8 (old Admin label and old first-point placeholder expectation). No new failure was introduced by v2.10.9 in that comparison.
+Historical tests were not rewritten to make old release identity assertions pass.
+
+6. Installer payload
+--------------------
+PASS  production payload contains 41 complete files
+PASS  payload manifest verifies size + SHA-256 for all 41 files
+PASS  tests and private fixtures are excluded from the production payload
+PASS  companion launcher is delivered separately and retained in the full source archive
+
+7. Installer clean / replay / rollback proofs
+----------------------------------------------
+PASS  clean disposable v2.10.8 -> v2.10.9 installation
+PASS  all 41 installed production files exactly match payload hashes
+PASS  v2.10.9 -> v2.10.9 idempotent replay
+PASS  successful CRON update removes the old MCA-only entry/block
+PASS  successful CRON update leaves unrelated CRON entries present
+PASS  exactly one v2.10.9 every-minute MCA worker entry installed
+PASS  injected failure after CRON modification returns non-zero
+PASS  injected late failure restores all 41 touched/new file paths to their v2.10.8 state
+PASS  injected late failure restores the complete previous crontab byte-for-byte
+
+Installer database validation note:
+The local validation container has no production MySQL/PDO-MySQL database. Installer mechanics therefore used a schema-upgrade shim only for the disposable install/replay/rollback proof. The actual upgrade script and Repository migration path were separately PHP-linted/static-validated. The migration is additive/idempotent: CREATE TABLE IF NOT EXISTS, ADD COLUMN IF NOT EXISTS, and analytics schema version 10 insertion; it contains no destructive table/data reset.
+
+8. Data / scheduling safety
+----------------------------
+PASS  existing Results CSV files are seeded as historical sources and are not re-downloaded merely for backfill
+PASS  new discoveries use priority 100; historical backfill uses priority 10
+PASS  Pairings are persisted page-by-page with durable next-page cursor
+PASS  Results source is parsed locally first; missing Club/Player sections fall back independently to HTML
+PASS  arena timestamp comes from arena page when available, index when needed
+PASS  index timestamp fallback is page-resumable
+PASS  all Chess.com fetches serialized by one DB advisory lock and >=1 second request-start gate
+PASS  acquisition worker scheduled every minute with requested <=55-second slice
+PASS  discovery remains internally due-gated to 12 hours
+PASS  unrelated installed CRON is preserved by the dedicated scheduler installer
+PASS  no runtime-data reset is part of v2.10.9
+
+9. Release boundary
+-------------------
+No GitHub fetch/commit/push was used for v2.10.9 development or release construction. Work was performed from the locally retained canonical v2.10.8 source archive/tree. GitHub remains untouched pending user confirmation after installation.

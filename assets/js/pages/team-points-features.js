@@ -135,38 +135,28 @@
     const progress = Math.max(0, Math.min(100, Number(sync.progress_percent || 0)));
     const progressNode = $('liveRanksSyncProgress'); if (progressNode) progressNode.value = progress;
     if ($('liveRanksSyncPercent')) $('liveRanksSyncPercent').textContent = `${progress.toFixed(1)}%`;
-    const queue = sync.queue || sync.hydration_queue || {};
+    const queue = sync.queue || {};
     const metrics = [
-      ['New arenas discovered', sync.total_events || 0], ['Index entries checked', sync.checked_events || 0],
-      ['Results CSVs added', sync.csv_added || 0], ['Pending downloads', Number(queue.pending || 0) + Number(queue.running || 0)],
-      ['Download errors', queue.error || 0], ['Historical dates missing', sync.historical_missing_dates || 0],
-      ['Requests this cycle', sync.request_count || 0], ['Next scheduled scan', sync.next_scan_at || '—']
+      ['Arena backlog', sync.arena_backlog_total || 0], ['Remaining', sync.arena_backlog_remaining || 0],
+      ['Games stored', sync.games_stored || 0], ['Player rows stored', sync.player_rows_stored || 0],
+      ['Club rows stored', sync.club_rows_stored || 0], ['New arenas this discovery', sync.total_events || 0],
+      ['Requests this discovery cycle', sync.request_count || 0], ['Next index discovery', sync.next_scan_at || '—']
     ];
     if ($('liveRanksSyncMetrics')) $('liveRanksSyncMetrics').innerHTML = metrics.map(([label,value]) => `<div class="p2k-tp-metric"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join('');
     const errors = Array.isArray(sync.errors) ? sync.errors : [];
     const errorWrap = $('liveRanksSyncErrorsWrap'), errorRows = $('liveRanksSyncErrorRows');
     if (errorWrap) errorWrap.hidden = errors.length === 0;
-    if (errorRows) errorRows.innerHTML = errors.map(row => `<tr>
-      <td><a href="${esc(row.arena_url || '#')}" target="_blank" rel="noopener noreferrer"><strong>#${fmt(row.arena_id,0)}</strong><br><small>${esc(row.arena_slug || '')}</small></a></td>
-      <td>${esc(row.stage || 'page')}</td><td>${fmt(row.attempts || 0,0)}</td><td><small>${esc(row.error || 'Unable to retrieve Results CSV')}</small></td><td>${esc(row.updated_at || '—')}</td>
-    </tr>`).join('');
+    if (errorRows) errorRows.innerHTML = errors.map(row => `<tr><td><a href="${esc(row.arena_url || '#')}" target="_blank" rel="noopener noreferrer"><strong>#${fmt(row.arena_id,0)}</strong><br><small>${esc(row.arena_slug || '')}</small></a></td><td>${esc(row.stage || 'arena')}</td><td>${fmt(row.attempts || 0,0)}</td><td><small>${esc(row.error || 'Acquisition step failed')}</small></td><td>${esc(row.updated_at || '—')}</td></tr>`).join('');
     const workflow = String(sync.workflow_status || 'current');
-    const current = sync.current_stage ? ` · ${sync.current_stage}` : '';
-    const remaining = Number(queue.pending || 0) + Number(queue.running || 0);
-    const text = workflow === 'discovery'
-      ? `MCA index discovery is running${current}. The cursor is durable; stopping or refreshing will resume from this page.`
-      : workflow === 'hydration'
-      ? `Downloading ${fmt(remaining,0)} missing Results CSV file(s). Requests are serial and server-paced at ≥1 second apart.`
-      : workflow === 'discovery_attention'
-      ? `MCA index discovery paused on ${sync.current_stage || 'the current page'}: ${sync.last_error || 'source error'}. The cursor was not advanced; use Resume synchronization to retry this page.`
-      : workflow === 'attention'
-      ? `Synchronization reached ${fmt(errors.length,0)} failed Results download(s). Successful sources were kept and processed; failed items require an explicit retry.`
-      : workflow === 'failed'
-      ? `MCA Results synchronization failed: ${sync.last_error || 'unknown error'}`
-      : `MCA Results sources are current for the latest completed scan. Next scheduled discovery: ${sync.next_scan_at || 'not scheduled yet'}.`;
-    message('liveRanksSyncStatus', text, ['failed','attention','discovery_attention'].includes(workflow) ? 'error' : workflow === 'current' ? 'success' : '');
-    if ($('liveRanksSyncStart')) $('liveRanksSyncStart').disabled = state.mcaSyncRunning || ['discovery','discovery_attention','hydration','attention'].includes(workflow);
-    if ($('liveRanksSyncResume')) $('liveRanksSyncResume').disabled = state.mcaSyncRunning || !['discovery','discovery_attention','hydration'].includes(workflow);
+    const remaining = Number(sync.arena_backlog_remaining || 0);
+    const text = workflow === 'discovery' ? `MCA index discovery is running at ${sync.current_stage || 'the current page'}; its cursor is durable.`
+      : workflow === 'discovery_attention' ? `MCA index discovery paused without advancing its cursor: ${sync.last_error || 'source error'}.`
+      : workflow === 'acquisition' ? `Durable arena acquisition is active: ${fmt(remaining,0)} arena(s) remain. New arenas have priority; Pairings resume page-by-page. The CRON worker runs every minute for at most 55 seconds.`
+      : workflow === 'attention' ? `Arena acquisition has ${fmt(errors.length,0)} failed step(s). Successful work is retained; retry only the failed stages.`
+      : `MCA arena data is current for the known queue. Next index discovery: ${sync.next_scan_at || 'not scheduled yet'}.`;
+    message('liveRanksSyncStatus', text, ['attention','discovery_attention'].includes(workflow) ? 'error' : workflow === 'current' ? 'success' : '');
+    if ($('liveRanksSyncStart')) $('liveRanksSyncStart').disabled = state.mcaSyncRunning;
+    if ($('liveRanksSyncResume')) $('liveRanksSyncResume').disabled = state.mcaSyncRunning || remaining === 0;
     if ($('liveRanksSyncRetry')) $('liveRanksSyncRetry').disabled = state.mcaSyncRunning || errors.length === 0;
   }
 
@@ -378,40 +368,21 @@
   async function runMcaSourceSync(force = false) {
     if (state.mcaSyncRunning) return;
     state.mcaSyncRunning = true; renderMcaSync(state.mcaSync || {});
-    let payload = null;
     try {
-      message('liveRanksSyncStatus', force ? 'Starting MCA index discovery from page 1…' : 'Resuming MCA Results synchronization…');
-      payload = await endpoint(liveEndpoint, { action: 'sync_discovery', method: 'POST', body: { force, max_seconds: 25 }, timeoutMs: 45_000 });
+      message('liveRanksSyncStatus', force ? 'Running a manual discovery + acquisition slice…' : 'Running one manual arena-acquisition slice…');
+      let payload = await endpoint(liveEndpoint, { action: 'sync_discovery', method: 'POST', body: { force, max_seconds: 10 }, timeoutMs: 30_000 });
       renderLive(payload);
-      while ((payload.sync?.workflow_status || state.mcaSync?.workflow_status) === 'discovery') {
-        payload = await endpoint(liveEndpoint, { action: 'sync_discovery', method: 'POST', body: { force: false, max_seconds: 25 }, timeoutMs: 45_000 });
-        renderLive(payload);
-        if (payload.sync?.last_error) break;
-      }
-      while (Number(payload.sync?.queue?.pending || 0) + Number(payload.sync?.queue?.running || 0) > 0) {
-        payload = await endpoint(liveEndpoint, { action: 'sync_hydrate', method: 'POST', body: { max_seconds: 25 }, timeoutMs: 45_000 });
-        renderLive(payload);
-      }
-      const finalSync = payload?.sync || state.mcaSync || {};
-      if (finalSync.workflow_status === 'discovery_attention') {
-        message('liveRanksSyncStatus', `Discovery paused without advancing the cursor: ${finalSync.last_error || 'source error'}. Resume explicitly to retry the same index page.`, 'error');
-      } else if (finalSync.workflow_status === 'attention') {
-        message('liveRanksSyncStatus', `Synchronization finished with ${fmt(finalSync.queue?.error || 0,0)} failed download(s). Successful Results files were retained; retry errors explicitly when ready.`, 'error');
-      } else if (finalSync.workflow_status === 'current') {
-        message('liveRanksSyncStatus', `MCA Results synchronization complete: ${fmt(finalSync.csv_added || 0,0)} new Results CSV file(s) added.`, 'success');
-      }
-    } catch (error) {
-      message('liveRanksSyncStatus', error.message, 'error');
-      try { await loadLive(); } catch (_) {}
-    } finally {
-      state.mcaSyncRunning = false; renderMcaSync(state.mcaSync || {});
-    }
+      payload = await endpoint(liveEndpoint, { action: 'sync_hydrate', method: 'POST', body: { max_seconds: 35 }, timeoutMs: 50_000 });
+      renderLive(payload);
+      message('liveRanksSyncStatus', `Manual slice complete. The every-minute CRON will continue the durable backlog automatically.`, 'success');
+    } catch (error) { message('liveRanksSyncStatus', error.message, 'error'); try { await loadLive(); } catch (_) {} }
+    finally { state.mcaSyncRunning = false; renderMcaSync(state.mcaSync || {}); }
   }
 
   async function retryMcaSourceErrors() {
     if (state.mcaSyncRunning) return;
     try {
-      message('liveRanksSyncStatus', 'Re-queueing failed MCA Results downloads…');
+      message('liveRanksSyncStatus', 'Re-queueing failed MCA arena-acquisition steps…');
       const payload = await endpoint(liveEndpoint, { action: 'sync_retry_download_errors', method: 'POST', body: {}, timeoutMs: 45_000 });
       renderLive(payload);
       if (Number(payload.sync?.queue?.pending || 0) > 0) await runMcaSourceSync(false);
