@@ -18,7 +18,7 @@ check('server/team-points/src/Repository.php','f2ebef46f295b1e410e9e8e5b08c38a56
 # exact v2.10.8 source manifest; installer was a local release artifact, not committed on main
 pb=b''.join((DATA/f'v2108-paths.part-{i:02d}').read_bytes() for i in range(5))
 paths=lzma.decompress(base64.b64decode(pb)).decode().splitlines()
-overrides={'PromoteToKing_v2.10.8_INCREMENTAL_INSTALLER.run':(232170,'ffede508b62772d14259ff7445350e6dab01e11e936e7f746f1af31565538f68')}
+overrides={'PromoteToKing_v2.10.8_INCREMENTAL_INSTALLER.run':(230631,'e65667bbdc1db9b6020e2c5779bae098ce1c4af10556eab4e4683883803a786f')}
 rows=[]
 for i,p in enumerate(paths,1):
  if p in overrides: size,digest=overrides[p]
