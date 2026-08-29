@@ -9,7 +9,7 @@ final class McaArenaParser
     public static function arenaPage(string $html): array
     {
         $decoded = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $date = McaIndexParser::extractDateFromText($decoded);
+        $date = McaIndexParser::extractDateFromHtml($decoded);
         $rating = null; $players = null; $maxScorers = null;
         if (preg_match('~Rating:\s*([^<\r\n]+)~i', $decoded, $m)) $rating = trim(preg_replace('/\s+/u',' ', $m[1]) ?? $m[1]);
         if (preg_match('~\b(\d+)\s+players\b~i', $decoded, $m)) $players = (int)$m[1];
