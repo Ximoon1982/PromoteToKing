@@ -1,0 +1,66 @@
+name: Publish Promote to King v2.10.9
+
+on:
+  push:
+    branches:
+      - p2k-v2109-publish
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct validated release patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .p2k/v2109.patch.b64.part00 \
+              .p2k/v2109.patch.b64.part01 \
+              .p2k/v2109.patch.b64.part02 \
+              .p2k/v2109.patch.b64.part03 \
+              .p2k/v2109.patch.b64.part04 \
+              .p2k/v2109.patch.b64.part05 | tr -d '\n\r' > /tmp/v2109.diff.gz.b64
+          echo 'ad9f99d2882e4276d795b88a8685f31807e8e7f0e37bbb0a7c19883a627ec23f  /tmp/v2109.diff.gz.b64' | sha256sum -c -
+          base64 -d /tmp/v2109.diff.gz.b64 > /tmp/v2109.diff.gz
+          echo '2f4caa6d4657d7377c35f4618c149802fc84a74b84e3533541f942568b1cefa4  /tmp/v2109.diff.gz' | sha256sum -c -
+          gzip -dc /tmp/v2109.diff.gz > /tmp/v2109.diff
+          echo '9a33255292c9eb29331839dac0962ab68a3a818ac9df38d043434b9ddd15a398  /tmp/v2109.diff' | sha256sum -c -
+
+      - name: Apply exact v2.10.9 source delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout --detach 1f2eccab9dd83a019947bbafe9be41bb26b9465a
+          patch -p1 --batch < /tmp/v2109.diff
+          chmod +x cron-mca-arena-v2.10.9.sh install-promote-to-king-2.10.9.sh reset-install-mca-cron-v2.10.9.sh
+          test "$(tr -d '\r\n' < VERSION)" = '2.10.9'
+          git diff --check
+          git add -A
+          test "$(git diff --cached --name-only | wc -l | tr -d ' ')" = '44'
+          if git diff --cached --name-only | grep -E '(^|/)(PromoteToKing_v2\.10\.9_INCREMENTAL_INSTALLER\.run|SOURCE_MANIFEST_v2\.10\.9\.json|VALIDATION_REPORT_v2\.10\.9\.txt)$'; then
+            echo 'Excluded release artifact unexpectedly staged' >&2
+            exit 1
+          fi
+          if git diff --cached --name-only | grep -E '^\.p2k/|^\.github/workflows/publish-v2109\.yml$'; then
+            echo 'Temporary publishing files unexpectedly staged' >&2
+            exit 1
+          fi
+
+      - name: Commit and fast-forward main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'release: Promote to King v2.10.9'
+          git push origin HEAD:main
+          git push origin --delete p2k-v2109-publish || true
