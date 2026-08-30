@@ -1,0 +1,100 @@
+/* Members Insights date/ranking controls. */
+.p2k-members-period-controls {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 14px 0 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,.035);
+}
+
+.p2k-members-period-fields,
+.p2k-members-period-actions {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.p2k-members-period-fields label {
+  display: grid;
+  gap: 5px;
+  min-width: 145px;
+}
+
+.p2k-members-period-fields label > span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  opacity: .76;
+}
+
+.p2k-members-period-fields input,
+.p2k-members-period-fields select {
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255,255,255,.17);
+  border-radius: 8px;
+  background: rgba(7,18,31,.72);
+  color: inherit;
+  font: inherit;
+}
+
+.p2k-members-evolution-field { min-width: 170px !important; }
+
+.p2k-members-export-button {
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid rgba(246,183,60,.5);
+  border-radius: 8px;
+  background: rgba(246,183,60,.12);
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.p2k-members-export-button:hover,
+.p2k-members-export-button:focus-visible { background: rgba(246,183,60,.2); }
+
+.p2k-members-period-status {
+  align-self: center;
+  min-height: 1.2em;
+  font-size: 12px;
+  opacity: .78;
+}
+
+.p2k-members-period-status.is-error { color: #e7685a; opacity: 1; }
+
+.p2k-member-team-position {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.p2k-member-team-position strong { font-variant-numeric: tabular-nums; }
+
+.p2k-member-position-change {
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.p2k-member-position-change.is-up { color: #5fbf72; }
+.p2k-member-position-change.is-down { color: #e7685a; }
+.p2k-member-position-change.is-flat { opacity: .5; }
+.p2k-member-position-change.is-new { color: #f6b73c; letter-spacing: .03em; }
+
+@media (max-width: 720px) {
+  .p2k-members-period-controls,
+  .p2k-members-period-fields,
+  .p2k-members-period-actions { align-items: stretch; }
+  .p2k-members-period-fields { width: 100%; }
+  .p2k-members-period-fields label { flex: 1 1 145px; }
+  .p2k-members-period-actions { width: 100%; justify-content: space-between; }
+}

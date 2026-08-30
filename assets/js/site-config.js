@@ -149,3 +149,10 @@
   if (document.querySelector('script[data-p2k-chart-maximize]')) return;
   const script=document.createElement('script');script.src='assets/js/shared/chart-maximize.js?v=2.10.6.24';script.defer=true;script.dataset.p2kChartMaximize='1';const mount=()=>document.head.appendChild(script);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
+
+// Members Insights period/ranking enhancement. The module wraps the lazy Insights
+// factory, so it adds its controls without changing the large dashboard controller.
+(() => {
+  if (document.querySelector('script[data-p2k-members-insights-enhancement]')) return;
+  const script=document.createElement('script');script.src='assets/js/pages/members-insights-enhancement.js?v=2.10.9.4-members-ranking-1';script.async=false;script.dataset.p2kMembersInsightsEnhancement='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+})();
