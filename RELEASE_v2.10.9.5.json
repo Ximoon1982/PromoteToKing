@@ -1,0 +1,16 @@
+{
+  "version": "2.10.9.5",
+  "baseline": "2.10.9.4",
+  "corrective": false,
+  "database_schema_change": false,
+  "runtime_data_reset": false,
+  "cron_change": false,
+  "scope": [
+    "period-aware Members Insights statistics and Daily Points",
+    "Team position by Daily Points with net wins tie breaker",
+    "1w/1m/3m/1y position evolution indicators",
+    "correct result-covered member win rate",
+    "full filtered unpaginated Members CSV export",
+    "v2.10.9.5 cache generation for site-config and Members enhancement assets"
+  ]
+}

@@ -1,3 +1,13 @@
+# v2.10.9.5 — Members Insights period ranking and export
+
+- Adds Members Insights From / To filtering backed by the existing dated point-event history.
+- Adds true Team position by Daily Points with net wins as tie breaker, calculated before display filters/pagination.
+- Adds 1-week / 1-month / 3-month / 1-year position evolution with green up, red down, unchanged and NEW states.
+- Fixes member win rate and distinguishes unavailable result coverage from a genuine zero.
+- Adds full filtered CSV export using the same canonical ranking projection as the table.
+- Promotes frontend cache generation to 2.10.9.5 so the new Members module and stylesheet are fetched after upgrade.
+- No database schema, CRON, or runtime-data reset.
+
 # v2.10.9.4 — MCA live-tournaments row-pagination corrective
 
 - Uses only the current `/club/live-tournaments/<club>?type=multi&page=N` endpoint.
