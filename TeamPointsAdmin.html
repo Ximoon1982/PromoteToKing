@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="assets/css/team-points-admin.css?v=2.10.6.6">
   <link rel="stylesheet" href="assets/css/admin-embedded.css?v=2.10.6">
   <script src="config/site-branding.js?v=2.10.6"></script>
-  <script src="assets/js/site-config.js?v=2.10.9"></script>
+  <script src="assets/js/site-config.js?v=2.10.9.4"></script>
   <script src="assets/js/shared/api-cache.js?v=2.10.6"></script>
   <script src="assets/js/shared/api-client.js?v=2.10.6"></script>
   <script defer src="assets/js/shared/real-oauth.js?v=2.10.6"></script><script src="assets/js/shared/simulated-oauth.js?v=2.10.6"></script><script defer src="assets/js/shared/authenticated-member-refresh.js?v=2.10.6"></script>
@@ -189,7 +189,7 @@
 
   <section data-panel="live-ranks" role="tabpanel" hidden>
     <section class="p2k-tp-card">
-      <div class="p2k-tp-card-head"><div><h2>MCA source data</h2><p>Manual Results CSV upload remains available. v2.10.9 adds durable full-arena acquisition: new arenas are discovered from the Chess.com live-tournaments index, existing historical arenas are seeded from the stored MCA catalogue, Results CSV remains the primary club/player source with HTML fallback, and Pairings pages provide game-level data.</p></div><span class="p2k-tp-pill">manual + durable arena acquisition</span></div>
+      <div class="p2k-tp-card-head"><div><h2>MCA source data</h2><p>Manual Results CSV upload remains available. v2.10.9.4 keeps one canonical Results source per Chess.com arena ID before processing: browser copies such as <code>arena-123 (2).csv</code> remain retained for audit but cannot count as a second arena. Results CSV remains the primary club/player source with HTML fallback, and Pairings pages provide game-level data.</p></div><span class="p2k-tp-pill">canonical arena sources + durable acquisition</span></div>
       <div class="p2k-live-drop" id="liveRanksDrop" tabindex="0" role="button" aria-label="Drop MCA source CSV files or select files">
         <strong>Drop MCA source CSV files here</strong><span>or select one or more arena exports</span>
         <input id="liveRanksFiles" type="file" accept=".csv,text/csv" multiple>
@@ -205,7 +205,7 @@
       <div class="p2k-tp-status" id="liveRanksBlueGreenStatus">Blue → Green copies only the MCA data domain and replaces the Green MCA snapshot after validation.</div>
     </section>
     <section class="p2k-tp-card">
-      <div class="p2k-tp-card-head"><div><h2>Synchronize MCA arenas</h2><p>Discovery scans the Promote to King live-tournaments index for new arena IDs. The durable worker then fills every incomplete arena, prioritizing new discoveries over the historical backlog. Club/player performance comes from Results CSV when available and from paginated HTML tables on failure; games always come from paginated Pairings. Work resumes from the exact next page and all Chess.com requests are serial at least one second apart.</p></div><span class="p2k-tp-pill">v2.10.9 · every minute · ≤55 s · serial ≥1 s/request</span></div>
+      <div class="p2k-tp-card-head"><div><h2>Synchronize MCA arenas</h2><p>Discovery follows the Promote to King past-event chronology, not arena-ID order. After one exhaustive reconciliation, each routine scan starts at the newest event and stops at the first arena confirmed by the previous successful index scan. The durable worker then fills every incomplete arena, prioritizing new discoveries over the historical backlog. Club/player performance comes from Results CSV when available and from paginated HTML tables on failure; games always come from paginated Pairings. Work resumes from the exact next page and all Chess.com requests are serial at least one second apart.</p></div><span class="p2k-tp-pill">v2.10.9.4 · row-scoped index · occurrence-ordered · every minute · ≤55 s · serial ≥1 s/request</span></div>
       <div class="p2k-tp-actions">
         <button class="p2k-tp-button primary" id="liveRanksSyncStart" type="button">Synchronize now</button>
         <button class="p2k-tp-button" id="liveRanksSyncResume" type="button">Resume synchronization</button>
@@ -223,7 +223,7 @@
       </div>
     </section>
     <section class="p2k-tp-card">
-      <div class="p2k-tp-card-head"><div><h2>Historical MCA date repair</h2><p>Manual repair remains available for exceptional stored sources whose date is still unresolved. The v2.10.9 arena worker normally obtains date/time from the arena page and uses the index timestamp as fallback.</p></div><span class="p2k-tp-pill">manual only · serial ≥1 s/request</span></div>
+      <div class="p2k-tp-card-head"><div><h2>Historical MCA date repair</h2><p>Manual repair remains available for exceptional stored sources whose date is still unresolved. v2.10.9.4 first reconciles any already-known canonical Results date back into stale acquisition state, then uses the canonical parser/index fallback only when a date is genuinely unresolved.</p></div><span class="p2k-tp-pill">manual only · serial ≥1 s/request</span></div>
       <div class="p2k-tp-actions">
         <button class="p2k-tp-button primary" id="liveRanksDateSyncStart" type="button">Backfill missing dates</button>
         <button class="p2k-tp-button" id="liveRanksDateSyncResume" type="button">Resume date backfill</button>
@@ -242,7 +242,15 @@
     </section>
     <div class="p2k-tp-grid" id="liveRanksMetrics"></div>
     <section class="p2k-tp-card">
-      <div class="p2k-tp-card-head"><div><h2>Stored MCA source CSV files</h2><p>Re-uploading the same filename always replaces that arena file, even when its contents are unchanged. Different filenames remain separate pack entries.</p></div></div>
+      <div class="p2k-tp-card-head"><div><h2>MCA source integrity</h2><p>One canonical Results source is used per recognized Chess.com arena ID. Browser/download copies are retained but excluded from all MCA calculations. Different hashes within one arena are flagged for review rather than deleted.</p></div><span class="p2k-tp-pill">non-destructive deduplication</span></div>
+      <div class="p2k-tp-grid" id="liveRanksIntegrityMetrics"></div>
+      <div class="p2k-tp-status" id="liveRanksIntegrityStatus">Loading source-integrity reconciliation…</div>
+      <div id="liveRanksDuplicateWrap" hidden style="margin-top:1rem">
+        <div class="p2k-tp-table-wrap"><table><thead><tr><th>Arena</th><th>Canonical source</th><th>Excluded legacy copies</th><th>Content</th></tr></thead><tbody id="liveRanksDuplicateRows"></tbody></table></div>
+      </div>
+    </section>
+    <section class="p2k-tp-card">
+      <div class="p2k-tp-card-head"><div><h2>Stored MCA source CSV files</h2><p>The table lists every retained CSV record for audit. Only rows marked canonical participate in MCA calculations; browser-copy suffixes such as <code>(1)</code> and <code>(2)</code> are recognized as copies of the same arena ID.</p></div></div>
       <div class="p2k-tp-table-wrap"><table><thead><tr><th>Filename / event page</th><th>Event date</th><th>Size</th><th>SHA-256</th><th>Uploaded UTC</th><th>Status</th><th>Rows</th><th>P2K rows</th></tr></thead><tbody id="liveRanksFileRows"><tr><td colspan="8">No MCA source CSV files loaded.</td></tr></tbody></table></div>
     </section>
     <section class="p2k-tp-card">
@@ -343,7 +351,7 @@
   </section>
 </main>
 <script src="assets/js/pages/team-points-admin.js?v=2.10.6.25"></script>
-<script src="assets/js/pages/team-points-features.js?v=2.10.9"></script>
+<script src="assets/js/pages/team-points-features.js?v=2.10.9.4"></script>
 <script src="assets/js/shared/embedded-page.js?v=2.10.6"></script>
 </body>
 </html>

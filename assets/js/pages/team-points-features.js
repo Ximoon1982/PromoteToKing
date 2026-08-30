@@ -137,9 +137,9 @@
     if ($('liveRanksSyncPercent')) $('liveRanksSyncPercent').textContent = `${progress.toFixed(1)}%`;
     const queue = sync.queue || {};
     const metrics = [
-      ['Arena backlog', sync.arena_backlog_total || 0], ['Remaining', sync.arena_backlog_remaining || 0],
+      ['Local acquisition arenas', sync.arena_backlog_total || 0], ['Index-confirmed arenas', sync.index_confirmed_arenas || 0], ['Remaining', sync.arena_backlog_remaining || 0],
       ['Games stored', sync.games_stored || 0], ['Player rows stored', sync.player_rows_stored || 0],
-      ['Club rows stored', sync.club_rows_stored || 0], ['New arenas this discovery', sync.total_events || 0],
+      ['Club rows stored', sync.club_rows_stored || 0], ['New acquisition rows this discovery', sync.total_events || 0],
       ['Requests this discovery cycle', sync.request_count || 0], ['Next index discovery', sync.next_scan_at || '—']
     ];
     if ($('liveRanksSyncMetrics')) $('liveRanksSyncMetrics').innerHTML = metrics.map(([label,value]) => `<div class="p2k-tp-metric"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join('');
@@ -149,7 +149,7 @@
     if (errorRows) errorRows.innerHTML = errors.map(row => `<tr><td><a href="${esc(row.arena_url || '#')}" target="_blank" rel="noopener noreferrer"><strong>#${fmt(row.arena_id,0)}</strong><br><small>${esc(row.arena_slug || '')}</small></a></td><td>${esc(row.stage || 'arena')}</td><td>${fmt(row.attempts || 0,0)}</td><td><small>${esc(row.error || 'Acquisition step failed')}</small></td><td>${esc(row.updated_at || '—')}</td></tr>`).join('');
     const workflow = String(sync.workflow_status || 'current');
     const remaining = Number(sync.arena_backlog_remaining || 0);
-    const text = workflow === 'discovery' ? `MCA index discovery is running at ${sync.current_stage || 'the current page'}; its cursor is durable.`
+    const text = workflow === 'discovery' ? `MCA index discovery is running at ${sync.current_stage || 'the current page'} in ${sync.full_reconciliation_active ? 'one-time full reconciliation' : 'incremental first-known'} mode; its cursor is durable.`
       : workflow === 'discovery_attention' ? `MCA index discovery paused without advancing its cursor: ${sync.last_error || 'source error'}.`
       : workflow === 'acquisition' ? `Durable arena acquisition is active: ${fmt(remaining,0)} arena(s) remain. New arenas have priority; Pairings resume page-by-page. The CRON worker runs every minute for at most 55 seconds.`
       : workflow === 'attention' ? `Arena acquisition has ${fmt(errors.length,0)} failed step(s). Successful work is retained; retry only the failed stages.`
@@ -194,14 +194,17 @@
   }
 
   function renderLive(payload) {
-    const files = payload.files || [], players = payload.players || [], summary = payload.summary || {}, processing = payload.processing || {};
+    const files = payload.files || [], players = payload.players || [], summary = payload.summary || {}, processing = payload.processing || {}, integrity = payload.source_integrity || {};
     renderMcaSync(payload.sync || {});
     renderMcaDateSync(payload.date_sync || {});
     $('liveRanksFileRows').innerHTML = files.length ? files.map(file => {
       const approx = file.event_date_approximate ? ' <small>(approximative date)</small>' : '';
       const editLabel = file.actual_event_date ? 'Edit actual date' : 'Set actual date';
+      const sourceNote = file.canonical_source === false
+        ? `<br><small><strong>Excluded legacy duplicate</strong>${file.duplicate_of_id ? ` · canonical file #${fmt(file.duplicate_of_id,0)}` : ''}${file.duplicate_content_conflict ? ' · different content hash' : ''}</small>`
+        : file.arena_id ? '<br><small>Canonical arena source</small>' : '<br><small>Independent legacy source</small>';
       return `<tr>
-      <td><a href="${esc(file.event_url || '#')}" target="_blank" rel="noopener noreferrer"><strong>${esc(file.name)}</strong></a>${file.arena_id ? `<br><small>Arena #${fmt(file.arena_id,0)}</small>` : ''}${file.replaced_at ? '<br><small>Corrected replacement</small>' : ''}</td>
+      <td><a href="${esc(file.event_url || '#')}" target="_blank" rel="noopener noreferrer"><strong>${esc(file.name)}</strong></a>${file.arena_id ? `<br><small>Arena #${fmt(file.arena_id,0)}</small>` : ''}${file.replaced_at ? '<br><small>Corrected replacement</small>' : ''}${sourceNote}</td>
       <td><strong>${esc(file.event_date || '—')}</strong>${approx}<br><button type="button" class="p2k-tp-small" data-mca-event-date="${Number(file.id)||0}" data-current-date="${esc(file.actual_event_date || '')}">${editLabel}</button></td>
       <td>${bytes(file.size)}</td><td><code>${esc(String(file.sha256 || '').slice(0,12))}…</code></td><td>${esc(file.uploaded_at || '—')}</td>
       <td>${stateBadge(file.status === 'processed' ? 'current_member' : file.status === 'error' ? 'closed_account' : 'pending_profile').replace(/current member|closed account|pending profile/, esc(file.status || 'uploaded'))}${file.error ? `<br><small>${esc(file.error)}</small>` : ''}</td>
@@ -221,11 +224,30 @@
       <td>${stateBadge(player.account_state)}</td><td><small>${esc((player.source_files || []).join(' · '))}</small></td>
       <td>${esc(player.profile_checked_at || 'Pending')}${player.error ? `<br><small>${esc(player.error)}</small>` : ''}</td></tr>`).join('') : '<tr><td colspan="6">No computed players.</td></tr>';
     const metrics = [
-      ['Stored MCA source files', files.length], ['P2K players', summary.players || 0], ['Arena points', fmt(summary.total_points,2)],
+      ['Canonical MCA sources', integrity.canonical_sources ?? files.filter(file => file.canonical_source !== false).length],
+      ['Stored CSV records', integrity.stored_records ?? files.length], ['P2K players', summary.players || 0], ['Arena points', fmt(summary.total_points,2)],
       ['Ranked 50+', summary.ranked_players || 0], ['Current members', summary.current_members || 0], ['Possible renames', summary.possible_renames || 0],
       ['Closed accounts', summary.closed_accounts || 0], ['Pending checks', summary.pending_checks || 0]
     ];
     $('liveRanksMetrics').innerHTML = metrics.map(([label,value]) => `<div class="p2k-tp-metric"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join('');
+    const integrityMetrics = [
+      ['Recognized arena IDs', integrity.recognized_arena_sources || 0], ['Legacy duplicate records', integrity.duplicate_records || 0],
+      ['Duplicate arena groups', integrity.duplicate_groups || 0], ['Raw hash differences', integrity.raw_hash_conflicting_duplicate_groups || 0], ['P2K metric conflicts', integrity.conflicting_duplicate_groups || 0],
+      ['Unidentified legacy sources', integrity.unidentified_records || 0], ['Noncanonical derived sources', integrity.noncanonical_derived_sources || 0]
+    ];
+    if ($('liveRanksIntegrityMetrics')) $('liveRanksIntegrityMetrics').innerHTML = integrityMetrics.map(([label,value]) => `<div class="p2k-tp-metric"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join('');
+    const duplicateGroups = Array.isArray(integrity.groups) ? integrity.groups : [];
+    if ($('liveRanksDuplicateWrap')) $('liveRanksDuplicateWrap').hidden = duplicateGroups.length === 0;
+    if ($('liveRanksDuplicateRows')) $('liveRanksDuplicateRows').innerHTML = duplicateGroups.map(group => `<tr>
+      <td><strong>#${fmt(group.arena_id || 0,0)}</strong><br><small>${esc(group.arena_slug || '')}</small></td>
+      <td><strong>${esc(group.canonical_name || '')}</strong><br><small>file #${fmt(group.canonical_file_id || 0,0)}</small></td>
+      <td>${(group.duplicates || []).map(row => `<div>${esc(row.name || '')} <small>#${fmt(row.id || 0,0)}</small></div>`).join('')}</td>
+      <td>${group.content_conflict ? '<strong>P2K-relevant Results rows differ — review retained copies</strong>' : group.raw_hash_conflict ? 'Raw files differ, but P2K-relevant Results rows are equivalent' : 'Equivalent content'}</td>
+    </tr>`).join('');
+    const integrityText = Number(integrity.duplicate_records || 0) === 0
+      ? 'Stored MCA sources are one-to-one with their recognized arena IDs.'
+      : `${fmt(integrity.duplicate_records || 0,0)} legacy duplicate CSV record(s) are retained but excluded from calculations across ${fmt(integrity.duplicate_groups || 0,0)} arena(s).${Number(integrity.raw_hash_conflicting_duplicate_groups || 0) ? ` ${fmt(integrity.raw_hash_conflicting_duplicate_groups || 0,0)} group(s) have different raw hashes.` : ''}${Number(integrity.conflicting_duplicate_groups || 0) ? ` ${fmt(integrity.conflicting_duplicate_groups || 0,0)} group(s) differ in P2K-relevant Results rows and remain visible for review.` : ''}${integrity.rebuild_required ? ' Existing derived MCA statistics contain excluded sources and are queued for a canonical rebuild.' : ''}`;
+    message('liveRanksIntegrityStatus', integrityText, integrity.rebuild_required ? 'error' : Number(integrity.duplicate_records || 0) ? '' : 'success');
     $('liveRanksExportCorrections').disabled = Number(summary.possible_renames || 0) === 0;
     if (processing.status === 'running') message('liveRanksStatus', `Processing ${processing.phase || ''}: ${processing.checked_players || 0} profile check(s) completed.`, '');
   }

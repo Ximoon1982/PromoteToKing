@@ -1,0 +1,16 @@
+{
+  "version": "2.10.9.4",
+  "baseline": "2.10.9.3",
+  "corrective": true,
+  "database_schema_change": false,
+  "runtime_data_reset": false,
+  "cron_change": false,
+  "scope": [
+    "parse the current Chess.com club live-tournaments endpoint by actual tournament table rows",
+    "ignore unrelated/repeated arena links elsewhere in the HTML when tournament rows are present",
+    "use only /club/live-tournaments/<club>?type=multi&page=N for MCA index pagination",
+    "remove the non-working /clubs/pastevents fallback",
+    "request live-tournaments pages with explicit no-cache and compression decoding",
+    "retain fail-closed non-advancing-page detection with effective-URL/body diagnostics"
+  ]
+}

@@ -1,18 +1,18 @@
 {
   "schemaVersion": 8,
-  "version": "2.10.9.2",
-  "builtAt": "2026-08-29T20:41:15Z",
-  "baseline": "Promote to King v2.10.9.1 canonical source.",
+  "version": "2.10.9.4",
+  "builtAt": "2026-08-30T10:20:30Z",
+  "baseline": "Promote to King v2.10.9.3 canonical source.",
   "release": {
     "corrective": true,
     "scope": [
-      "HTML-boundary-safe MCA date parsing",
-      "DOM-independent index date recovery",
-      "manual Backfill missing dates uses canonical arena/index parsers with paginated fallback",
-      "browser-suffixed MCA CSV copies canonicalized by arena ID and excluded non-destructively from derived statistics",
-      "Admin source-integrity reconciliation with canonical rebuild detection"
+      "current Chess.com live-tournaments table-row parsing is authoritative for MCA discovery",
+      "page=N remains the only MCA index pagination route; pastevents fallback removed",
+      "document-level arena links are ignored when tournament rows are available",
+      "HTTP no-cache/compression/effective-URL diagnostics harden non-advancing-page detection",
+      "v2.10.9.3 occurrence-order/frontier logic remains unchanged"
     ],
-    "sourceBaseline": "v2.10.9.1",
+    "sourceBaseline": "v2.10.9.3",
     "databaseSchemaChange": false,
     "runtimeDataReset": false
   },
@@ -21,6 +21,8 @@
     "version": "2.10.6.24"
   },
   "releaseNotes": [
+    "RELEASE_NOTES_v2.10.9.4.md",
+    "RELEASE_NOTES_v2.10.9.3.md",
     "RELEASE_NOTES_v2.10.9.2.md",
     "RELEASE_NOTES_v2.10.9.1.md",
     "RELEASE_NOTES_v2.10.9.md",

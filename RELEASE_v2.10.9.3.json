@@ -1,0 +1,17 @@
+{
+  "version": "2.10.9.3",
+  "baseline": "2.10.9.2",
+  "corrective": true,
+  "database_schema_change": false,
+  "runtime_data_reset": false,
+  "cron_change": false,
+  "scope": [
+    "preserve Chess.com past-event occurrence order; do not sort by arena ID",
+    "retire ID high-water discovery after one exhaustive reconciliation",
+    "incremental newest-to-first-previous-index-known discovery",
+    "fail-closed pagination with legacy pastevents fallback",
+    "repair stale date-index acquisition rows from canonical source dates",
+    "remove arena-ID-based event-date interpolation",
+    "separate raw hash differences from P2K-relevant duplicate conflicts"
+  ]
+}

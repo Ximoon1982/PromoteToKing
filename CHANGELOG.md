@@ -1,3 +1,40 @@
+# v2.10.9.4 — MCA live-tournaments row-pagination corrective
+
+- Uses only the current `/club/live-tournaments/<club>?type=multi&page=N` endpoint.
+- Parses actual tournament table rows before any broad arena-link fallback, matching the successful POC behavior.
+- Removes the unusable `/clubs/pastevents/...` fallback.
+- Adds no-cache/compression handling plus effective-URL/body-hash diagnostics for non-advancing pages.
+- Preserves v2.10.9.3 occurrence-order/frontier semantics and all runtime data.
+- No schema, CRON, or runtime-data reset.
+
+# v2.10.9.3 — MCA occurrence-order discovery corrective
+
+- Retires arena-ID chronology/high-water assumptions: IDs identify creation order only; index document order drives discovery.
+- Performs one exhaustive post-upgrade reconciliation, then scans newest-to-first-previous-index-known.
+- Rejects non-advancing Chess.com pagination and falls back to the legacy pastevents route without falsely completing.
+- Self-heals stale acquisition date errors from canonical Results dates.
+- Removes ID-weighted event-date interpolation.
+- Distinguishes raw duplicate-file hash differences from P2K-relevant Results-row conflicts.
+- No schema, CRON, or runtime-data reset.
+
+# v2.10.9.2 — MCA date recovery + source-integrity corrective
+
+- Preserves whitespace at Chess.com HTML element boundaries and normalizes narrow/non-breaking spaces before date parsing.
+- Recovers MCA index dates without requiring PHP DOM support.
+- Moves manual Backfill missing dates onto the canonical arena/index parsers with one-page-per-step paginated fallback.
+- Canonicalizes browser-suffixed Results files such as `arena-123 (2).csv` to arena 123 and excludes duplicate copies from all derived MCA statistics without deleting the retained CSV bytes.
+- Flags differing-hash duplicate groups, prevents future browser-copy uploads from creating new active arena sources, and exposes canonical/stored/duplicate counts in Admin.
+- Detects stale derived rows produced from excluded copies and marks/attempts a canonical rebuild.
+- Does not delete a historical local arena solely because the current Chess.com index count is lower; that external-index discrepancy remains separately auditable.
+- No schema, destructive runtime-data, or CRON-definition change.
+
+# v2.10.9.1 — MCA historical arena date recovery corrective
+
+- Robust arena-page dates: visible text plus embedded machine timestamps and `<time datetime>`.
+- Historical index date lookup follows pagination exhaustively instead of treating arena-ID ordering as a hard stop.
+- Existing legacy date-index errors are requeued once automatically after deployment.
+- No schema change, no runtime reset, no CRON change.
+
 # v2.10.9 — durable MCA full-arena acquisition
 
 - Replaces twice-daily Results-only hydration with a durable every-minute arena worker (<=55-second requested slice) while keeping discovery due-gated to 12 hours.
