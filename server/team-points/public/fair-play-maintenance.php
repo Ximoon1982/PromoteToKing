@@ -9,9 +9,18 @@ try {
     $config=p2k_tp_config();
     $club=strtolower((string)($config['app']['club_slug']??'promote-to-king'));
     $core=Database::core();$repo=new Repository($core,Database::analytics());
-    $svc=new FairPlayReconciliationService($core,$repo,new ChessApi($repo),$club);
+    $api=new ChessApi($repo);
+    $svc=new FairPlayReconciliationService($core,$repo,$api,$club);
     $action=strtolower(trim((string)($_GET['action']??'status')));
 
+    if($action==='process-match'){
+        Http::method('POST');$body=Http::body();$matchId=(int)($body['match_id']??0);
+        if($matchId<=0)throw new ApiException('A valid match_id is required.',400,'MATCH_ID_REQUIRED');
+        $payload=$api->json('https://api.chess.com/pub/match/'.$matchId,true);
+        $status=strtolower(trim((string)($payload['status']??'unknown')));
+        $finalize=in_array($status,['finished','complete','completed'],true);
+        Http::json(['ok'=>true,'data'=>$svc->applyMatchPayload($matchId,$payload,$finalize,false),'status'=>$svc->status()]);
+    }
     if($action==='run-step'){
         Http::method('POST');$body=Http::body();
         $limit=max(1,min(10,(int)($body['limit']??3)));
