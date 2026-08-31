@@ -47,7 +47,8 @@ final class MemberInsightsTableService
         if ($comparisonAvailable) {
             $previous = $this->baseRows($clubSlug, $comparisonStart ?? '', $comparisonEnd);
             $previousRows = is_array($previous['rows'] ?? null) ? array_values($previous['rows']) : [];
-            $previousPositions = self::positionMap($previousRows, $comparisonEnd);
+            $joinedAtByKey = $this->joinedAtMap($clubSlug, $previousRows);
+            $previousPositions = self::positionMap($previousRows, $comparisonEnd, $joinedAtByKey);
         }
 
         foreach ($rows as &$row) {
@@ -122,6 +123,31 @@ final class MemberInsightsTableService
         return is_array($entry['payload'] ?? null) ? $entry['payload'] : [];
     }
 
+    /** @param list<array<string,mixed>> $rows @return array<string,?string> */
+    private function joinedAtMap(string $clubSlug, array $rows): array
+    {
+        $keys = [];
+        foreach ($rows as $row) {
+            $key = (string)($row['username_key'] ?? p2k_tp_username_key((string)($row['username'] ?? '')));
+            if ($key !== '') $keys[$key] = true;
+        }
+        $keys = array_keys($keys);
+        if ($keys === []) return [];
+
+        $out = [];
+        foreach (array_chunk($keys, 500) as $chunk) {
+            $marks = implode(',', array_fill(0, count($chunk), '?'));
+            $q = $this->repository->core()->prepare(
+                "SELECT username_key,joined_at FROM p2k_tp_members WHERE club_slug=? AND username_key IN ({$marks})"
+            );
+            $q->execute(array_merge([$clubSlug], $chunk));
+            foreach ($q->fetchAll() ?: [] as $row) {
+                $out[(string)$row['username_key']] = $row['joined_at'] === null ? null : (string)$row['joined_at'];
+            }
+        }
+        return $out;
+    }
+
     private function comparisonRange(string $start, string $end, string $evolutionKey): array
     {
         $utc = new DateTimeZone('UTC');
@@ -170,8 +196,14 @@ final class MemberInsightsTableService
         return $rows;
     }
 
-    /** Previous-position ranking can exclude members not yet known at the comparison cutoff. */
-    public static function positionMap(array $rows, ?string $cutoffDate = null): array
+    /**
+     * Build the comparison ranking from historical evidence, not database-import time.
+     * A point event on/before the cutoff is strongest evidence; authoritative joined_at
+     * is next; first_seen_at is only a fallback when neither historical signal exists.
+     *
+     * @param array<string,?string> $joinedAtByKey
+     */
+    public static function positionMap(array $rows, ?string $cutoffDate = null, array $joinedAtByKey = []): array
     {
         $rows = self::decorateAndRankRows($rows);
         $cutoffTs = $cutoffDate !== null ? strtotime($cutoffDate . ' 23:59:59 UTC') : false;
@@ -179,8 +211,16 @@ final class MemberInsightsTableService
         foreach ($rows as $row) {
             if (empty($row['current_member'])) continue;
             if ($cutoffTs !== false) {
+                $key = (string)($row['username_key'] ?? p2k_tp_username_key((string)($row['username'] ?? '')));
+                $firstActivity = strtotime((string)($row['first_activity'] ?? '') . ' UTC');
+                $joinedAt = strtotime((string)($joinedAtByKey[$key] ?? '') . ' UTC');
                 $firstSeen = strtotime((string)($row['first_seen_at'] ?? '') . ' UTC');
-                if ($firstSeen !== false && $firstSeen > $cutoffTs) continue;
+
+                $hadHistoricalActivity = $firstActivity !== false && $firstActivity <= $cutoffTs;
+                $wasAuthoritativelyJoined = $joinedAt !== false && $joinedAt <= $cutoffTs;
+                $fallbackSeen = $firstActivity === false && $joinedAt === false
+                    && $firstSeen !== false && $firstSeen <= $cutoffTs;
+                if (!$hadHistoricalActivity && !$wasAuthoritativelyJoined && !$fallbackSeen) continue;
             }
             $eligible[] = $row;
         }
