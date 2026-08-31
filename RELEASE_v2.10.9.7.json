@@ -1,0 +1,20 @@
+{
+  "version": "2.10.9.7",
+  "baseline": "2.10.9.6",
+  "branch": "release/v2.10.9.7",
+  "type": "corrective-fair-play-scheduling",
+  "changes": {
+    "fair_play_priority_before_green": true,
+    "dedicated_historical_backfill_runner": true,
+    "targeted_process_match": true,
+    "installer_managed_backfill_cron": true,
+    "version_propagation": true
+  },
+  "preservation": {
+    "runtime_data_reset": false,
+    "credentials_reset": false,
+    "unrelated_cron_preserved": true,
+    "raw_game_results_preserved": true,
+    "existing_fair_play_state_preserved": true
+  }
+}
