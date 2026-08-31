@@ -154,5 +154,5 @@
 // factory, so it adds its controls without changing the large dashboard controller.
 (() => {
   if (document.querySelector('script[data-p2k-members-insights-enhancement]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/members-insights-enhancement.js?v=2.10.9.5-members-ranking-1';script.async=false;script.dataset.p2kMembersInsightsEnhancement='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  const script=document.createElement('script');script.src='assets/js/pages/members-insights-enhancement.js?v=2.10.9.6-members-ranking-2';script.async=false;script.dataset.p2kMembersInsightsEnhancement='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
