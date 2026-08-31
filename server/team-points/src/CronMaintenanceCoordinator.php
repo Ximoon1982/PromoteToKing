@@ -56,8 +56,19 @@ final class CronMaintenanceCoordinator
             // Active matches are revisited first; the one-time finished-match backfill
             // uses any remaining slice and checkpoints after each authoritative match.
             $out['classes']['fair_play'] = $this->runClass('fair_play', 8.0, 3.0, function(float $deadline): array {
-                $service = new FairPlayReconciliationService($this->core, $this->repository, new ChessApi($this->repository), $this->clubSlug);
-                return $service->runStep(3, $deadline) + ['maintenance_class'=>'fair_play'];
+                $api = new ChessApi($this->repository);
+                $service = new FairPlayReconciliationService($this->core, $this->repository, $api, $this->clubSlug);
+                $firstFinished = null;
+                // First-finished safety closes the race where Chess.com adds a removal
+                // shortly before match end and no active-match scan runs in between.
+                if ($this->hasTime($deadline, 2.0)) {
+                    $q=$this->core->prepare("SELECT m.match_id FROM p2k_tp_match_metadata m LEFT JOIN p2k_tp_fair_play_match_state f ON f.club_slug=m.club_slug AND f.match_id=m.match_id WHERE m.club_slug=? AND m.status='finished' AND f.finalized_at IS NULL ORDER BY COALESCE(m.end_time,m.last_verified_at) DESC,m.match_id DESC LIMIT 1");
+                    try {
+                        $service->ensureSchema();$q->execute([$this->clubSlug]);$id=(int)($q->fetchColumn()?:0);
+                        if($id>0 && $this->hasTime($deadline,1.5))$firstFinished=$service->applyMatchPayload($id,$api->json('https://api.chess.com/pub/match/'.$id,true),true,false);
+                    } catch (\Throwable $e) { $firstFinished=['ran'=>false,'error'=>$e->getMessage()]; }
+                }
+                return $service->runStep(3, $deadline) + ['first_finished_check'=>$firstFinished,'maintenance_class'=>'fair_play'];
             });
             $out['classes']['pir'] = $this->runClass('pir', 6.0, 2.0, function(float $deadline): array {
                 return (new PointIntegrityService($this->core, $this->repository, $this->clubSlug))->runStep(30, $deadline);
