@@ -1,0 +1,198 @@
+name: Package Promote to King v2.10.9.5
+on:
+  push:
+    branches: ["automation/package-v2.10.9.5"]
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build exact incremental installer
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          BASE=9a7bc037e1d791fcdb61f7e8ecc8c1726c2f2262
+          SOURCE=01c963f24681602455d8414e747a196ecbab4dfa
+          OUT="$RUNNER_TEMP/p2k-v21095-out"
+          PAY="$RUNNER_TEMP/p2k-v21095-payload"
+          mkdir -p "$OUT" "$PAY"
+          git diff --name-only "$BASE" "$SOURCE" > "$RUNNER_TEMP/changed.txt"
+          COUNT=$(wc -l < "$RUNNER_TEMP/changed.txt" | tr -d ' ')
+          test "$COUNT" -eq 35
+          while IFS= read -r f; do
+            mkdir -p "$PAY/$(dirname "$f")"
+            git show "$SOURCE:$f" > "$PAY/$f"
+          done < "$RUNNER_TEMP/changed.txt"
+          python3 - "$PAY" "$RUNNER_TEMP/changed.txt" "$SOURCE" <<'PY'
+          from pathlib import Path
+          import hashlib,json,sys
+          root=Path(sys.argv[1]); files=Path(sys.argv[2]).read_text().splitlines(); source=sys.argv[3]
+          rows=[]
+          for rel in files:
+              b=(root/rel).read_bytes(); rows.append({'path':rel,'size':len(b),'sha256':hashlib.sha256(b).hexdigest()})
+          (root/'.p2k-v21095-manifest.json').write_text(json.dumps({'base_version':'2.10.9.4','target_version':'2.10.9.5','source_commit':source,'files':rows},indent=2)+'\n')
+          PY
+          tar -czf "$RUNNER_TEMP/payload.tgz" -C "$PAY" .
+          cat > "$OUT/PromoteToKing_v2.10.9.5_INCREMENTAL_INSTALLER.run" <<'SH'
+          #!/usr/bin/env bash
+          set -Eeuo pipefail
+          BASE_VERSION="2.10.9.4"
+          TARGET_VERSION="2.10.9.5"
+          SOURCE_COMMIT="01c963f24681602455d8414e747a196ecbab4dfa"
+          TARGET="${1:-${P2K_SITE_ROOT:-$PWD}}"
+          MARKER="__P2K_V21095_PAYLOAD_BELOW__"
+          SELF="$0"
+          MANIFEST=".p2k-v21095-manifest.json"
+          fail(){ echo "ERROR: $*" >&2; exit 2; }
+          command -v python3 >/dev/null 2>&1 || fail "python3 is required"
+          command -v tar >/dev/null 2>&1 || fail "tar is required"
+          choose_php(){ local c r; for c in "${P2K_PHP_CLI:-}" /usr/bin/php8.5-cli /usr/bin/php8.5 /usr/bin/php8.4-cli /usr/bin/php8.4 /usr/bin/php8.3-cli /usr/bin/php8.3 /usr/bin/php8.2-cli /usr/bin/php8.2 /usr/bin/php8.1-cli /usr/bin/php8.1 php8.5-cli php8.5 php8.4-cli php8.4 php8.3-cli php8.3 php8.2-cli php8.2 php8.1-cli php8.1 php; do [[ -n "$c" ]] || continue; r="$c"; [[ "$c" == */* ]] || r="$(command -v "$c" 2>/dev/null || true)"; [[ -n "$r" && -x "$r" ]] || continue; "$r" -r 'exit(PHP_SAPI==="cli" && PHP_VERSION_ID>=80100 ? 0 : 1);' >/dev/null 2>&1 && { printf '%s\n' "$r"; return 0; }; done; return 1; }
+          PHP_BIN="$(choose_php || true)"; [[ -n "$PHP_BIN" ]] || fail "PHP CLI 8.1+ not found"
+          [[ -d "$TARGET" ]] || fail "Target directory not found: $TARGET"
+          TARGET="$(cd "$TARGET" && pwd -P)"; [[ -f "$TARGET/VERSION" ]] || fail "VERSION missing"
+          CURRENT="$(tr -d '\r\n' < "$TARGET/VERSION")"
+          [[ "$CURRENT" == "$BASE_VERSION" || "$CURRENT" == "$TARGET_VERSION" ]] || fail "Unsupported VERSION '$CURRENT' (expected $BASE_VERSION or replay on $TARGET_VERSION)"
+          STAGE="$(mktemp -d "${TMPDIR:-/tmp}/p2k-v21095.XXXXXX")"; STAMP="$(date -u +%Y%m%d-%H%M%S)"; BACKUP="$TARGET/.p2k-backups/v2.10.9.5-$STAMP-$$"; NEW_LIST="$BACKUP/new-files.txt"; ROLLBACK=0
+          cleanup(){ rm -rf "$STAGE"; }
+          restore(){ python3 - "$TARGET" "$BACKUP" "$NEW_LIST" <<'PY'
+          from pathlib import Path
+          import shutil,sys
+          root=Path(sys.argv[1]); backup=Path(sys.argv[2]); new=Path(sys.argv[3])
+          if new.exists():
+              for rel in reversed(new.read_text().splitlines()):
+                  p=root/rel
+                  if p.is_file() or p.is_symlink(): p.unlink(missing_ok=True)
+                  elif p.is_dir(): shutil.rmtree(p)
+          saved=backup/'files'
+          if saved.exists():
+              for p in sorted(saved.rglob('*')):
+                  if not p.is_file() and not p.is_symlink(): continue
+                  dst=root/p.relative_to(saved); dst.parent.mkdir(parents=True,exist_ok=True)
+                  if p.is_symlink(): dst.unlink(missing_ok=True); dst.symlink_to(p.readlink())
+                  else: shutil.copy2(p,dst)
+          PY
+          }
+          onerr(){ rc=$?; if [[ "$ROLLBACK" == 1 ]]; then echo "Install failed; rolling back from $BACKUP" >&2; restore || true; fi; cleanup; exit "$rc"; }
+          trap onerr ERR INT TERM; trap cleanup EXIT
+          LINE="$(awk -v m="$MARKER" '$0==m{print NR+1;exit}' "$SELF")"; [[ -n "$LINE" ]] || fail "Payload marker missing"
+          echo "[1/5] Extracting and verifying exact v2.10.9.5 payload..."
+          tail -n +"$LINE" "$SELF" | tar -xzf - -C "$STAGE"
+          python3 - "$STAGE" "$STAGE/$MANIFEST" "$SOURCE_COMMIT" <<'PY'
+          from pathlib import Path
+          import hashlib,json,sys
+          root=Path(sys.argv[1]); m=json.loads(Path(sys.argv[2]).read_text()); source=sys.argv[3]
+          assert m['base_version']=='2.10.9.4' and m['target_version']=='2.10.9.5' and m['source_commit']==source and len(m['files'])==35
+          for r in m['files']:
+              p=root/r['path']; b=p.read_bytes(); assert len(b)==r['size'] and hashlib.sha256(b).hexdigest()==r['sha256'], r['path']
+          print('verified 35 payload files')
+          PY
+          echo "[2/5] Syntax/preflight checks..."
+          while IFS= read -r f; do [[ "$f" == *.php ]] && "$PHP_BIN" -d display_errors=1 -l "$STAGE/$f" >/dev/null; done < <(python3 -c 'import json,sys; [print(x["path"]) for x in json.load(open(sys.argv[1]))["files"]]' "$STAGE/$MANIFEST")
+          if command -v node >/dev/null 2>&1; then while IFS= read -r f; do [[ "$f" == *.js ]] && node --check "$STAGE/$f" >/dev/null; done < <(python3 -c 'import json,sys; [print(x["path"]) for x in json.load(open(sys.argv[1]))["files"]]' "$STAGE/$MANIFEST"); fi
+          grep -qx '2.10.9.5' "$STAGE/VERSION"; grep -qx '2.10.9.5' "$STAGE/MIGRATION_VERSION"
+          echo "[3/5] Backing up 35 touched paths..."
+          mkdir -p "$BACKUP/files"; : > "$NEW_LIST"
+          python3 - "$TARGET" "$STAGE/$MANIFEST" "$BACKUP" "$NEW_LIST" <<'PY'
+          from pathlib import Path
+          import json,shutil,sys
+          root=Path(sys.argv[1]); m=json.loads(Path(sys.argv[2]).read_text()); backup=Path(sys.argv[3]); new=Path(sys.argv[4]); n=[]
+          for r in m['files']:
+              rel=Path(r['path']); dst=root/rel
+              if dst.exists() or dst.is_symlink():
+                  if not dst.is_file() and not dst.is_symlink(): raise SystemExit(f'not a file: {rel}')
+                  b=backup/'files'/rel; b.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(dst,b,follow_symlinks=False)
+              else: n.append(str(rel))
+          new.write_text('\n'.join(n)+('\n' if n else ''))
+          PY
+          ROLLBACK=1
+          echo "[4/5] Installing v2.10.9.5 text/source delta..."
+          python3 - "$TARGET" "$STAGE" "$STAGE/$MANIFEST" <<'PY'
+          from pathlib import Path
+          import json,os,shutil,sys
+          root=Path(sys.argv[1]); stage=Path(sys.argv[2]); m=json.loads(Path(sys.argv[3]).read_text())
+          for r in m['files']:
+              rel=Path(r['path']); src=stage/rel; dst=root/rel; dst.parent.mkdir(parents=True,exist_ok=True); tmp=dst.with_name(dst.name+f'.p2k-{os.getpid()}.tmp'); shutil.copy2(src,tmp); os.replace(tmp,dst)
+          PY
+          [[ "${P2K_INSTALL_TEST_FAIL_AFTER_COPY:-0}" != 1 ]] || { echo "TEST forced failure" >&2; false; }
+          echo "[5/5] Verifying installed bytes and version..."
+          python3 - "$TARGET" "$STAGE/$MANIFEST" <<'PY'
+          from pathlib import Path
+          import hashlib,json,sys
+          root=Path(sys.argv[1]); m=json.loads(Path(sys.argv[2]).read_text())
+          for r in m['files']:
+              b=(root/r['path']).read_bytes(); assert len(b)==r['size'] and hashlib.sha256(b).hexdigest()==r['sha256'], r['path']
+          PY
+          [[ "$(tr -d '\r\n' < "$TARGET/VERSION")" == "$TARGET_VERSION" ]] || fail "VERSION did not become $TARGET_VERSION"
+          ROLLBACK=0
+          echo "Promote to King upgraded successfully: $CURRENT -> $TARGET_VERSION"
+          echo "Source commit: $SOURCE_COMMIT"
+          echo "Backup: $BACKUP"
+          echo "No database schema, CRON, runtime-data, or MCA CSV reset performed."
+          exit 0
+          __P2K_V21095_PAYLOAD_BELOW__
+          SH
+          cat "$RUNNER_TEMP/payload.tgz" >> "$OUT/PromoteToKing_v2.10.9.5_INCREMENTAL_INSTALLER.run"
+          chmod +x "$OUT/PromoteToKing_v2.10.9.5_INCREMENTAL_INSTALLER.run"
+          cat > "$OUT/install-promote-to-king-2.10.9.5.sh" <<'SH'
+          #!/usr/bin/env bash
+          set -Eeuo pipefail
+          ROOT="${1:-${P2K_SITE_ROOT:-$PWD}}"
+          HERE="$(cd "$(dirname "$0")" && pwd -P)"
+          exec "$HERE/PromoteToKing_v2.10.9.5_INCREMENTAL_INSTALLER.run" "$ROOT"
+          SH
+          chmod +x "$OUT/install-promote-to-king-2.10.9.5.sh"
+          python3 - "$BASE" "$SOURCE" <<'PY' > "$OUT/VALIDATION_REPORT_v2.10.9.5.txt"
+          import subprocess,sys
+          base,source=sys.argv[1:]
+          files=subprocess.check_output(['git','diff','--name-only',base,source],text=True).splitlines()
+          print('Promote to King v2.10.9.5 incremental installer validation')
+          print('Base commit:',base); print('Source commit:',source); print('Payload files:',len(files)); print()
+          for f in files: print(f)
+          PY
+          python3 - "$BASE" "$SOURCE" <<'PY' >> "$OUT/VALIDATION_REPORT_v2.10.9.5.txt"
+          import re,subprocess,sys
+          base,source=sys.argv[1:]
+          paths=subprocess.check_output(['git','ls-tree','-r','--name-only',base],text=True).splitlines()
+          pages=[]
+          for f in paths:
+              if not f.lower().endswith(('.html','.htm')): continue
+              b=subprocess.check_output(['git','show',f'{base}:{f}'])
+              if b'assets/js/site-config.js?v=' in b: pages.append(f)
+          bad=[]
+          for f in pages:
+              s=subprocess.check_output(['git','show',f'{source}:{f}']).decode('utf-8','replace')
+              refs=re.findall(r'assets/js/site-config\.js\?v=([^"\']+)',s)
+              if not refs or any(v!='2.10.9.5' for v in refs): bad.append((f,refs))
+          if bad: raise SystemExit('cache audit failed: '+repr(bad))
+          print('\nPASS cache audit:',len(pages),'HTML/HTM bootstrap pages use site-config.js?v=2.10.9.5')
+          print('PASS VERSION/MIGRATION_VERSION target 2.10.9.5')
+          PY
+          git worktree add --detach "$RUNNER_TEMP/p2k-clean" "$BASE" >/dev/null
+          "$OUT/PromoteToKing_v2.10.9.5_INCREMENTAL_INSTALLER.run" "$RUNNER_TEMP/p2k-clean" >/tmp/install1.log
+          while IFS= read -r f; do cmp -s <(git show "$SOURCE:$f") "$RUNNER_TEMP/p2k-clean/$f" || { echo "mismatch: $f"; exit 1; }; done < "$RUNNER_TEMP/changed.txt"
+          echo 'PASS clean 2.10.9.4 -> 2.10.9.5 install; all 35 files byte-equal to source commit.' >> "$OUT/VALIDATION_REPORT_v2.10.9.5.txt"
+          "$OUT/PromoteToKing_v2.10.9.5_INCREMENTAL_INSTALLER.run" "$RUNNER_TEMP/p2k-clean" >/tmp/install2.log
+          echo 'PASS replay/idempotent install on 2.10.9.5.' >> "$OUT/VALIDATION_REPORT_v2.10.9.5.txt"
+          git worktree add --detach "$RUNNER_TEMP/p2k-rollback" "$BASE" >/dev/null
+          set +e
+          P2K_INSTALL_TEST_FAIL_AFTER_COPY=1 "$OUT/PromoteToKing_v2.10.9.5_INCREMENTAL_INSTALLER.run" "$RUNNER_TEMP/p2k-rollback" >/tmp/rollback.log 2>&1
+          RC=$?
+          set -e
+          test "$RC" -ne 0
+          test "$(tr -d '\r\n' < "$RUNNER_TEMP/p2k-rollback/VERSION")" = '2.10.9.4'
+          cmp -s <(git show "$BASE:assets/js/site-config.js") "$RUNNER_TEMP/p2k-rollback/assets/js/site-config.js"
+          test ! -e "$RUNNER_TEMP/p2k-rollback/server/team-points/src/MemberInsightsTableService.php"
+          echo 'PASS forced post-copy failure rollback restores existing files and removes newly introduced files.' >> "$OUT/VALIDATION_REPORT_v2.10.9.5.txt"
+          sha256sum "$OUT/PromoteToKing_v2.10.9.5_INCREMENTAL_INSTALLER.run" "$OUT/install-promote-to-king-2.10.9.5.sh" >> "$OUT/VALIDATION_REPORT_v2.10.9.5.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PromoteToKing-v2.10.9.5-incremental
+          path: |
+            ${{ runner.temp }}/p2k-v21095-out/PromoteToKing_v2.10.9.5_INCREMENTAL_INSTALLER.run
+            ${{ runner.temp }}/p2k-v21095-out/install-promote-to-king-2.10.9.5.sh
+            ${{ runner.temp }}/p2k-v21095-out/VALIDATION_REPORT_v2.10.9.5.txt
+          if-no-files-found: error
