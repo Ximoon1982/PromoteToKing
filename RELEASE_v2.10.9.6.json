@@ -1,0 +1,18 @@
+{
+  "version": "2.10.9.6",
+  "baseline": "2.10.9.5",
+  "branch": "release/v2.10.9.6",
+  "type": "corrective-data-integrity",
+  "changes": {
+    "fair_play_reconciliation": true,
+    "first_finished_safety": true,
+    "historical_backfill": true,
+    "member_rank_evolution_fix": true
+  },
+  "preservation": {
+    "runtime_data_reset": false,
+    "credentials_reset": false,
+    "cron_reset": false,
+    "raw_game_results_preserved": true
+  }
+}
