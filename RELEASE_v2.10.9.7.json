@@ -2,13 +2,15 @@
   "version": "2.10.9.7",
   "baseline": "2.10.9.6",
   "branch": "release/v2.10.9.7",
-  "type": "corrective-fair-play-scheduling",
+  "type": "corrective-fair-play-and-analytics-scheduling",
   "changes": {
     "fair_play_priority_before_green": true,
     "dedicated_historical_backfill_runner": true,
     "targeted_process_match": true,
     "installer_managed_backfill_cron": true,
-    "version_propagation": true
+    "version_propagation": true,
+    "analytics_generation_convergence_cron": true,
+    "analytics_fallback_budget_corrected": true
   },
   "preservation": {
     "runtime_data_reset": false,
