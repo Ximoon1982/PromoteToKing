@@ -10,9 +10,9 @@ use DateTimeZone;
  * Canonical Members Insights table projection.
  *
  * Ranking is deliberately calculated before display filters/pagination so a search
- * never turns the searched member into #1. Daily Points are the primary key,
- * net wins (wins-losses) the first tie breaker, and username_key the stable final
- * tie breaker. The same projection feeds the browser table and CSV export.
+ * never turns the searched member into #1. Team position follows the active table
+ * sort over the whole current-member population. Daily Points keep net wins as the
+ * canonical tie breaker. The same projection feeds the browser table and CSV export.
  */
 final class MemberInsightsTableService
 {
@@ -21,6 +21,18 @@ final class MemberInsightsTableService
         '1m' => ['label' => '1 month', 'modify' => '-1 month'],
         '3m' => ['label' => '3 months', 'modify' => '-3 months'],
         '1y' => ['label' => '1 year', 'modify' => '-1 year'],
+    ];
+
+    /** Sorts whose earlier value can be reconstructed from the historical range projection. */
+    private const HISTORICAL_POSITION_SORTS = [
+        'username','points','matches','games','wins','draws','losses','net_wins',
+        'result_coverage_percent','win_rate','points_per_game','first_activity','last_activity','daily_rank',
+    ];
+
+    private const VALID_SORTS = [
+        'username','activity_status','daily_rank','points','matches','games','wins','draws','losses','net_wins',
+        'win_rate','result_coverage_percent','points_per_game','first_activity','last_activity','current_matches',
+        'live_points','achievement_count','daily_rating','chess960_rating','last_standard_game_at','last_chess960_game_at',
     ];
 
     public function __construct(
@@ -37,18 +49,23 @@ final class MemberInsightsTableService
 
         $start = trim((string)($options['start'] ?? ''));
         $end = trim((string)($options['end'] ?? ''));
+        $sort = self::normalizeSort((string)($options['sort'] ?? 'points'));
+        $direction = strtolower(trim((string)($options['direction'] ?? 'desc'))) === 'asc' ? 'asc' : 'desc';
+
         $base = $this->baseRows($clubSlug, $start, $end);
         $rows = is_array($base['rows'] ?? null) ? array_values($base['rows']) : [];
+        $rows = self::decorateAndRankRows($rows, $sort, $direction);
 
-        $rows = self::decorateAndRankRows($rows);
         [$comparisonEnd, $comparisonStart] = $this->comparisonRange($start, $end, $evolutionKey);
         $previousPositions = [];
-        $comparisonAvailable = $comparisonEnd !== null && ($comparisonStart === null || $comparisonStart <= $comparisonEnd);
+        $comparisonAvailable = $comparisonEnd !== null
+            && ($comparisonStart === null || $comparisonStart <= $comparisonEnd)
+            && in_array($sort, self::HISTORICAL_POSITION_SORTS, true);
         if ($comparisonAvailable) {
             $previous = $this->baseRows($clubSlug, $comparisonStart ?? '', $comparisonEnd);
             $previousRows = is_array($previous['rows'] ?? null) ? array_values($previous['rows']) : [];
             $joinedAtByKey = $this->joinedAtMap($clubSlug, $previousRows);
-            $previousPositions = self::positionMap($previousRows, $comparisonEnd, $joinedAtByKey);
+            $previousPositions = self::positionMap($previousRows, $comparisonEnd, $joinedAtByKey, $sort, $direction);
         }
 
         foreach ($rows as &$row) {
@@ -63,11 +80,14 @@ final class MemberInsightsTableService
                 : null;
             $row['position_comparison_available'] = $comparisonAvailable;
             $row['position_new'] = $comparisonAvailable && $currentPosition !== null && $previousPosition === null;
+            $row['position_sort'] = $sort;
+            $row['position_direction'] = $direction;
         }
         unset($row);
 
+        // Search/filter never define rank. Sorting is global and happens before page slicing.
         $rows = $this->applyDisplayFilters($rows, $options);
-        $rows = $this->sortRows($rows, (string)($options['sort'] ?? 'points'), (string)($options['direction'] ?? 'desc'));
+        $rows = $this->sortRows($rows, $sort, $direction);
 
         $totalRows = count($rows);
         $pageSize = max(10, min(100, (int)($options['page_size'] ?? 25)));
@@ -88,11 +108,17 @@ final class MemberInsightsTableService
                 'start' => $start !== '' ? $start : null,
                 'end' => $end !== '' ? $end : null,
             ],
+            'position' => [
+                'sort' => $sort,
+                'direction' => $direction,
+                'global' => true,
+            ],
             'evolution' => [
                 'key' => $evolutionKey,
                 'label' => self::EVOLUTION[$evolutionKey]['label'],
                 'comparison_start' => $comparisonStart,
                 'comparison_end' => $comparisonEnd,
+                'position_comparison_available' => $comparisonAvailable,
             ],
         ];
     }
@@ -160,8 +186,10 @@ final class MemberInsightsTableService
     }
 
     /** Normalize result-derived fields and assign globally stable current-member positions. */
-    public static function decorateAndRankRows(array $rows): array
+    public static function decorateAndRankRows(array $rows, string $sort = 'points', string $direction = 'desc'): array
     {
+        $sort = self::normalizeSort($sort);
+        $direction = strtolower($direction) === 'asc' ? 'asc' : 'desc';
         foreach ($rows as &$row) {
             $games = max(0, (int)($row['games'] ?? 0));
             $wins = max(0, (int)($row['wins'] ?? 0));
@@ -181,17 +209,7 @@ final class MemberInsightsTableService
 
         $rankedIndexes = [];
         foreach ($rows as $index => $row) if (!empty($row['current_member'])) $rankedIndexes[] = $index;
-        usort($rankedIndexes, static function (int $left, int $right) use ($rows): int {
-            $a = $rows[$left]; $b = $rows[$right];
-            $cmp = ((float)($b['points'] ?? 0)) <=> ((float)($a['points'] ?? 0));
-            if ($cmp !== 0) return $cmp;
-            $cmp = ((int)($b['net_wins'] ?? 0)) <=> ((int)($a['net_wins'] ?? 0));
-            if ($cmp !== 0) return $cmp;
-            return strcmp(
-                (string)($a['username_key'] ?? p2k_tp_username_key((string)($a['username'] ?? ''))),
-                (string)($b['username_key'] ?? p2k_tp_username_key((string)($b['username'] ?? '')))
-            );
-        });
+        usort($rankedIndexes, static fn(int $left, int $right): int => self::compareRows($rows[$left], $rows[$right], $sort, $direction));
         foreach ($rankedIndexes as $offset => $index) $rows[$index]['team_position'] = $offset + 1;
         return $rows;
     }
@@ -203,9 +221,16 @@ final class MemberInsightsTableService
      *
      * @param array<string,?string> $joinedAtByKey
      */
-    public static function positionMap(array $rows, ?string $cutoffDate = null, array $joinedAtByKey = []): array
-    {
-        $rows = self::decorateAndRankRows($rows);
+    public static function positionMap(
+        array $rows,
+        ?string $cutoffDate = null,
+        array $joinedAtByKey = [],
+        string $sort = 'points',
+        string $direction = 'desc'
+    ): array {
+        $sort = self::normalizeSort($sort);
+        $direction = strtolower($direction) === 'asc' ? 'asc' : 'desc';
+        $rows = self::decorateAndRankRows($rows, $sort, $direction);
         $cutoffTs = $cutoffDate !== null ? strtotime($cutoffDate . ' 23:59:59 UTC') : false;
         $eligible = [];
         foreach ($rows as $row) {
@@ -224,16 +249,7 @@ final class MemberInsightsTableService
             }
             $eligible[] = $row;
         }
-        usort($eligible, static function (array $a, array $b): int {
-            $cmp = ((float)($b['points'] ?? 0)) <=> ((float)($a['points'] ?? 0));
-            if ($cmp !== 0) return $cmp;
-            $cmp = ((int)($b['net_wins'] ?? 0)) <=> ((int)($a['net_wins'] ?? 0));
-            if ($cmp !== 0) return $cmp;
-            return strcmp(
-                (string)($a['username_key'] ?? p2k_tp_username_key((string)($a['username'] ?? ''))),
-                (string)($b['username_key'] ?? p2k_tp_username_key((string)($b['username'] ?? '')))
-            );
-        });
+        usort($eligible, static fn(array $a, array $b): int => self::compareRows($a, $b, $sort, $direction));
         $map = [];
         foreach ($eligible as $index => $row) {
             $key = (string)($row['username_key'] ?? p2k_tp_username_key((string)($row['username'] ?? '')));
@@ -277,23 +293,61 @@ final class MemberInsightsTableService
 
     private function sortRows(array $rows, string $sort, string $direction): array
     {
-        $sort = strtolower(trim($sort));
-        $valid = [
-            'team_position','position_change','username','points','matches','games','wins','draws','losses','net_wins',
-            'win_rate','result_coverage_percent','points_per_game','first_activity','last_activity','current_matches',
-            'live_points','achievement_count','daily_rating','chess960_rating','last_standard_game_at','last_chess960_game_at'
-        ];
-        if (!in_array($sort, $valid, true)) $sort = 'points';
-        $directionFactor = strtolower(trim($direction)) === 'asc' ? 1 : -1;
-        usort($rows, static function (array $a, array $b) use ($sort, $directionFactor): int {
-            $av = $a[$sort] ?? null; $bv = $b[$sort] ?? null;
-            if ($av === null && $bv !== null) return 1;
-            if ($bv === null && $av !== null) return -1;
-            if ($av === null && $bv === null) return strcasecmp((string)($a['username'] ?? ''), (string)($b['username'] ?? ''));
-            $cmp = is_numeric($av) && is_numeric($bv) ? ($av <=> $bv) : strcasecmp((string)$av, (string)$bv);
-            if ($cmp === 0) return strcasecmp((string)($a['username'] ?? ''), (string)($b['username'] ?? ''));
-            return $directionFactor * $cmp;
-        });
+        $sort = self::normalizeSort($sort);
+        $direction = strtolower($direction) === 'asc' ? 'asc' : 'desc';
+        usort($rows, static fn(array $a, array $b): int => self::compareRows($a, $b, $sort, $direction));
         return $rows;
+    }
+
+    private static function normalizeSort(string $sort): string
+    {
+        $sort = strtolower(trim($sort));
+        if (in_array($sort, ['team_position','position_change'], true)) return 'points';
+        return in_array($sort, self::VALID_SORTS, true) ? $sort : 'points';
+    }
+
+    private static function compareRows(array $a, array $b, string $sort, string $direction): int
+    {
+        $sort = self::normalizeSort($sort);
+        $directionFactor = $direction === 'asc' ? 1 : -1;
+        $av = self::sortValue($a, $sort);
+        $bv = self::sortValue($b, $sort);
+
+        if ($av === null && $bv !== null) return 1;
+        if ($bv === null && $av !== null) return -1;
+        if ($av !== null && $bv !== null) {
+            $cmp = is_numeric($av) && is_numeric($bv)
+                ? ($av <=> $bv)
+                : strcasecmp((string)$av, (string)$bv);
+            if ($cmp !== 0) return $directionFactor * $cmp;
+        }
+
+        // Daily Points retain the established canonical tie-breaker regardless of display direction.
+        if ($sort === 'points') {
+            $cmp = ((int)($b['net_wins'] ?? 0)) <=> ((int)($a['net_wins'] ?? 0));
+            if ($cmp !== 0) return $cmp;
+        }
+        return strcmp(
+            (string)($a['username_key'] ?? p2k_tp_username_key((string)($a['username'] ?? ''))),
+            (string)($b['username_key'] ?? p2k_tp_username_key((string)($b['username'] ?? '')))
+        );
+    }
+
+    private static function sortValue(array $row, string $sort): mixed
+    {
+        if ($sort === 'activity_status') {
+            return match (strtolower((string)($row['activity_status'] ?? 'unknown'))) {
+                'active' => 0,
+                'cooling' => 1,
+                'inactive' => 2,
+                'dormant' => 3,
+                default => 4,
+            };
+        }
+        if ($sort === 'daily_rank') {
+            $rank = $row['daily_rank'] ?? null;
+            return is_array($rank) ? (string)($rank['name'] ?? $rank['key'] ?? 'Unranked') : (string)($rank ?? 'Unranked');
+        }
+        return $row[$sort] ?? null;
     }
 }
