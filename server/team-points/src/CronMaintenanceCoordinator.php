@@ -68,7 +68,7 @@ final class CronMaintenanceCoordinator
                         if($id>0 && $this->hasTime($deadline,1.5))$firstFinished=$service->applyMatchPayload($id,$api->json('https://api.chess.com/pub/match/'.$id,true),true,false);
                     } catch (\Throwable $e) { $firstFinished=['ran'=>false,'error'=>$e->getMessage()]; }
                 }
-                return $service->runStep(3, $deadline) + ['first_finished_check'=>$firstFinished,'maintenance_class'=>'fair_play'];
+                return $service->runStep(4, $deadline) + ['first_finished_check'=>$firstFinished,'maintenance_class'=>'fair_play'];
             });
             $out['classes']['pir'] = $this->runClass('pir', 6.0, 2.0, function(float $deadline): array {
                 return (new PointIntegrityService($this->core, $this->repository, $this->clubSlug))->runStep(30, $deadline);
