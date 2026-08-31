@@ -25,8 +25,8 @@
   });
 
   window.P2K_SITE_CONFIG = Object.freeze({
-    version: "2.10.9.5",
-    builtAt: "2026-08-30T21:10:18Z",
+    version: "2.10.9.7",
+    builtAt: "2026-08-31T15:21:28Z",
     schemaVersion: 6,
     siteName: existing.siteName || branding.title || "Promote to King",
     siteDescription: existing.siteDescription || branding.subtitle || "Play together. Improve together. Promote to King.",
@@ -154,5 +154,5 @@
 // factory, so it adds its controls without changing the large dashboard controller.
 (() => {
   if (document.querySelector('script[data-p2k-members-insights-enhancement]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/members-insights-enhancement.js?v=2.10.9.6-members-ranking-2';script.async=false;script.dataset.p2kMembersInsightsEnhancement='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  const script=document.createElement('script');script.src='assets/js/pages/members-insights-enhancement.js?v=2.10.9.7-members-ranking-2';script.async=false;script.dataset.p2kMembersInsightsEnhancement='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
