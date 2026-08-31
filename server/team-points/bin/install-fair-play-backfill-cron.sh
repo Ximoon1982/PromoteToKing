@@ -8,11 +8,38 @@ else
   ROOT="$(cd "$ROOT" && pwd)"
 fi
 
-PHP_BIN="${P2K_PHP_BIN:-$(command -v php || true)}"
-if [[ -z "$PHP_BIN" ]]; then
-  echo "ERROR: PHP CLI was not found." >&2
-  exit 1
-fi
+resolve_php_cli() {
+  local candidate sapi
+  if [[ -n "${P2K_PHP_BIN:-}" ]]; then
+    candidate="$P2K_PHP_BIN"
+    if [[ -x "$candidate" ]]; then
+      sapi="$($candidate -r 'echo PHP_SAPI;' 2>/dev/null | tr -d '\r\n' || true)"
+      [[ "$sapi" == "cli" ]] && { printf '%s\n' "$candidate"; return 0; }
+    fi
+    echo "ERROR: P2K_PHP_BIN does not point to a PHP CLI executable: $candidate" >&2
+    return 1
+  fi
+
+  # IONOS Web Hosting: versioned CLI paths differ by contract generation.
+  # Prefer PHP 8.5, then supported fallbacks. Never use bare /usr/bin/php.
+  for candidate in \
+    /usr/bin/php8.5-cli /usr/bin/php8.5 \
+    /usr/bin/php8.4-cli /usr/bin/php8.4 \
+    /usr/bin/php8.3-cli /usr/bin/php8.3 \
+    /usr/bin/php8.2-cli /usr/bin/php8.2; do
+    [[ -x "$candidate" ]] || continue
+    sapi="$($candidate -r 'echo PHP_SAPI;' 2>/dev/null | tr -d '\r\n' || true)"
+    if [[ "$sapi" == "cli" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  echo "ERROR: No supported PHP CLI executable was found. Expected an IONOS versioned CLI such as /usr/bin/php8.5-cli or /usr/bin/php8.5." >&2
+  return 1
+}
+
+PHP_BIN="$(resolve_php_cli)"
 if ! command -v crontab >/dev/null 2>&1; then
   echo "ERROR: crontab command is unavailable." >&2
   exit 1
@@ -48,4 +75,4 @@ SCRIPT_Q="$(quote_sq "server/team-points/bin/fair-play-backfill.php")"
 } >>"$TMP_NEXT"
 
 crontab "$TMP_NEXT"
-echo "Installed Promote to King v2.10.9.7 Fair Play backfill CRON (every 2 minutes)."
+echo "Installed Promote to King v2.10.9.7 Fair Play backfill CRON (every 2 minutes) using $PHP_BIN."
