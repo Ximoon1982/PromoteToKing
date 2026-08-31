@@ -52,6 +52,13 @@ final class CronMaintenanceCoordinator
                 RuntimeTelemetry::record('intelligence_maintenance',['lane'=>$this->lane,'anomalies'=>(int)($scan['summary']['total']??0)]);
                 return ['ran'=>true,'snapshot_date'=>$snapshot['date']??null,'anomaly_scan'=>$scan['summary']??null,'scanned_at'=>$scan['scanned_at']??null];
             });
+            // v2.10.9.6: fair-play correction is bounded background integrity work.
+            // Active matches are revisited first; the one-time finished-match backfill
+            // uses any remaining slice and checkpoints after each authoritative match.
+            $out['classes']['fair_play'] = $this->runClass('fair_play', 8.0, 3.0, function(float $deadline): array {
+                $service = new FairPlayReconciliationService($this->core, $this->repository, new ChessApi($this->repository), $this->clubSlug);
+                return $service->runStep(3, $deadline) + ['maintenance_class'=>'fair_play'];
+            });
             $out['classes']['pir'] = $this->runClass('pir', 6.0, 2.0, function(float $deadline): array {
                 return (new PointIntegrityService($this->core, $this->repository, $this->clubSlug))->runStep(30, $deadline);
             });
@@ -65,8 +72,6 @@ final class CronMaintenanceCoordinator
                 $service = new LiveRanksService($this->analytics, $this->repository, new ChessApi($this->repository));
                 $status = $service->identityAttributionStatus();
                 if (empty($status['stale'])) return ['ran'=>false,'reason'=>'current','identity_attribution'=>$status];
-                // A full CSV rebuild may be too large for the residual HTTP envelope.
-                // Only run automatically when CMDI can grant a meaningful bounded slice.
                 if (!$this->hasTime($deadline, 4.0)) return ['ran'=>false,'deferred'=>true,'reason'=>'insufficient_mira_slice','identity_attribution'=>$status];
                 return $service->rebuildIdentityAttributionIfNeeded($deadline);
             });
@@ -119,8 +124,6 @@ final class CronMaintenanceCoordinator
 
     private function setStatementBudget(float $seconds): void
     {
-        // MariaDB accepts max_statement_time in seconds. Failure is harmless on hosts
-        // where the variable is unavailable; wall-clock checks still prevent new work.
         $value = $seconds > 0 ? number_format(max(0.05,min(30.0,$seconds)),3,'.','') : '0';
         foreach ([$this->core,$this->analytics] as $pdo) {
             try { $pdo->exec('SET SESSION max_statement_time='.$value); } catch (\Throwable) {}
