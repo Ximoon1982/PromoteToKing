@@ -22,3 +22,12 @@ Corrective Fair Play scheduling release built from the canonical v2.10.9.6 basel
 - Only effective Team Points are corrected, with the v2.10.9.6 adjustment/provenance tables retained.
 - Core/Analytics runtime data, credentials, generated analytics and unrelated scheduled tasks are preserved.
 - No database schema reset or migration is required beyond the already-installed v2.10.9.6 Fair Play tables.
+
+## R3 Analytics convergence correction
+
+- Fair Play corrections increment the authoritative Core generation immediately, but all-time Members/Hall/Profile totals are served from the materialized `p2k_an_player_totals` Analytics projection.
+- The previous Club maintenance allocation was internally impossible: Analytics received at most 7 seconds while `AnalyticsBuilder::refreshIfDue()` requires at least 8 seconds remaining before a rebuild may start.
+- The Club fallback slice is corrected to a 10-second maximum with a 9-second minimum start budget.
+- Generation convergence now also has a dedicated CLI runner and one-minute CRON. It uses a separate MariaDB advisory lock, the existing generation/source-watermark logic, a 35-second bounded request window and verified versioned IONOS PHP CLI.
+- The task is cheap when Core has not changed; when Fair Play or another authoritative write increments Core generation, the next eligible invocation rebuilds Analytics after the existing short generation-coalescing window.
+- No Core/Analytics data is reset and the existing Fair Play backfill CRON is left untouched.
