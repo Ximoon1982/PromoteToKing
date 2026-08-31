@@ -1,20 +1,19 @@
 {
   "schemaVersion": 8,
-  "version": "2.10.9.5",
-  "builtAt": "2026-08-30T21:10:18Z",
-  "baseline": "Promote to King v2.10.9.4 canonical source.",
+  "version": "2.10.9.6",
+  "builtAt": "2026-08-31T09:47:00Z",
+  "baseline": "Promote to King v2.10.9.5 canonical source.",
   "release": {
-    "corrective": false,
+    "corrective": true,
     "scope": [
-      "period-aware Members Insights statistics and Daily Points",
-      "Team position by Daily Points with net wins tie breaker",
-      "1w/1m/3m/1y position evolution indicators",
-      "correct result-covered member win rate",
-      "full filtered unpaginated Members CSV export",
-      "v2.10.9.5 cache generation for site-config and Members enhancement assets"
+      "fair_play_removals effective Team Points reconciliation",
+      "first-finished fair-play safety check",
+      "resumable historical finished-match fair-play backfill",
+      "team-score versus effective player-points reconciliation observability",
+      "historical-evidence Members leaderboard position evolution"
     ],
-    "sourceBaseline": "v2.10.9.4",
-    "databaseSchemaChange": false,
+    "sourceBaseline": "v2.10.9.5",
+    "databaseSchemaChange": true,
     "runtimeDataReset": false
   },
   "preservedPriorManifest": {
@@ -22,6 +21,7 @@
     "version": "2.10.6.24"
   },
   "releaseNotes": [
+    "RELEASE_NOTES_v2.10.9.6.md",
     "RELEASE_NOTES_v2.10.9.5.md",
     "RELEASE_NOTES_v2.10.9.4.md",
     "RELEASE_NOTES_v2.10.9.3.md",
