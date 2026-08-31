@@ -1,7 +1,7 @@
 {
   "schemaVersion": 8,
   "version": "2.10.9.7",
-  "builtAt": "2026-08-31T15:21:28Z",
+  "builtAt": "2026-08-31T19:10:00Z",
   "baseline": "Promote to King v2.10.9.6 canonical source.",
   "release": {
     "corrective": true,
@@ -11,7 +11,10 @@
       "one-request-per-second historical Chess.com match pacing",
       "authenticated targeted process-match Fair Play repair",
       "rollback-safe installer-managed Fair Play backfill CRON",
-      "v2.10.9.7 runtime and cache-key propagation"
+      "v2.10.9.7 runtime and cache-key propagation",
+      "dedicated generation-aware Analytics convergence runner",
+      "one-minute Analytics convergence CRON using verified IONOS PHP CLI",
+      "Club maintenance Analytics fallback budget corrected above the builder start threshold"
     ],
     "sourceBaseline": "v2.10.9.6",
     "databaseSchemaChange": false,
