@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+if (PHP_SAPI !== 'cli') {
+    fwrite(STDERR, "Fair Play backfill requires PHP CLI; current SAPI is " . PHP_SAPI . PHP_EOL);
+    exit(2);
+}
+
 require_once dirname(__DIR__) . '/src/bootstrap.php';
 
 use P2K\TeamPoints\ChessApi;
