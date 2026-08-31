@@ -1,19 +1,20 @@
 {
   "schemaVersion": 8,
-  "version": "2.10.9.6",
-  "builtAt": "2026-08-31T09:47:00Z",
-  "baseline": "Promote to King v2.10.9.5 canonical source.",
+  "version": "2.10.9.7",
+  "builtAt": "2026-08-31T15:21:28Z",
+  "baseline": "Promote to King v2.10.9.6 canonical source.",
   "release": {
     "corrective": true,
     "scope": [
-      "fair_play_removals effective Team Points reconciliation",
-      "first-finished fair-play safety check",
-      "resumable historical finished-match fair-play backfill",
-      "team-score versus effective player-points reconciliation observability",
-      "historical-evidence Members leaderboard position evolution"
+      "guaranteed current Fair Play priority slice before Green Club worker",
+      "dedicated resumable historical Fair Play backfill runner",
+      "one-request-per-second historical Chess.com match pacing",
+      "authenticated targeted process-match Fair Play repair",
+      "rollback-safe installer-managed Fair Play backfill CRON",
+      "v2.10.9.7 runtime and cache-key propagation"
     ],
-    "sourceBaseline": "v2.10.9.5",
-    "databaseSchemaChange": true,
+    "sourceBaseline": "v2.10.9.6",
+    "databaseSchemaChange": false,
     "runtimeDataReset": false
   },
   "preservedPriorManifest": {
@@ -21,6 +22,7 @@
     "version": "2.10.6.24"
   },
   "releaseNotes": [
+    "RELEASE_NOTES_v2.10.9.7.md",
     "RELEASE_NOTES_v2.10.9.6.md",
     "RELEASE_NOTES_v2.10.9.5.md",
     "RELEASE_NOTES_v2.10.9.4.md",
