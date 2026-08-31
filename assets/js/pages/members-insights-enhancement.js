@@ -1,4 +1,4 @@
-/* Members Insights period, team-position, evolution, and full CSV enhancement. */
+/* Members Insights period, dynamic team-position, evolution, and full CSV enhancement. */
 (() => {
   "use strict";
 
@@ -10,7 +10,7 @@
     if (document.querySelector('link[data-p2k-members-insights-css]')) return;
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "assets/css/members-insights-enhancement.css?v=2.10.9.5-members-ranking-1";
+    link.href = "assets/css/members-insights-enhancement.css?v=2.10.9.6-members-ranking-2";
     link.dataset.p2kMembersInsightsCss = "1";
     document.head.appendChild(link);
   }
@@ -38,7 +38,6 @@
   function memberRequestURL(url, state) {
     const resolved = new URL(String(url || ""), window.location.href);
     if (!/\/server\/team-points\/public\/members-insights\.php$/i.test(resolved.pathname)) return resolved;
-    // Members owns its date state. Do not inherit Team Insights' teamStart/teamEnd.
     resolved.searchParams.delete("start");
     resolved.searchParams.delete("end");
     resolved.searchParams.delete("evolution");
@@ -61,7 +60,11 @@
     const movement = document.createElement("span");
     const previous = Number(row?.previous_position);
     const change = Number(row?.position_change);
-    if (row?.position_new === true) {
+    if (row?.position_comparison_available === false) {
+      movement.className = "p2k-member-position-change is-flat";
+      movement.textContent = "—";
+      movement.title = "Historical position evolution is unavailable for this sorting metric";
+    } else if (row?.position_new === true) {
       movement.className = "p2k-member-position-change is-new";
       movement.textContent = "NEW";
       movement.title = "No team position at the selected comparison date";
@@ -87,16 +90,18 @@
   }
 
   function ensurePositionHeader(root) {
-    if (!root || root.querySelector('th[data-key="team_position"]')) return;
+    if (!root) return;
     const row = root.querySelector("thead tr");
     if (!row) return;
-    const header = document.createElement("th");
-    header.dataset.key = "team_position";
-    header.textContent = "Team position";
-    header.title = "Daily Points rank · net wins break ties";
-    const first = row.children[0];
-    if (first?.nextSibling) row.insertBefore(header, first.nextSibling);
-    else row.appendChild(header);
+    let header = row.querySelector('th[data-position-column="team_position"]');
+    if (!header) {
+      header = document.createElement("th");
+      header.dataset.positionColumn = "team_position";
+      header.textContent = "Team position";
+      header.title = "Global rank in the current table sorting order";
+    }
+    header.removeAttribute("data-key");
+    if (row.firstElementChild !== header) row.insertBefore(header, row.firstElementChild);
   }
 
   function patchDataTable() {
@@ -108,16 +113,14 @@
         if (options?.root?.id === "membersDataTable") {
           ensurePositionHeader(options.root);
           const columns = Array.isArray(options.columns) ? options.columns.map(column => ({ ...column })) : [];
-          if (!columns.some(column => column.key === "team_position")) {
-            const usernameIndex = Math.max(0, columns.findIndex(column => column.key === "username"));
-            columns.splice(usernameIndex + 1, 0, {
-              key: "team_position",
-              label: "Team position",
-              type: "number",
-              defaultDirection: "asc",
-              render: row => positionCell(row),
-            });
-          }
+          const existingIndex = columns.findIndex(column => column.key === "team_position");
+          if (existingIndex >= 0) columns.splice(existingIndex, 1);
+          columns.unshift({
+            key: "team_position",
+            label: "Team position",
+            type: "number",
+            render: row => positionCell(row),
+          });
           const winRate = columns.find(column => column.key === "win_rate");
           if (winRate) {
             winRate.render = row => row?.win_rate === null || row?.win_rate === undefined || row?.win_rate === ""
@@ -247,7 +250,6 @@
       };
       const api = factory(enhancedContext);
       const originalLoadMemberInsights = api.loadMemberInsights;
-      let enhancedApi = null;
       const loadMemberInsights = async (options = {}) => {
         patchDataTable();
         ensureControls(ctx, state, () => {
@@ -255,8 +257,7 @@
         });
         return originalLoadMemberInsights(options);
       };
-      enhancedApi = Object.freeze({ ...api, loadMemberInsights });
-      return enhancedApi;
+      return Object.freeze({ ...api, loadMemberInsights });
     };
     Object.defineProperty(enhancedFactory, FACTORY_FLAG, { value: true });
     return enhancedFactory;
@@ -277,7 +278,6 @@
       set(value) { storedFactory = typeof value === "function" ? wrapFactory(value) : value; },
     });
   } catch (_) {
-    // Very old browsers: poll briefly for the lazy Insights factory instead.
     let attempts = 0;
     const timer = window.setInterval(() => {
       attempts += 1;
