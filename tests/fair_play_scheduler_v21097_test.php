@@ -27,8 +27,8 @@ $must(str_contains($backfill,'applyMatchPayload($id, $payload, true, true)'),'Hi
 $must(str_contains($backfill,'cursor_match_id=GREATEST(cursor_match_id,?)'),'Backfill runner must durably advance the cursor after success.');
 
 $endpoint=$read('server/team-points/public/fair-play-maintenance.php');
-$must(str_contains($endpoint,"$action==='process-match'"),'Authenticated targeted process-match action is missing.');
-$must(str_contains($endpoint,"$body['match_id']"),'Targeted process-match must accept match_id.');
+$must(str_contains($endpoint,"\$action==='process-match'"),'Authenticated targeted process-match action is missing.');
+$must(str_contains($endpoint,"\$body['match_id']"),'Targeted process-match must accept match_id.');
 
 $must(trim($read('VERSION'))==='2.10.9.7','VERSION not propagated to 2.10.9.7.');
 $must(trim($read('MIGRATION_VERSION'))==='2.10.9.7','MIGRATION_VERSION not propagated to 2.10.9.7.');
