@@ -14,7 +14,11 @@ final class CronMaintenanceCoordinator
     {
         $out=['mode'=>'cmdi-isolated','request_deadline_epoch_ms'=>(int)round($this->requestDeadlineAt*1000),'hard_return_reserve_seconds'=>$this->hardReturnReserve,'classes'=>[]];
         if($this->lane==='club'){
-            $out['classes']['analytics']=$this->runClass('analytics',7.0,3.0,function(float $deadline):array{
+            // v2.10.9.7 R3: AnalyticsBuilder refuses to start with <8s remaining.
+            // The old 7s/3s class was therefore mathematically incapable of rebuilding.
+            // Keep this fallback coherent at 10s/9s; the dedicated CLI convergence task
+            // is the guaranteed path when the Green worker leaves less request budget.
+            $out['classes']['analytics']=$this->runClass('analytics',10.0,9.0,function(float $deadline):array{
                 $builder=new AnalyticsBuilder($this->core,$this->analytics);
                 return $builder->refreshIfDue($this->clubSlug,300,$deadline)+['maintenance_class'=>'analytics'];
             });
