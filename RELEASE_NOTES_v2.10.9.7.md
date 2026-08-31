@@ -8,6 +8,7 @@ Corrective Fair Play scheduling release built from the canonical v2.10.9.6 basel
 - The priority slice checks one newly-finished match first, then a small number of active matches. Historical traversal is excluded from this priority budget.
 - The historical Fair Play scan now has a dedicated resumable CLI runner with its own MariaDB advisory lock, persisted cursor and minimum one-second interval between Chess.com match requests.
 - The release installer adds a dedicated two-minute Fair Play backfill CRON entry while preserving every unrelated CRON line. The runner becomes effectively idle once the backfill reaches `complete`.
+- IONOS Web Hosting CLI execution uses a versioned PHP CLI binary (`/usr/bin/php8.5-cli` on older contracts or `/usr/bin/php8.5` on newer contracts), never the legacy bare `php` command; the worker rejects non-CLI SAPIs defensively.
 - The existing Fair Play database state from v2.10.9.6 is preserved; no restart or data reset is performed.
 
 ## Targeted repair
