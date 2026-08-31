@@ -26,6 +26,13 @@ $must(str_contains($backfill,"status='finished' AND match_id>?"),'Backfill runne
 $must(str_contains($backfill,'applyMatchPayload($id, $payload, true, true)'),'Historical processing must use canonical Fair Play reconciliation with backfill provenance.');
 $must(str_contains($backfill,'cursor_match_id=GREATEST(cursor_match_id,?)'),'Backfill runner must durably advance the cursor after success.');
 
+$cliWorker=$read('server/team-points/bin/fair-play-backfill.php');
+$must(str_contains($cliWorker,"PHP_SAPI !== 'cli'"),'Historical worker must reject non-CLI PHP SAPIs.');
+$cronInstaller=$read('server/team-points/bin/install-fair-play-backfill-cron.sh');
+$must(str_contains($cronInstaller,'/usr/bin/php8.5-cli'),'IONOS PHP 8.5 CLI path must be considered.');
+$must(str_contains($cronInstaller,"echo PHP_SAPI"),'CRON installer must verify that the selected PHP executable is CLI.');
+$must(!str_contains($cronInstaller,'command -v php'),'CRON installer must never fall back to the legacy bare php command on IONOS.');
+
 $endpoint=$read('server/team-points/public/fair-play-maintenance.php');
 $must(str_contains($endpoint,"\$action==='process-match'"),'Authenticated targeted process-match action is missing.');
 $must(str_contains($endpoint,"\$body['match_id']"),'Targeted process-match must accept match_id.');
@@ -38,4 +45,4 @@ $must(str_contains($site,'v=2.10.9.7-members-ranking-2'),'Members enhancement ca
 $manifest=json_decode($read('site-manifest.json'),true,512,JSON_THROW_ON_ERROR);
 $must(($manifest['version']??'')==='2.10.9.7','site-manifest version not propagated.');
 
-echo "PASS v2.10.9.7 Fair Play scheduling, targeted repair and version propagation contract\n";
+echo "PASS v2.10.9.7 Fair Play scheduling, IONOS CLI safety, targeted repair and version propagation contract\n";
