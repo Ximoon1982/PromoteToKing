@@ -67,41 +67,13 @@
       recruitmentAdminEndpoint: existing.serverStorage?.recruitmentAdminEndpoint || "server/team-points/public/recruitment-admin.php"
     }),
     modelVersions: Object.freeze({
-      matchAssistant: Object.freeze({
-        label: "Match Assistant eligibility and recommendation",
-        version: "FM-32",
-        source: "FindMatch v32"
-      }),
-      upcomingAnalysis: Object.freeze({
-        label: "Upcoming lineup, probability and recruitment",
-        version: "UA-45",
-        source: "Upcoming Matches Analyzer v45"
-      }),
-      matchCreation: Object.freeze({
-        label: "Match Creation scoring and secured outcomes",
-        version: "MC-23",
-        source: "Match Creation Analyzer v23"
-      }),
-      inProgressProjection: Object.freeze({
-        label: "In-progress match score projection",
-        version: "AM-3",
-        source: "Analyze Match v3"
-      }),
-      recruitmentEligibility: Object.freeze({
-        label: "Recruitment candidate eligibility",
-        version: "RM-2",
-        source: "Recruit Match stored-rating top-player model v2"
-      }),
-      challengeValidation: Object.freeze({
-        label: "Challenge validation, error classification, and recommendation",
-        version: "CL-4",
-        source: "Challenge validation and recommendation model v4"
-      }),
-      matchHistory: Object.freeze({
-        label: "Match registration history and probability evolution",
-        version: "MH-1",
-        source: "Match history model v1"
-      })
+      matchAssistant: Object.freeze({ label: "Match Assistant eligibility and recommendation", version: "FM-32", source: "FindMatch v32" }),
+      upcomingAnalysis: Object.freeze({ label: "Upcoming lineup, probability and recruitment", version: "UA-45", source: "Upcoming Matches Analyzer v45" }),
+      matchCreation: Object.freeze({ label: "Match Creation scoring and secured outcomes", version: "MC-23", source: "Match Creation Analyzer v23" }),
+      inProgressProjection: Object.freeze({ label: "In-progress match score projection", version: "AM-3", source: "Analyze Match v3" }),
+      recruitmentEligibility: Object.freeze({ label: "Recruitment candidate eligibility", version: "RM-2", source: "Recruit Match stored-rating top-player model v2" }),
+      challengeValidation: Object.freeze({ label: "Challenge validation, error classification, and recommendation", version: "CL-4", source: "Challenge validation and recommendation model v4" }),
+      matchHistory: Object.freeze({ label: "Match registration history and probability evolution", version: "MH-1", source: "Match history model v1" })
     }),
     api: Object.freeze({
       allowedOrigins: Object.freeze(["https://api.chess.com"]),
@@ -157,13 +129,13 @@
     creation: ["competitions", "daily", "creation"],
     challenge: ["competitions", "daily", "challenge"],
     members: ["members", "", ""],
-    tasks: ["maintenance", "tasks", ""],
+    tasks: ["maintenance", "tasks", "control"],
     diagnostics: ["maintenance", "diagnostics", "health"],
     reconciliation: ["maintenance", "diagnostics", "reconciliation"],
     intelligence: ["opponents", "opponents", "intelligence"],
     logs: ["maintenance", "", ""],
     storage: ["maintenance", "", ""],
-    migration: ["maintenance", "", ""],
+    migration: ["maintenance", "tasks", "control"],
     open: ["competitions", "daily", ""],
     "live-ranks": ["competitions", "", ""]
   };
@@ -203,4 +175,10 @@
 (() => {
   if (document.querySelector('script[data-p2k-v2110]')) return;
   const script=document.createElement('script');script.src='assets/js/pages/v2-11-0.js?v=2.11.0';script.async=false;script.dataset.p2kV2110='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+})();
+
+// Green-primary/legacy migration cleanup runs after the canonical 2.11.0 admin module.
+(() => {
+  if (document.querySelector('script[data-p2k-v2110-green-primary]')) return;
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-green-primary.js?v=2.11.0';script.async=false;script.dataset.p2kV2110GreenPrimary='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
