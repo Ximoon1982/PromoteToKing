@@ -191,9 +191,9 @@
   const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r2-admin-stability.js?v=2.11.0-r2';script.async=false;script.dataset.p2kV2110R2AdminStability='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
 
-// v2.11.0 R3: bridge the canonical Recruitment URL into the native Recruitment
-// mount host expected by the v2.11.0 module.
+// v2.11.0 R4: Recruitment renders inside the canonical Admin detail shell and
+// non-GET Recruitment requests reuse the secured Team Points CSRF/session client.
 (() => {
-  if (document.querySelector('script[data-p2k-v2110-r3-recruitment-route]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r3-recruitment-route.js?v=2.11.0-r3';script.async=false;script.dataset.p2kV2110R3RecruitmentRoute='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  if (document.querySelector('script[data-p2k-v2110-r4-recruitment-integration]')) return;
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r4-recruitment-integration.js?v=2.11.0-r4';script.async=false;script.dataset.p2kV2110R4RecruitmentIntegration='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
