@@ -1,28 +1,36 @@
 {
   "schemaVersion": 8,
-  "version": "2.10.9.8",
-  "builtAt": "2026-09-01T08:46:30Z",
-  "baseline": "Promote to King v2.10.9.7 canonical source.",
+  "version": "2.11.0",
+  "builtAt": "2026-09-01T11:30:13Z",
+  "baseline": "Promote to King v2.10.9.8 canonical source on main.",
   "release": {
     "corrective": false,
     "scope": [
-      "Administration Members Recruitment candidate pool",
-      "parallel browser-side Chess.com recruitment scanner",
-      "server-owned immutable recruitment run snapshots and resumable checkpoints",
-      "current and former P2K member exclusion using existing Team Points member data",
-      "selected recruitment candidate CSV export",
-      "Members Insights Result coverage header alignment correction",
-      "v2.10.9.8 runtime and cache-key propagation"
+      "canonical Public/Admin toggle Administration",
+      "native Admin Members Recruitment card and detail",
+      "legacy Administration compatibility routing",
+      "Admin-mode red navigation accent",
+      "embedded admin iframe scrolling normalization",
+      "Green Core and Analytics sole production Team Points route",
+      "Blue databases preserved as recovery/reference only",
+      "retirement of Blue/Green switching and rollback controls",
+      "retirement of historical heatmap backfill controls",
+      "non-gating GAB and compatibility technical-debt operation",
+      "MCA Green-primary routing and Blue-to-Green sync retirement",
+      "idempotent Green-primary promotion tool"
     ],
-    "sourceBaseline": "v2.10.9.7",
+    "sourceBaseline": "v2.10.9.8",
     "databaseSchemaChange": false,
-    "runtimeDataReset": false
+    "runtimeDataReset": false,
+    "productionDatabase": "green",
+    "blueDatabaseMode": "recovery-only"
   },
   "preservedPriorManifest": {
-    "path": "site-manifest_v2.10.6.24.json",
-    "version": "2.10.6.24"
+    "path": "site-manifest.json@v2.10.9.8",
+    "version": "2.10.9.8"
   },
   "releaseNotes": [
+    "RELEASE_NOTES_v2.11.0.md",
     "RELEASE_NOTES_v2.10.9.8.md",
     "RELEASE_NOTES_v2.10.9.7.md",
     "RELEASE_NOTES_v2.10.9.6.md",
