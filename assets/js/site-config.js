@@ -182,3 +182,11 @@
   if (document.querySelector('script[data-p2k-v2110-green-primary]')) return;
   const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-green-primary.js?v=2.11.0';script.async=false;script.dataset.p2kV2110GreenPrimary='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
+
+// v2.11.0 R2: live Admin-state synchronization, embedded-frame stability and
+// post-Green maintenance cleanup. Loaded on every site-config page so both the
+// parent Admin shell and embedded administration tools share the same contract.
+(() => {
+  if (document.querySelector('script[data-p2k-v2110-r2-admin-stability]')) return;
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r2-admin-stability.js?v=2.11.0-r2';script.async=false;script.dataset.p2kV2110R2AdminStability='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+})();
