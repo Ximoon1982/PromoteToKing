@@ -1,0 +1,284 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+RELEASE="2.11.0-R4"
+DEFAULT_ROOT="/homepages/43/d141198007/htdocs/PromoteToKing"
+ROOT="${1:-${P2K_ROOT:-$DEFAULT_ROOT}}"
+ROOT="${ROOT%/}"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+BACKUP="$ROOT/data/release-backups/v2.11.0-R4-$STAMP"
+TMP="${TMPDIR:-/tmp}/p2k-v2110-r4-$STAMP"
+R4_REL="assets/js/pages/v2-11-0-r4-recruitment-integration.js"
+SITE_REL="assets/js/site-config.js"
+PHP_REL="server/team-points/public/recruitment-admin.php"
+UI_REL="ui-v2.html"
+TOUCHED=("$R4_REL" "$SITE_REL" "$PHP_REL" "$UI_REL")
+COMMITTED=0
+
+log(){ printf '[P2K %s] %s\n' "$RELEASE" "$*"; }
+
+find_php(){
+  local candidates=(/usr/bin/php8.5-cli /usr/bin/php8.4-cli /usr/bin/php8.3-cli /usr/bin/php8.2-cli /usr/bin/php8.1-cli /usr/bin/php8.0-cli php)
+  local c
+  for c in "${candidates[@]}"; do
+    if [[ "$c" == */* ]]; then [[ -x "$c" ]] && { printf '%s\n' "$c"; return 0; }
+    elif command -v "$c" >/dev/null 2>&1; then command -v "$c"; return 0
+    fi
+  done
+  return 1
+}
+
+rollback(){
+  [[ "$COMMITTED" == "1" ]] && return 0
+  log "Rolling back R4 file changes..."
+  local rel src
+  for rel in "${TOUCHED[@]}"; do
+    src="$BACKUP/$rel"
+    if [[ -f "$src" ]]; then
+      mkdir -p "$(dirname "$ROOT/$rel")"
+      cp -p "$src" "$ROOT/$rel"
+    elif [[ -f "$BACKUP/.missing/$rel" ]]; then
+      rm -f "$ROOT/$rel"
+    fi
+  done
+}
+
+fail(){
+  printf '[P2K %s] ERROR: %s\n' "$RELEASE" "$*" >&2
+  rollback || true
+  exit 1
+}
+
+trap 'rc=$?; if [[ $rc -ne 0 && "$COMMITTED" != "1" ]]; then rollback || true; fi; rm -rf "$TMP" 2>/dev/null || true; exit $rc' ERR INT TERM
+
+[[ -d "$ROOT" ]] || fail "Installation root does not exist: $ROOT"
+[[ -f "$ROOT/VERSION" ]] || fail "VERSION is missing from $ROOT"
+CURRENT="$(tr -d '\r\n ' < "$ROOT/VERSION")"
+[[ "$CURRENT" == "2.11.0" ]] || fail "R4 requires Promote to King 2.11.0; found '$CURRENT'."
+[[ -f "$ROOT/$SITE_REL" ]] || fail "$SITE_REL is missing."
+[[ -f "$ROOT/$PHP_REL" ]] || fail "$PHP_REL is missing."
+[[ -f "$ROOT/$UI_REL" ]] || fail "$UI_REL is missing."
+
+PHP_BIN="$(find_php)" || fail "No supported PHP CLI was found."
+log "Using PHP: $PHP_BIN"
+mkdir -p "$TMP" "$BACKUP/.missing"
+
+for rel in "${TOUCHED[@]}"; do
+  if [[ -f "$ROOT/$rel" ]]; then
+    mkdir -p "$BACKUP/$(dirname "$rel")"
+    cp -p "$ROOT/$rel" "$BACKUP/$rel"
+  else
+    mkdir -p "$BACKUP/.missing/$(dirname "$rel")"
+    : > "$BACKUP/.missing/$rel"
+  fi
+done
+log "Backup: $BACKUP"
+
+base64 -d > "$TMP/r4.js" <<'P2K_R4_JS_B64'
+LyogUHJvbW90ZSB0byBLaW5nIHYyLjExLjAgUjQ6IFJlY3J1aXRtZW50IG5hdGl2ZS1kZXRhaWwg
+aW50ZWdyYXRpb24gKyBzZWN1cmVkIEFQSSBicmlkZ2UuICovCigoKSA9PiB7CiAgInVzZSBzdHJp
+Y3QiOwoKICBsZXQgcXVldWVkID0gZmFsc2U7CgogIGNvbnN0IGJ5SWQgPSBpZCA9PiBkb2N1bWVu
+dC5nZXRFbGVtZW50QnlJZChpZCk7CgogIGZ1bmN0aW9uIHJlY3J1aXRtZW50Um91dGUoKSB7CiAg
+ICBpZiAoIS9cL3VpLXYyXC5odG1sJC9pLnRlc3QobG9jYXRpb24ucGF0aG5hbWUpKSByZXR1cm4g
+ZmFsc2U7CiAgICBjb25zdCBwYXJhbXMgPSBuZXcgVVJMKGxvY2F0aW9uLmhyZWYpLnNlYXJjaFBh
+cmFtczsKICAgIHJldHVybiBwYXJhbXMuZ2V0KCJ2aWV3IikgPT09ICJhZG1pbiIgJiYKICAgICAg
+KHBhcmFtcy5nZXQoImFkbWluQ2F0ZWdvcnkiKSB8fCAiY29tcGV0aXRpb25zIikgPT09ICJtZW1i
+ZXJzIiAmJgogICAgICBwYXJhbXMuZ2V0KCJhZG1pbkRldGFpbCIpID09PSAicmVjcnVpdG1lbnQi
+OwogIH0KCiAgZnVuY3Rpb24gcmVjcnVpdG1lbnRCYXNlKCkgewogICAgcmV0dXJuIFN0cmluZyh3
+aW5kb3cuUDJLX1NJVEVfQ09ORklHPy5zZXJ2ZXJTdG9yYWdlPy5yZWNydWl0bWVudEFkbWluRW5k
+cG9pbnQgfHwgInNlcnZlci90ZWFtLXBvaW50cy9wdWJsaWMvcmVjcnVpdG1lbnQtYWRtaW4ucGhw
+Iik7CiAgfQoKICBmdW5jdGlvbiBzYW1lUmVjcnVpdG1lbnRFbmRwb2ludChpbnB1dCkgewogICAg
+dHJ5IHsKICAgICAgY29uc3QgdXJsID0gbmV3IFVSTCh0eXBlb2YgaW5wdXQgPT09ICJzdHJpbmci
+ID8gaW5wdXQgOiBpbnB1dD8udXJsIHx8IFN0cmluZyhpbnB1dCB8fCAiIiksIGxvY2F0aW9uLmhy
+ZWYpOwogICAgICBjb25zdCBleHBlY3RlZCA9IG5ldyBVUkwocmVjcnVpdG1lbnRCYXNlKCksIGxv
+Y2F0aW9uLmhyZWYpOwogICAgICByZXR1cm4gdXJsLm9yaWdpbiA9PT0gZXhwZWN0ZWQub3JpZ2lu
+ICYmIHVybC5wYXRobmFtZSA9PT0gZXhwZWN0ZWQucGF0aG5hbWU7CiAgICB9IGNhdGNoIChfKSB7
+CiAgICAgIHJldHVybiBmYWxzZTsKICAgIH0KICB9CgogIGZ1bmN0aW9uIHJlcXVlc3RIYXNDc3Jm
+KGlucHV0LCBpbml0ID0ge30pIHsKICAgIHRyeSB7CiAgICAgIGNvbnN0IGhlYWRlcnMgPSBuZXcg
+SGVhZGVycyhpbml0Py5oZWFkZXJzIHx8ICh0eXBlb2YgUmVxdWVzdCAhPT0gInVuZGVmaW5lZCIg
+JiYgaW5wdXQgaW5zdGFuY2VvZiBSZXF1ZXN0ID8gaW5wdXQuaGVhZGVycyA6IHVuZGVmaW5lZCkp
+OwogICAgICByZXR1cm4gaGVhZGVycy5oYXMoIlgtUDJLLUNTUkYiKTsKICAgIH0gY2F0Y2ggKF8p
+IHsKICAgICAgcmV0dXJuIGZhbHNlOwogICAgfQogIH0KCiAgZnVuY3Rpb24gaW5zdGFsbFNlY3Vy
+ZWRSZWNydWl0bWVudEZldGNoQnJpZGdlKCkgewogICAgaWYgKHdpbmRvdy5mZXRjaD8uX19wMmtS
+ZWNydWl0bWVudFI0KSByZXR1cm47CiAgICBjb25zdCBvcmlnaW5hbEZldGNoID0gd2luZG93LmZl
+dGNoLmJpbmQod2luZG93KTsKICAgIGNvbnN0IHdyYXBwZWQgPSBhc3luYyBmdW5jdGlvbihpbnB1
+dCwgaW5pdCA9IHt9KSB7CiAgICAgIGNvbnN0IG1ldGhvZCA9IFN0cmluZyhpbml0Py5tZXRob2Qg
+fHwgKHR5cGVvZiBSZXF1ZXN0ICE9PSAidW5kZWZpbmVkIiAmJiBpbnB1dCBpbnN0YW5jZW9mIFJl
+cXVlc3QgPyBpbnB1dC5tZXRob2QgOiAiR0VUIikgfHwgIkdFVCIpLnRvVXBwZXJDYXNlKCk7CiAg
+ICAgIGlmICghWyJHRVQiLCAiSEVBRCIsICJPUFRJT05TIl0uaW5jbHVkZXMobWV0aG9kKSAmJiBz
+YW1lUmVjcnVpdG1lbnRFbmRwb2ludChpbnB1dCkgJiYgIXJlcXVlc3RIYXNDc3JmKGlucHV0LCBp
+bml0KSkgewogICAgICAgIGNvbnN0IGNsaWVudCA9IHdpbmRvdy5QMktfVEVBTV9QT0lOVFNfQ0xJ
+RU5UOwogICAgICAgIGlmICghY2xpZW50Py5lbmRwb2ludFJlcXVlc3QpIHJldHVybiBvcmlnaW5h
+bEZldGNoKGlucHV0LCBpbml0KTsKICAgICAgICBjb25zdCB1cmwgPSBuZXcgVVJMKHR5cGVvZiBp
+bnB1dCA9PT0gInN0cmluZyIgPyBpbnB1dCA6IGlucHV0Py51cmwgfHwgU3RyaW5nKGlucHV0IHx8
+ICIiKSwgbG9jYXRpb24uaHJlZik7CiAgICAgICAgY29uc3QgYWN0aW9uID0gU3RyaW5nKHVybC5z
+ZWFyY2hQYXJhbXMuZ2V0KCJhY3Rpb24iKSB8fCAiIik7CiAgICAgICAgbGV0IGJvZHkgPSBudWxs
+OwogICAgICAgIGlmIChpbml0Py5ib2R5ICE9IG51bGwpIHsKICAgICAgICAgIGlmICh0eXBlb2Yg
+aW5pdC5ib2R5ID09PSAic3RyaW5nIikgewogICAgICAgICAgICB0cnkgeyBib2R5ID0gSlNPTi5w
+YXJzZShpbml0LmJvZHkpOyB9IGNhdGNoIChfKSB7IGJvZHkgPSBpbml0LmJvZHk7IH0KICAgICAg
+ICAgIH0gZWxzZSBib2R5ID0gaW5pdC5ib2R5OwogICAgICAgIH0KICAgICAgICB0cnkgewogICAg
+ICAgICAgY29uc3QgcGF5bG9hZCA9IGF3YWl0IGNsaWVudC5lbmRwb2ludFJlcXVlc3QocmVjcnVp
+dG1lbnRCYXNlKCksIHsKICAgICAgICAgICAgYWN0aW9uLAogICAgICAgICAgICBtZXRob2QsCiAg
+ICAgICAgICAgIGJvZHksCiAgICAgICAgICAgIHRpbWVvdXRNczogMTIwMDAwLAogICAgICAgICAg
+ICBzZXJ2ZXJUcmFmZmljQ2xhc3M6ICJmb3JlZ3JvdW5kIgogICAgICAgICAgfSk7CiAgICAgICAg
+ICByZXR1cm4gbmV3IFJlc3BvbnNlKEpTT04uc3RyaW5naWZ5KHBheWxvYWQpLCB7CiAgICAgICAg
+ICAgIHN0YXR1czogMjAwLAogICAgICAgICAgICBoZWFkZXJzOiB7ICJDb250ZW50LVR5cGUiOiAi
+YXBwbGljYXRpb24vanNvbjsgY2hhcnNldD11dGYtOCIsICJDYWNoZS1Db250cm9sIjogIm5vLXN0
+b3JlIiB9CiAgICAgICAgICB9KTsKICAgICAgICB9IGNhdGNoIChlcnJvcikgewogICAgICAgICAg
+cmV0dXJuIG5ldyBSZXNwb25zZShKU09OLnN0cmluZ2lmeSh7CiAgICAgICAgICAgIG9rOiBmYWxz
+ZSwKICAgICAgICAgICAgZXJyb3I6IHsKICAgICAgICAgICAgICBjb2RlOiBTdHJpbmcoZXJyb3I/
+LmNvZGUgfHwgIlJFQ1JVSVRNRU5UX1JFUVVFU1RfRkFJTEVEIiksCiAgICAgICAgICAgICAgbWVz
+c2FnZTogU3RyaW5nKGVycm9yPy5tZXNzYWdlIHx8IGVycm9yIHx8ICJSZWNydWl0bWVudCByZXF1
+ZXN0IGZhaWxlZC4iKQogICAgICAgICAgICB9CiAgICAgICAgICB9KSwgewogICAgICAgICAgICBz
+dGF0dXM6IE1hdGgubWF4KDQwMCwgTWF0aC5taW4oNTk5LCBOdW1iZXIoZXJyb3I/LnN0YXR1cykg
+fHwgNTAwKSksCiAgICAgICAgICAgIGhlYWRlcnM6IHsgIkNvbnRlbnQtVHlwZSI6ICJhcHBsaWNh
+dGlvbi9qc29uOyBjaGFyc2V0PXV0Zi04IiwgIkNhY2hlLUNvbnRyb2wiOiAibm8tc3RvcmUiIH0K
+ICAgICAgICAgIH0pOwogICAgICAgIH0KICAgICAgfQogICAgICByZXR1cm4gb3JpZ2luYWxGZXRj
+aChpbnB1dCwgaW5pdCk7CiAgICB9OwogICAgT2JqZWN0LmRlZmluZVByb3BlcnR5KHdyYXBwZWQs
+ICJfX3Aya1JlY3J1aXRtZW50UjQiLCB7IHZhbHVlOiB0cnVlIH0pOwogICAgd2luZG93LmZldGNo
+ID0gd3JhcHBlZDsKICB9CgogIGZ1bmN0aW9uIGVuc3VyZU5hdGl2ZURldGFpbE1vdW50KCkgewog
+ICAgcXVldWVkID0gZmFsc2U7CiAgICBjb25zdCBtb3VudCA9IGJ5SWQoImRhc2hib2FyZEFkbWlu
+TWFpbkNvbnRlbnQiKTsKICAgIGlmICghcmVjcnVpdG1lbnRSb3V0ZSgpKSB7CiAgICAgIGlmICht
+b3VudD8uZGF0YXNldD8ucDJrUmVjcnVpdG1lbnRSNCA9PT0gIjEiKSBtb3VudC5oaWRkZW4gPSB0
+cnVlOwogICAgICByZXR1cm47CiAgICB9CgogICAgY29uc3QgYWRtaW5Ib3N0ID0gYnlJZCgiYWRt
+aW5EYXNoYm9hcmRIb3N0Iik7CiAgICBjb25zdCBkZXRhaWxIb3N0ID0gYnlJZCgiYWRtaW5TaGVs
+bERldGFpbCIpOwogICAgY29uc3QgZnJhbWUgPSBieUlkKCJhZG1pblNoZWxsRGV0YWlsRnJhbWUi
+KTsKICAgIGlmICghYWRtaW5Ib3N0IHx8ICFkZXRhaWxIb3N0KSByZXR1cm47CgogICAgZGV0YWls
+SG9zdC5oaWRkZW4gPSBmYWxzZTsKICAgIGNvbnN0IHRpdGxlID0gYnlJZCgiYWRtaW5TaGVsbERl
+dGFpbFRpdGxlIik7CiAgICBpZiAodGl0bGUpIHRpdGxlLnRleHRDb250ZW50ID0gIlJlY3J1aXRt
+ZW50IjsKICAgIGNvbnN0IGJyZWFkY3J1bWIgPSBieUlkKCJhZG1pblNoZWxsRGV0YWlsQnJlYWRj
+cnVtYiIpOwogICAgaWYgKGJyZWFkY3J1bWIpIGJyZWFkY3J1bWIudGV4dENvbnRlbnQgPSAiQWRt
+aW5pc3RyYXRpb24gwrcgTWVtYmVycyI7CiAgICBjb25zdCB0YWJzID0gYnlJZCgiYWRtaW5TaGVs
+bERldGFpbFRhYnMiKTsKICAgIGlmICh0YWJzKSB7CiAgICAgIHRhYnMuaGlkZGVuID0gdHJ1ZTsK
+ICAgICAgdGFicy5yZXBsYWNlQ2hpbGRyZW4oKTsKICAgIH0KCiAgICBpZiAoZnJhbWUpIHsKICAg
+ICAgZnJhbWUuaGlkZGVuID0gdHJ1ZTsKICAgICAgZnJhbWUuc3R5bGUuZGlzcGxheSA9ICJub25l
+IjsKICAgICAgZnJhbWUucmVtb3ZlQXR0cmlidXRlKCJzcmMiKTsKICAgIH0KCiAgICBkb2N1bWVu
+dC5xdWVyeVNlbGVjdG9yQWxsKCJbZGF0YS1hZG1pbi1zaGVsbC1wYW5lbF0iKS5mb3JFYWNoKHBh
+bmVsID0+IHsgcGFuZWwuaGlkZGVuID0gdHJ1ZTsgfSk7CgogICAgbGV0IHRhcmdldCA9IG1vdW50
+OwogICAgaWYgKCF0YXJnZXQpIHsKICAgICAgdGFyZ2V0ID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVu
+dCgiZGl2Iik7CiAgICAgIHRhcmdldC5pZCA9ICJkYXNoYm9hcmRBZG1pbk1haW5Db250ZW50IjsK
+ICAgICAgdGFyZ2V0LmNsYXNzTmFtZSA9ICJkYXNoYm9hcmQtYWRtaW4tbmF0aXZlLWRldGFpbC1o
+b3N0IjsKICAgICAgdGFyZ2V0LmRhdGFzZXQucDJrUmVjcnVpdG1lbnRSNCA9ICIxIjsKICAgICAg
+aWYgKGZyYW1lPy5wYXJlbnRFbGVtZW50KSBmcmFtZS5pbnNlcnRBZGphY2VudEVsZW1lbnQoImFm
+dGVyZW5kIiwgdGFyZ2V0KTsKICAgICAgZWxzZSBkZXRhaWxIb3N0LmFwcGVuZENoaWxkKHRhcmdl
+dCk7CiAgICB9CiAgICB0YXJnZXQuaGlkZGVuID0gZmFsc2U7CiAgICBhZG1pbkhvc3QuaGlkZGVu
+ID0gZmFsc2U7CiAgfQoKICBmdW5jdGlvbiBzY2hlZHVsZSgpIHsKICAgIGlmIChxdWV1ZWQpIHJl
+dHVybjsKICAgIHF1ZXVlZCA9IHRydWU7CiAgICByZXF1ZXN0QW5pbWF0aW9uRnJhbWUoZW5zdXJl
+TmF0aXZlRGV0YWlsTW91bnQpOwogIH0KCiAgZnVuY3Rpb24gaW5zdHJ1bWVudEhpc3RvcnkoKSB7
+CiAgICBpZiAoaGlzdG9yeS5fX3Aya1JlY3J1aXRtZW50UjQpIHJldHVybjsKICAgIE9iamVjdC5k
+ZWZpbmVQcm9wZXJ0eShoaXN0b3J5LCAiX19wMmtSZWNydWl0bWVudFI0IiwgeyB2YWx1ZTogdHJ1
+ZSB9KTsKICAgIFsicHVzaFN0YXRlIiwgInJlcGxhY2VTdGF0ZSJdLmZvckVhY2gobmFtZSA9PiB7
+CiAgICAgIGNvbnN0IG9yaWdpbmFsID0gaGlzdG9yeVtuYW1lXTsKICAgICAgaGlzdG9yeVtuYW1l
+XSA9IGZ1bmN0aW9uKC4uLmFyZ3MpIHsKICAgICAgICBjb25zdCByZXN1bHQgPSBvcmlnaW5hbC5h
+cHBseSh0aGlzLCBhcmdzKTsKICAgICAgICBzY2hlZHVsZSgpOwogICAgICAgIHJldHVybiByZXN1
+bHQ7CiAgICAgIH07CiAgICB9KTsKICAgIGFkZEV2ZW50TGlzdGVuZXIoInBvcHN0YXRlIiwgc2No
+ZWR1bGUpOwogIH0KCiAgZnVuY3Rpb24gbW91bnQoKSB7CiAgICBpbnN0YWxsU2VjdXJlZFJlY3J1
+aXRtZW50RmV0Y2hCcmlkZ2UoKTsKICAgIGluc3RydW1lbnRIaXN0b3J5KCk7CiAgICBjb25zdCBv
+YnNlcnZlciA9IG5ldyBNdXRhdGlvbk9ic2VydmVyKHNjaGVkdWxlKTsKICAgIG9ic2VydmVyLm9i
+c2VydmUoZG9jdW1lbnQuZG9jdW1lbnRFbGVtZW50LCB7CiAgICAgIHN1YnRyZWU6IHRydWUsCiAg
+ICAgIGNoaWxkTGlzdDogdHJ1ZSwKICAgICAgYXR0cmlidXRlczogdHJ1ZSwKICAgICAgYXR0cmli
+dXRlRmlsdGVyOiBbImhpZGRlbiIsICJjbGFzcyIsICJhcmlhLXByZXNzZWQiLCAiYXJpYS1zZWxl
+Y3RlZCJdCiAgICB9KTsKICAgIHNjaGVkdWxlKCk7CiAgfQoKICBpZiAoZG9jdW1lbnQucmVhZHlT
+dGF0ZSA9PT0gImxvYWRpbmciKSBkb2N1bWVudC5hZGRFdmVudExpc3RlbmVyKCJET01Db250ZW50
+TG9hZGVkIiwgbW91bnQsIHsgb25jZTogdHJ1ZSB9KTsKICBlbHNlIG1vdW50KCk7Cn0pKCk7Cg==
+P2K_R4_JS_B64
+
+EXPECTED_R4_SHA="078de425cb75d0b2863ab24bcb3eca9acb917f69d31e47a2fdc528909b521d90"
+ACTUAL_R4_SHA="$(sha256sum "$TMP/r4.js" | awk '{print $1}')"
+[[ "$ACTUAL_R4_SHA" == "$EXPECTED_R4_SHA" ]] || fail "Embedded R4 JavaScript hash mismatch."
+if command -v node >/dev/null 2>&1; then node --check "$TMP/r4.js" >/dev/null || fail "R4 JavaScript syntax check failed."; fi
+
+mkdir -p "$(dirname "$ROOT/$R4_REL")"
+cp "$TMP/r4.js" "$ROOT/$R4_REL"
+
+cat > "$TMP/patch.php" <<'PHP_PATCH'
+<?php
+declare(strict_types=1);
+$root = rtrim((string)($argv[1] ?? ''), '/\\');
+if ($root === '') { fwrite(STDERR, "Missing root\n"); exit(2); }
+
+$phpPath = $root . '/server/team-points/public/recruitment-admin.php';
+$sitePath = $root . '/assets/js/site-config.js';
+$uiPath = $root . '/ui-v2.html';
+
+$php = file_get_contents($phpPath);
+$site = file_get_contents($sitePath);
+$ui = file_get_contents($uiPath);
+if (!is_string($php) || !is_string($site) || !is_string($ui)) { fwrite(STDERR, "Unable to read R4 target files\n"); exit(3); }
+
+$oldRuntime = <<<'OLD'
+    $base = rtrim((string)($config['storage']['runtime_dir'] ?? dirname(__DIR__, 3) . '/data/runtime-v280'), '/\\');
+OLD;
+$newRuntime = <<<'NEW'
+    $configured = trim((string)($config['storage']['runtime_dir'] ?? ''));
+    $base = $configured !== ''
+        ? rtrim($configured, '/\\')
+        : dirname(__DIR__, 3) . '/data/runtime-v280';
+NEW;
+if (!str_contains($php, '$configured = trim((string)($config[\'storage\'][\'runtime_dir\'] ?? \'\'));')) {
+    if (!str_contains($php, $oldRuntime)) { fwrite(STDERR, "Recruitment runtime anchor not found\n"); exit(4); }
+    $php = str_replace($oldRuntime, $newRuntime, $php, $count);
+    if ($count !== 1) { fwrite(STDERR, "Unexpected Recruitment runtime replacement count\n"); exit(5); }
+}
+
+$r3Marker = "// v2.11.0 R3: bridge the canonical Recruitment URL into the native Recruitment";
+if (($start = strpos($site, $r3Marker)) !== false) {
+    $blockStart = $start;
+    while ($blockStart > 0 && $site[$blockStart - 1] === "\n") { $blockStart--; }
+    $end = strpos($site, "\n})();", $start);
+    if ($end === false) { fwrite(STDERR, "R3 loader end marker not found\n"); exit(6); }
+    $end += strlen("\n})();");
+    if (isset($site[$end]) && $site[$end] === "\n") $end++;
+    $site = substr($site, 0, $blockStart) . substr($site, $end);
+}
+
+$r4Marker = "data-p2k-v2110-r4-recruitment-integration";
+if (!str_contains($site, $r4Marker)) {
+    $r4 = <<<'R4'
+
+// v2.11.0 R4: Recruitment renders inside the canonical Admin detail shell and
+// non-GET Recruitment requests reuse the secured Team Points CSRF/session client.
+(() => {
+  if (document.querySelector('script[data-p2k-v2110-r4-recruitment-integration]')) return;
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r4-recruitment-integration.js?v=2.11.0-r4';script.async=false;script.dataset.p2kV2110R4RecruitmentIntegration='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+})();
+R4;
+    $site = rtrim($site) . "\n" . $r4;
+}
+
+$count = 0;
+$ui = preg_replace('~assets/js/site-config\.js\?v=[^"\'<>[:space:]]+~', 'assets/js/site-config.js?v=2.11.0-r4', $ui, -1, $count);
+if (!is_string($ui) || $count < 1) { fwrite(STDERR, "ui-v2 site-config cache-key anchor not found\n"); exit(7); }
+
+if (file_put_contents($phpPath, $php) === false) { fwrite(STDERR, "Unable to write Recruitment endpoint\n"); exit(8); }
+if (file_put_contents($sitePath, $site) === false) { fwrite(STDERR, "Unable to write site-config\n"); exit(9); }
+if (file_put_contents($uiPath, $ui) === false) { fwrite(STDERR, "Unable to write ui-v2\n"); exit(10); }
+PHP_PATCH
+
+"$PHP_BIN" "$TMP/patch.php" "$ROOT" || fail "R4 source transformation failed."
+
+if [[ "${P2K_R4_TEST_FAIL_AFTER_PATCH:-0}" == "1" ]]; then fail "Injected R4 rollback test failure."; fi
+
+"$PHP_BIN" -l "$ROOT/$PHP_REL" >/dev/null || fail "Recruitment PHP syntax check failed after patch."
+if command -v node >/dev/null 2>&1; then
+  node --check "$ROOT/$R4_REL" >/dev/null || fail "Installed R4 JavaScript syntax check failed."
+  node --check "$ROOT/$SITE_REL" >/dev/null || fail "site-config JavaScript syntax check failed after patch."
+fi
+
+grep -q 'data-p2k-v2110-r4-recruitment-integration' "$ROOT/$SITE_REL" || fail "R4 loader is missing after installation."
+if grep -q 'data-p2k-v2110-r3-recruitment-route' "$ROOT/$SITE_REL"; then fail "Obsolete R3 Recruitment loader is still active."; fi
+grep -q 'site-config.js?v=2.11.0-r4' "$ROOT/$UI_REL" || fail "ui-v2 did not receive the R4 cache key."
+grep -q '\$configured = trim((string)(\$config' "$ROOT/$PHP_REL" || fail "Recruitment runtime fallback correction is missing."
+
+RUNTIME="$ROOT/data/runtime-v280/recruitment-admin"
+mkdir -p "$RUNTIME" || fail "Unable to create protected Recruitment runtime directory."
+chmod 0775 "$ROOT/data/runtime-v280" "$RUNTIME" 2>/dev/null || true
+TEST_FILE="$RUNTIME/.r4-write-test-$$"
+printf 'ok\n' > "$TEST_FILE" || fail "Protected Recruitment runtime directory is not writable."
+rm -f "$TEST_FILE"
+
+COMMITTED=1
+trap - ERR INT TERM
+rm -rf "$TMP"
+log "R4 installed successfully. Recruitment remains on VERSION 2.11.0."
+log "Admin → Members → Recruitment now uses the canonical Admin detail shell and secured Team Points POST authentication."
