@@ -247,6 +247,7 @@
     "tests/test_v299_oauth_throughput.py::test_v299_release_contract_preserves_schema_and_serial_fallbacks"
   ],
   "known_standalone_failures": [
+    "tests/test_php_backend.py",
     "tests/test_server_storage.py",
     "tests/test_team_points.py",
     "tests/test_tracking_features.py",

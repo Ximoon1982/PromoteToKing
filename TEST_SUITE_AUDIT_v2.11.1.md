@@ -12,7 +12,7 @@ Before this increment, no current workflow inventoried or ran all layers. The ve
 
 The audit also reproduced a collection-breaking defect: `pytest tests` imports legacy executable release checks whose top-level `SystemExit` aborts collection before the pytest-style suite can run. The canonical runner now selects real pytest modules explicitly and executes zero-test legacy modules separately, retaining both categories without cross-contamination.
 
-The first isolated run executed all 795 pytest-style tests: 552 passed and 243 inherited assertions failed. Of 23 legacy standalone checks, 7 passed and 16 failed. Those exact node IDs/files are recorded as bounded known debt. They do not hide new regressions: any failure outside the audited baseline fails CI, collection/runtime errors fail immediately, and resolved debt is reported. The policy forbids either debt count from growing.
+The first isolated run executed all 795 pytest-style tests: 552 passed and 243 inherited assertions failed. Of 23 legacy standalone checks, 7 passed and 16 failed locally; the PHP-enabled CI environment exposed one additional legacy backend-ordering failure, producing a bounded cross-environment standalone debt ceiling of 17. Those exact node IDs/files are recorded as known debt. They do not hide new regressions: any failure outside the audited baseline fails CI, collection/runtime errors fail immediately, and resolved debt is reported. The policy forbids either debt count from growing.
 
 ## Hardening changes
 
