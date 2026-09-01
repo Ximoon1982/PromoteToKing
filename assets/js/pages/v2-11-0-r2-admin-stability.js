@@ -14,11 +14,6 @@
     if (host && !host.hidden) return true;
     return isDashboardPage() && currentUrl().searchParams.get("view") === "admin";
   }
-  function recruitmentRoute() {
-    if (!isDashboardPage()) return false;
-    const params = currentUrl().searchParams;
-    return params.get("view") === "admin" && (params.get("adminCategory") || "competitions") === "members" && params.get("adminDetail") === "recruitment";
-  }
 
   function installStyles() {
     if (byId("p2kV2110R2Styles")) return;

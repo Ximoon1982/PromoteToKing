@@ -39,10 +39,6 @@
     return route.isAdmin && route.category === "members" && route.detail === "recruitment";
   }
 
-  function syncEarlyRouteClass() {
-    document.documentElement.classList.toggle("p2k-recruitment-route", isRecruitmentRoute());
-  }
-  syncEarlyRouteClass();
 
   function adminHref(adminCategory, adminDetail = "", adminDetailTab = "") {
     const url = new URL("ui-v2.html", window.location.href);

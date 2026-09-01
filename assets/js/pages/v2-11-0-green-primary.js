@@ -38,27 +38,22 @@
     root.querySelectorAll?.('[data-action="sync_blue_to_green"], [data-blue-green-sync]').forEach(node => node.remove());
   }
 
-  function normalizeRecruitmentWorkers() {
-    const workers = document.getElementById("recruitmentWorkers"); if (!workers) return;
-    workers.min = "1"; if (!Number.isFinite(Number(workers.value)) || Number(workers.value) < 1) workers.value = "1";
-  }
 
   function normalizeFrames() {
     document.querySelectorAll("iframe.dashboard-integrated-frame, iframe.dashboard-admin-detail-frame").forEach(frame => {
-      if(document.documentElement.classList.contains("p2k-recruitment-route") && frame.id==="adminShellDetailFrame")return;
       frame.setAttribute("scrolling", "no"); frame.style.overflow = "hidden"; frame.style.maxHeight = "none"; frame.style.width = "100%";
     });
   }
 
   function observe() {
-    const observer = new MutationObserver(() => { normalizeRoute(); removeRetiredAdministration(); removeMcaMigrationControls(); normalizeRecruitmentWorkers(); normalizeFrames(); });
+    const observer = new MutationObserver(() => { normalizeRoute(); removeRetiredAdministration(); removeMcaMigrationControls(); normalizeFrames(); });
     observer.observe(document.documentElement, { childList: true, subtree: true });
   }
 
   normalizeRoute();
   const mount = () => {
     document.body?.classList.add("p2k-green-primary");
-    removeRetiredAdministration(); removeMcaMigrationControls(); normalizeRecruitmentWorkers(); normalizeFrames(); observe();
+    removeRetiredAdministration(); removeMcaMigrationControls(); normalizeFrames(); observe();
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount, { once: true }); else mount();
 })();
