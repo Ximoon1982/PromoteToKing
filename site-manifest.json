@@ -1,22 +1,20 @@
 {
   "schemaVersion": 8,
-  "version": "2.10.9.7",
-  "builtAt": "2026-08-31T19:10:00Z",
-  "baseline": "Promote to King v2.10.9.6 canonical source.",
+  "version": "2.10.9.8",
+  "builtAt": "2026-09-01T08:46:30Z",
+  "baseline": "Promote to King v2.10.9.7 canonical source.",
   "release": {
-    "corrective": true,
+    "corrective": false,
     "scope": [
-      "guaranteed current Fair Play priority slice before Green Club worker",
-      "dedicated resumable historical Fair Play backfill runner",
-      "one-request-per-second historical Chess.com match pacing",
-      "authenticated targeted process-match Fair Play repair",
-      "rollback-safe installer-managed Fair Play backfill CRON",
-      "v2.10.9.7 runtime and cache-key propagation",
-      "dedicated generation-aware Analytics convergence runner",
-      "one-minute Analytics convergence CRON using verified IONOS PHP CLI",
-      "Club maintenance Analytics fallback budget corrected above the builder start threshold"
+      "Administration Members Recruitment candidate pool",
+      "parallel browser-side Chess.com recruitment scanner",
+      "server-owned immutable recruitment run snapshots and resumable checkpoints",
+      "current and former P2K member exclusion using existing Team Points member data",
+      "selected recruitment candidate CSV export",
+      "Members Insights Result coverage header alignment correction",
+      "v2.10.9.8 runtime and cache-key propagation"
     ],
-    "sourceBaseline": "v2.10.9.6",
+    "sourceBaseline": "v2.10.9.7",
     "databaseSchemaChange": false,
     "runtimeDataReset": false
   },
@@ -25,6 +23,7 @@
     "version": "2.10.6.24"
   },
   "releaseNotes": [
+    "RELEASE_NOTES_v2.10.9.8.md",
     "RELEASE_NOTES_v2.10.9.7.md",
     "RELEASE_NOTES_v2.10.9.6.md",
     "RELEASE_NOTES_v2.10.9.5.md",
