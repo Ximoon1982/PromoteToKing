@@ -1,3 +1,4 @@
+RecruitmentAdmin.html
 ClubIntelligence.html
 ui-v2.html
 assets/js/site-config.js
