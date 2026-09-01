@@ -36,6 +36,8 @@ try {
     $bluePause['ok'] = true;
     $bluePause['message'] = 'Blue Team Points tasks paused; Blue databases were not modified or deleted.';
 } catch (Throwable $e) {
+    // State has already been normalized to Green-only. This warning is reported so the
+    // installer can decide whether to stop and roll back files before exposing 2.11.0.
     $bluePause['message'] = $e->getMessage();
 }
 
