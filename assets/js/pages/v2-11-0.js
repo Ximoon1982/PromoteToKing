@@ -1,4 +1,4 @@
-/* Promote to King v2.11.0: canonical toggle Administration + native Recruitment. */
+/* Promote to King v2.11.0: canonical Administration + Recruitment application. */
 (() => {
   "use strict";
 
@@ -20,9 +20,7 @@
     canonicalView: "admin-toggle",
     release: VERSION,
     categories: Object.freeze(["competitions", "members", "team", "opponents", "maintenance", "misc"]),
-    nativeDetails: Object.freeze({
-      members: Object.freeze({ recruitment: Object.freeze({ title: "Recruitment", source: "Green Core + Chess.com", mode: "Native" }) })
-    })
+    recruitmentDetail: Object.freeze({ title: "Recruitment", source: "Green Core + Chess.com OAuth", mode: "Embedded" })
   });
 
   function routeState() {

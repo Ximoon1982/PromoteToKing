@@ -690,7 +690,7 @@ const ADMIN_DETAIL_DEFS = {
     depth: { title:"Team Depth", tabs:[{key:"depth",label:"Team depth",src:"ClubIntelligence.html?embedded=1&tab=depth&release=2.10.6.14"}]},
     chronology: { title:"Member chronology", tabs:[{key:"chronology",label:"Chronology",src:"TeamPointsAdmin.html?embedded=1&tab=members&release=2.10.6.14"}]},
     aliases: { title:"Aliases & name changes", tabs:[{key:"aliases",label:"Aliases & name changes",src:"ClubIntelligence.html?embedded=1&tab=aliases&release=2.10.6.14"}]},
-    recruitment: { title:"Recruitment", tabs:[{key:"recruitment",label:"Recruitment",mode:"native",nativeKey:"recruitment"}]}
+    recruitment: { title:"Recruitment", tabs:[{key:"recruitment",label:"Recruitment",src:"RecruitmentAdmin.html?view=admin&adminCategory=members&adminDetail=recruitment&embedded=1&release=2.11.0-r6"}]}
   },
   team: {
     team: { title:"Club intelligence", tabs:[
