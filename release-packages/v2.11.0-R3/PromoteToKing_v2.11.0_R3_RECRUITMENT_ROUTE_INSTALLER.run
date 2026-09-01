@@ -1,0 +1,176 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+RELEASE="2.11.0-R3"
+DEFAULT_ROOT="/homepages/43/d141198007/htdocs/PromoteToKing"
+ROOT="${1:-$DEFAULT_ROOT}"
+SCRIPT_NAME="assets/js/pages/v2-11-0-r3-recruitment-route.js"
+SCRIPT_SHA256="d7327d192f4b6e666946ea60fabbcdce47be7fdd006e26da6bcff985123873dc"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+BACKUP_REL="data/release-backups/v2.11.0-R3-${STAMP}"
+BACKUP="$ROOT/$BACKUP_REL"
+STARTED=0
+SCRIPT_EXISTED=0
+
+log(){ printf '[P2K %s] %s\n' "$RELEASE" "$*"; }
+fail(){ printf '[P2K %s] ERROR: %s\n' "$RELEASE" "$*" >&2; if [[ "$STARTED" == "1" ]]; then rollback 1; else exit 1; fi; }
+
+choose_php(){
+  local c
+  for c in /usr/bin/php8.5-cli /usr/bin/php8.4-cli /usr/bin/php8.3-cli /usr/bin/php8.2-cli /usr/bin/php8.1-cli php; do
+    if command -v "$c" >/dev/null 2>&1 || [[ -x "$c" ]]; then printf '%s\n' "$c"; return 0; fi
+  done
+  return 1
+}
+PHP_BIN="$(choose_php)" || fail "No PHP CLI found."
+
+[[ -d "$ROOT" ]] || fail "Target root does not exist: $ROOT"
+[[ -f "$ROOT/VERSION" ]] || fail "VERSION missing in $ROOT"
+[[ "$(tr -d '\r\n ' < "$ROOT/VERSION")" == "2.11.0" ]] || fail "R3 requires deployed VERSION 2.11.0."
+[[ -f "$ROOT/assets/js/site-config.js" ]] || fail "assets/js/site-config.js missing."
+[[ -f "$ROOT/ui-v2.html" ]] || fail "ui-v2.html missing."
+grep -q 'data-p2k-v2110-r2-admin-stability' "$ROOT/assets/js/site-config.js" || fail "R2 Administration stability loader not found. Install v2.11.0 R2 first."
+
+mkdir -p "$BACKUP/assets/js/pages"
+cp -p "$ROOT/assets/js/site-config.js" "$BACKUP/site-config.js"
+cp -p "$ROOT/ui-v2.html" "$BACKUP/ui-v2.html"
+if [[ -f "$ROOT/$SCRIPT_NAME" ]]; then
+  SCRIPT_EXISTED=1
+  cp -p "$ROOT/$SCRIPT_NAME" "$BACKUP/assets/js/pages/v2-11-0-r3-recruitment-route.js"
+fi
+printf '%s\n' "$SCRIPT_EXISTED" > "$BACKUP/script-existed.txt"
+STARTED=1
+
+rollback(){
+  local code="${1:-$?}"
+  trap - ERR INT TERM
+  if [[ "$STARTED" == "1" ]]; then
+    log "Failure detected; restoring pre-R3 files from $BACKUP_REL"
+    cp -p "$BACKUP/site-config.js" "$ROOT/assets/js/site-config.js" || true
+    cp -p "$BACKUP/ui-v2.html" "$ROOT/ui-v2.html" || true
+    if [[ "$SCRIPT_EXISTED" == "1" ]]; then
+      cp -p "$BACKUP/assets/js/pages/v2-11-0-r3-recruitment-route.js" "$ROOT/$SCRIPT_NAME" || true
+    else
+      rm -f "$ROOT/$SCRIPT_NAME" || true
+    fi
+  fi
+  exit "$code"
+}
+trap rollback ERR INT TERM
+
+log "Using PHP CLI: $PHP_BIN"
+log "Backup: $BACKUP_REL"
+mkdir -p "$ROOT/assets/js/pages"
+cat > "$ROOT/$SCRIPT_NAME" <<'JS'
+/* Promote to King v2.11.0 R3: native Recruitment route mount bridge. */
+(() => {
+  "use strict";
+
+  let queued = false;
+
+  function isRecruitmentRoute() {
+    if (!/\/ui-v2\.html$/i.test(location.pathname)) return false;
+    const params = new URL(location.href).searchParams;
+    return params.get("view") === "admin" &&
+      (params.get("adminCategory") || "competitions") === "members" &&
+      params.get("adminDetail") === "recruitment";
+  }
+
+  function ensureRecruitmentMountHost() {
+    queued = false;
+    if (!isRecruitmentRoute()) return;
+    const adminHost = document.getElementById("adminDashboardHost");
+    if (!adminHost) return;
+    if (document.getElementById("dashboardAdminMainContent")) return;
+
+    const mount = document.createElement("div");
+    mount.id = "dashboardAdminMainContent";
+    mount.className = "dashboard-admin-native-detail-host";
+    adminHost.replaceChildren(mount);
+    adminHost.hidden = false;
+  }
+
+  function schedule() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(ensureRecruitmentMountHost);
+  }
+
+  ["pushState", "replaceState"].forEach(name => {
+    const original = history[name];
+    if (!original || original.__p2kRecruitmentR3) return;
+    const wrapped = function(...args) {
+      const result = original.apply(this, args);
+      schedule();
+      return result;
+    };
+    Object.defineProperty(wrapped, "__p2kRecruitmentR3", { value: true });
+    history[name] = wrapped;
+  });
+
+  addEventListener("popstate", schedule);
+  const observer = new MutationObserver(schedule);
+  const mountObserver = () => {
+    observer.observe(document.documentElement, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["hidden", "class", "aria-pressed"]
+    });
+    schedule();
+  };
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mountObserver, { once: true });
+  else mountObserver();
+})();
+JS
+
+actual_sha="$(sha256sum "$ROOT/$SCRIPT_NAME" | awk '{print $1}')"
+[[ "$actual_sha" == "$SCRIPT_SHA256" ]] || fail "R3 bridge hash mismatch: $actual_sha"
+
+PATCH_FILE="$BACKUP/patch-r3.php"
+cat > "$PATCH_FILE" <<'PHP'
+<?php
+$root = $argv[1] ?? '';
+if ($root === '') { fwrite(STDERR, "missing root\n"); exit(2); }
+$configPath = $root . '/assets/js/site-config.js';
+$uiPath = $root . '/ui-v2.html';
+$config = file_get_contents($configPath);
+if ($config === false) { fwrite(STDERR, "cannot read site-config\n"); exit(3); }
+$marker = "data-p2k-v2110-r3-recruitment-route";
+if (strpos($config, $marker) === false) {
+    $loader = <<<'JS'
+
+// v2.11.0 R3: bridge the canonical Recruitment URL into the native Recruitment
+// mount host expected by the v2.11.0 module.
+(() => {
+  if (document.querySelector('script[data-p2k-v2110-r3-recruitment-route]')) return;
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r3-recruitment-route.js?v=2.11.0-r3';script.async=false;script.dataset.p2kV2110R3RecruitmentRoute='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+})();
+JS;
+    if (file_put_contents($configPath, rtrim($config) . "\n" . $loader) === false) { fwrite(STDERR, "cannot write site-config\n"); exit(4); }
+}
+$ui = file_get_contents($uiPath);
+if ($ui === false) { fwrite(STDERR, "cannot read ui-v2\n"); exit(5); }
+$count = 0;
+$patched = preg_replace("#assets/js/site-config\\.js\\?v=[^\"']+#", "assets/js/site-config.js?v=2.11.0-r3", $ui, -1, $count);
+if ($patched === null) { fwrite(STDERR, "cache-key regex failed\n"); exit(6); }
+if ($count < 1 && strpos($ui, 'assets/js/site-config.js?v=2.11.0-r3') === false) { fwrite(STDERR, "site-config reference not found in ui-v2\n"); exit(7); }
+if ($patched !== $ui && file_put_contents($uiPath, $patched) === false) { fwrite(STDERR, "cannot write ui-v2\n"); exit(8); }
+PHP
+"$PHP_BIN" "$PATCH_FILE" "$ROOT"
+
+# Static validation before commit point.
+grep -q 'data-p2k-v2110-r3-recruitment-route' "$ROOT/assets/js/site-config.js" || fail "R3 loader missing after patch."
+grep -q 'v2-11-0-r3-recruitment-route.js?v=2.11.0-r3' "$ROOT/assets/js/site-config.js" || fail "R3 script URL missing after patch."
+grep -q 'assets/js/site-config.js?v=2.11.0-r3' "$ROOT/ui-v2.html" || fail "ui-v2 cache key was not updated."
+if command -v node >/dev/null 2>&1; then
+  node --check "$ROOT/$SCRIPT_NAME"
+  node --check "$ROOT/assets/js/site-config.js"
+fi
+
+trap - ERR INT TERM
+STARTED=0
+log "R3 installed successfully. VERSION remains 2.11.0."
+log "Recruitment route: ui-v2.html?ui=v2&view=admin&adminCategory=members&adminDetail=recruitment"
+log "Rollback backup retained at: $BACKUP_REL"
