@@ -1,0 +1,102 @@
+'return Database::core()' "$PAYLOAD_DIR/server/team-points/src/PublicReadDatabase.php"; then die "Blue public-read fallback unexpectedly remains in payload."; fi
+
+BACKUP_ROOT="$TARGET/data/release-backups"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+BACKUP_DIR="$BACKUP_ROOT/v2.11.0-$STAMP"
+STATE_SNAPSHOT="$BACKUP_DIR/primary-state-before.json"
+mkdir -p "$BACKUP_DIR/files"
+: > "$BACKUP_DIR/existing-files.txt"
+: > "$BACKUP_DIR/created-files.txt"
+
+PAYLOAD_FILES=(
+  RELEASE_NOTES_v2.11.0.md
+  site-manifest.json
+  assets/js/site-config.js
+  assets/js/pages/v2-11-0.js
+  assets/js/pages/v2-11-0-green-primary.js
+  server/team-points/src/PublicReadDatabase.php
+  server/team-points/src/McaBlueGreenSync.php
+  server/team-points-green/public/api.php
+  server/team-points-green/tools/promote-primary-v2.11.0.php
+  server/team-points-green/tools/primary-state-v2.11.0.php
+  VERSION
+)
+TOUCHED=("${PAYLOAD_FILES[@]}" ui-v2.html TeamPointsAdmin.html)
+for rel in "${TOUCHED[@]}"; do
+  if [[ -e "$TARGET/$rel" ]]; then
+    mkdir -p "$BACKUP_DIR/files/$(dirname "$rel")"
+    cp -p "$TARGET/$rel" "$BACKUP_DIR/files/$rel"
+    printf '%s\n' "$rel" >> "$BACKUP_DIR/existing-files.txt"
+  else
+    printf '%s\n' "$rel" >> "$BACKUP_DIR/created-files.txt"
+  fi
+done
+cp "$PAYLOAD_DIR/INSTALLER_PAYLOAD_SHA256SUMS.txt" "$BACKUP_DIR/payload-sha256s.txt"
+printf 'from=%s\nto=%s\npayload_sha256=%s\nphp=%s\n' "$CURRENT_VERSION" "$RELEASE" "$ACTUAL_PAYLOAD_SHA" "$PHP_BIN" > "$BACKUP_DIR/transaction.txt"
+TRANSACTION_ACTIVE=1
+
+# Install rollback helper first, then capture state before any routing/task mutation.
+mkdir -p "$TARGET/server/team-points-green/tools"
+install -m 0644 "$PAYLOAD_DIR/server/team-points-green/tools/primary-state-v2.11.0.php" "$TARGET/server/team-points-green/tools/primary-state-v2.11.0.php"
+"$PHP_BIN" "$TARGET/server/team-points-green/tools/primary-state-v2.11.0.php" snapshot "$STATE_SNAPSHOT" > "$BACKUP_DIR/state-snapshot.log"
+[[ -s "$STATE_SNAPSHOT" ]] || die "Primary-state snapshot was not created."
+STATE_SNAPSHOT_READY=1
+
+# Install all release source except VERSION; VERSION is committed only after Green promotion validates.
+for rel in "${PAYLOAD_FILES[@]}"; do
+  [[ "$rel" == "VERSION" || "$rel" == "server/team-points-green/tools/primary-state-v2.11.0.php" ]] && continue
+  mkdir -p "$TARGET/$(dirname "$rel")"
+  install -m 0644 "$PAYLOAD_DIR/$rel" "$TARGET/$rel"
+done
+
+patch_cache_key(){
+  local rel="$1" old='assets/js/site-config.js?v=2.10.9.8' new='assets/js/site-config.js?v=2.11.0'
+  if grep -Fq "$new" "$TARGET/$rel"; then return 0; fi
+  grep -Fq "$old" "$TARGET/$rel" || die "$rel no longer contains the expected 2.10.9.8 cache key."
+  sed -i "s#${old}#${new}#g" "$TARGET/$rel"
+  grep -Fq "$new" "$TARGET/$rel" || die "Failed to update site-config cache key in $rel."
+}
+patch_cache_key ui-v2.html
+patch_cache_key TeamPointsAdmin.html
+
+"$PHP_BIN" "$TARGET/server/team-points-green/tools/promote-primary-v2.11.0.php" > "$BACKUP_DIR/promotion-result.json"
+grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' "$BACKUP_DIR/promotion-result.json" || die "Green-primary promotion did not report success."
+
+# Verify effective Green route before exposing the new VERSION.
+SOURCE="$($PHP_BIN -r "require '$TARGET/server/team-points/src/bootstrap.php'; echo P2K\\TeamPoints\\PublicReadDatabase::source();")"
+[[ "$SOURCE" == "green" ]] || die "Post-promotion public read source is '$SOURCE', expected green."
+POST_STATE="$BACKUP_DIR/primary-state-after.json"
+"$PHP_BIN" "$TARGET/server/team-points-green/tools/primary-state-v2.11.0.php" snapshot "$POST_STATE" > "$BACKUP_DIR/state-after.log"
+grep -Eq '"public_read_target"[[:space:]]*:[[:space:]]*"green"' "$POST_STATE" || die "Post-promotion state check failed: public_read_target"
+grep -Eq '"migration_phase"[[:space:]]*:[[:space:]]*"green_primary"' "$POST_STATE" || die "Post-promotion state check failed: migration_phase"
+grep -Eq '"worker_target"[[:space:]]*:[[:space:]]*"green"' "$POST_STATE" || die "Post-promotion state check failed: worker_target"
+grep -Eq '"client_ingest_target"[[:space:]]*:[[:space:]]*"green"' "$POST_STATE" || die "Post-promotion state check failed: client_ingest_target"
+grep -Eq '"team-points-club"[[:space:]]*:[[:space:]]*1' "$POST_STATE" || die "Post-promotion state check failed: Blue club task pause flag"
+grep -Eq '"team-points-player"[[:space:]]*:[[:space:]]*1' "$POST_STATE" || die "Post-promotion state check failed: Blue player task pause flag"
+
+install -m 0644 "$PAYLOAD_DIR/VERSION" "$TARGET/VERSION"
+[[ "$(tr -d '\r\n ' < "$TARGET/VERSION")" == "$RELEASE" ]] || die "VERSION post-install verification failed."
+for f in ui-v2.html TeamPointsAdmin.html; do grep -Fq 'assets/js/site-config.js?v=2.11.0' "$TARGET/$f" || die "$f cache-key postcheck failed."; done
+for f in "${PHP_FILES[@]}"; do "$PHP_BIN" -l "$TARGET/$f" >/dev/null || die "Installed PHP lint failed: $f"; done
+
+TRANSACTION_ACTIVE=0
+trap - ERR
+log "Installation successful: $CURRENT_VERSION -> $RELEASE"
+log "Production Team Points backend: Green Core + Analytics"
+log "Blue databases: preserved, recovery/reference only, legacy Team Points task flags paused"
+log "Rollback backup: $BACKUP_DIR"
+log "No protected configuration or runtime data was deleted or reset."
+cleanup
+exit 0
+
+__P2K_PAYLOAD_BELOW__
+H4sIAEO6lmoC/+2923YbR7Ig6md+RRlmG4CN+5UEBbIpirK5WxS1Scq997A5UAFVIMsCUOiqAik2
+xbX6aZ5nnXVezlrnvM4vzPt8Sn/JiUtmVtYNgGRb09MGui0CVZGRt4jIiMjIyEq1Uv3jG/PDj7Zp
+2d5Xv8mnxp+sv7VasxV+x+f1WqPe+Mr48NUX+Cz8wPSg+q9+n5/GjjENnKndr3d3dhqdRrfTrezs
+tGvd+s7WV5vPv/zn/PjV8eHF8eD12eXxxeCuUanXK7XK1Pq1+b/Taul8X++26/J3t9bsfFVvN1rt
+drPV7iD/t5qN5ldG7Uvyv+e6wTI413QG/q3p2da/1Px/Y7zx3Kkb2EbgGn9yZjeGoIGtrW++MQ6t
+qTNz/MAzA8edGSN35rsTx6JfW1tl4/LWNt4shhNnVCVQQHJzM7ENxzdm7r0RwOuROXNnzsicxJHZ
+s8B7MOauMwsqgOqVfWOOHox3c/PG7psR0G/p56XrTvqVSuWdMXTd91PTe+8bMB1QkTc1J87fbMsA
+VC5VKprBbfLcRWD7ewBozOx7Y2ybwcKjNpqWBaVEmQk3INZKf+GNzZGNLTy3R97CCabQcCpszADk
+Ttbyj//2fxmn9nRoez702bOqlh2YzsQwZ5bh2Qvf9qkW+wPgxmGeAyB8hfphhCwcUxsGw52UANpf
+TM0htN9bzKqjW3v0nkbJAEoFIER4dPETYJq7XmAMzdF7e2Zh
