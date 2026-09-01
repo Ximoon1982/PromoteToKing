@@ -181,12 +181,12 @@
     const detail = byId("adminShellDetail");
     const frame = byId("adminShellDetailFrame");
     if (!detail || detail.hidden || !frame) return;
-    frame.dataset.p2kR2Stable = "1";
-    frame.hidden = false;
-    frame.removeAttribute("aria-hidden");
-    frame.style.display = "block";
-    frame.style.width = "100%";
-    frame.style.maxHeight = "none";
+    if (frame.dataset.p2kR2Stable !== "1") frame.dataset.p2kR2Stable = "1";
+    if (frame.hidden) frame.hidden = false;
+    if (frame.hasAttribute("aria-hidden")) frame.removeAttribute("aria-hidden");
+    if (frame.style.display !== "block") frame.style.display = "block";
+    if (frame.style.width !== "100%") frame.style.width = "100%";
+    if (frame.style.maxHeight !== "none") frame.style.maxHeight = "none";
     if (!frame.style.height || Number.parseFloat(frame.style.height) < 360) frame.style.height = "520px";
   }
 
