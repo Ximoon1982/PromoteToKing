@@ -3,7 +3,6 @@
   "use strict";
 
   let queued = false;
-  let forwardingRecruitmentRequest = false;
 
   const byId = id => document.getElementById(id);
 
@@ -29,12 +28,21 @@
     }
   }
 
+  function requestHasCsrf(input, init = {}) {
+    try {
+      const headers = new Headers(init?.headers || (typeof Request !== "undefined" && input instanceof Request ? input.headers : undefined));
+      return headers.has("X-P2K-CSRF");
+    } catch (_) {
+      return false;
+    }
+  }
+
   function installSecuredRecruitmentFetchBridge() {
     if (window.fetch?.__p2kRecruitmentR4) return;
     const originalFetch = window.fetch.bind(window);
     const wrapped = async function(input, init = {}) {
       const method = String(init?.method || (typeof Request !== "undefined" && input instanceof Request ? input.method : "GET") || "GET").toUpperCase();
-      if (!forwardingRecruitmentRequest && !["GET", "HEAD", "OPTIONS"].includes(method) && sameRecruitmentEndpoint(input)) {
+      if (!["GET", "HEAD", "OPTIONS"].includes(method) && sameRecruitmentEndpoint(input) && !requestHasCsrf(input, init)) {
         const client = window.P2K_TEAM_POINTS_CLIENT;
         if (!client?.endpointRequest) return originalFetch(input, init);
         const url = new URL(typeof input === "string" ? input : input?.url || String(input || ""), location.href);
@@ -46,7 +54,6 @@
           } else body = init.body;
         }
         try {
-          forwardingRecruitmentRequest = true;
           const payload = await client.endpointRequest(recruitmentBase(), {
             action,
             method,
@@ -69,8 +76,6 @@
             status: Math.max(400, Math.min(599, Number(error?.status) || 500)),
             headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
           });
-        } finally {
-          forwardingRecruitmentRequest = false;
         }
       }
       return originalFetch(input, init);
