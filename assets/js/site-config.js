@@ -190,3 +190,10 @@
   if (document.querySelector('script[data-p2k-v2110-r2-admin-stability]')) return;
   const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r2-admin-stability.js?v=2.11.0-r2';script.async=false;script.dataset.p2kV2110R2AdminStability='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
+
+// v2.11.0 R3: bridge the canonical Recruitment URL into the native Recruitment
+// mount host expected by the v2.11.0 module.
+(() => {
+  if (document.querySelector('script[data-p2k-v2110-r3-recruitment-route]')) return;
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r3-recruitment-route.js?v=2.11.0-r3';script.async=false;script.dataset.p2kV2110R3RecruitmentRoute='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+})();
