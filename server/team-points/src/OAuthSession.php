@@ -9,7 +9,8 @@ final class OAuthSession
 {
     public const SESSION_NAME = 'P2KOAUTH';
     private const VERSION = '2.9.22.4';
-    private const SESSION_RETENTION_SECONDS = 90000; // 25h: slightly beyond the observed ~24h Chess.com token lifetime.
+    private const SESSION_RETENTION_SECONDS = 604800; // Seven days of inactivity; refreshed on every same-origin session request.
+    private const TOKEN_REFRESH_LEEWAY_SECONDS = 300;
 
     public static function config(): array
     {
@@ -38,14 +39,15 @@ final class OAuthSession
         $forwarded=strtolower(trim(explode(',',(string)($_SERVER['HTTP_X_FORWARDED_PROTO']??''))[0]??''));
         $secure=(!empty($_SERVER['HTTPS'])&&strtolower((string)$_SERVER['HTTPS'])!=='off')||$forwarded==='https';
         session_name(self::SESSION_NAME);
-        // Persist the opaque session id across browser restarts while keeping the
-        // Bearer token server-side. Authentication still ends at token expires_at.
+        // Persist only the opaque session id across browser restarts. Both PHP's
+        // server-side retention and the browser cookie use the same seven-day
+        // inactivity window; the explicit Set-Cookie below makes it sliding.
         @ini_set('session.gc_maxlifetime',(string)self::SESSION_RETENTION_SECONDS);
         session_set_cookie_params(['lifetime'=>self::SESSION_RETENTION_SECONDS,'path'=>'/','secure'=>$secure,'httponly'=>true,'samesite'=>'Lax']);
         session_start();
-        // session_start() does not reliably re-issue an already existing cookie
-        // with a newly configured lifetime on every host. Refresh it explicitly so
-        // users upgrading from the old browser-session cookie gain persistence.
+        // session_start() does not reliably re-issue an existing persistent cookie
+        // on every host. Refresh it explicitly after each successful session open,
+        // so activity moves the seven-day expiry without exposing the Bearer token.
         if (session_id() !== '') {
             setcookie(self::SESSION_NAME,session_id(),[
                 'expires'=>time()+self::SESSION_RETENTION_SECONDS,
@@ -269,9 +271,52 @@ final class OAuthSession
 
     private static function accessToken(): string
     {
-        $a=$_SESSION['oauth_access']??null;if(!is_array($a))return '';$token=trim((string)($a['access_token']??''));$exp=(int)($a['expires_at']??0);
-        if($token===''||($exp>0&&$exp<=time()+5)){if($exp>0&&$exp<=time()+5)unset($_SESSION['oauth_access'],$_SESSION['oauth_user']);return '';}
+        $a=$_SESSION['oauth_access']??null;if(!is_array($a))return '';$token=trim((string)($a['access_token']??''));$exp=(int)($a['expires_at']??0);$now=time();
+        if($token==='')return '';
+        $refreshToken=trim((string)($a['refresh_token']??''));
+        $retryAt=(int)($_SESSION['oauth_refresh_retry_at']??0);
+        if($refreshToken!==''&&($exp<=0||$exp<=$now+self::TOKEN_REFRESH_LEEWAY_SECONDS)&&$retryAt<=$now){
+            try{
+                self::refreshAccessToken($a,$refreshToken);
+                $a=$_SESSION['oauth_access']??[];$token=trim((string)($a['access_token']??''));$exp=(int)($a['expires_at']??0);
+            }catch(\Throwable){
+                // A temporary token-endpoint failure must not discard an access
+                // token that is still valid. Bound retries while retaining the
+                // current credential until its authoritative expiry.
+                $_SESSION['oauth_refresh_retry_at']=$now+60;
+            }
+        }
+        if($token===''||($exp>0&&$exp<=time()+5)){unset($_SESSION['oauth_access'],$_SESSION['oauth_user'],$_SESSION['oauth_refresh_retry_at']);return '';}
         return $token;
+    }
+
+    private static function refreshAccessToken(array $current,string $refreshToken): void
+    {
+        $cfg=self::config();
+        if(!self::configured($cfg))throw new \RuntimeException('OAuth configuration is incomplete.');
+        $token=self::postForm((string)$cfg['token_url'],[
+            'grant_type'=>'refresh_token',
+            'client_id'=>(string)$cfg['client_id'],
+            'refresh_token'=>$refreshToken,
+        ]);
+        $accessToken=trim((string)($token['access_token']??''));
+        if($accessToken==='')throw new \RuntimeException('Chess.com token refresh returned no access token.');
+        $expiresIn=max(1,(int)($token['expires_in']??0));
+        if($expiresIn<=1)throw new \RuntimeException('Chess.com token refresh returned no usable lifetime.');
+        $expiresAt=time()+$expiresIn;
+        $_SESSION['oauth_access']=[
+            'access_token'=>$accessToken,
+            'refresh_token'=>trim((string)($token['refresh_token']??''))?:$refreshToken,
+            'id_token'=>trim((string)($token['id_token']??''))?:trim((string)($current['id_token']??'')),
+            'token_type'=>trim((string)($token['token_type']??''))?:trim((string)($current['token_type']??'Bearer')),
+            'scope'=>trim((string)($token['scope']??''))?:trim((string)($current['scope']??self::scope($cfg))),
+            'expires_at'=>$expiresAt,
+        ];
+        if(is_array($_SESSION['oauth_user']??null))$_SESSION['oauth_user']['expires_at']=$expiresAt;
+        unset($_SESSION['oauth_refresh_retry_at']);
+        // Rotate the opaque browser credential whenever server-side OAuth
+        // credentials are renewed. CSRF state remains bound to the new session id.
+        session_regenerate_id(true);
     }
 
     private static function scope(array $cfg): string
