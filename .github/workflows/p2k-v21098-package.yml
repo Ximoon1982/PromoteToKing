@@ -95,19 +95,26 @@ jobs:
           mkdir -p "$BACKUP_ROOT"
           BACKUP="$BACKUP_ROOT/v2.10.9.8-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
           FILES=(
+            server/team-points/public/recruitment-admin.php
+            assets/js/pages/v2-10-9-8.js
             assets/js/site-config.js
             VERSION
             site-manifest.json
+            RELEASE_NOTES_v2.10.9.8.md
           )
           EXISTING=()
-          for file in "${FILES[@]}"; do [[ -e "$TARGET/$file" ]] && EXISTING+=("$file"); done
+          CREATED=()
+          for file in "${FILES[@]}"; do
+            if [[ -e "$TARGET/$file" ]]; then EXISTING+=("$file"); else CREATED+=("$file"); fi
+          done
           if ((${#EXISTING[@]})); then tar -C "$TARGET" -czf "$BACKUP" "${EXISTING[@]}"; fi
 
           rollback(){
             status=$?
-            if ((status!=0)) && [[ -f "$BACKUP" ]]; then
+            if ((status!=0)); then
               printf 'Install failed; restoring pre-v%s files...\n' "$RELEASE" >&2
-              tar -C "$TARGET" -xzf "$BACKUP" || true
+              for file in "${CREATED[@]}"; do rm -f "$TARGET/$file" || true; done
+              if [[ -f "$BACKUP" ]]; then tar -C "$TARGET" -xzf "$BACKUP" || true; fi
             fi
             exit "$status"
           }
