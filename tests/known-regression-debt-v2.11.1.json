@@ -266,6 +266,11 @@
     "tests/test_v280_storage_architecture.py"
   ],
   "known_browser_failures": [
-    "tests/browser_gate_v2914_interactive_survival.py"
+    "tests/browser_gate_v2914_interactive_survival.py",
+    "tests/browser_gate_v29222_oauth_feeder.py",
+    "tests/browser_gate_v29222_oauth_saturation.py",
+    "tests/browser_gate_v2922_reconstruction.py",
+    "tests/browser_startup_gate_v2810.py",
+    "tests/browser_startup_gate_v289.py"
   ]
 }

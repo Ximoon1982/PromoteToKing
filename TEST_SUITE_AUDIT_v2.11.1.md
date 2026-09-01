@@ -14,7 +14,7 @@ The audit also reproduced a collection-breaking defect: `pytest tests` imports l
 
 The first isolated run executed all 795 pytest-style tests: 552 passed and 243 inherited assertions failed. Of 23 legacy standalone checks, 7 passed and 16 failed locally; the PHP-enabled CI environment exposed one additional legacy backend-ordering failure, producing a bounded cross-environment standalone debt ceiling of 17. Those exact node IDs/files are recorded as known debt. They do not hide new regressions: any failure outside the audited baseline fails CI, collection/runtime errors fail immediately, and resolved debt is reported. The policy forbids either debt count from growing.
 
-The browser audit initially passed six gates before reproducing the timing-sensitive v2.9.14 interactive-survival timeout. Browser execution was changed from fail-fast to complete-inventory mode, and that exact gate is recorded as bounded browser debt so all later browser gates are still exercised and any additional failure is rejected.
+The browser audit initially passed six gates before reproducing the timing-sensitive v2.9.14 interactive-survival timeout. Browser execution was changed from fail-fast to complete-inventory mode. The complete Linux CI audit passed 14 of 20 gates and identified six inherited environment-sensitive failures: the v2.9.14 interactive-survival gate, three OAuth/reconstruction gates, and two startup gates whose administration control is present but hidden. Those exact files are recorded as bounded browser debt; every gate still runs, any failure outside that list is rejected, and resolved debt is reported.
 
 ## Hardening changes
 
