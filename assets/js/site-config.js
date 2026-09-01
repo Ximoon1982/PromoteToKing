@@ -26,7 +26,7 @@
 
   window.P2K_SITE_CONFIG = Object.freeze({
     version: "2.11.0",
-    builtAt: "2026-09-01T10:50:00Z",
+    builtAt: "2026-09-01T14:30:00Z",
     schemaVersion: 6,
     siteName: existing.siteName || branding.title || "Promote to King",
     siteDescription: existing.siteDescription || branding.subtitle || "Play together. Improve together. Promote to King.",
@@ -112,13 +112,14 @@
       trafficAnalytics: existing.features?.trafficAnalytics !== false,
       analysisSynchronization: existing.features?.analysisSynchronization !== false,
       legacyAdministration: false,
-      blueProductionControls: false
+      blueProductionControls: false,
+      dataReconciliation: false
     })
   });
 })();
 
 // v2.11.0 canonical Administration routing. Old adminTool bookmarks remain usable,
-// but are normalized before dashboard-v2 reads the URL so only the toggle shell runs.
+// but retired migration/reconciliation bookmarks land on their supported successors.
 (() => {
   if (!/\/ui-v2\.html$/i.test(window.location.pathname)) return;
   const url = new URL(window.location.href);
@@ -131,7 +132,7 @@
     members: ["members", "", ""],
     tasks: ["maintenance", "tasks", "control"],
     diagnostics: ["maintenance", "diagnostics", "health"],
-    reconciliation: ["maintenance", "diagnostics", "reconciliation"],
+    reconciliation: ["maintenance", "diagnostics", "health"],
     intelligence: ["opponents", "opponents", "intelligence"],
     logs: ["maintenance", "", ""],
     storage: ["maintenance", "", ""],
@@ -163,37 +164,27 @@
   const script=document.createElement('script');script.src='assets/js/shared/chart-maximize.js?v=2.10.6.24';script.defer=true;script.dataset.p2kChartMaximize='1';const mount=()=>document.head.appendChild(script);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
 
-// Members Insights period/ranking enhancement. The module wraps the lazy Insights
-// factory, so it adds its controls without changing the large dashboard controller.
+// Members Insights period/ranking enhancement.
 (() => {
   if (document.querySelector('script[data-p2k-members-insights-enhancement]')) return;
   const script=document.createElement('script');script.src='assets/js/pages/members-insights-enhancement.js?v=2.10.9.7-members-ranking-2';script.async=false;script.dataset.p2kMembersInsightsEnhancement='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
 
-// v2.11.0 canonical toggle Administration enhancements. This supersedes the
-// v2.10.9.8 Recruitment injection into legacy TeamPointsAdmin.
+// v2.11.0 canonical toggle Administration + Recruitment native detail.
 (() => {
   if (document.querySelector('script[data-p2k-v2110]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0.js?v=2.11.0';script.async=false;script.dataset.p2kV2110='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0.js?v=2.11.0-r5';script.async=false;script.dataset.p2kV2110='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
 
-// Green-primary/legacy migration cleanup runs after the canonical 2.11.0 admin module.
+// Green-primary/retired migration cleanup.
 (() => {
   if (document.querySelector('script[data-p2k-v2110-green-primary]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-green-primary.js?v=2.11.0';script.async=false;script.dataset.p2kV2110GreenPrimary='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-green-primary.js?v=2.11.0-r5';script.async=false;script.dataset.p2kV2110GreenPrimary='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
 
-// v2.11.0 R2: live Admin-state synchronization, embedded-frame stability and
-// post-Green maintenance cleanup. Loaded on every site-config page so both the
-// parent Admin shell and embedded administration tools share the same contract.
+// Admin SPA/frame stability. Recruitment is a native detail and is explicitly
+// excluded from iframe stabilization; actual iframe tools retain dynamic height support.
 (() => {
   if (document.querySelector('script[data-p2k-v2110-r2-admin-stability]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r2-admin-stability.js?v=2.11.0-r2';script.async=false;script.dataset.p2kV2110R2AdminStability='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
-})();
-
-// v2.11.0 R4: Recruitment renders inside the canonical Admin detail shell and
-// non-GET Recruitment requests reuse the secured Team Points CSRF/session client.
-(() => {
-  if (document.querySelector('script[data-p2k-v2110-r4-recruitment-integration]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r4-recruitment-integration.js?v=2.11.0-r4';script.async=false;script.dataset.p2kV2110R4RecruitmentIntegration='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r2-admin-stability.js?v=2.11.0-r5';script.async=false;script.dataset.p2kV2110R2AdminStability='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
