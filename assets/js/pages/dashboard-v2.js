@@ -689,7 +689,8 @@ const ADMIN_DETAIL_DEFS = {
   members: {
     depth: { title:"Team Depth", tabs:[{key:"depth",label:"Team depth",src:"ClubIntelligence.html?embedded=1&tab=depth&release=2.10.6.14"}]},
     chronology: { title:"Member chronology", tabs:[{key:"chronology",label:"Chronology",src:"TeamPointsAdmin.html?embedded=1&tab=members&release=2.10.6.14"}]},
-    aliases: { title:"Aliases & name changes", tabs:[{key:"aliases",label:"Aliases & name changes",src:"ClubIntelligence.html?embedded=1&tab=aliases&release=2.10.6.14"}]}
+    aliases: { title:"Aliases & name changes", tabs:[{key:"aliases",label:"Aliases & name changes",src:"ClubIntelligence.html?embedded=1&tab=aliases&release=2.10.6.14"}]},
+    recruitment: { title:"Recruitment", tabs:[{key:"recruitment",label:"Recruitment",mode:"native",nativeKey:"recruitment"}]}
   },
   team: {
     team: { title:"Club intelligence", tabs:[
@@ -788,7 +789,8 @@ members: [
   adminMemberLookupCard(),
   adminShellCard({key:"depth",category:"members",eyebrow:"Members",title:"Team Depth",description:"Current rating-band depth, activity and availability coverage.",metrics:[{label:"Current members",id:"adminShellDepthMembers"},{label:"Active ≤30d",id:"adminShellDepthActive"},{label:"Rating coverage",id:"adminShellDepthRatings"}],source:"Club Intelligence · Green Core/Analytics",links:[{label:"Open team depth",tab:"depth"}]}),
   adminShellCard({key:"chronology",category:"members",eyebrow:"Members",title:"Chronology",description:"Join, leave and name-change chronology from the authoritative Green member lifecycle.",metrics:[{label:"Observed members",id:"adminShellChronMembers"},{label:"Lifecycle events",id:"adminShellChronEvents"},{label:"Pending checks",id:"adminShellChronPending"}],source:"Green member lifecycle",links:[{label:"Open chronology",tab:"chronology"}]}),
-  adminShellCard({key:"aliases",category:"members",eyebrow:"Members",title:"Aliases & name changes",description:"Canonical identity mappings, possible renames and review state.",metrics:[{label:"Known names",id:"adminShellAliasMappings"},{label:"Review queue",id:"adminShellAliasReview"},{label:"Confirmed",id:"adminShellAliasConfirmed"}],source:"MIAC identity graph",links:[{label:"Open aliases",tab:"aliases"}]})
+  adminShellCard({key:"aliases",category:"members",eyebrow:"Members",title:"Aliases & name changes",description:"Canonical identity mappings, possible renames and review state.",metrics:[{label:"Known names",id:"adminShellAliasMappings"},{label:"Review queue",id:"adminShellAliasReview"},{label:"Confirmed",id:"adminShellAliasConfirmed"}],source:"MIAC identity graph",links:[{label:"Open aliases",tab:"aliases"}]}),
+  adminShellCard({key:"recruitment",category:"members",eyebrow:"Members",title:"Recruitment",description:"Maintain the candidate pool and evaluate prospective members against Daily activity, reliability and membership criteria.",metrics:[{label:"Candidates",id:"adminRecruitmentCandidates"},{label:"Checked",id:"adminRecruitmentChecked"},{label:"Selected",id:"adminRecruitmentSelected"}],source:"Green Core + Chess.com OAuth",links:[{label:"Open Recruitment",tab:"recruitment"}]})
 ],
 team: [adminShellCard({key:"team",category:"team",eyebrow:"Team",title:"Club intelligence",description:"Authoritative team health, Club Points, snapshots, forecast and current anomalies.",metrics:[{label:"Club points",id:"adminShellTeamPoints"},{label:"Current members",id:"adminShellTeamMembers"},{label:"Open anomalies",id:"adminShellTeamAnomalies"}],source:"Green Core · Club Intelligence",links:[{label:"Open club intelligence",tab:"overview"},{label:"Forecast",tab:"forecast",secondary:true}]})],
 opponents: [adminShellCard({key:"opponents",category:"opponents",eyebrow:"Opponents",title:"Opponent intelligence",description:"Recurring opponents, historical outcomes and opponent maintenance intelligence.",metrics:[{label:"Profiles",id:"adminShellOpponentProfiles"},{label:"Recent opponents",id:"adminShellOpponentRecent"},{label:"Review needed",id:"adminShellOpponentReview"}],source:"Club Intelligence · Green match history",links:[{label:"Open opponent intelligence",tab:"intelligence"},{label:"Challenge assistant",tab:"challenge",secondary:true}]})],
@@ -817,7 +819,8 @@ return `<section aria-label="Administrator dashboard" class="dashboard-panel das
   <section class="dashboard-admin-shell-detail" id="adminShellDetail" hidden>
     <div class="dashboard-admin-detail-heading"><div><button class="dashboard-button is-secondary" id="adminShellDetailBack" type="button">← Back</button><p class="dashboard-eyebrow" id="adminShellDetailBreadcrumb">Administration</p><h3 id="adminShellDetailTitle">Detail</h3></div></div>
     <nav class="dashboard-admin-detail-tabs" id="adminShellDetailTabs" aria-label="Administration detail sections"></nav>
-    <div class="dashboard-admin-detail-frame-wrap"><iframe class="dashboard-integrated-frame dashboard-admin-detail-frame" id="adminShellDetailFrame" title="Administration detail"></iframe></div>
+    <div class="dashboard-admin-detail-frame-wrap" id="adminShellDetailFrameWrap"><iframe class="dashboard-integrated-frame dashboard-admin-detail-frame" id="adminShellDetailFrame" title="Administration detail"></iframe></div>
+    <div class="dashboard-admin-detail-native" id="adminShellNativeDetailHost" hidden></div>
   </section>
 </section>`;
 }
@@ -838,12 +841,26 @@ function adminShellCloseDetail({updateHistory=true}={}){
 function renderAdminShellDetail(){
   const detailHost=byId("adminShellDetail");if(!detailHost)return;
   const def=adminDetailDefinition();
-  if(!def){detailHost.hidden=true;setIntegratedFrameActivity("");return;}
+  const frame=byId("adminShellDetailFrame");
+  const frameWrap=byId("adminShellDetailFrameWrap")||frame?.parentElement;
+  const nativeHost=byId("adminShellNativeDetailHost");
+  if(!def){detailHost.hidden=true;setIntegratedFrameActivity("");if(frameWrap)frameWrap.hidden=false;if(frame)frame.hidden=false;if(nativeHost){nativeHost.hidden=true;nativeHost.replaceChildren();nativeHost.removeAttribute("data-native-detail");}return;}
   const validTab=def.tabs.find(item=>item.key===state.adminDetailTab)||def.tabs[0];state.adminDetailTab=validTab.key;
   detailHost.hidden=false;setText("adminShellDetailTitle",def.title);setText("adminShellDetailBreadcrumb",`Administration · ${state.category.replace("maintenance","Maintenance")}`);
   const tabs=byId("adminShellDetailTabs");if(tabs){tabs.hidden=def.tabs.length<=1;tabs.innerHTML=def.tabs.map(item=>`<a class="dashboard-admin-detail-tab${item.key===validTab.key?" is-active":""}" data-admin-detail-tab="${escapeHTML(item.key)}" href="${escapeHTML(adminShellHref(state.category,state.adminDetail,item.key,item.key===validTab.key?state.adminToolTab:""))}" aria-current="${item.key===validTab.key?"page":"false"}">${escapeHTML(item.label)}</a>`).join("");}
-  const frame=byId("adminShellDetailFrame");
+  const nativeKey=String(validTab.nativeKey||"");
+  const nativeMode=validTab.mode==="native"||nativeKey!=="";
+  if(nativeMode){
+    setIntegratedFrameActivity("");
+    if(frameWrap)frameWrap.hidden=true;
+    if(frame){frame.hidden=true;frame.removeAttribute("data-p2k-r2-stable");}
+    if(nativeHost){nativeHost.hidden=false;nativeHost.dataset.nativeDetail=nativeKey||validTab.key;}
+    return;
+  }
+  if(nativeHost){nativeHost.hidden=true;nativeHost.replaceChildren();nativeHost.removeAttribute("data-native-detail");}
+  if(frameWrap)frameWrap.hidden=false;
   if(frame){
+    frame.hidden=false;
     const targetUrl=applyOAuthContext(new URL(validTab.src,location.href));
     targetUrl.searchParams.set("embedded","1");
     targetUrl.searchParams.set("active","1");
@@ -858,10 +875,13 @@ function renderAdminShellDetail(){
   }
 }
 function adminShellActivate(){
-  const detail=Boolean(adminDetailDefinition());
+  const def=adminDetailDefinition();
+  const detail=Boolean(def);
   document.querySelectorAll("[data-admin-shell-panel]").forEach(panel=>panel.hidden=detail||panel.dataset.adminShellPanel!==state.category);
   document.querySelectorAll("[data-admin-category]").forEach(button=>{const active=button.dataset.adminCategory===state.category;button.setAttribute("aria-pressed",String(active));button.classList.toggle("is-active",active);button.setAttribute("aria-selected",String(active));button.tabIndex=active?0:-1;});
   if(detail)renderAdminShellDetail();else if(byId("adminShellDetail"))byId("adminShellDetail").hidden=true;
+  const activeTab=def?.tabs?.find(item=>item.key===state.adminDetailTab)||def?.tabs?.[0]||null;
+  try{window.dispatchEvent(new CustomEvent("p2k-admin-shell-route",{detail:{category:state.category,detail:state.adminDetail,tab:state.adminDetailTab,nativeKey:activeTab?.nativeKey||""}}));}catch(_){ }
 }
 async function adminShellJSON(url){const response=await fetch(url,{credentials:"same-origin",cache:"no-store"});const payload=await response.json();if(!response.ok||payload?.ok===false)throw new Error(payload?.error?.message||`HTTP ${response.status}`);return payload}
 async function loadAdminShellMetrics(force=false){
@@ -2551,8 +2571,14 @@ if (frame && height) frame.style.height = `${height}px`;
 });
 document.querySelectorAll("[data-public-page]").forEach(button => button.addEventListener("click", () => {
 if (button.disabled) return;
-if (button.dataset.publicPage === "hall") openHallOfFame();
-else showPublicPage(button.dataset.publicPage || "dashboard");
+const page=button.dataset.publicPage||"dashboard";
+if(page==="administration"){
+  if(!state.admin)return;
+  state.view="admin";state.publicPage="dashboard";renderView();writeNavigationState();
+  return;
+}
+if (page === "hall") openHallOfFame();
+else showPublicPage(page);
 }));
 document.querySelectorAll("[data-insights-subtab]").forEach(button => button.addEventListener("click", () => {
 if (!button.disabled) selectInsightsSubtab(button.dataset.insightsSubtab || "team");

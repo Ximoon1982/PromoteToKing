@@ -26,7 +26,7 @@
 
   window.P2K_SITE_CONFIG = Object.freeze({
     version: "2.11.0",
-    builtAt: "2026-09-01T14:30:00Z",
+    builtAt: "2026-09-01T16:30:00Z",
     schemaVersion: 6,
     siteName: existing.siteName || branding.title || "Promote to King",
     siteDescription: existing.siteDescription || branding.subtitle || "Play together. Improve together. Promote to King.",
@@ -173,18 +173,18 @@
 // v2.11.0 canonical toggle Administration + Recruitment native detail.
 (() => {
   if (document.querySelector('script[data-p2k-v2110]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0.js?v=2.11.0-r5';script.async=false;script.dataset.p2kV2110='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0.js?v=2.11.0-r6';script.async=false;script.dataset.p2kV2110='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
 
 // Green-primary/retired migration cleanup.
 (() => {
   if (document.querySelector('script[data-p2k-v2110-green-primary]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-green-primary.js?v=2.11.0-r5';script.async=false;script.dataset.p2kV2110GreenPrimary='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-green-primary.js?v=2.11.0-r6';script.async=false;script.dataset.p2kV2110GreenPrimary='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
 
 // Admin SPA/frame stability. Recruitment is a native detail and is explicitly
 // excluded from iframe stabilization; actual iframe tools retain dynamic height support.
 (() => {
   if (document.querySelector('script[data-p2k-v2110-r2-admin-stability]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r2-admin-stability.js?v=2.11.0-r5';script.async=false;script.dataset.p2kV2110R2AdminStability='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r2-admin-stability.js?v=2.11.0-r6';script.async=false;script.dataset.p2kV2110R2AdminStability='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();

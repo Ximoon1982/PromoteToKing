@@ -3,8 +3,8 @@
   "use strict";
 
   const VERSION = "2.11.0";
-  const MEMBERSHIP_BATCH = 1000;
-  const CHECKPOINT_BATCH = 10;
+  const MEMBERSHIP_BATCH = 2000;
+  const CHECKPOINT_BATCH = 500;
   const RESULT_RENDER_LIMIT = 500;
   const $ = id => document.getElementById(id);
   const text = value => String(value ?? "");
@@ -105,8 +105,6 @@
       body.p2k-admin-canonical [data-admin-category][aria-pressed="true"],
       body.p2k-admin-canonical .dashboard-admin-detail-tab.is-active{border-color:#d45b50!important;color:#ffd9d5!important;background:rgba(177,48,39,.18)!important}
       body.p2k-admin-canonical [data-admin-category][aria-pressed="true"] svg{stroke:#ff8e82!important}
-      html.p2k-recruitment-route #adminShellDetailFrame{display:none!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important}
-      html.p2k-recruitment-route [data-admin-shell-panel]{display:none!important}
       #p2kRecruitmentNativeHost{display:block!important;width:100%;min-height:0;margin:0;padding:0}
       .p2k-recruitment-native{display:grid;gap:16px}
       .p2k-recruitment-native-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
@@ -123,7 +121,7 @@
       .p2k-recruitment-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
       .p2k-recruitment-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
       .p2k-recruitment-summary>div{padding:10px;border:1px solid rgba(255,255,255,.10);border-radius:8px;background:rgba(0,0,0,.12)}
-      .p2k-recruitment-summary span{display:block;color:#a9a096;font-size:10px;text-transform:uppercase;letter-spacing:.04em}.p2k-recruitment-summary strong{display:block;margin-top:2px;color:#f6b73c;font-size:20px}
+      .p2k-recruitment-summary span{display:block;color:#a9a096;font-size:10px;text-transform:uppercase;letter-spacing:.04em}.p2k-recruitment-summary strong{display:block;margin-top:2px;color:#f6b73c;font-size:20px}.p2k-recruitment-summary small{display:block;margin-top:3px;color:#91887f;font-size:10px;line-height:1.3}
       .p2k-recruitment-status{padding:10px 12px;border-radius:8px;background:rgba(255,255,255,.06);color:#d8d1c8}.p2k-recruitment-status.is-error{color:#ffb2aa;background:rgba(177,48,39,.14)}
       .p2k-recruitment-progress{height:7px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.08)}.p2k-recruitment-progress span{display:block;width:0;height:100%;background:#d98d18;transition:width .2s ease}
       .p2k-recruitment-table-wrap{width:100%;overflow:auto;border:1px solid rgba(255,255,255,.09);border-radius:9px}.p2k-recruitment-table{width:100%;border-collapse:collapse}.p2k-recruitment-table th,.p2k-recruitment-table td{padding:8px 9px;border-bottom:1px solid rgba(255,255,255,.07);white-space:nowrap;text-align:left}.p2k-recruitment-table td:last-child{white-space:normal;min-width:240px}
@@ -192,6 +190,42 @@
   let activeScan = false;
   let scanGeneration = 0;
   let detailMounted = false;
+  let scanAbortController = null;
+  let scanTelemetry = null;
+  let scanTelemetryTimer = 0;
+
+  function durationLabel(seconds) {
+    const value=Math.max(0,Number(seconds)||0);
+    if(value<60)return `${Math.round(value)} s`;
+    if(value<3600)return `${Math.floor(value/60)}m ${Math.round(value%60)}s`;
+    return `${Math.floor(value/3600)}h ${Math.round((value%3600)/60)}m`;
+  }
+  function stopTelemetryTimer(){if(scanTelemetryTimer){clearInterval(scanTelemetryTimer);scanTelemetryTimer=0;}}
+  function clearScanTelemetry(){stopTelemetryTimer();scanTelemetry=null;renderScanTelemetry();}
+  function beginScanTelemetry(runId,total,baseChecked){
+    stopTelemetryTimer();scanTelemetry={runId:String(runId||""),startedAt:Date.now(),finishedAt:0,total:Math.max(0,Number(total)||0),baseChecked:Math.max(0,Number(baseChecked)||0),settled:0,samples:[]};
+    scanTelemetryTimer=setInterval(renderScanTelemetry,500);renderScanTelemetry();
+  }
+  function noteCandidateSettled(){
+    if(!scanTelemetry)return;const now=Date.now();scanTelemetry.settled+=1;scanTelemetry.samples.push(now);scanTelemetry.samples=scanTelemetry.samples.filter(at=>now-at<=10000);renderScanTelemetry();
+  }
+  function finishScanTelemetry(){if(scanTelemetry&&!scanTelemetry.finishedAt)scanTelemetry.finishedAt=Date.now();stopTelemetryTimer();renderScanTelemetry();}
+  function renderScanTelemetry(){
+    const summary=adminState.run?.summary||{};const total=Math.max(0,Number(summary.total??scanTelemetry?.total??0)||0);const storedChecked=Math.max(0,Number(summary.checked??adminState.run?.results?.length??0)||0);
+    const liveChecked=scanTelemetry?Math.min(total,Math.max(storedChecked,scanTelemetry.baseChecked+scanTelemetry.settled)):storedChecked;const remaining=Math.max(0,total-liveChecked);
+    const now=scanTelemetry?.finishedAt||Date.now();const elapsed=scanTelemetry?Math.max(0,(now-scanTelemetry.startedAt)/1000):0;let rolling=0,average=0;
+    if(scanTelemetry){const windowSeconds=Math.max(1,Math.min(10,elapsed||1));scanTelemetry.samples=scanTelemetry.samples.filter(at=>now-at<=10000);rolling=scanTelemetry.samples.length/windowSeconds;average=elapsed>0?scanTelemetry.settled/elapsed:0;}
+    const rate=rolling>0?rolling:average;const eta=remaining===0&&total>0?"Done":rate>0?durationLabel(remaining/rate):"—";const diag=window.P2K_API_CLIENT?.diagnostics?.()||{};const gatewayRate=Math.max(0,Number(diag.oauthGatewayLastCps||0));const targetRate=Math.max(0,Number(diag.oauthGatewayRateTarget||0));
+    if($("recruitmentMetricChecked"))$("recruitmentMetricChecked").textContent=liveChecked.toLocaleString("en-GB");
+    if($("recruitmentMetricRemaining"))$("recruitmentMetricRemaining").textContent=remaining.toLocaleString("en-GB");
+    if($("recruitmentMetricRate"))$("recruitmentMetricRate").textContent=rate>0?rate.toFixed(rate<10?2:1):"—";
+    if($("recruitmentMetricRateNote"))$("recruitmentMetricRateNote").textContent=scanTelemetry?`Rolling 10 s · avg ${average.toFixed(2)}/s`:"Rolling 10 s";
+    if($("recruitmentMetricEta"))$("recruitmentMetricEta").textContent=eta;
+    if($("recruitmentMetricEtaNote"))$("recruitmentMetricEtaNote").textContent=scanTelemetry?`Elapsed ${durationLabel(elapsed)}`:"Elapsed —";
+    if($("recruitmentMetricOauth"))$("recruitmentMetricOauth").textContent=diag.oauthBearerMode?(gatewayRate>0?`${gatewayRate.toFixed(1)} req/s`:"OAuth"):"Not active";
+    if($("recruitmentMetricOauthNote"))$("recruitmentMetricOauthNote").textContent=diag.oauthBearerMode?`Shared gateway · target ${targetRate>0?targetRate.toFixed(1):"adaptive"} req/s`:"OAuth Bearer required";
+    if($("recruitmentProgressBar")&&total)$("recruitmentProgressBar").style.width=`${Math.min(100,liveChecked*100/total)}%`;
+  }
 
   function displayDays(value) {
     const numeric = number(value);
@@ -206,10 +240,9 @@
       ["recruitmentMaxTimeout", "Maximum timeout rate (%)", "8", "0.1"], ["recruitmentMaxRd", "Maximum rating deviation (RD)", "100"],
       ["recruitmentMinGames", "Current Daily games · minimum", "2"], ["recruitmentMaxGames", "Current Daily games · maximum", "25"],
       ["recruitmentMinCompleted", "Minimum completed Daily games", "50"], ["recruitmentMaxOffline", "Last online · maximum days ago", "14"],
-      ["recruitmentMaxSpm", "Average seconds per move · maximum", ""], ["recruitmentMinAge", "Minimum account age (days)", ""],
-      ["recruitmentWorkers", "Parallel candidates", "4"]
+      ["recruitmentMaxSpm", "Average seconds per move · maximum", ""], ["recruitmentMinAge", "Minimum account age (days)", ""]
     ];
-    return fields.map(([id, label, value, step]) => `<div class="p2k-recruitment-field"><label for="${id}">${escapeHTML(label)}</label><input class="p2k-recruitment-input" id="${id}" type="number" min="0"${step ? ` step="${step}"` : ""}${id === "recruitmentWorkers" ? ' max="12"' : ""} value="${escapeHTML(value)}" placeholder="${value ? "" : "Doesn't matter"}"></div>`).join("");
+    return fields.map(([id, label, value, step]) => `<div class="p2k-recruitment-field"><label for="${id}">${escapeHTML(label)}</label><input class="p2k-recruitment-input" id="${id}" type="number" min="0"${step ? ` step="${step}"` : ""} value="${escapeHTML(value)}" placeholder="${value ? "" : "Doesn't matter"}"></div>`).join("");
   }
 
   function recruitmentMarkup() {
@@ -219,7 +252,7 @@
         <fieldset><legend>Eligibility settings</legend><div class="p2k-recruitment-criteria">${criteriaMarkup()}</div><div class="p2k-recruitment-checks"><label><input type="checkbox" checked disabled> Exclude current P2K members.</label><label><input id="recruitmentExcludeFormer" type="checkbox"> Exclude former P2K members as well.</label><label><input type="checkbox" checked disabled> Reject closed / unavailable accounts automatically.</label></div><div class="p2k-recruitment-help">Empty numeric fields mean “doesn’t matter”. A resumed run keeps its original criteria snapshot.</div></fieldset>
       </div>
       <div class="p2k-recruitment-actions"><button class="dashboard-button" id="recruitmentStart" type="button">Start / resume scan</button><button class="dashboard-button is-secondary" id="recruitmentPause" type="button" disabled>Pause</button><button class="dashboard-button is-secondary" id="recruitmentRestart" type="button">Restart scan</button><button class="dashboard-button is-secondary" id="recruitmentCsv" type="button" disabled>Download selected CSV</button></div>
-      <div class="p2k-recruitment-summary"><div><span>Candidates</span><strong id="recruitmentMetricTotal">0</strong></div><div><span>Checked</span><strong id="recruitmentMetricChecked">0</strong></div><div><span>Selected</span><strong id="recruitmentMetricSelected">0</strong></div><div><span>Errors / unavailable</span><strong id="recruitmentMetricErrors">0</strong></div></div>
+      <div class="p2k-recruitment-summary"><div><span>Candidates</span><strong id="recruitmentMetricTotal">0</strong></div><div><span>Checked</span><strong id="recruitmentMetricChecked">0</strong></div><div><span>Selected</span><strong id="recruitmentMetricSelected">0</strong></div><div><span>Errors / unavailable</span><strong id="recruitmentMetricErrors">0</strong></div><div><span>Remaining</span><strong id="recruitmentMetricRemaining">0</strong></div><div><span>Candidates / second</span><strong id="recruitmentMetricRate">—</strong><small id="recruitmentMetricRateNote">Rolling 10 s</small></div><div><span>ETA</span><strong id="recruitmentMetricEta">—</strong><small id="recruitmentMetricEtaNote">Elapsed —</small></div><div><span>OAuth gateway</span><strong id="recruitmentMetricOauth">—</strong><small id="recruitmentMetricOauthNote">Shared full-throttle transport</small></div></div>
       <div class="p2k-recruitment-progress"><span id="recruitmentProgressBar"></span></div><div class="p2k-recruitment-status" id="recruitmentStatus">Ready. Save the candidate pool, then start a scan.</div>
       <div class="p2k-recruitment-table-wrap"><table class="p2k-recruitment-table"><thead><tr><th>Candidate</th><th>Decision</th><th>Daily rating</th><th>Timeout %</th><th>Current games</th><th>Completed games</th><th>Last online</th><th>Account age</th><th>P2K state</th><th>Reason</th></tr></thead><tbody id="recruitmentRows"><tr><td colspan="10">No scan results yet.</td></tr></tbody></table></div>
       <div id="recruitmentRowsNote" class="p2k-recruitment-help"></div>
@@ -280,6 +313,7 @@
     if ($("recruitmentCsv")) $("recruitmentCsv").disabled = selected < 1;
     if ($("recruitmentPause")) $("recruitmentPause").disabled = !activeScan;
     if ($("recruitmentStart")) $("recruitmentStart").disabled = activeScan;
+    renderScanTelemetry();
     const tbody = $("recruitmentRows");
     if (!tbody) return;
     const rows = Array.isArray(adminState.run?.results) ? adminState.run.results : [];
@@ -294,14 +328,14 @@
   }
 
   function applyCriteria(criteria = {}) {
-    const fields = [["recruitmentMinRating","minRating"],["recruitmentMaxRating","maxRating"],["recruitmentMaxTimeout","maxTimeout"],["recruitmentMaxRd","maxRd"],["recruitmentMinGames","minGames"],["recruitmentMaxGames","maxGames"],["recruitmentMinCompleted","minCompleted"],["recruitmentMaxOffline","maxOffline"],["recruitmentMaxSpm","maxSpm"],["recruitmentMinAge","minAge"],["recruitmentWorkers","parallelWorkers"]];
+    const fields = [["recruitmentMinRating","minRating"],["recruitmentMaxRating","maxRating"],["recruitmentMaxTimeout","maxTimeout"],["recruitmentMaxRd","maxRd"],["recruitmentMinGames","minGames"],["recruitmentMaxGames","maxGames"],["recruitmentMinCompleted","minCompleted"],["recruitmentMaxOffline","maxOffline"],["recruitmentMaxSpm","maxSpm"],["recruitmentMinAge","minAge"]];
     fields.forEach(([id, key]) => { const node = $(id); if (node && Object.prototype.hasOwnProperty.call(criteria, key)) node.value = criteria[key] === null ? "" : String(criteria[key]); });
     if ($("recruitmentExcludeFormer") && Object.prototype.hasOwnProperty.call(criteria, "excludeFormer")) $("recruitmentExcludeFormer").checked = Boolean(criteria.excludeFormer);
   }
 
   function criteriaFromForm() {
     const numeric = id => { const raw = $(id)?.value?.trim() ?? ""; return raw === "" ? null : Number(raw); };
-    return { minRating:numeric("recruitmentMinRating"), maxRating:numeric("recruitmentMaxRating"), maxTimeout:numeric("recruitmentMaxTimeout"), maxRd:numeric("recruitmentMaxRd"), minGames:numeric("recruitmentMinGames"), maxGames:numeric("recruitmentMaxGames"), minCompleted:numeric("recruitmentMinCompleted"), maxOffline:numeric("recruitmentMaxOffline"), maxSpm:numeric("recruitmentMaxSpm"), minAge:numeric("recruitmentMinAge"), excludeFormer:Boolean($("recruitmentExcludeFormer")?.checked), parallelWorkers:Math.max(1,Math.min(12,Number($("recruitmentWorkers")?.value||4))) };
+    return { minRating:numeric("recruitmentMinRating"), maxRating:numeric("recruitmentMaxRating"), maxTimeout:numeric("recruitmentMaxTimeout"), maxRd:numeric("recruitmentMaxRd"), minGames:numeric("recruitmentMinGames"), maxGames:numeric("recruitmentMaxGames"), minCompleted:numeric("recruitmentMinCompleted"), maxOffline:numeric("recruitmentMaxOffline"), maxSpm:numeric("recruitmentMaxSpm"), minAge:numeric("recruitmentMinAge"), excludeFormer:Boolean($("recruitmentExcludeFormer")?.checked) };
   }
 
   async function loadState({ populateEditor = true } = {}) {
@@ -319,18 +353,18 @@
     return payload;
   }
 
-  async function chessJSON(url, attempts = 3) {
+  async function chessJSON(url, attempts = 3, signal = null) {
     const client = window.P2K_API_CLIENT;
-    if (client && typeof client.json === "function") return client.json(url, { attempts, cacheMode: "network-only", trafficClass: "foreground" });
+    if (client && typeof client.json === "function") return client.json(url, { attempts, cacheMode: "network-only", trafficClass: "foreground", signal });
     let lastError = null;
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       try {
-        const response = await fetch(url, { mode:"cors", headers:{Accept:"application/json"}, cache:"no-store" });
+        const response = await fetch(url, { mode:"cors", headers:{Accept:"application/json"}, cache:"no-store", signal });
         if (response.ok) return await response.json();
         const error = new Error(`Chess.com returned HTTP ${response.status}.`); error.status = response.status;
         if (![429,500,502,503,504].includes(response.status) || attempt >= attempts) throw error;
         lastError = error;
-      } catch (error) { lastError = error; if (attempt >= attempts) throw error; }
+      } catch (error) { lastError = error; if (attempt >= attempts || signal?.aborted) throw error; }
       await sleep(350 * attempt);
     }
     throw lastError || new Error("Chess.com request failed.");
@@ -355,23 +389,24 @@
     return map;
   }
 
-  async function scanCandidate(username, p2kState, criteria) {
+  async function scanCandidate(username, p2kState, criteria, signal = null) {
     if (p2kState === "current" || (criteria?.excludeFormer && p2kState === "former")) {
       return { username, data:{ closed:false, p2k_state:p2kState, error:"" } };
     }
     const base = `https://api.chess.com/pub/player/${encodeURIComponent(username)}`;
     let profile;
-    try { profile = await chessJSON(base); }
+    try { profile = await chessJSON(base,3,signal); }
     catch (error) {
       if ([404,410].includes(Number(error?.status))) return {username,data:{closed:true,p2k_state:p2kState,error:""}};
+      if(signal?.aborted)throw error;
       return {username,data:{closed:false,p2k_state:p2kState,error:error?.message||"Profile unavailable."}};
     }
     const closed = /closed/i.test(text(profile?.status));
     const common = {p2k_state:p2kState,last_online_days:daysSinceUnix(profile?.last_online),account_age_days:daysSinceUnix(profile?.joined)};
     if (closed) return {username,data:{...common,closed:true,error:""}};
     let stats,games;
-    try { [stats,games] = await Promise.all([chessJSON(`${base}/stats`),chessJSON(`${base}/games`)]); }
-    catch (error) { return {username,data:{...common,closed:false,error:error?.message||"Stats or current games unavailable."}}; }
+    try { [stats,games] = await Promise.all([chessJSON(`${base}/stats`,3,signal),chessJSON(`${base}/games`,3,signal)]); }
+    catch (error) { if(signal?.aborted)throw error; return {username,data:{...common,closed:false,error:error?.message||"Stats or current games unavailable."}}; }
     const daily=stats?.chess_daily||{}, record=daily?.record||{};
     const completed=[record.win,record.loss,record.draw].reduce((sum,value)=>sum+(number(value)??0),0);
     return {username,data:{...common,daily_rating:number(daily?.last?.rating??daily?.best?.rating),timeout_percent:number(record?.timeout_percent),current_daily_games:Array.isArray(games?.games)?games.games.length:null,daily_rd:number(daily?.last?.rd),completed_daily_games:completed,avg_seconds_per_move:number(record?.time_per_move),closed:false,error:""}};
@@ -381,108 +416,88 @@
     if (!batch.length) return;
     const payload = await server("checkpoint", { method:"POST", body:{ runId, results:batch } });
     mergeCheckpoint(payload?.run || {}, payload?.results || []);
-    if (payload?.run?.status === "completed") activeScan = false;
   }
 
   async function runScan(run) {
     const generation=++scanGeneration;activeScan=true;renderRun(run);
     const checked=new Set((run?.results||[]).map(row=>text(row.username).toLowerCase()));
     const pending=(run?.candidates||[]).filter(username=>!checked.has(text(username).toLowerCase()));
-    if(!pending.length){activeScan=false;await loadState({populateEditor:false});return;}
+    if(!pending.length){activeScan=false;finishScanTelemetry();await loadState({populateEditor:false});return;}
 
     setStatus(`Preparing Green membership · 0 / ${pending.length.toLocaleString("en-GB")} candidates…`);
-    setPreparationProgress(0, pending.length);
+    setPreparationProgress(0,pending.length);
     let membership;
-    try { membership=await loadMembershipStates(pending,generation); }
-    catch(error){ activeScan=false;renderRun();setStatus(`Unable to prepare Green membership: ${error?.message||error}`,true);return; }
+    try{membership=await loadMembershipStates(pending,generation);}catch(error){activeScan=false;renderRun();setStatus(`Unable to prepare Green membership: ${error?.message||error}`,true);return;}
     if(!activeScan||generation!==scanGeneration)return;
 
-    const queue=pending.slice();const workers=Math.max(1,Math.min(12,Number(run?.criteria?.parallelWorkers||4)));
+    if(window.P2K_REAL_OAUTH_READY){try{await window.P2K_REAL_OAUTH_READY;}catch(_){ }}
+    const api=window.P2K_API_CLIENT;
+    const diagnostics=api?.diagnostics?.()||{};
+    if(!api?.processPriority||!api?.json||diagnostics.oauthBearerMode!==true){activeScan=false;renderRun();setStatus("Recruitment requires the authenticated OAuth Bearer API scheduler. Log in with Chess.com and retry.",true);return;}
+
+    const controller=new AbortController();scanAbortController=controller;
+    beginScanTelemetry(run?.id,Number(run?.summary?.total??run?.candidates?.length??0),Number(run?.summary?.checked??run?.results?.length??0));
+    const checkpointBuffer=[];let checkpointChain=Promise.resolve();let checkpointError=null;let queuedCheckpointBatches=0;let completedCheckpointBatches=0;
+    const updateCheckpointNote=()=>{const node=$("recruitmentRowsNote");if(node&&activeScan){const backlog=Math.max(0,queuedCheckpointBatches-completedCheckpointBatches);node.textContent=backlog?`${backlog.toLocaleString("en-GB")} secured checkpoint batch${backlog===1?"":"es"} queued for persistence.`:"Checkpoints caught up with live evaluation.";}};
+    const scheduleCheckpoint=(force=false)=>{
+      while(checkpointBuffer.length>=CHECKPOINT_BATCH||(force&&checkpointBuffer.length)){
+        const batch=checkpointBuffer.splice(0,Math.min(CHECKPOINT_BATCH,checkpointBuffer.length));queuedCheckpointBatches+=1;updateCheckpointNote();
+        checkpointChain=checkpointChain.then(async()=>{
+          if(checkpointError)return;
+          try{await checkpoint(run.id,batch);completedCheckpointBatches+=1;updateCheckpointNote();}catch(error){checkpointError=error;activeScan=false;controller.abort();}
+        });
+      }
+      return checkpointChain;
+    };
+    const feeder=Number(diagnostics.recommendedBatchConcurrency||diagnostics.oauthLogicalFeederConcurrency||0);
+    setStatus(`Scan running · OAuth Bearer full throttle · ${feeder?`${feeder} logical candidate feeders · `:""}gateway rate/concurrency are controlled automatically · checkpoints up to ${CHECKPOINT_BATCH}.`);
     renderRun();
-    setStatus(`Scan running · ${workers} parallel candidate${workers===1?"":"s"} · membership preparation complete · results checkpoint in batches of up to ${CHECKPOINT_BATCH}.`);
 
-    async function worker(){
-      let batch=[];
-      while(activeScan&&generation===scanGeneration){
-        const username=queue.shift();
-        if(!username) break;
-        const result=await scanCandidate(username,membership.get(text(username).toLowerCase())||"none",run?.criteria||{});
-        if(!activeScan||generation!==scanGeneration)return;
-        batch.push(result);
-        if(batch.length>=CHECKPOINT_BATCH || queue.length===0){
-          try { await checkpoint(run.id,batch); batch=[]; }
-          catch(error){
-            if(!activeScan||generation!==scanGeneration)return;
-            if(error?.code==="RUN_CHANGED"||error?.code==="RUN_COMPLETED"){activeScan=false;await loadState({populateEditor:false}).catch(()=>{});return;}
-            setStatus(`Checkpoint failed: ${error.message||error}`,true);activeScan=false;return;
-          }
-        }
-        await sleep(100);
-      }
-      if(batch.length&&activeScan&&generation===scanGeneration){
-        try{await checkpoint(run.id,batch);}catch(error){if(activeScan&&generation===scanGeneration){setStatus(`Checkpoint failed: ${error.message||error}`,true);activeScan=false;}}
-      }
-    }
+    try{
+      await api.processPriority(pending,async username=>{
+        if(!activeScan||generation!==scanGeneration||controller.signal.aborted){const error=new Error("Recruitment scan cancelled.");error.name="AbortError";throw error;}
+        const result=await scanCandidate(username,membership.get(text(username).toLowerCase())||"none",run?.criteria||{},controller.signal);
+        if(!activeScan||generation!==scanGeneration||controller.signal.aborted){const error=new Error("Recruitment scan cancelled.");error.name="AbortError";throw error;}
+        noteCandidateSettled();checkpointBuffer.push(result);scheduleCheckpoint(false);return result;
+      },{signal:controller.signal,getKey:username=>text(username).toLowerCase(),getPriority:()=>60});
+    }catch(error){if(!controller.signal.aborted&&!checkpointError)checkpointError=error;}
 
-    await Promise.all(Array.from({length:Math.min(workers,pending.length)},()=>worker()));
-    if(generation!==scanGeneration)return;activeScan=false;renderRun();await loadState({populateEditor:false}).catch(error=>setStatus(error.message||String(error),true));
+    if(generation!==scanGeneration)return;
+    if(!controller.signal.aborted&&!checkpointError){setStatus("API evaluation complete · finalizing secured Recruitment checkpoints…");scheduleCheckpoint(true);}
+    await checkpointChain;
+    scanAbortController=null;
+    if(checkpointError){finishScanTelemetry();renderRun();if(["RUN_CHANGED","RUN_COMPLETED","RUN_PAUSED"].includes(String(checkpointError?.code||""))){await loadState({populateEditor:false}).catch(()=>{});if(checkpointError.code==="RUN_PAUSED")setStatus("Paused on the server. Start / resume continues pending candidates.");return;}setStatus(`Checkpoint failed: ${checkpointError.message||checkpointError}`,true);return;}
+    if(controller.signal.aborted||!activeScan){finishScanTelemetry();renderRun();return;}
+    activeScan=false;finishScanTelemetry();renderRun();await loadState({populateEditor:false}).catch(error=>setStatus(error.message||String(error),true));
   }
 
   async function startScan(){if(activeScan)return;try{setStatus("Starting or resuming the server checkpoint…");const payload=await server("start",{method:"POST",body:{criteria:criteriaFromForm()}});adminState.run=payload.run;if(payload.run?.criteria)applyCriteria(payload.run.criteria);renderRun(payload.run);await runScan(payload.run);}catch(error){activeScan=false;renderRun();setStatus(error.message||String(error),true);}}
-  async function pauseScan(){scanGeneration+=1;activeScan=false;renderRun();try{const payload=await server("pause",{method:"POST",body:{}});if(adminState.run&&payload.run){Object.assign(adminState.run,payload.run);adminState.run.summary=payload.run.summary||adminState.run.summary;}renderRun();setStatus(`Paused · ${Number(payload.run?.summary?.pending||0).toLocaleString("en-GB")} candidates remain. Start / resume continues only pending candidates.`);}catch(error){setStatus(error.message||String(error),true);}}
+  async function pauseScan(){scanGeneration+=1;activeScan=false;scanAbortController?.abort();scanAbortController=null;finishScanTelemetry();renderRun();try{const payload=await server("pause",{method:"POST",body:{}});if(adminState.run&&payload.run){Object.assign(adminState.run,payload.run);adminState.run.summary=payload.run.summary||adminState.run.summary;}renderRun();setStatus(`Paused · ${Number(payload.run?.summary?.pending||0).toLocaleString("en-GB")} candidates remain. Start / resume continues only pending candidates.`);}catch(error){setStatus(error.message||String(error),true);}}
 
   function bindRecruitment(){
     $("recruitmentLoadPool")?.addEventListener("click",()=>loadState({populateEditor:true}).catch(error=>setStatus(error.message||String(error),true)));
     $("recruitmentClearEditor")?.addEventListener("click",()=>{if($("recruitmentCandidates"))$("recruitmentCandidates").value="";});
     $("recruitmentSavePool")?.addEventListener("click",async()=>{try{setStatus("Normalizing and saving candidate pool…");const payload=await server("save-pool",{method:"POST",body:{candidates:$("recruitmentCandidates")?.value||""}});adminState.pool=payload.pool;setPoolStatus(payload.pool);if($("recruitmentCandidates"))$("recruitmentCandidates").value=(payload.pool?.candidates||[]).join("\n");setStatus(`Candidate pool saved · ${Number(payload.pool?.candidates?.length||0).toLocaleString("en-GB")} normalized unique usernames.`);}catch(error){setStatus(error.message||String(error),true);}});
     $("recruitmentStart")?.addEventListener("click",startScan);$("recruitmentPause")?.addEventListener("click",pauseScan);
-    $("recruitmentRestart")?.addEventListener("click",async()=>{if(!window.confirm("Clear the current Recruitment run checkpoint? The saved candidate pool will be kept."))return;scanGeneration+=1;activeScan=false;try{await server("restart",{method:"POST",body:{}});adminState.run=null;renderRun(null);setStatus("Run checkpoint cleared. The saved candidate pool is unchanged.");}catch(error){setStatus(error.message||String(error),true);}});
+    $("recruitmentRestart")?.addEventListener("click",async()=>{if(!window.confirm("Clear the current Recruitment run checkpoint? The saved candidate pool will be kept."))return;scanGeneration+=1;activeScan=false;scanAbortController?.abort();scanAbortController=null;clearScanTelemetry();try{await server("restart",{method:"POST",body:{}});adminState.run=null;renderRun(null);setStatus("Run checkpoint cleared. The saved candidate pool is unchanged.");}catch(error){setStatus(error.message||String(error),true);}});
     $("recruitmentCsv")?.addEventListener("click",()=>{const anchor=document.createElement("a");anchor.href=recruitmentEndpoint("csv").href;anchor.download="p2k-recruitment-selected.csv";document.body.appendChild(anchor);anchor.click();anchor.remove();});
   }
 
   function ensureRecruitmentDetail() {
-    syncEarlyRouteClass();
-    if (!isRecruitmentRoute()) {
-      const existing=$("p2kRecruitmentNativeHost");
-      if(existing)existing.remove();
-      detailMounted=false;
-      return;
-    }
-    const adminHost=$("adminDashboardHost");
-    const detailHost=$("adminShellDetail");
-    if(!adminHost||!detailHost)return;
-    adminHost.hidden=false;
-    detailHost.hidden=false;
-    const title=$("adminShellDetailTitle");if(title)title.textContent="Recruitment";
-    const breadcrumb=$("adminShellDetailBreadcrumb");if(breadcrumb)breadcrumb.textContent="Administration · Members";
-    const tabs=$("adminShellDetailTabs");if(tabs){tabs.hidden=true;tabs.replaceChildren();}
-    const frame=$("adminShellDetailFrame");if(frame){frame.hidden=true;frame.style.display="none";frame.style.height="0px";frame.style.minHeight="0px";frame.removeAttribute("src");frame.removeAttribute("data-p2k-r2-stable");}
-    document.querySelectorAll("[data-admin-shell-panel]").forEach(panel=>{panel.hidden=true;});
-    let host=$("p2kRecruitmentNativeHost");
-    if(!host){host=document.createElement("div");host.id="p2kRecruitmentNativeHost";host.className="dashboard-admin-native-detail-host";detailHost.appendChild(host);}
-    if(!detailMounted || !$("p2kRecruitmentNative")){
-      detailMounted=true;host.innerHTML=recruitmentMarkup();bindRecruitment();loadState().catch(error=>setStatus(`Unable to load Recruitment state: ${error.message||error}`,true));
-    }
+    if(!isRecruitmentRoute())return;
+    const host=$("adminShellNativeDetailHost");
+    if(!host||host.hidden)return;
+    let mount=$("p2kRecruitmentNativeHost");
+    if(!mount||mount.parentElement!==host){mount?.remove();mount=document.createElement("div");mount.id="p2kRecruitmentNativeHost";mount.className="dashboard-admin-native-detail-host";host.replaceChildren(mount);detailMounted=false;}
+    if(!detailMounted||!$("p2kRecruitmentNative")){detailMounted=true;mount.innerHTML=recruitmentMarkup();bindRecruitment();loadState().catch(error=>setStatus(`Unable to load Recruitment state: ${error.message||error}`,true));}
   }
 
-  let reconcileQueued=false;
   function reconcile(){
-    reconcileQueued=false;installStyles();syncEarlyRouteClass();
+    installStyles();fixMembersInsightsHeader();
     const route=routeState();if(route.isAdmin)document.body?.classList.add("p2k-admin-canonical");
-    fixMembersInsightsHeader();ensureRecruitmentDetail();if(!isRecruitmentRoute())ensureRecruitmentCard();
+    if(isRecruitmentRoute())ensureRecruitmentDetail();else ensureRecruitmentCard();
   }
-  function schedule(){if(reconcileQueued)return;reconcileQueued=true;requestAnimationFrame(reconcile);}
-
-  function instrumentHistory(){
-    if(history.__p2kV2110Canonical)return;Object.defineProperty(history,"__p2kV2110Canonical",{value:true});
-    ["pushState","replaceState"].forEach(name=>{const original=history[name];history[name]=function(...args){const result=original.apply(this,args);syncEarlyRouteClass();schedule();return result;};});
-    addEventListener("popstate",()=>{syncEarlyRouteClass();schedule();});
-  }
-
-  function mount(){
-    installStyles();instrumentHistory();reconcile();
-    const observer=new MutationObserver(schedule);observer.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["hidden","class","aria-pressed","aria-selected","style","src"]});
-  }
+  function mount(){installStyles();window.addEventListener("p2k-admin-shell-route",reconcile);reconcile();}
 
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",mount,{once:true});else mount();
 })();

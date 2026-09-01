@@ -27,7 +27,6 @@
   }
 
   function removeRetiredAdministration() {
-    const legacyTab = document.getElementById("dashboardAdministrationTab"); if (legacyTab) legacyTab.hidden = true;
     const legacyPage = document.getElementById("administrationPage"); if (legacyPage) legacyPage.hidden = true;
     document.querySelectorAll('[data-admin-shell-detail="migration"], [data-admin-detail="migration"], [data-admin-detail-tab="reconciliation"], [href*="adminDetailTab=reconciliation"]').forEach(node => node.remove());
     document.querySelectorAll('iframe[src*="TeamPointsMigration.html"], iframe[data-src*="TeamPointsMigration.html"]').forEach(frame => frame.closest("section,article,div")?.remove?.() || frame.remove());

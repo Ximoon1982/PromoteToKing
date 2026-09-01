@@ -11,7 +11,7 @@ use P2K\TeamPoints\PublicReadDatabase;
 const P2K_RECRUITMENT_SCHEMA = 2;
 const P2K_RECRUITMENT_MAX_CANDIDATES = 100000;
 const P2K_RECRUITMENT_MEMBERSHIP_BATCH_MAX = 2000;
-const P2K_RECRUITMENT_CHECKPOINT_MAX = 50;
+const P2K_RECRUITMENT_CHECKPOINT_MAX = 500;
 
 function p2k_recruitment_dir(): string
 {
@@ -119,7 +119,6 @@ function p2k_recruitment_criteria(array $body): array
         'maxSpm' => p2k_recruitment_number($body, 'maxSpm', null),
         'minAge' => p2k_recruitment_number($body, 'minAge', null),
         'excludeFormer' => !empty($body['excludeFormer']),
-        'parallelWorkers' => max(1, min(12, (int)($body['parallelWorkers'] ?? 4))),
     ];
     foreach (['minRating','maxRating','maxTimeout','maxRd','minGames','maxGames','minCompleted','maxOffline','maxSpm','minAge'] as $key) {
         if ($criteria[$key] !== null && $criteria[$key] < 0) {

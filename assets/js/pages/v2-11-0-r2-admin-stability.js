@@ -34,7 +34,7 @@
       body.p2k-admin-live [data-admin-category][aria-pressed="true"] svg,
       body.p2k-admin-live [data-admin-category].is-active svg{stroke:#ff8e82!important}
       body.p2k-admin-live #dashboardAdminToggleHost button[aria-pressed="true"]{box-shadow:0 0 0 1px rgba(212,91,80,.25) inset!important}
-      html:not(.p2k-recruitment-route) .dashboard-admin-detail-frame[data-p2k-r2-stable="1"]{display:block!important;width:100%!important;min-height:520px!important;max-height:none!important;overflow:hidden!important}
+      .dashboard-admin-detail-frame[data-p2k-r2-stable="1"]{display:block!important;width:100%!important;min-height:520px!important;max-height:none!important;overflow:hidden!important}
     `;
     document.head.appendChild(style);
   }
@@ -136,10 +136,8 @@
     if (!isDashboardPage() || !dashboardAdminVisible()) return;
     const frame = byId("adminShellDetailFrame");
     if (!frame) return;
-    if (recruitmentRoute()) {
-      frame.removeAttribute("data-p2k-r2-stable");
-      return;
-    }
+    const frameWrap = byId("adminShellDetailFrameWrap") || frame.parentElement;
+    if (frame.hidden || frameWrap?.hidden) { frame.removeAttribute("data-p2k-r2-stable"); return; }
     const detail = byId("adminShellDetail");
     if (!detail || detail.hidden) return;
     if (frame.dataset.p2kR2Stable !== "1") frame.dataset.p2kR2Stable = "1";
