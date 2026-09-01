@@ -35,6 +35,13 @@
     root.querySelectorAll?.('[data-action="sync_blue_to_green"], [data-blue-green-sync]').forEach(node => node.remove());
   }
 
+  function normalizeRecruitmentWorkers() {
+    const workers = document.getElementById("recruitmentWorkers");
+    if (!workers) return;
+    workers.min = "1";
+    if (!Number.isFinite(Number(workers.value)) || Number(workers.value) < 1) workers.value = "1";
+  }
+
   function normalizeFrames() {
     document.querySelectorAll("iframe.dashboard-integrated-frame, iframe.dashboard-admin-detail-frame").forEach(frame => {
       frame.setAttribute("scrolling", "no");
@@ -48,6 +55,7 @@
     const observer = new MutationObserver(() => {
       removeLegacyAdministration();
       removeMcaMigrationControls();
+      normalizeRecruitmentWorkers();
       normalizeFrames();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
@@ -58,6 +66,7 @@
     document.body?.classList.add("p2k-green-primary");
     removeLegacyAdministration();
     removeMcaMigrationControls();
+    normalizeRecruitmentWorkers();
     normalizeFrames();
     observe();
   };
