@@ -65,8 +65,26 @@ jobs:
           TARGET="$(cd "$TARGET" && pwd)"
           MARKER='__P2K_V21098_PAYLOAD_BELOW__'
           EXPECTED_PAYLOAD_SHA='__PAYLOAD_SHA__'
+          TRANSACTION_ACTIVE=0
+          BACKUP=""
+          CREATED=()
 
-          fail(){ printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+          rollback(){
+            local status="${1:-$?}"
+            trap - ERR
+            if ((TRANSACTION_ACTIVE)); then
+              printf 'Install failed; restoring pre-v%s files...\n' "$RELEASE" >&2
+              for file in "${CREATED[@]}"; do rm -f "$TARGET/$file" || true; done
+              if [[ -n "$BACKUP" && -f "$BACKUP" ]]; then tar -C "$TARGET" -xzf "$BACKUP" || true; fi
+            fi
+            exit "$status"
+          }
+          fail(){
+            printf 'ERROR: %s\n' "$*" >&2
+            if ((TRANSACTION_ACTIVE)); then rollback 1; fi
+            exit 1
+          }
+
           command -v tar >/dev/null 2>&1 || fail 'tar is required.'
           command -v base64 >/dev/null 2>&1 || fail 'base64 is required.'
           command -v sha256sum >/dev/null 2>&1 || fail 'sha256sum is required.'
@@ -103,23 +121,13 @@ jobs:
             RELEASE_NOTES_v2.10.9.8.md
           )
           EXISTING=()
-          CREATED=()
           for file in "${FILES[@]}"; do
             if [[ -e "$TARGET/$file" ]]; then EXISTING+=("$file"); else CREATED+=("$file"); fi
           done
           if ((${#EXISTING[@]})); then tar -C "$TARGET" -czf "$BACKUP" "${EXISTING[@]}"; fi
 
-          rollback(){
-            status=$?
-            if ((status!=0)); then
-              printf 'Install failed; restoring pre-v%s files...\n' "$RELEASE" >&2
-              for file in "${CREATED[@]}"; do rm -f "$TARGET/$file" || true; done
-              if [[ -f "$BACKUP" ]]; then tar -C "$TARGET" -xzf "$BACKUP" || true; fi
-            fi
-            exit "$status"
-          }
-          trap rollback ERR
-
+          TRANSACTION_ACTIVE=1
+          trap 'rollback $?' ERR
           mkdir -p "$TARGET/server/team-points/public" "$TARGET/assets/js/pages" "$TARGET/assets/js"
           install -m 0644 "$TMP/payload/server/team-points/public/recruitment-admin.php" "$TARGET/server/team-points/public/recruitment-admin.php"
           install -m 0644 "$TMP/payload/assets/js/pages/v2-10-9-8.js" "$TARGET/assets/js/pages/v2-10-9-8.js"
@@ -131,6 +139,7 @@ jobs:
           [[ "$(tr -d '\r\n[:space:]' < "$TARGET/VERSION")" == "$RELEASE" ]] || fail 'Installed VERSION verification failed.'
           grep -Fq 'recruitmentAdminEndpoint' "$TARGET/assets/js/site-config.js" || fail 'Installed site-config verification failed.'
           grep -Fq 'Result coverage' "$TARGET/assets/js/pages/v2-10-9-8.js" || fail 'Installed table-alignment verification failed.'
+          TRANSACTION_ACTIVE=0
           trap - ERR
           printf 'Promote to King v%s installed successfully in %s\n' "$RELEASE" "$TARGET"
           [[ -f "$BACKUP" ]] && printf 'Backup: %s\n' "$BACKUP"
@@ -151,6 +160,76 @@ jobs:
           LAUNCHER
           chmod +x build-v21098/install-promote-to-king-2.10.9.8.sh
           sha256sum build-v21098/PromoteToKing_v2.10.9.8.run build-v21098/install-promote-to-king-2.10.9.8.sh > build-v21098/SHA256SUMS.txt
+
+      - name: Installer upgrade, reinstall and rollback checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$(mktemp -d)"
+          trap 'rm -rf "$ROOT"' EXIT
+
+          UPGRADE="$ROOT/upgrade"
+          mkdir -p "$UPGRADE/assets/js" "$UPGRADE/data"
+          printf '2.10.9.7\n' > "$UPGRADE/VERSION"
+          printf 'OLD_SITE_CONFIG\n' > "$UPGRADE/assets/js/site-config.js"
+          printf '{"version":"2.10.9.7","sentinel":"old-manifest"}\n' > "$UPGRADE/site-manifest.json"
+          printf 'UNRELATED_DATA\n' > "$UPGRADE/data/unrelated.txt"
+          build-v21098/install-promote-to-king-2.10.9.8.sh "$UPGRADE"
+          test "$(tr -d '\r\n[:space:]' < "$UPGRADE/VERSION")" = "2.10.9.8"
+          test -s "$UPGRADE/server/team-points/public/recruitment-admin.php"
+          test -s "$UPGRADE/assets/js/pages/v2-10-9-8.js"
+          grep -qx 'UNRELATED_DATA' "$UPGRADE/data/unrelated.txt"
+
+          sha256sum \
+            "$UPGRADE/server/team-points/public/recruitment-admin.php" \
+            "$UPGRADE/assets/js/pages/v2-10-9-8.js" \
+            "$UPGRADE/assets/js/site-config.js" \
+            "$UPGRADE/VERSION" "$UPGRADE/site-manifest.json" "$UPGRADE/RELEASE_NOTES_v2.10.9.8.md" > "$ROOT/before-reinstall.sha"
+          sleep 1
+          build-v21098/PromoteToKing_v2.10.9.8.run "$UPGRADE"
+          sha256sum \
+            "$UPGRADE/server/team-points/public/recruitment-admin.php" \
+            "$UPGRADE/assets/js/pages/v2-10-9-8.js" \
+            "$UPGRADE/assets/js/site-config.js" \
+            "$UPGRADE/VERSION" "$UPGRADE/site-manifest.json" "$UPGRADE/RELEASE_NOTES_v2.10.9.8.md" > "$ROOT/after-reinstall.sha"
+          diff -u "$ROOT/before-reinstall.sha" "$ROOT/after-reinstall.sha"
+
+          FORCED="$ROOT/PromoteToKing_v2.10.9.8_FORCED_FAIL.run"
+          cp build-v21098/PromoteToKing_v2.10.9.8.run "$FORCED"
+          python3 - "$FORCED" <<'PY'
+          from pathlib import Path
+          import sys
+          path = Path(sys.argv[1])
+          text = path.read_text()
+          marker = '__P2K_V21098_PAYLOAD_BELOW__\n'
+          head, payload = text.split(marker, 1)
+          old = "grep -Fq 'Result coverage' \"$TARGET/assets/js/pages/v2-10-9-8.js\" || fail 'Installed table-alignment verification failed.'"
+          new = "grep -Fq '__FORCED_ROLLBACK_FAILURE__' \"$TARGET/assets/js/pages/v2-10-9-8.js\" || fail 'Installed table-alignment verification failed.'"
+          if old not in head:
+              raise SystemExit('forced-failure anchor not found')
+          path.write_text(head.replace(old, new, 1) + marker + payload)
+          PY
+          chmod +x "$FORCED"
+
+          ROLLBACK="$ROOT/rollback"
+          mkdir -p "$ROLLBACK/assets/js" "$ROLLBACK/data"
+          printf '2.10.9.7\n' > "$ROLLBACK/VERSION"
+          printf 'ROLLBACK_OLD_SITE_CONFIG\n' > "$ROLLBACK/assets/js/site-config.js"
+          printf '{"version":"2.10.9.7","sentinel":"ROLLBACK_OLD_MANIFEST"}\n' > "$ROLLBACK/site-manifest.json"
+          printf 'UNRELATED_DATA\n' > "$ROLLBACK/data/unrelated.txt"
+          set +e
+          "$FORCED" "$ROLLBACK" > "$ROOT/forced-failure.log" 2>&1
+          STATUS=$?
+          set -e
+          test "$STATUS" -ne 0
+          grep -Fq 'restoring pre-v2.10.9.8 files' "$ROOT/forced-failure.log"
+          test "$(tr -d '\r\n[:space:]' < "$ROLLBACK/VERSION")" = "2.10.9.7"
+          grep -qx 'ROLLBACK_OLD_SITE_CONFIG' "$ROLLBACK/assets/js/site-config.js"
+          grep -Fq 'ROLLBACK_OLD_MANIFEST' "$ROLLBACK/site-manifest.json"
+          grep -qx 'UNRELATED_DATA' "$ROLLBACK/data/unrelated.txt"
+          test ! -e "$ROLLBACK/server/team-points/public/recruitment-admin.php"
+          test ! -e "$ROLLBACK/assets/js/pages/v2-10-9-8.js"
+          test ! -e "$ROLLBACK/RELEASE_NOTES_v2.10.9.8.md"
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
