@@ -32,17 +32,26 @@ try{
     $core=PublicReadDatabase::core();
     $analytics=PublicReadDatabase::analytics();
     $greenFreshness=new GreenFreshnessService($core,$analytics,$club);
+    $greenReport=static function() use($greenFreshness):array {
+        $report=$greenFreshness->report();
+        // The compatibility queue headline in the canonical Admin shell now means
+        // GFFL due debt specifically; do not expose an overlapping sum of board/GFFL/GQAC obligations.
+        if(is_array($report['coverage']??null)){
+            $report['coverage']['queue_pending']=(int)($report['green']['work']['gffl_due']??0);
+        }
+        return $report;
+    };
     if($scope==='freshness'){
-        Http::json(['ok'=>true,'scope'=>$scope,'server_utc'=>gmdate(DATE_ATOM),'data'=>$greenFreshness->report()]);
+        Http::json(['ok'=>true,'scope'=>$scope,'server_utc'=>gmdate(DATE_ATOM),'data'=>$greenReport()]);
     }
 
     $r=new Repository($core,$analytics);
     if(!$r->schemaInstalled())throw new ApiException('Team Points schema must be upgraded before Club Intelligence is available.',503,'SCHEMA_NOT_INSTALLED');
     $s=new ClubIntelligenceService($core,$analytics,$club);
 
-    $acamr=static function() use($greenFreshness):array {
+    $acamr=static function() use($greenReport):array {
         $telemetry=RuntimeTelemetry::summary(7)['acamr']??[];
-        $fresh=$greenFreshness->report();
+        $fresh=$greenReport();
         $coverage=is_array($fresh['coverage']??null)?$fresh['coverage']:[];
         $green=is_array($fresh['green']??null)?$fresh['green']:[];
         $matches=is_array($green['matches']??null)?$green['matches']:[];
@@ -64,7 +73,7 @@ try{
     };
 
     $data=match($scope){
-        'overview'=>(static function() use($s,$greenFreshness):array {$overview=$s->overview();$overview['freshness']=$greenFreshness->report();return $overview;})(),
+        'overview'=>(static function() use($s,$greenReport):array {$overview=$s->overview();$overview['freshness']=$greenReport();return $overview;})(),
         'depth'=>$s->teamDepthReport(),
         'activity'=>$s->memberActivity(),
         'anomalies'=>['rows'=>$s->anomalies(),'actions'=>$s->adminActions()],
