@@ -13,7 +13,10 @@ const P2K_RECRUITMENT_SCHEMA = 1;
 function p2k_recruitment_dir(): string
 {
     $config = p2k_tp_config();
-    $base = rtrim((string)($config['storage']['runtime_dir'] ?? dirname(__DIR__, 3) . '/data/runtime-v280'), '/\\');
+    $configured = trim((string)($config['storage']['runtime_dir'] ?? ''));
+    $base = $configured !== ''
+        ? rtrim($configured, '/\\')
+        : dirname(__DIR__, 3) . '/data/runtime-v280';
     $dir = $base . '/recruitment-admin';
     if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
         throw new RuntimeException('Unable to create the recruitment runtime directory.');
