@@ -1,0 +1,6 @@
+{
+  "minimum_counts": {"python_modules": 160, "pytest_functions": 791, "browser_gates": 20, "php_harnesses": 8},
+  "maximum_known_debt": {"pytest": 243, "standalone": 16},
+  "required_gates": ["tests/run-tests.js", "tests/validate_package.py", "tests/known-regression-debt-v2.11.1.json", "tests/test_v2111_persistent_oauth.py", "tests/test_v2111_test_suite_hardening.py"],
+  "standalone_regression_gates": ["tests/test_tracking_features.py", "tests/test_server_storage.py", "tests/test_php_backend.py"]
+}
