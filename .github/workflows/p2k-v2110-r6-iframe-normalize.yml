@@ -1,0 +1,70 @@
+name: Normalize P2K v2.11.0 R6 Recruitment to standard embedded detail
+
+on:
+  push:
+    branches:
+      - release/v2.11.0
+    paths:
+      - .github/workflows/p2k-v2110-r6-iframe-normalize.yml
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout R6
+        uses: actions/checkout@v4
+        with:
+          ref: release/v2.11.0
+          fetch-depth: 0
+
+      - name: Use standard iframe detail path for Recruitment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p=Path('assets/js/pages/dashboard-v2.js')
+          text=p.read_text()
+          old='recruitment: { title:"Recruitment", tabs:[{key:"recruitment",label:"Recruitment",mode:"native",nativeKey:"recruitment"}]}'
+          new='recruitment: { title:"Recruitment", tabs:[{key:"recruitment",label:"Recruitment",src:"RecruitmentAdmin.html?view=admin&adminCategory=members&adminDetail=recruitment&embedded=1&release=2.11.0-r6"}]}'
+          if text.count(old) != 1: raise SystemExit(f'Recruitment native definition count={text.count(old)}')
+          p.write_text(text.replace(old,new,1))
+
+          p=Path('assets/js/pages/v2-11-0.js')
+          text=p.read_text()
+          text=text.replace('/* Promote to King v2.11.0: canonical toggle Administration + native Recruitment. */','/* Promote to King v2.11.0: canonical Administration + Recruitment application. */',1)
+          text=text.replace('nativeDetails: Object.freeze({\n      members: Object.freeze({ recruitment: Object.freeze({ title: "Recruitment", source: "Green Core + Chess.com", mode: "Native" }) })\n    })','recruitmentDetail: Object.freeze({ title: "Recruitment", source: "Green Core + Chess.com OAuth", mode: "Embedded" })',1)
+          if 'mode: "Native"' in text: raise SystemExit('Native Recruitment registry marker remains')
+          p.write_text(text)
+          PY
+
+      - name: Validate exact standard detail behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check assets/js/pages/dashboard-v2.js
+          node --check assets/js/pages/v2-11-0.js
+          grep -Fq 'recruitment: { title:"Recruitment", tabs:[{key:"recruitment",label:"Recruitment",src:"RecruitmentAdmin.html?view=admin&adminCategory=members&adminDetail=recruitment&embedded=1&release=2.11.0-r6"}]}' assets/js/pages/dashboard-v2.js
+          ! grep -Fq 'nativeKey:"recruitment"' assets/js/pages/dashboard-v2.js
+          ! grep -Fq 'mode:"native"' assets/js/pages/dashboard-v2.js
+          grep -Fq '<div id="adminShellNativeDetailHost"></div>' RecruitmentAdmin.html
+          grep -Fq 'assets/js/shared/api-client.js' RecruitmentAdmin.html
+          grep -Fq 'assets/js/shared/admin-page-guard.js' RecruitmentAdmin.html
+          grep -Fq 'assets/js/shared/embedded-page.js' RecruitmentAdmin.html
+          grep -Fq 'mode: "Embedded"' assets/js/pages/v2-11-0.js
+          git diff --check
+
+      - name: Commit standard embedded Recruitment
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'P2K release automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add assets/js/pages/dashboard-v2.js assets/js/pages/v2-11-0.js
+          git diff --cached --check
+          git commit -m 'fix(2.11.0): load Recruitment like other Members details'
+          git push origin HEAD:release/v2.11.0
