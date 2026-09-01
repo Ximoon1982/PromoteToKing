@@ -5,7 +5,11 @@
   const VERSION = "2.10.9.8";
   const $ = id => document.getElementById(id);
   const sleep = ms => new Promise(resolve => window.setTimeout(resolve, ms));
-  const number = value => Number.isFinite(Number(value)) ? Number(value) : null;
+  const number = value => {
+    if (value === null || value === undefined || value === "") return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  };
   const text = value => String(value ?? "");
   const escapeHTML = value => text(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 
@@ -36,7 +40,12 @@
       cache: "no-store"
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok || payload?.ok === false) throw new Error(payload?.error?.message || `Recruitment server request failed (${response.status}).`);
+    if (!response.ok || payload?.ok === false) {
+      const error = new Error(payload?.error?.message || `Recruitment server request failed (${response.status}).`);
+      error.code = payload?.error?.code || "SERVER_REQUEST_FAILED";
+      error.status = response.status;
+      throw error;
+    }
     return payload;
   }
 
@@ -121,7 +130,7 @@
       <div class="p2k-tp-table-wrap p2k-recruitment-table">
         <table><thead><tr><th>Candidate</th><th>Decision</th><th>Daily rating</th><th>Timeout %</th><th>Current games</th><th>Completed games</th><th>Last online</th><th>Account age</th><th>P2K state</th><th>Reason</th></tr></thead><tbody id="recruitmentRows"><tr><td colspan="10">No scan results yet.</td></tr></tbody></table>
       </div>
-      <p class="p2k-recruitment-help"><strong>Data path:</strong> Chess.com profile supplies account state, joined and last-online timestamps; Daily stats supply rating, RD, completed record, timeout percentage and average move time when available; current Daily games supply the ongoing-game count. P2K current/former membership is resolved from the existing Team Points member database without an extra Chess.com request.</p>
+      <p class="p2k-recruitment-help"><strong>Data path:</strong> Chess.com profile supplies account state, joined and last-online timestamps; Daily stats supply rating, RD, completed record, timeout percentage and average move time when available; current Daily games supply the ongoing-game count. P2K current/former membership is resolved authoritatively from the Team Points member database when each result is checkpointed.</p>
     `;
   }
 
@@ -164,30 +173,40 @@
     if ($("recruitmentStart")) $("recruitmentStart").disabled = activeScan;
 
     const tbody = $("recruitmentRows");
-    if (tbody) {
-      const rows = Array.isArray(adminState.run?.results) ? adminState.run.results : [];
-      if (!rows.length) tbody.innerHTML = '<tr><td colspan="10">No scan results yet.</td></tr>';
-      else tbody.innerHTML = rows.map(row => {
-        const d = row?.data || {};
-        const decision = row?.selected ? "Selected" : "Rejected";
-        return `<tr><td>${escapeHTML(row?.username)}</td><td><span class="p2k-recruitment-decision ${row?.selected ? "is-selected" : "is-rejected"}">${decision}</span></td><td>${d.daily_rating ?? "—"}</td><td>${d.timeout_percent ?? "—"}</td><td>${d.current_daily_games ?? "—"}</td><td>${d.completed_daily_games ?? "—"}</td><td>${displayDays(d.last_online_days)}</td><td>${displayDays(d.account_age_days)}</td><td>${escapeHTML(d.p2k_state || "none")}</td><td>${escapeHTML(row?.reason || "—")}</td></tr>`;
-      }).join("");
+    if (!tbody) return;
+    const rows = Array.isArray(adminState.run?.results) ? adminState.run.results : [];
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="10">No scan results yet.</td></tr>';
+      return;
     }
+    tbody.innerHTML = rows.map(row => {
+      const data = row?.data || {};
+      const decision = row?.selected ? "Selected" : "Rejected";
+      return `<tr><td>${escapeHTML(row?.username)}</td><td><span class="p2k-recruitment-decision ${row?.selected ? "is-selected" : "is-rejected"}">${decision}</span></td><td>${data.daily_rating ?? "—"}</td><td>${data.timeout_percent ?? "—"}</td><td>${data.current_daily_games ?? "—"}</td><td>${data.completed_daily_games ?? "—"}</td><td>${displayDays(data.last_online_days)}</td><td>${displayDays(data.account_age_days)}</td><td>${escapeHTML(data.p2k_state || "none")}</td><td>${escapeHTML(row?.reason || "—")}</td></tr>`;
+    }).join("");
   }
 
   function applyCriteria(criteria = {}) {
-    const entries = [
+    const fields = [
       ["recruitmentMinRating", "minRating"], ["recruitmentMaxRating", "maxRating"], ["recruitmentMaxTimeout", "maxTimeout"],
       ["recruitmentMaxRd", "maxRd"], ["recruitmentMinGames", "minGames"], ["recruitmentMaxGames", "maxGames"],
       ["recruitmentMinCompleted", "minCompleted"], ["recruitmentMaxOffline", "maxOffline"], ["recruitmentMaxSpm", "maxSpm"],
       ["recruitmentMinAge", "minAge"], ["recruitmentWorkers", "parallelWorkers"]
     ];
-    entries.forEach(([id, key]) => { const node = $(id); if (node && Object.prototype.hasOwnProperty.call(criteria, key)) node.value = criteria[key] === null ? "" : String(criteria[key]); });
-    if ($("recruitmentExcludeFormer") && Object.prototype.hasOwnProperty.call(criteria, "excludeFormer")) $("recruitmentExcludeFormer").checked = Boolean(criteria.excludeFormer);
+    fields.forEach(([id, key]) => {
+      const node = $(id);
+      if (node && Object.prototype.hasOwnProperty.call(criteria, key)) node.value = criteria[key] === null ? "" : String(criteria[key]);
+    });
+    if ($("recruitmentExcludeFormer") && Object.prototype.hasOwnProperty.call(criteria, "excludeFormer")) {
+      $("recruitmentExcludeFormer").checked = Boolean(criteria.excludeFormer);
+    }
   }
 
   function criteriaFromForm() {
-    const numeric = id => { const raw = $(id)?.value?.trim() ?? ""; return raw === "" ? null : Number(raw); };
+    const numeric = id => {
+      const raw = $(id)?.value?.trim() ?? "";
+      return raw === "" ? null : Number(raw);
+    };
     return {
       minRating: numeric("recruitmentMinRating"), maxRating: numeric("recruitmentMaxRating"), maxTimeout: numeric("recruitmentMaxTimeout"), maxRd: numeric("recruitmentMaxRd"),
       minGames: numeric("recruitmentMinGames"), maxGames: numeric("recruitmentMaxGames"), minCompleted: numeric("recruitmentMinCompleted"), maxOffline: numeric("recruitmentMaxOffline"),
@@ -212,10 +231,14 @@
   }
 
   async function chessJSON(url, attempts = 3) {
+    const client = window.P2K_API_CLIENT;
+    if (client && typeof client.json === "function") {
+      return client.json(url, { attempts, cacheMode: "network-only", trafficClass: "foreground" });
+    }
     let lastError = null;
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       try {
-        const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
+        const response = await fetch(url, { mode: "cors", headers: { Accept: "application/json" }, cache: "no-store" });
         if (response.ok) return await response.json();
         const error = new Error(`Chess.com returned HTTP ${response.status}.`);
         error.status = response.status;
@@ -231,8 +254,8 @@
   }
 
   function daysSinceUnix(value) {
-    const timestamp = Number(value);
-    return Number.isFinite(timestamp) && timestamp > 0 ? Math.max(0, (Date.now() / 1000 - timestamp) / 86400) : null;
+    const timestamp = number(value);
+    return timestamp !== null && timestamp > 0 ? Math.max(0, (Date.now() / 1000 - timestamp) / 86400) : null;
   }
 
   async function loadMembershipStates(usernames) {
@@ -248,15 +271,18 @@
       url.searchParams.set("page_size", "100");
       url.searchParams.set("usernames", chunk.join(","));
       try {
-        const response = await fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" } });
+        const response = await fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" }, cache: "no-store" });
         const payload = await response.json();
         if (!response.ok || payload?.ok === false) throw new Error(payload?.error?.message || "Member database lookup failed.");
         (payload.rows || []).forEach(row => map.set(text(row.username).toLowerCase(), row.current_member ? "current" : "former"));
       } catch (error) {
-        console.warn("P2K recruitment membership lookup failed", error);
+        console.warn("P2K recruitment membership precheck failed; the server checkpoint remains authoritative.", error);
       }
     }
-    usernames.forEach(username => { const key = username.toLowerCase(); if (!map.has(key)) map.set(key, "none"); });
+    usernames.forEach(username => {
+      const key = username.toLowerCase();
+      if (!map.has(key)) map.set(key, "none");
+    });
     return map;
   }
 
@@ -269,31 +295,36 @@
       if ([404, 410].includes(Number(error?.status))) return { username, data: { closed: true, p2k_state: p2kState, error: "" } };
       return { username, data: { closed: false, p2k_state: p2kState, error: error?.message || "Profile unavailable." } };
     }
+
     const closed = /closed/i.test(text(profile?.status));
-    if (closed) return { username, data: { closed: true, p2k_state: p2kState, last_online_days: daysSinceUnix(profile?.last_online), account_age_days: daysSinceUnix(profile?.joined), error: "" } };
+    const common = {
+      p2k_state: p2kState,
+      last_online_days: daysSinceUnix(profile?.last_online),
+      account_age_days: daysSinceUnix(profile?.joined)
+    };
+    if (closed) return { username, data: { ...common, closed: true, error: "" } };
 
     let stats, games;
     try {
       [stats, games] = await Promise.all([chessJSON(`${base}/stats`), chessJSON(`${base}/games`)]);
     } catch (error) {
-      return { username, data: { closed: false, p2k_state: p2kState, last_online_days: daysSinceUnix(profile?.last_online), account_age_days: daysSinceUnix(profile?.joined), error: error?.message || "Stats or current games unavailable." } };
+      return { username, data: { ...common, closed: false, error: error?.message || "Stats or current games unavailable." } };
     }
+
     const daily = stats?.chess_daily || {};
     const record = daily?.record || {};
-    const completed = [record.win, record.loss, record.draw].reduce((sum, value) => sum + (Number.isFinite(Number(value)) ? Number(value) : 0), 0);
-    const currentGames = Array.isArray(games?.games) ? games.games.filter(game => (!game?.time_class || game.time_class === "daily") && (!game?.rules || game.rules === "chess")).length : 0;
+    const completed = [record.win, record.loss, record.draw].reduce((sum, value) => sum + (number(value) ?? 0), 0);
+    const currentGames = Array.isArray(games?.games) ? games.games.length : null;
     return {
       username,
       data: {
+        ...common,
         daily_rating: number(daily?.last?.rating ?? daily?.best?.rating),
         timeout_percent: number(record?.timeout_percent),
         current_daily_games: currentGames,
         daily_rd: number(daily?.last?.rd),
         completed_daily_games: completed,
         avg_seconds_per_move: number(record?.time_per_move),
-        last_online_days: daysSinceUnix(profile?.last_online),
-        account_age_days: daysSinceUnix(profile?.joined),
-        p2k_state: p2kState,
         closed: false,
         error: ""
       }
@@ -306,13 +337,18 @@
     renderRun(run);
     const checked = new Set((run?.results || []).map(row => text(row.username).toLowerCase()));
     const pending = (run?.candidates || []).filter(username => !checked.has(text(username).toLowerCase()));
-    if (!pending.length) { activeScan = false; await loadState({ populateEditor: false }); return; }
+    if (!pending.length) {
+      activeScan = false;
+      await loadState({ populateEditor: false });
+      return;
+    }
+
     setStatus(`Preparing ${pending.length} pending candidate${pending.length === 1 ? "" : "s"}…`);
     const membership = await loadMembershipStates(pending);
     if (!activeScan || generation !== scanGeneration) return;
     const queue = pending.slice();
     const workers = Math.max(1, Math.min(12, Number(run?.criteria?.parallelWorkers || 4)));
-    setStatus(`Scan running · ${workers} parallel candidate${workers === 1 ? "" : "s"} · progress is checkpointed after every result.`);
+    setStatus(`Scan running · ${workers} parallel candidate${workers === 1 ? "" : "s"} · each result is checkpointed on the server.`);
 
     async function worker() {
       while (activeScan && generation === scanGeneration) {
@@ -321,11 +357,22 @@
         const result = await scanCandidate(username, membership.get(text(username).toLowerCase()) || "none");
         if (!activeScan || generation !== scanGeneration) return;
         try {
-          const payload = await server("checkpoint", { method: "POST", body: { results: [result] } });
+          const payload = await server("checkpoint", {
+            method: "POST",
+            body: { runId: run.id, results: [result] }
+          });
           renderRun(payload.run);
-          if (payload.run?.status === "completed") { activeScan = false; return; }
+          if (payload.run?.status === "completed") {
+            activeScan = false;
+            return;
+          }
         } catch (error) {
           if (!activeScan || generation !== scanGeneration) return;
+          if (error?.code === "RUN_CHANGED" || error?.code === "RUN_COMPLETED") {
+            activeScan = false;
+            await loadState({ populateEditor: false }).catch(() => {});
+            return;
+          }
           setStatus(`Checkpoint failed for ${username}: ${error.message || error}`, true);
           activeScan = false;
           return;
@@ -365,29 +412,52 @@
       const payload = await server("pause", { method: "POST", body: {} });
       renderRun(payload.run);
       setStatus(`Paused · ${payload.run?.summary?.pending || 0} candidates remain. Start / resume continues only pending candidates.`);
-    } catch (error) { setStatus(error.message || String(error), true); }
+    } catch (error) {
+      setStatus(error.message || String(error), true);
+    }
   }
 
   function bindRecruitment() {
-    $("recruitmentLoadPool")?.addEventListener("click", async () => { try { await loadState({ populateEditor: true }); } catch (error) { setStatus(error.message || String(error), true); } });
-    $("recruitmentClearEditor")?.addEventListener("click", () => { if ($("recruitmentCandidates")) $("recruitmentCandidates").value = ""; });
+    $("recruitmentLoadPool")?.addEventListener("click", async () => {
+      try { await loadState({ populateEditor: true }); }
+      catch (error) { setStatus(error.message || String(error), true); }
+    });
+    $("recruitmentClearEditor")?.addEventListener("click", () => {
+      if ($("recruitmentCandidates")) $("recruitmentCandidates").value = "";
+    });
     $("recruitmentSavePool")?.addEventListener("click", async () => {
       try {
         const payload = await server("save-pool", { method: "POST", body: { candidates: $("recruitmentCandidates")?.value || "" } });
-        adminState.pool = payload.pool; setPoolStatus(payload.pool); $("recruitmentCandidates").value = (payload.pool?.candidates || []).join("\n");
+        adminState.pool = payload.pool;
+        setPoolStatus(payload.pool);
+        $("recruitmentCandidates").value = (payload.pool?.candidates || []).join("\n");
         setStatus(`Candidate pool saved · ${payload.pool?.candidates?.length || 0} normalized unique usernames.`);
-      } catch (error) { setStatus(error.message || String(error), true); }
+      } catch (error) {
+        setStatus(error.message || String(error), true);
+      }
     });
     $("recruitmentStart")?.addEventListener("click", startScan);
     $("recruitmentPause")?.addEventListener("click", pauseScan);
     $("recruitmentRestart")?.addEventListener("click", async () => {
       if (!window.confirm("Clear the current Recruitment run checkpoint? The saved candidate pool will be kept.")) return;
-      scanGeneration += 1; activeScan = false;
-      try { await server("restart", { method: "POST", body: {} }); adminState.run = null; renderRun(null); setStatus("Run checkpoint cleared. The saved candidate pool is unchanged."); }
-      catch (error) { setStatus(error.message || String(error), true); }
+      scanGeneration += 1;
+      activeScan = false;
+      try {
+        await server("restart", { method: "POST", body: {} });
+        adminState.run = null;
+        renderRun(null);
+        setStatus("Run checkpoint cleared. The saved candidate pool is unchanged.");
+      } catch (error) {
+        setStatus(error.message || String(error), true);
+      }
     });
     $("recruitmentCsv")?.addEventListener("click", () => {
-      const anchor = document.createElement("a"); anchor.href = recruitmentEndpoint("csv").href; anchor.download = "p2k-recruitment-selected.csv"; document.body.appendChild(anchor); anchor.click(); anchor.remove();
+      const anchor = document.createElement("a");
+      anchor.href = recruitmentEndpoint("csv").href;
+      anchor.download = "p2k-recruitment-selected.csv";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
     });
   }
 
