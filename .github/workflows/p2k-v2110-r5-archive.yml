@@ -1,0 +1,59 @@
+name: Archive P2K v2.11.0 R5 validated package
+
+on:
+  push:
+    branches:
+      - release/v2.11.0
+    paths:
+      - .github/workflows/p2k-v2110-r5-archive.yml
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@v4
+        with:
+          ref: release/v2.11.0
+          fetch-depth: 0
+
+      - name: Download validated R5 artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/p2k-r5-artifact
+          mkdir -p /tmp/p2k-r5-artifact
+          gh run download 33528322423 --repo Ximoon1982/PromoteToKing --name PromoteToKing-v2.11.0-R5-admin-green --dir /tmp/p2k-r5-artifact
+          (cd /tmp/p2k-r5-artifact && sha256sum -c SHA256SUMS_v2.11.0_R5.txt)
+          (cd /tmp/p2k-r5-artifact && sha256sum -c SHA256SUMS_v2.11.0_R5_PACKAGE.txt)
+
+      - name: Archive release package in repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEST=release-packages/v2.11.0-R5
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
+          cp /tmp/p2k-r5-artifact/PromoteToKing-v2.11.0-R5-admin-green.zip "$DEST/"
+          cp /tmp/p2k-r5-artifact/PromoteToKing_v2.11.0_R5_ADMIN_GREEN_INSTALLER.run "$DEST/"
+          cp /tmp/p2k-r5-artifact/install-promote-to-king-2.11.0-R5.sh "$DEST/"
+          cp /tmp/p2k-r5-artifact/SHA256SUMS_v2.11.0_R5.txt "$DEST/"
+          cp /tmp/p2k-r5-artifact/SHA256SUMS_v2.11.0_R5_PACKAGE.txt "$DEST/"
+          cp /tmp/p2k-r5-artifact/SOURCE_FILES_v2.11.0_R5.txt "$DEST/"
+          cp /tmp/p2k-r5-artifact/RELEASE_NOTES_v2.11.0_R5.md "$DEST/"
+          git config user.name 'P2K release automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add "$DEST"
+          if git diff --cached --quiet; then
+            echo 'Validated R5 package is already archived.'
+            exit 0
+          fi
+          git commit -m 'chore(release): archive v2.11.0 R5 package'
+          git push origin HEAD:release/v2.11.0
