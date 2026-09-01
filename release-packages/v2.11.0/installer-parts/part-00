@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+umask 077
+
+RELEASE="2.11.0"
+BASELINE="2.10.9.8"
+DEFAULT_TARGET="/homepages/43/d141198007/htdocs/PromoteToKing"
+TARGET="${1:-${P2K_TARGET:-$DEFAULT_TARGET}}"
+SELF="$0"
+EXPECTED_PAYLOAD_SHA="c436217316eb5b56fff041ecadec33d2d473b496f2d622d393e6919ca74b7f47"
+BACKUP_DIR=""
+STATE_SNAPSHOT=""
+TRANSACTION_ACTIVE=0
+STATE_SNAPSHOT_READY=0
+ROLLBACK_RUNNING=0
+PHP_BIN=""
+TMP=""
+
+log(){ printf '[P2K %s] %s\n' "$RELEASE" "$*"; }
+warn(){ printf '[P2K %s] WARNING: %s\n' "$RELEASE" "$*" >&2; }
+die(){ printf '[P2K %s] ERROR: %s\n' "$RELEASE" "$*" >&2; exit 1; }
+
+cleanup(){ if [[ -n "${TMP:-}" && -d "$TMP" ]]; then rm -rf "$TMP"; fi; }
+
+find_php(){
+  local c
+  if [[ -n "${P2K_PHP_CLI:-}" && -x "${P2K_PHP_CLI}" ]]; then PHP_BIN="$P2K_PHP_CLI"; return; fi
+  for c in /usr/bin/php8.5-cli /usr/bin/php8.4-cli /usr/bin/php8.3-cli /usr/bin/php8.2-cli /usr/bin/php8.1-cli /usr/bin/php8.0-cli php8.5 php8.4 php8.3 php8.2 php8.1 php8.0 php; do
+    if [[ "$c" == /* ]]; then [[ -x "$c" ]] && { PHP_BIN="$c"; return; }
+    else command -v "$c" >/dev/null 2>&1 && { PHP_BIN="$(command -v "$c")"; return; }
+    fi
+  done
+  die "No supported PHP CLI was found."
+}
+
+restore_files(){
+  [[ -n "$BACKUP_DIR" && -d "$BACKUP_DIR" ]] || return 0
+  if [[ -f "$BACKUP_DIR/existing-files.txt" ]]; then
+    while IFS= read -r rel; do
+      [[ -n "$rel" ]] || continue
+      mkdir -p "$TARGET/$(dirname "$rel")"
+      cp -p "$BACKUP_DIR/files/$rel" "$TARGET/$rel"
+    done < "$BACKUP_DIR/existing-files.txt"
+  fi
+  if [[ -f "$BACKUP_DIR/created-files.txt" ]]; then
+    while IFS= read -r rel; do [[ -n "$rel" ]] && rm -f "$TARGET/$rel"; done < "$BACKUP_DIR/created-files.txt"
+  fi
+}
+
+rollback(){
+  local rc="${1:-1}"
+  [[ "$ROLLBACK_RUNNING" -eq 0 ]] || exit "$rc"
+  ROLLBACK_RUNNING=1
+  trap - ERR
+  warn "Installation failed; rolling back 2.11.0 transaction."
+  if [[ "$STATE_SNAPSHOT_READY" -eq 1 && -f "$STATE_SNAPSHOT" && -f "$TARGET/server/team-points-green/tools/primary-state-v2.11.0.php" ]]; then
+    if ! "$PHP_BIN" "$TARGET/server/team-points-green/tools/primary-state-v2.11.0.php" restore "$STATE_SNAPSHOT" >"$BACKUP_DIR/state-restore.log" 2>&1; then
+      warn "Database control-state restore reported an error; see $BACKUP_DIR/state-restore.log"
+    else
+      log "Green/Blue control state restored."
+    fi
+  fi
+  restore_files || warn "One or more file restore operations reported an error."
+  TRANSACTION_ACTIVE=0
+  warn "Rollback complete. Production files were restored from $BACKUP_DIR"
+  cleanup
+  exit "$rc"
+}
+
+on_err(){ local rc=$?; if [[ "$TRANSACTION_ACTIVE" -eq 1 ]]; then rollback "$rc"; fi; cleanup; exit "$rc"; }
+trap on_err ERR
+trap cleanup EXIT
+
+[[ -d "$TARGET" ]] || die "Target directory does not exist: $TARGET"
+[[ -f "$TARGET/VERSION" ]] || die "Target VERSION file is missing."
+CURRENT_VERSION="$(tr -d '\r\n ' < "$TARGET/VERSION")"
+[[ "$CURRENT_VERSION" == "$BASELINE" || "$CURRENT_VERSION" == "$RELEASE" ]] || die "Expected deployed VERSION $BASELINE or $RELEASE; found $CURRENT_VERSION."
+
+for cmd in base64 sha256sum tar mktemp grep sed cp mkdir dirname awk tail install date tr; do command -v "$cmd" >/dev/null 2>&1 || die "Required command is unavailable: $cmd"; done
+find_php
+PHP_ID="$($PHP_BIN -r 'echo PHP_VERSION_ID;' 2>/dev/null)"
+[[ "$PHP_ID" =~ ^[0-9]+$ && "$PHP_ID" -ge 80100 ]] || die "PHP CLI 8.1+ is required; selected: $PHP_BIN"
+log "Using PHP CLI: $PHP_BIN ($($PHP_BIN -r 'echo PHP_VERSION;' 2>/dev/null))"
+
+for f in server/team-points/config/config.local.php server/team-points-green/config/green.local.php server/team-points/src/bootstrap.php server/team-points-green/src/bootstrap.php ui-v2.html TeamPointsAdmin.html; do
+  [[ -f "$TARGET/$f" ]] || die "Required existing production file is missing: $f"
+done
+
+for f in ui-v2.html TeamPointsAdmin.html; do
+  if ! grep -Fq 'assets/js/site-config.js?v=2.10.9.8' "$TARGET/$f" && ! grep -Fq 'assets/js/site-config.js?v=2.11.0' "$TARGET/$f"; then
+    die "$f has an unexpected site-config cache key; refusing blind replacement."
+  fi
+done
+
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/p2k-v2110.XXXXXX")"
+PAYLOAD="$TMP/payload.tar.gz"
+PAYLOAD_DIR="$TMP/payload"
+mkdir -p "$PAYLOAD_DIR"
+MARKER_LINE="$(awk '/^__P2K_PAYLOAD_BELOW__$/ {print NR+1; exit}' "$SELF")"
+[[ -n "$MARKER_LINE" ]] || die "Installer payload marker is missing."
+tail -n +"$MARKER_LINE" "$SELF" | base64 -d > "$PAYLOAD"
+ACTUAL_PAYLOAD_SHA="$(sha256sum "$PAYLOAD" | awk '{print $1}')"
+[[ "$ACTUAL_PAYLOAD_SHA" == "$EXPECTED_PAYLOAD_SHA" ]] || die "Embedded payload checksum mismatch."
+tar -xzf "$PAYLOAD" -C "$PAYLOAD_DIR"
+(cd "$PAYLOAD_DIR" && sha256sum -c INSTALLER_PAYLOAD_SHA256SUMS.txt >/dev/null) || die "Payload file checksum verification failed."
+[[ "$(tr -d '\r\n ' < "$PAYLOAD_DIR/VERSION")" == "$RELEASE" ]] || die "Payload VERSION is not $RELEASE."
+
+PHP_FILES=(
+  server/team-points/src/PublicReadDatabase.php
+  server/team-points/src/McaBlueGreenSync.php
+  server/team-points-green/public/api.php
+  server/team-points-green/tools/promote-primary-v2.11.0.php
+  server/team-points-green/tools/primary-state-v2.11.0.php
+)
+for f in "${PHP_FILES[@]}"; do "$PHP_BIN" -l "$PAYLOAD_DIR/$f" >/dev/null || die "PHP lint failed: $f"; done
+JS_FILES=(assets/js/site-config.js assets/js/pages/v2-11-0.js assets/js/pages/v2-11-0-green-primary.js)
+if command -v node >/dev/null 2>&1; then for f in "${JS_FILES[@]}"; do node --check "$PAYLOAD_DIR/$f" >/dev/null || die "JavaScript syntax check failed: $f"; done; fi
+
+grep -Fq 'version: "2.11.0"' "$PAYLOAD_DIR/assets/js/site-config.js" || die "site-config release marker missing."
+grep -Fq 'primaryBackend: "green"' "$PAYLOAD_DIR/assets/js/site-config.js" || die "Green primary config marker missing."
+grep -Fq 'MIGRATION_CONTROL_RETIRED' "$PAYLOAD_DIR/server/team-points-green/public/api.php" || die "Retired migration control marker missing."
+grep -Fq "return 'green';" "$PAYLOAD_DIR/server/team-points/src/PublicReadDatabase.php" || die "Green-only public read marker missing."
+if grep -Fq 
