@@ -264,7 +264,7 @@ jobs:
           LAUNCHER
           chmod +x "$BUILD/install-promote-to-king-2.11.0-R5.sh"
           cp RELEASE_NOTES_v2.11.0_R5.md "$BUILD/"
-          sha256sum "$BUILD/PromoteToKing_v2.11.0_R5_ADMIN_GREEN_INSTALLER.run" "$BUILD/install-promote-to-king-2.11.0-R5.sh" "$BUILD/RELEASE_NOTES_v2.11.0_R5.md" "$BUILD/SOURCE_FILES_v2.11.0_R5.txt" > "$BUILD/SHA256SUMS_v2.11.0_R5.txt"
+          (cd "$BUILD" && sha256sum PromoteToKing_v2.11.0_R5_ADMIN_GREEN_INSTALLER.run install-promote-to-king-2.11.0-R5.sh RELEASE_NOTES_v2.11.0_R5.md SOURCE_FILES_v2.11.0_R5.txt > SHA256SUMS_v2.11.0_R5.txt)
 
       - name: Installer install, idempotence and rollback checks
         shell: bash
@@ -338,14 +338,16 @@ jobs:
           grep -qx 'ROLLBACK_SENTINEL' "$ROLLBACK/data/unrelated-runtime.txt"
           grep -qx 'ROLLBACK_SENTINEL-config' "$ROLLBACK/config/config.local.php"
 
-      - name: Finalize downloadable package
+      - name: Finalize and verify downloadable package
         shell: bash
         run: |
           set -euo pipefail
           BUILD=build-v2110-r5
           rm -rf "$BUILD/payload" "$BUILD/payload.tar.gz"
+          (cd "$BUILD" && sha256sum -c SHA256SUMS_v2.11.0_R5.txt)
           (cd "$BUILD" && zip -q PromoteToKing-v2.11.0-R5-admin-green.zip PromoteToKing_v2.11.0_R5_ADMIN_GREEN_INSTALLER.run install-promote-to-king-2.11.0-R5.sh SHA256SUMS_v2.11.0_R5.txt SOURCE_FILES_v2.11.0_R5.txt RELEASE_NOTES_v2.11.0_R5.md)
-          sha256sum "$BUILD/PromoteToKing-v2.11.0-R5-admin-green.zip" > "$BUILD/SHA256SUMS_v2.11.0_R5_PACKAGE.txt"
+          (cd "$BUILD" && sha256sum PromoteToKing-v2.11.0-R5-admin-green.zip > SHA256SUMS_v2.11.0_R5_PACKAGE.txt)
+          (cd "$BUILD" && sha256sum -c SHA256SUMS_v2.11.0_R5_PACKAGE.txt)
 
       - name: Upload R5 package
         uses: actions/upload-artifact@v4
