@@ -25,8 +25,8 @@
   });
 
   window.P2K_SITE_CONFIG = Object.freeze({
-    version: "2.10.9.8",
-    builtAt: "2026-09-01T08:46:30Z",
+    version: "2.11.0",
+    builtAt: "2026-09-01T10:50:00Z",
     schemaVersion: 6,
     siteName: existing.siteName || branding.title || "Promote to King",
     siteDescription: existing.siteDescription || branding.subtitle || "Play together. Improve together. Promote to King.",
@@ -40,6 +40,12 @@
         : ["1WL", "TCMAC", "KOTML", "TMCL", "WKCL", "PCL", "CW"]
     ),
     routes,
+    runtime: Object.freeze({
+      ...(existing.runtime || {}),
+      primaryBackend: "green",
+      recoveryBackend: "blue",
+      blueMode: "recovery-only"
+    }),
     serverStorage: Object.freeze({
       challengeClubListEndpoint: existing.serverStorage?.challengeClubListEndpoint || "api/challenge-club-list/",
       matchAssistantLogEndpoint: existing.serverStorage?.matchAssistantLogEndpoint || "api/match-assistant-log/",
@@ -132,9 +138,43 @@
       analytics: existing.features?.analytics !== false,
       diagnostics: existing.features?.diagnostics !== false,
       trafficAnalytics: existing.features?.trafficAnalytics !== false,
-      analysisSynchronization: existing.features?.analysisSynchronization !== false
+      analysisSynchronization: existing.features?.analysisSynchronization !== false,
+      legacyAdministration: false,
+      blueProductionControls: false
     })
   });
+})();
+
+// v2.11.0 canonical Administration routing. Old adminTool bookmarks remain usable,
+// but are normalized before dashboard-v2 reads the URL so only the toggle shell runs.
+(() => {
+  if (!/\/ui-v2\.html$/i.test(window.location.pathname)) return;
+  const url = new URL(window.location.href);
+  if (url.searchParams.get("page") !== "administration" || !url.searchParams.get("adminTool")) return;
+  const tool = String(url.searchParams.get("adminTool") || "").toLowerCase();
+  const map = {
+    upcoming: ["competitions", "daily", "upcoming"],
+    creation: ["competitions", "daily", "creation"],
+    challenge: ["competitions", "daily", "challenge"],
+    members: ["members", "", ""],
+    tasks: ["maintenance", "tasks", ""],
+    diagnostics: ["maintenance", "diagnostics", "health"],
+    reconciliation: ["maintenance", "diagnostics", "reconciliation"],
+    intelligence: ["opponents", "opponents", "intelligence"],
+    logs: ["maintenance", "", ""],
+    storage: ["maintenance", "", ""],
+    migration: ["maintenance", "", ""],
+    open: ["competitions", "daily", ""],
+    "live-ranks": ["competitions", "", ""]
+  };
+  const target = map[tool] || ["misc", "", ""];
+  ["page", "adminTool", "adminContext"].forEach(key => url.searchParams.delete(key));
+  url.searchParams.set("ui", "v2");
+  url.searchParams.set("view", "admin");
+  url.searchParams.set("adminCategory", target[0]);
+  if (target[1]) url.searchParams.set("adminDetail", target[1]); else url.searchParams.delete("adminDetail");
+  if (target[2]) url.searchParams.set("adminDetailTab", target[2]); else url.searchParams.delete("adminDetailTab");
+  window.history.replaceState(window.history.state, "", url.href);
 })();
 
 // First-party cookieless traffic analytics. Loading is centralized here so every
@@ -158,8 +198,9 @@
   const script=document.createElement('script');script.src='assets/js/pages/members-insights-enhancement.js?v=2.10.9.7-members-ranking-2';script.async=false;script.dataset.p2kMembersInsightsEnhancement='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
 
-// v2.10.9.8 Recruitment admin and Members Insights result-coverage alignment.
+// v2.11.0 canonical toggle Administration enhancements. This supersedes the
+// v2.10.9.8 Recruitment injection into legacy TeamPointsAdmin.
 (() => {
-  if (document.querySelector('script[data-p2k-v21098]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/v2-10-9-8.js?v=2.10.9.8';script.async=false;script.dataset.p2kV21098='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  if (document.querySelector('script[data-p2k-v2110]')) return;
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0.js?v=2.11.0';script.async=false;script.dataset.p2kV2110='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
