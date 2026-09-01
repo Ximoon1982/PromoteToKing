@@ -32,10 +32,15 @@ jobs:
           grep -Fq 'version: "2.10.9.8"' assets/js/site-config.js
           grep -Fq 'recruitmentAdminEndpoint' assets/js/site-config.js
           grep -Fq 'assets/js/pages/v2-10-9-8.js?v=2.10.9.8' assets/js/site-config.js
-          grep -Fq 'data-key="result_coverage_percent"' assets/js/pages/v2-10-9-8.js
+          grep -Fq 'assets/js/site-config.js?v=2.10.9.8' TeamPointsAdmin.html
+          grep -Fq 'assets/js/site-config.js?v=2.10.9.8' ui-v2.html
+          grep -Fq 'data-key="result_coverage_percent">Result coverage</th>' ui-v2.html
           grep -Fq 'textContent = "Result coverage"' assets/js/pages/v2-10-9-8.js
           grep -Fq 'parallelWorkers' assets/js/pages/v2-10-9-8.js
+          grep -Fq 'runId: run.id' assets/js/pages/v2-10-9-8.js
           grep -Fq 'action === '\''checkpoint'\''' server/team-points/public/recruitment-admin.php
+          grep -Fq 'RUN_CHANGED' server/team-points/public/recruitment-admin.php
+          grep -Fq 'p2k_recruitment_membership_state' server/team-points/public/recruitment-admin.php
           grep -Fq 'action === '\''csv'\''' server/team-points/public/recruitment-admin.php
           grep -Fq 'already current P2K member' server/team-points/public/recruitment-admin.php
           grep -Fq '"databaseSchemaChange": false' site-manifest.json
@@ -50,7 +55,7 @@ jobs:
           cp server/team-points/public/recruitment-admin.php build-v21098/payload/server/team-points/public/
           cp assets/js/pages/v2-10-9-8.js build-v21098/payload/assets/js/pages/
           cp assets/js/site-config.js build-v21098/payload/assets/js/
-          cp VERSION site-manifest.json RELEASE_NOTES_v2.10.9.8.md build-v21098/payload/
+          cp TeamPointsAdmin.html ui-v2.html VERSION site-manifest.json RELEASE_NOTES_v2.10.9.8.md build-v21098/payload/
           tar -C build-v21098/payload -czf build-v21098/payload.tar.gz .
           PAYLOAD_SHA="$(sha256sum build-v21098/payload.tar.gz | awk '{print $1}')"
 
@@ -108,6 +113,8 @@ jobs:
             node --check "$TMP/payload/assets/js/pages/v2-10-9-8.js" >/dev/null || fail 'Recruitment JavaScript syntax check failed.'
             node --check "$TMP/payload/assets/js/site-config.js" >/dev/null || fail 'Site config JavaScript syntax check failed.'
           fi
+          grep -Fq 'assets/js/site-config.js?v=2.10.9.8' "$TMP/payload/TeamPointsAdmin.html" || fail 'Team Points Admin cache-key verification failed.'
+          grep -Fq 'data-key="result_coverage_percent">Result coverage</th>' "$TMP/payload/ui-v2.html" || fail 'Members table header verification failed.'
 
           BACKUP_ROOT="$TARGET/data/release-backups"
           mkdir -p "$BACKUP_ROOT"
@@ -116,6 +123,8 @@ jobs:
             server/team-points/public/recruitment-admin.php
             assets/js/pages/v2-10-9-8.js
             assets/js/site-config.js
+            TeamPointsAdmin.html
+            ui-v2.html
             VERSION
             site-manifest.json
             RELEASE_NOTES_v2.10.9.8.md
@@ -132,13 +141,16 @@ jobs:
           install -m 0644 "$TMP/payload/server/team-points/public/recruitment-admin.php" "$TARGET/server/team-points/public/recruitment-admin.php"
           install -m 0644 "$TMP/payload/assets/js/pages/v2-10-9-8.js" "$TARGET/assets/js/pages/v2-10-9-8.js"
           install -m 0644 "$TMP/payload/assets/js/site-config.js" "$TARGET/assets/js/site-config.js"
+          install -m 0644 "$TMP/payload/TeamPointsAdmin.html" "$TARGET/TeamPointsAdmin.html"
+          install -m 0644 "$TMP/payload/ui-v2.html" "$TARGET/ui-v2.html"
           install -m 0644 "$TMP/payload/VERSION" "$TARGET/VERSION"
           install -m 0644 "$TMP/payload/site-manifest.json" "$TARGET/site-manifest.json"
           install -m 0644 "$TMP/payload/RELEASE_NOTES_v2.10.9.8.md" "$TARGET/RELEASE_NOTES_v2.10.9.8.md"
 
           [[ "$(tr -d '\r\n[:space:]' < "$TARGET/VERSION")" == "$RELEASE" ]] || fail 'Installed VERSION verification failed.'
           grep -Fq 'recruitmentAdminEndpoint' "$TARGET/assets/js/site-config.js" || fail 'Installed site-config verification failed.'
-          grep -Fq 'Result coverage' "$TARGET/assets/js/pages/v2-10-9-8.js" || fail 'Installed table-alignment verification failed.'
+          grep -Fq 'assets/js/site-config.js?v=2.10.9.8' "$TARGET/TeamPointsAdmin.html" || fail 'Installed Team Points Admin cache-key verification failed.'
+          grep -Fq 'data-key="result_coverage_percent">Result coverage</th>' "$TARGET/ui-v2.html" || fail 'Installed Members table header verification failed.'
           TRANSACTION_ACTIVE=0
           trap - ERR
           printf 'Promote to King v%s installed successfully in %s\n' "$RELEASE" "$TARGET"
@@ -172,18 +184,23 @@ jobs:
           mkdir -p "$UPGRADE/assets/js" "$UPGRADE/data"
           printf '2.10.9.7\n' > "$UPGRADE/VERSION"
           printf 'OLD_SITE_CONFIG\n' > "$UPGRADE/assets/js/site-config.js"
+          printf 'OLD_TEAM_POINTS_ADMIN\n' > "$UPGRADE/TeamPointsAdmin.html"
+          printf 'OLD_UI_V2\n' > "$UPGRADE/ui-v2.html"
           printf '{"version":"2.10.9.7","sentinel":"old-manifest"}\n' > "$UPGRADE/site-manifest.json"
           printf 'UNRELATED_DATA\n' > "$UPGRADE/data/unrelated.txt"
           build-v21098/install-promote-to-king-2.10.9.8.sh "$UPGRADE"
           test "$(tr -d '\r\n[:space:]' < "$UPGRADE/VERSION")" = "2.10.9.8"
           test -s "$UPGRADE/server/team-points/public/recruitment-admin.php"
           test -s "$UPGRADE/assets/js/pages/v2-10-9-8.js"
+          grep -Fq 'assets/js/site-config.js?v=2.10.9.8' "$UPGRADE/TeamPointsAdmin.html"
+          grep -Fq 'data-key="result_coverage_percent">Result coverage</th>' "$UPGRADE/ui-v2.html"
           grep -qx 'UNRELATED_DATA' "$UPGRADE/data/unrelated.txt"
 
           sha256sum \
             "$UPGRADE/server/team-points/public/recruitment-admin.php" \
             "$UPGRADE/assets/js/pages/v2-10-9-8.js" \
             "$UPGRADE/assets/js/site-config.js" \
+            "$UPGRADE/TeamPointsAdmin.html" "$UPGRADE/ui-v2.html" \
             "$UPGRADE/VERSION" "$UPGRADE/site-manifest.json" "$UPGRADE/RELEASE_NOTES_v2.10.9.8.md" > "$ROOT/before-reinstall.sha"
           sleep 1
           build-v21098/PromoteToKing_v2.10.9.8.run "$UPGRADE"
@@ -191,6 +208,7 @@ jobs:
             "$UPGRADE/server/team-points/public/recruitment-admin.php" \
             "$UPGRADE/assets/js/pages/v2-10-9-8.js" \
             "$UPGRADE/assets/js/site-config.js" \
+            "$UPGRADE/TeamPointsAdmin.html" "$UPGRADE/ui-v2.html" \
             "$UPGRADE/VERSION" "$UPGRADE/site-manifest.json" "$UPGRADE/RELEASE_NOTES_v2.10.9.8.md" > "$ROOT/after-reinstall.sha"
           diff -u "$ROOT/before-reinstall.sha" "$ROOT/after-reinstall.sha"
 
@@ -203,8 +221,8 @@ jobs:
           text = path.read_text()
           marker = '__P2K_V21098_PAYLOAD_BELOW__\n'
           head, payload = text.split(marker, 1)
-          old = "grep -Fq 'Result coverage' \"$TARGET/assets/js/pages/v2-10-9-8.js\" || fail 'Installed table-alignment verification failed.'"
-          new = "grep -Fq '__FORCED_ROLLBACK_FAILURE__' \"$TARGET/assets/js/pages/v2-10-9-8.js\" || fail 'Installed table-alignment verification failed.'"
+          old = "grep -Fq 'data-key=\"result_coverage_percent\">Result coverage</th>' \"$TARGET/ui-v2.html\" || fail 'Installed Members table header verification failed.'"
+          new = "grep -Fq '__FORCED_ROLLBACK_FAILURE__' \"$TARGET/ui-v2.html\" || fail 'Installed Members table header verification failed.'"
           if old not in head:
               raise SystemExit('forced-failure anchor not found')
           path.write_text(head.replace(old, new, 1) + marker + payload)
@@ -215,6 +233,8 @@ jobs:
           mkdir -p "$ROLLBACK/assets/js" "$ROLLBACK/data"
           printf '2.10.9.7\n' > "$ROLLBACK/VERSION"
           printf 'ROLLBACK_OLD_SITE_CONFIG\n' > "$ROLLBACK/assets/js/site-config.js"
+          printf 'ROLLBACK_OLD_TEAM_POINTS_ADMIN\n' > "$ROLLBACK/TeamPointsAdmin.html"
+          printf 'ROLLBACK_OLD_UI_V2\n' > "$ROLLBACK/ui-v2.html"
           printf '{"version":"2.10.9.7","sentinel":"ROLLBACK_OLD_MANIFEST"}\n' > "$ROLLBACK/site-manifest.json"
           printf 'UNRELATED_DATA\n' > "$ROLLBACK/data/unrelated.txt"
           set +e
@@ -225,6 +245,8 @@ jobs:
           grep -Fq 'restoring pre-v2.10.9.8 files' "$ROOT/forced-failure.log"
           test "$(tr -d '\r\n[:space:]' < "$ROLLBACK/VERSION")" = "2.10.9.7"
           grep -qx 'ROLLBACK_OLD_SITE_CONFIG' "$ROLLBACK/assets/js/site-config.js"
+          grep -qx 'ROLLBACK_OLD_TEAM_POINTS_ADMIN' "$ROLLBACK/TeamPointsAdmin.html"
+          grep -qx 'ROLLBACK_OLD_UI_V2' "$ROLLBACK/ui-v2.html"
           grep -Fq 'ROLLBACK_OLD_MANIFEST' "$ROLLBACK/site-manifest.json"
           grep -qx 'UNRELATED_DATA' "$ROLLBACK/data/unrelated.txt"
           test ! -e "$ROLLBACK/server/team-points/public/recruitment-admin.php"
