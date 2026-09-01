@@ -1,0 +1,437 @@
+name: P2K v2.11.0 R6 validation and installer
+
+on:
+  push:
+    branches:
+      - release/v2.11.0
+    paths:
+      - .github/workflows/p2k-v2110-r6-package.yml
+
+permissions:
+  contents: write
+
+jobs:
+  validate-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout R6 branch
+        uses: actions/checkout@v4
+        with:
+          ref: release/v2.11.0
+          fetch-depth: 0
+
+      - name: Syntax checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l server/team-points/public/recruitment-admin.php
+          php -l server/team-points/public/intelligence.php
+          php -l server/team-points/public/data-reconciliation.php
+          php -l server/team-points/src/GreenFreshnessService.php
+          node --check assets/js/pages/dashboard-v2.js
+          node --check assets/js/pages/ui-version-gate.js
+          node --check assets/js/pages/v2-11-0.js
+          node --check assets/js/pages/v2-11-0-green-primary.js
+          node --check assets/js/pages/v2-11-0-r2-admin-stability.js
+          node --check assets/js/pages/v2-11-0-green-freshness.js
+          node --check assets/js/site-config.js
+
+      - name: R6 canonical routing and OAuth regression checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n[:space:]' < VERSION)" = '2.11.0'
+          grep -Fq 'version: "2.11.0"' assets/js/site-config.js
+          grep -Fq 'assets/js/pages/v2-11-0.js?v=2.11.0-r6' assets/js/site-config.js
+          grep -Fq 'assets/js/pages/v2-11-0-green-primary.js?v=2.11.0-r6' assets/js/site-config.js
+          grep -Fq 'assets/js/pages/v2-11-0-r2-admin-stability.js?v=2.11.0-r6' assets/js/site-config.js
+          grep -Fq 'assets/js/site-config.js?v=2.11.0-r6' ui-v2.html
+          grep -Fq 'assets/js/pages/ui-version-gate.js?v=2.11.0-r6' ui-v2.html
+          grep -Fq 'assets/js/pages/dashboard-v2.js?v=2.11.0-r6' ui-v2.html
+
+          grep -Fq 'recruitment: { title:"Recruitment", tabs:[{key:"recruitment",label:"Recruitment",mode:"native",nativeKey:"recruitment"}]}' assets/js/pages/dashboard-v2.js
+          grep -Fq 'data-admin-shell-card="${escapeHTML(key)}"' assets/js/pages/dashboard-v2.js
+          grep -Fq 'key:"recruitment",category:"members"' assets/js/pages/dashboard-v2.js
+          grep -Fq 'id="adminShellDetailFrameWrap"' assets/js/pages/dashboard-v2.js
+          grep -Fq 'id="adminShellNativeDetailHost"' assets/js/pages/dashboard-v2.js
+          grep -Fq 'if(frameWrap)frameWrap.hidden=true' assets/js/pages/dashboard-v2.js
+          grep -Fq 'if(frame){frame.hidden=true;frame.removeAttribute("data-p2k-r2-stable");}' assets/js/pages/dashboard-v2.js
+          grep -Fq 'p2k-admin-shell-route' assets/js/pages/dashboard-v2.js
+          grep -Fq 'page==="administration"' assets/js/pages/dashboard-v2.js
+          grep -Fq 'state.view="admin";state.publicPage="dashboard";renderView();writeNavigationState();' assets/js/pages/dashboard-v2.js
+          ! grep -Fq 'legacyTab.hidden = true' assets/js/pages/v2-11-0-green-primary.js
+          grep -Fq 'const legacyPage = document.getElementById("administrationPage"); if (legacyPage) legacyPage.hidden = true;' assets/js/pages/v2-11-0-green-primary.js
+
+          ! grep -Fq 'p2k-recruitment-route' assets/js/pages/ui-version-gate.js
+          ! grep -Fq 'p2k-recruitment-route' assets/js/pages/v2-11-0.js
+          ! grep -Fq 'p2k-recruitment-route' assets/js/pages/v2-11-0-green-primary.js
+          ! grep -Fq 'p2k-recruitment-route' assets/js/pages/v2-11-0-r2-admin-stability.js
+          ! grep -Fq 'p2kRecruitmentFirstPaint' assets/js/pages/ui-version-gate.js
+
+          grep -Fq 'const MEMBERSHIP_BATCH = 2000;' assets/js/pages/v2-11-0.js
+          grep -Fq 'const CHECKPOINT_BATCH = 500;' assets/js/pages/v2-11-0.js
+          grep -Fq 'P2K_RECRUITMENT_MAX_CANDIDATES = 100000' server/team-points/public/recruitment-admin.php
+          grep -Fq 'P2K_RECRUITMENT_MEMBERSHIP_BATCH_MAX = 2000' server/team-points/public/recruitment-admin.php
+          grep -Fq 'P2K_RECRUITMENT_CHECKPOINT_MAX = 500' server/team-points/public/recruitment-admin.php
+          grep -Fq 'processPriority(pending' assets/js/pages/v2-11-0.js
+          grep -Fq 'OAuth Bearer full throttle' assets/js/pages/v2-11-0.js
+          grep -Fq 'diagnostics.oauthBearerMode!==true' assets/js/pages/v2-11-0.js
+          ! grep -Fq 'recruitmentWorkers' assets/js/pages/v2-11-0.js
+          ! grep -Fq 'parallelWorkers' assets/js/pages/v2-11-0.js
+          ! grep -Fq 'parallelWorkers' server/team-points/public/recruitment-admin.php
+          grep -Fq 'Candidates / second' assets/js/pages/v2-11-0.js
+          grep -Fq 'recruitmentMetricRemaining' assets/js/pages/v2-11-0.js
+          grep -Fq 'recruitmentMetricRate' assets/js/pages/v2-11-0.js
+          grep -Fq 'recruitmentMetricEta' assets/js/pages/v2-11-0.js
+          grep -Fq 'recruitmentMetricOauth' assets/js/pages/v2-11-0.js
+          grep -Fq 'secured checkpoint batch' assets/js/pages/v2-11-0.js
+
+          grep -Fq 'const OAUTH_LOGICAL_CONCURRENCY = 256;' assets/js/shared/api-client.js
+          grep -Fq 'return OAUTH_LOGICAL_CONCURRENCY;' assets/js/shared/api-client.js
+          grep -Fq 'const transportConcurrency = effectiveBatchConcurrency();' assets/js/shared/api-client.js
+          grep -Fq 'const requestedConcurrency = integer(options.concurrency, transportConcurrency, 1, OAUTH_LOGICAL_CONCURRENCY);' assets/js/shared/api-client.js
+
+          grep -Fq 'RECONCILIATION_RETIRED' server/team-points/public/data-reconciliation.php
+          grep -Fq 'new GreenFreshnessService' server/team-points/public/intelligence.php
+          grep -Fq "'source'=>'green_native_core'" server/team-points/src/GreenFreshnessService.php
+          grep -Fq 'v2-11-0-green-freshness.js?v=2.11.0-r5' ClubIntelligence.html
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          src=Path('assets/js/pages/v2-11-0.js').read_text()
+          match=re.search(r'await api\.processPriority\(pending,async username=>\{.*?\},\{(.*?)\}\);',src,re.S)
+          if not match:
+              raise SystemExit('Recruitment processPriority call was not found')
+          options=match.group(1)
+          if 'concurrency' in options:
+              raise SystemExit('Recruitment must not override shared OAuth scheduler concurrency')
+          if 'signal:controller.signal' not in options:
+              raise SystemExit('Recruitment scheduler feed must remain abortable')
+          dashboard=Path('assets/js/pages/dashboard-v2.js').read_text()
+          if dashboard.count('nativeKey:"recruitment"') != 1:
+              raise SystemExit('Recruitment must have exactly one canonical native detail definition')
+          if 'adminShellNativeDetailHost' not in dashboard or 'adminShellDetailFrameWrap' not in dashboard:
+              raise SystemExit('Canonical native/iframe detail slots are incomplete')
+          PY
+
+      - name: Build cumulative R6 corrective installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUILD=build-v2110-r6
+          rm -rf "$BUILD"
+          mkdir -p "$BUILD/payload/assets/js/pages" "$BUILD/payload/assets/js" "$BUILD/payload/server/team-points/public" "$BUILD/payload/server/team-points/src"
+          cp ClubIntelligence.html ui-v2.html VERSION RELEASE_NOTES_v2.11.0_R6.md "$BUILD/payload/"
+          cp assets/js/site-config.js "$BUILD/payload/assets/js/"
+          cp assets/js/pages/dashboard-v2.js assets/js/pages/ui-version-gate.js assets/js/pages/v2-11-0.js assets/js/pages/v2-11-0-green-primary.js assets/js/pages/v2-11-0-r2-admin-stability.js assets/js/pages/v2-11-0-green-freshness.js "$BUILD/payload/assets/js/pages/"
+          cp server/team-points/public/recruitment-admin.php server/team-points/public/intelligence.php server/team-points/public/data-reconciliation.php "$BUILD/payload/server/team-points/public/"
+          cp server/team-points/src/GreenFreshnessService.php "$BUILD/payload/server/team-points/src/"
+          cat > "$BUILD/payload/R6_SOURCE_HEAD.txt" <<EOF
+          branch=release/v2.11.0
+          head=$(git rev-parse HEAD)
+          release=2.11.0-R6
+          EOF
+          cat > "$BUILD/SOURCE_FILES_v2.11.0_R6.txt" <<'EOF'
+          ClubIntelligence.html
+          ui-v2.html
+          assets/js/site-config.js
+          assets/js/pages/dashboard-v2.js
+          assets/js/pages/ui-version-gate.js
+          assets/js/pages/v2-11-0.js
+          assets/js/pages/v2-11-0-green-primary.js
+          assets/js/pages/v2-11-0-r2-admin-stability.js
+          assets/js/pages/v2-11-0-green-freshness.js
+          server/team-points/public/recruitment-admin.php
+          server/team-points/public/intelligence.php
+          server/team-points/public/data-reconciliation.php
+          server/team-points/src/GreenFreshnessService.php
+          VERSION
+          RELEASE_NOTES_v2.11.0_R6.md
+          R6_SOURCE_HEAD.txt
+          EOF
+          tar -C "$BUILD/payload" -czf "$BUILD/payload.tar.gz" .
+          PAYLOAD_SHA="$(sha256sum "$BUILD/payload.tar.gz" | awk '{print $1}')"
+
+          cat > "$BUILD/PromoteToKing_v2.11.0_R6_CANONICAL_RECRUITMENT_INSTALLER.run" <<'INSTALLER'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          RELEASE='2.11.0'
+          CORRECTIVE='R6'
+          SELF="${BASH_SOURCE[0]}"
+          TARGET="${1:-.}"
+          TARGET="$(cd "$TARGET" && pwd)"
+          MARKER='__P2K_V2110_R6_PAYLOAD_BELOW__'
+          EXPECTED_PAYLOAD_SHA='__PAYLOAD_SHA__'
+          TRANSACTION_ACTIVE=0
+          BACKUP=''
+          CREATED=()
+
+          rollback(){
+            local status="${1:-$?}"
+            trap - ERR
+            if ((TRANSACTION_ACTIVE)); then
+              printf 'Failure detected; restoring pre-%s %s files...\n' "$RELEASE" "$CORRECTIVE" >&2
+              for file in "${CREATED[@]}"; do rm -f "$TARGET/$file" || true; done
+              if [[ -n "$BACKUP" && -f "$BACKUP" ]]; then tar -C "$TARGET" -xzf "$BACKUP" || true; fi
+            fi
+            exit "$status"
+          }
+          fail(){
+            printf 'ERROR: %s\n' "$*" >&2
+            if ((TRANSACTION_ACTIVE)); then rollback 1; fi
+            exit 1
+          }
+          choose_php(){
+            local candidate
+            for candidate in "${P2K_PHP_BIN:-}" /usr/bin/php8.5-cli /usr/bin/php8.4-cli /usr/bin/php8.3-cli /usr/bin/php8.2-cli /usr/bin/php8.1-cli /usr/bin/php8.0-cli "$(command -v php 2>/dev/null || true)"; do
+              [[ -n "$candidate" && -x "$candidate" ]] && { printf '%s\n' "$candidate"; return 0; }
+            done
+            return 1
+          }
+
+          command -v tar >/dev/null 2>&1 || fail 'tar is required.'
+          command -v base64 >/dev/null 2>&1 || fail 'base64 is required.'
+          command -v sha256sum >/dev/null 2>&1 || fail 'sha256sum is required.'
+          PHP_BIN="$(choose_php)" || fail 'PHP CLI was not found.'
+          [[ -f "$TARGET/VERSION" ]] || fail "No Promote to King VERSION file found in $TARGET"
+          INSTALLED="$(tr -d '\r\n[:space:]' < "$TARGET/VERSION")"
+          [[ "$INSTALLED" == "$RELEASE" ]] || fail "R6 requires an existing v$RELEASE installation; found v$INSTALLED."
+          [[ -f "$TARGET/server/team-points/src/PublicReadDatabase.php" ]] || fail 'Green-primary Team Points baseline is missing PublicReadDatabase.php.'
+          [[ -f "$TARGET/server/team-points-green/sql/core-schema.sql" ]] || fail 'Green Core baseline is missing.'
+          [[ -f "$TARGET/assets/js/shared/api-client.js" ]] || fail 'The shared Chess.com API client is missing.'
+          grep -Fq 'const OAUTH_LOGICAL_CONCURRENCY = 256;' "$TARGET/assets/js/shared/api-client.js" || fail 'The installed shared API client does not provide the required OAuth full-throttle scheduler.'
+          grep -Fq 'processPriority' "$TARGET/assets/js/shared/api-client.js" || fail 'The installed shared API client does not provide priority scheduling.'
+
+          TMP="$(mktemp -d "${TMPDIR:-/tmp}/p2k-v2110-r6.XXXXXX")"
+          cleanup(){ rm -rf "$TMP"; }
+          trap cleanup EXIT
+          LINE="$(awk -v marker="$MARKER" '$0==marker{print NR+1; exit}' "$SELF")"
+          [[ -n "$LINE" ]] || fail 'Installer payload marker is missing.'
+          tail -n +"$LINE" "$SELF" | base64 -d > "$TMP/payload.tar.gz"
+          ACTUAL="$(sha256sum "$TMP/payload.tar.gz" | awk '{print $1}')"
+          [[ "$ACTUAL" == "$EXPECTED_PAYLOAD_SHA" ]] || fail 'Installer payload checksum mismatch.'
+          mkdir -p "$TMP/payload"
+          tar -C "$TMP/payload" -xzf "$TMP/payload.tar.gz"
+          [[ "$(tr -d '\r\n[:space:]' < "$TMP/payload/VERSION")" == "$RELEASE" ]] || fail 'Payload VERSION mismatch.'
+
+          "$PHP_BIN" -l "$TMP/payload/server/team-points/public/recruitment-admin.php" >/dev/null || fail 'Recruitment PHP syntax check failed.'
+          "$PHP_BIN" -l "$TMP/payload/server/team-points/public/intelligence.php" >/dev/null || fail 'Intelligence PHP syntax check failed.'
+          "$PHP_BIN" -l "$TMP/payload/server/team-points/public/data-reconciliation.php" >/dev/null || fail 'Retired reconciliation PHP syntax check failed.'
+          "$PHP_BIN" -l "$TMP/payload/server/team-points/src/GreenFreshnessService.php" >/dev/null || fail 'Green freshness service PHP syntax check failed.'
+          if command -v node >/dev/null 2>&1; then
+            for file in dashboard-v2.js ui-version-gate.js v2-11-0.js v2-11-0-green-primary.js v2-11-0-r2-admin-stability.js v2-11-0-green-freshness.js; do
+              node --check "$TMP/payload/assets/js/pages/$file" >/dev/null || fail "JavaScript syntax check failed: $file"
+            done
+            node --check "$TMP/payload/assets/js/site-config.js" >/dev/null || fail 'Site config JavaScript syntax check failed.'
+          fi
+          grep -Fq 'mode:"native",nativeKey:"recruitment"' "$TMP/payload/assets/js/pages/dashboard-v2.js" || fail 'Canonical Recruitment detail definition is missing.'
+          grep -Fq 'id="adminShellNativeDetailHost"' "$TMP/payload/assets/js/pages/dashboard-v2.js" || fail 'Canonical native detail host is missing.'
+          grep -Fq 'OAuth Bearer full throttle' "$TMP/payload/assets/js/pages/v2-11-0.js" || fail 'OAuth full-throttle Recruitment marker is missing.'
+          grep -Fq 'Candidates / second' "$TMP/payload/assets/js/pages/v2-11-0.js" || fail 'Recruitment telemetry marker is missing.'
+          grep -Fq 'P2K_RECRUITMENT_MAX_CANDIDATES = 100000' "$TMP/payload/server/team-points/public/recruitment-admin.php" || fail '100,000 Recruitment capacity marker is missing.'
+          grep -Fq 'P2K_RECRUITMENT_CHECKPOINT_MAX = 500' "$TMP/payload/server/team-points/public/recruitment-admin.php" || fail 'R6 checkpoint capacity marker is missing.'
+          grep -Fq 'RECONCILIATION_RETIRED' "$TMP/payload/server/team-points/public/data-reconciliation.php" || fail 'Retired reconciliation marker is missing.'
+          grep -Fq "'source'=>'green_native_core'" "$TMP/payload/server/team-points/src/GreenFreshnessService.php" || fail 'Green-native Freshness marker is missing.'
+          ! grep -Fq 'p2k-recruitment-route' "$TMP/payload/assets/js/pages/v2-11-0.js" || fail 'A retired Recruitment route workaround remains active.'
+          ! grep -Fq 'recruitmentWorkers' "$TMP/payload/assets/js/pages/v2-11-0.js" || fail 'Manual Recruitment concurrency control remains active.'
+
+          FILES=(
+            ClubIntelligence.html
+            ui-v2.html
+            assets/js/site-config.js
+            assets/js/pages/dashboard-v2.js
+            assets/js/pages/ui-version-gate.js
+            assets/js/pages/v2-11-0.js
+            assets/js/pages/v2-11-0-green-primary.js
+            assets/js/pages/v2-11-0-r2-admin-stability.js
+            assets/js/pages/v2-11-0-green-freshness.js
+            server/team-points/public/recruitment-admin.php
+            server/team-points/public/intelligence.php
+            server/team-points/public/data-reconciliation.php
+            server/team-points/src/GreenFreshnessService.php
+            VERSION
+            RELEASE_NOTES_v2.11.0_R6.md
+            R6_SOURCE_HEAD.txt
+          )
+          EXISTING=()
+          for file in "${FILES[@]}"; do
+            if [[ -e "$TARGET/$file" ]]; then EXISTING+=("$file"); else CREATED+=("$file"); fi
+          done
+          BACKUP_ROOT="$TARGET/data/release-backups"
+          mkdir -p "$BACKUP_ROOT"
+          BACKUP="$BACKUP_ROOT/v2.11.0-R6-$(date -u +%Y%m%dT%H%M%SZ)-$$.tar.gz"
+          if ((${#EXISTING[@]})); then tar -C "$TARGET" -czf "$BACKUP" "${EXISTING[@]}"; fi
+
+          TRANSACTION_ACTIVE=1
+          trap 'rollback $?' ERR
+          for file in "${FILES[@]}"; do
+            mkdir -p "$TARGET/$(dirname "$file")"
+            install -m 0644 "$TMP/payload/$file" "$TARGET/$file"
+          done
+
+          [[ "$(tr -d '\r\n[:space:]' < "$TARGET/VERSION")" == "$RELEASE" ]] || fail 'Installed VERSION verification failed.'
+          grep -Fq 'assets/js/pages/dashboard-v2.js?v=2.11.0-r6' "$TARGET/ui-v2.html" || fail 'Installed dashboard cache-key verification failed.'
+          grep -Fq 'assets/js/site-config.js?v=2.11.0-r6' "$TARGET/ui-v2.html" || fail 'Installed site-config cache-key verification failed.'
+          grep -Fq 'mode:"native",nativeKey:"recruitment"' "$TARGET/assets/js/pages/dashboard-v2.js" || fail 'Installed canonical Recruitment router verification failed.'
+          grep -Fq 'id="adminShellNativeDetailHost"' "$TARGET/assets/js/pages/dashboard-v2.js" || fail 'Installed native detail host verification failed.'
+          grep -Fq 'page==="administration"' "$TARGET/assets/js/pages/dashboard-v2.js" || fail 'Installed historical Administration routing verification failed.'
+          grep -Fq 'OAuth Bearer full throttle' "$TARGET/assets/js/pages/v2-11-0.js" || fail 'Installed OAuth full-throttle Recruitment verification failed.'
+          grep -Fq 'Candidates / second' "$TARGET/assets/js/pages/v2-11-0.js" || fail 'Installed Recruitment telemetry verification failed.'
+          ! grep -Fq 'recruitmentWorkers' "$TARGET/assets/js/pages/v2-11-0.js" || fail 'Installed Recruitment still exposes manual concurrency.'
+          grep -Fq 'P2K_RECRUITMENT_CHECKPOINT_MAX = 500' "$TARGET/server/team-points/public/recruitment-admin.php" || fail 'Installed Recruitment checkpoint verification failed.'
+          grep -Fq 'RECONCILIATION_RETIRED' "$TARGET/server/team-points/public/data-reconciliation.php" || fail 'Installed reconciliation retirement verification failed.'
+          grep -Fq 'v2-11-0-green-freshness.js?v=2.11.0-r5' "$TARGET/ClubIntelligence.html" || fail 'Installed Green Freshness UI verification failed.'
+          grep -Fq "'source'=>'green_native_core'" "$TARGET/server/team-points/src/GreenFreshnessService.php" || fail 'Installed Green Freshness backend verification failed.'
+
+          TRANSACTION_ACTIVE=0
+          trap - ERR
+          printf 'Promote to King v%s %s installed successfully in %s\n' "$RELEASE" "$CORRECTIVE" "$TARGET"
+          [[ -f "$BACKUP" ]] && printf 'Backup: %s\n' "$BACKUP"
+          printf 'PHP CLI: %s\n' "$PHP_BIN"
+          exit 0
+          __P2K_V2110_R6_PAYLOAD_BELOW__
+          INSTALLER
+          sed -i "s/__PAYLOAD_SHA__/$PAYLOAD_SHA/" "$BUILD/PromoteToKing_v2.11.0_R6_CANONICAL_RECRUITMENT_INSTALLER.run"
+          base64 -w 76 "$BUILD/payload.tar.gz" >> "$BUILD/PromoteToKing_v2.11.0_R6_CANONICAL_RECRUITMENT_INSTALLER.run"
+          chmod +x "$BUILD/PromoteToKing_v2.11.0_R6_CANONICAL_RECRUITMENT_INSTALLER.run"
+
+          cat > "$BUILD/install-promote-to-king-2.11.0-R6.sh" <<'LAUNCHER'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          TARGET="${1:-.}"
+          chmod +x "$HERE/PromoteToKing_v2.11.0_R6_CANONICAL_RECRUITMENT_INSTALLER.run"
+          exec "$HERE/PromoteToKing_v2.11.0_R6_CANONICAL_RECRUITMENT_INSTALLER.run" "$TARGET"
+          LAUNCHER
+          chmod +x "$BUILD/install-promote-to-king-2.11.0-R6.sh"
+          cp RELEASE_NOTES_v2.11.0_R6.md "$BUILD/"
+          (cd "$BUILD" && sha256sum PromoteToKing_v2.11.0_R6_CANONICAL_RECRUITMENT_INSTALLER.run install-promote-to-king-2.11.0-R6.sh RELEASE_NOTES_v2.11.0_R6.md SOURCE_FILES_v2.11.0_R6.txt > SHA256SUMS_v2.11.0_R6.txt)
+          (cd "$BUILD" && sha256sum -c SHA256SUMS_v2.11.0_R6.txt)
+
+      - name: Installer install, idempotence and rollback checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUILD=build-v2110-r6
+          ROOT="$(mktemp -d)"
+          trap 'rm -rf "$ROOT"' EXIT
+
+          seed_fixture(){
+            local target="$1" marker="$2"
+            mkdir -p "$target/assets/js/pages" "$target/assets/js/shared" "$target/assets/js" "$target/server/team-points/public" "$target/server/team-points/src" "$target/server/team-points-green/sql" "$target/data/runtime-v280/recruitment-admin" "$target/config"
+            printf '2.11.0\n' > "$target/VERSION"
+            printf '<?php // baseline\n' > "$target/server/team-points/src/PublicReadDatabase.php"
+            printf -- '-- baseline green schema\n' > "$target/server/team-points-green/sql/core-schema.sql"
+            printf 'const OAUTH_LOGICAL_CONCURRENCY = 256; function processPriority(){}\n' > "$target/assets/js/shared/api-client.js"
+            printf '%s\n' "$marker" > "$target/data/unrelated-runtime.txt"
+            printf '%s\n' "$marker-config" > "$target/config/config.local.php"
+            for file in ClubIntelligence.html ui-v2.html assets/js/site-config.js assets/js/pages/dashboard-v2.js assets/js/pages/ui-version-gate.js assets/js/pages/v2-11-0.js assets/js/pages/v2-11-0-green-primary.js assets/js/pages/v2-11-0-r2-admin-stability.js server/team-points/public/recruitment-admin.php server/team-points/public/intelligence.php server/team-points/public/data-reconciliation.php; do
+              mkdir -p "$target/$(dirname "$file")"
+              printf '%s:%s\n' "$marker" "$file" > "$target/$file"
+            done
+          }
+
+          UPGRADE="$ROOT/upgrade"
+          seed_fixture "$UPGRADE" 'UPGRADE_SENTINEL'
+          "$BUILD/install-promote-to-king-2.11.0-R6.sh" "$UPGRADE"
+          test "$(tr -d '\r\n[:space:]' < "$UPGRADE/VERSION")" = '2.11.0'
+          grep -Fq 'mode:"native",nativeKey:"recruitment"' "$UPGRADE/assets/js/pages/dashboard-v2.js"
+          grep -Fq 'OAuth Bearer full throttle' "$UPGRADE/assets/js/pages/v2-11-0.js"
+          grep -Fq 'Candidates / second' "$UPGRADE/assets/js/pages/v2-11-0.js"
+          grep -Fq 'P2K_RECRUITMENT_CHECKPOINT_MAX = 500' "$UPGRADE/server/team-points/public/recruitment-admin.php"
+          grep -qx 'UPGRADE_SENTINEL' "$UPGRADE/data/unrelated-runtime.txt"
+          grep -qx 'UPGRADE_SENTINEL-config' "$UPGRADE/config/config.local.php"
+          test -s "$UPGRADE/assets/js/pages/v2-11-0-green-freshness.js"
+          test -s "$UPGRADE/server/team-points/src/GreenFreshnessService.php"
+
+          (cd "$UPGRADE" && find ClubIntelligence.html ui-v2.html assets/js/site-config.js assets/js/pages/dashboard-v2.js assets/js/pages/ui-version-gate.js assets/js/pages/v2-11-0.js assets/js/pages/v2-11-0-green-primary.js assets/js/pages/v2-11-0-r2-admin-stability.js assets/js/pages/v2-11-0-green-freshness.js server/team-points/public/recruitment-admin.php server/team-points/public/intelligence.php server/team-points/public/data-reconciliation.php server/team-points/src/GreenFreshnessService.php VERSION RELEASE_NOTES_v2.11.0_R6.md R6_SOURCE_HEAD.txt -type f -print0 | sort -z | xargs -0 sha256sum) > "$ROOT/before-reinstall.sha"
+          sleep 1
+          "$BUILD/PromoteToKing_v2.11.0_R6_CANONICAL_RECRUITMENT_INSTALLER.run" "$UPGRADE"
+          (cd "$UPGRADE" && find ClubIntelligence.html ui-v2.html assets/js/site-config.js assets/js/pages/dashboard-v2.js assets/js/pages/ui-version-gate.js assets/js/pages/v2-11-0.js assets/js/pages/v2-11-0-green-primary.js assets/js/pages/v2-11-0-r2-admin-stability.js assets/js/pages/v2-11-0-green-freshness.js server/team-points/public/recruitment-admin.php server/team-points/public/intelligence.php server/team-points/public/data-reconciliation.php server/team-points/src/GreenFreshnessService.php VERSION RELEASE_NOTES_v2.11.0_R6.md R6_SOURCE_HEAD.txt -type f -print0 | sort -z | xargs -0 sha256sum) > "$ROOT/after-reinstall.sha"
+          diff -u "$ROOT/before-reinstall.sha" "$ROOT/after-reinstall.sha"
+
+          FORCED="$ROOT/PromoteToKing_v2.11.0_R6_FORCED_FAIL.run"
+          cp "$BUILD/PromoteToKing_v2.11.0_R6_CANONICAL_RECRUITMENT_INSTALLER.run" "$FORCED"
+          python3 - "$FORCED" <<'PY'
+          from pathlib import Path
+          import sys
+          path=Path(sys.argv[1])
+          text=path.read_text()
+          marker='__P2K_V2110_R6_PAYLOAD_BELOW__\n'
+          head,payload=text.split(marker,1)
+          old="grep -Fq 'OAuth Bearer full throttle' \"$TARGET/assets/js/pages/v2-11-0.js\" || fail 'Installed OAuth full-throttle Recruitment verification failed.'"
+          new="grep -Fq '__FORCED_R6_ROLLBACK_FAILURE__' \"$TARGET/assets/js/pages/v2-11-0.js\" || fail 'Installed OAuth full-throttle Recruitment verification failed.'"
+          if old not in head: raise SystemExit('forced failure anchor not found')
+          path.write_text(head.replace(old,new,1)+marker+payload)
+          PY
+          chmod +x "$FORCED"
+
+          ROLLBACK="$ROOT/rollback"
+          seed_fixture "$ROLLBACK" 'ROLLBACK_SENTINEL'
+          (cd "$ROLLBACK" && find ClubIntelligence.html ui-v2.html assets/js/site-config.js assets/js/pages/dashboard-v2.js assets/js/pages/ui-version-gate.js assets/js/pages/v2-11-0.js assets/js/pages/v2-11-0-green-primary.js assets/js/pages/v2-11-0-r2-admin-stability.js server/team-points/public/recruitment-admin.php server/team-points/public/intelligence.php server/team-points/public/data-reconciliation.php VERSION -type f -print0 | sort -z | xargs -0 sha256sum) > "$ROOT/rollback-before.sha"
+          set +e
+          "$FORCED" "$ROLLBACK" > "$ROOT/forced-failure.log" 2>&1
+          STATUS=$?
+          set -e
+          test "$STATUS" -ne 0
+          grep -Fq 'restoring pre-2.11.0 R6 files' "$ROOT/forced-failure.log"
+          (cd "$ROLLBACK" && find ClubIntelligence.html ui-v2.html assets/js/site-config.js assets/js/pages/dashboard-v2.js assets/js/pages/ui-version-gate.js assets/js/pages/v2-11-0.js assets/js/pages/v2-11-0-green-primary.js assets/js/pages/v2-11-0-r2-admin-stability.js server/team-points/public/recruitment-admin.php server/team-points/public/intelligence.php server/team-points/public/data-reconciliation.php VERSION -type f -print0 | sort -z | xargs -0 sha256sum) > "$ROOT/rollback-after.sha"
+          diff -u "$ROOT/rollback-before.sha" "$ROOT/rollback-after.sha"
+          test ! -e "$ROLLBACK/assets/js/pages/v2-11-0-green-freshness.js"
+          test ! -e "$ROLLBACK/server/team-points/src/GreenFreshnessService.php"
+          test ! -e "$ROLLBACK/RELEASE_NOTES_v2.11.0_R6.md"
+          test ! -e "$ROLLBACK/R6_SOURCE_HEAD.txt"
+          grep -qx 'ROLLBACK_SENTINEL' "$ROLLBACK/data/unrelated-runtime.txt"
+          grep -qx 'ROLLBACK_SENTINEL-config' "$ROLLBACK/config/config.local.php"
+
+      - name: Finalize and verify downloadable package
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUILD=build-v2110-r6
+          rm -rf "$BUILD/payload" "$BUILD/payload.tar.gz"
+          (cd "$BUILD" && zip -q PromoteToKing-v2.11.0-R6-canonical-recruitment.zip PromoteToKing_v2.11.0_R6_CANONICAL_RECRUITMENT_INSTALLER.run install-promote-to-king-2.11.0-R6.sh SHA256SUMS_v2.11.0_R6.txt SOURCE_FILES_v2.11.0_R6.txt RELEASE_NOTES_v2.11.0_R6.md)
+          (cd "$BUILD" && sha256sum PromoteToKing-v2.11.0-R6-canonical-recruitment.zip > SHA256SUMS_v2.11.0_R6_PACKAGE.txt)
+          VERIFY="$(mktemp -d)"
+          trap 'rm -rf "$VERIFY"' EXIT
+          unzip -q "$BUILD/PromoteToKing-v2.11.0-R6-canonical-recruitment.zip" -d "$VERIFY"
+          (cd "$VERIFY" && sha256sum -c SHA256SUMS_v2.11.0_R6.txt)
+          (cd "$BUILD" && sha256sum -c SHA256SUMS_v2.11.0_R6_PACKAGE.txt)
+
+      - name: Archive validated R6 package in branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUILD=build-v2110-r6
+          DEST=release-packages/v2.11.0-R6
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
+          cp "$BUILD/PromoteToKing-v2.11.0-R6-canonical-recruitment.zip" "$DEST/"
+          cp "$BUILD/PromoteToKing_v2.11.0_R6_CANONICAL_RECRUITMENT_INSTALLER.run" "$DEST/"
+          cp "$BUILD/install-promote-to-king-2.11.0-R6.sh" "$DEST/"
+          cp "$BUILD/SHA256SUMS_v2.11.0_R6.txt" "$DEST/"
+          cp "$BUILD/SHA256SUMS_v2.11.0_R6_PACKAGE.txt" "$DEST/"
+          cp "$BUILD/SOURCE_FILES_v2.11.0_R6.txt" "$DEST/"
+          cp "$BUILD/RELEASE_NOTES_v2.11.0_R6.md" "$DEST/"
+          git config user.name 'P2K release automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add "$DEST"
+          git diff --cached --check
+          git commit -m 'chore(release): archive v2.11.0 R6 package'
+          git push origin HEAD:release/v2.11.0
+
+      - name: Upload R6 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: PromoteToKing-v2.11.0-R6-canonical-recruitment
+          path: |
+            build-v2110-r6/PromoteToKing-v2.11.0-R6-canonical-recruitment.zip
+            build-v2110-r6/PromoteToKing_v2.11.0_R6_CANONICAL_RECRUITMENT_INSTALLER.run
+            build-v2110-r6/install-promote-to-king-2.11.0-R6.sh
+            build-v2110-r6/SHA256SUMS_v2.11.0_R6.txt
+            build-v2110-r6/SHA256SUMS_v2.11.0_R6_PACKAGE.txt
+            build-v2110-r6/SOURCE_FILES_v2.11.0_R6.txt
+            build-v2110-r6/RELEASE_NOTES_v2.11.0_R6.md
+          retention-days: 30
