@@ -186,6 +186,7 @@ try {
     if ($action === 'start-gab') {
         $restart=!empty($body['restart']);
         $gab=(new GreenAnalyticsBootstrap($repo))->start($restart);
+        // Green remains the only runtime target. Compatibility work never re-enables Blue.
         $state=$repo->setControl(['worker_target'=>'green','client_ingest_target'=>'green']);
         GreenConfig::json(['ok'=>true,'production_gate'=>false,'gab'=>$gab,'state'=>$state]);
     }
