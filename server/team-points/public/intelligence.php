@@ -44,37 +44,22 @@ try{
         $telemetry=RuntimeTelemetry::summary(7)['acamr']??[];
         $fresh=$greenFreshness->report();
         $coverage=is_array($fresh['coverage']??null)?$fresh['coverage']:[];
+        $green=is_array($fresh['green']??null)?$fresh['green']:[];
+        $matches=is_array($green['matches']??null)?$green['matches']:[];
+        // The legacy ACAMR planner is disabled when Green owns browser ingest. Do not
+        // reinterpret Green current-match debt as the old per-player `matches` class.
         $telemetry['freshness']=[
             'current_members'=>(int)($coverage['current_members']??0),
-            'player_matches_due'=>(int)($coverage['player_matches_due']??0),
-            'player_matches_never_checked'=>(int)($coverage['player_matches_never_checked']??0),
-            'player_matches_fresh_percent'=>(float)($coverage['player_matches_fresh_percent']??0),
-            'player_matches_operational_due'=>(int)($coverage['player_matches_operational_due']??0),
-            'player_matches_operational_fresh_percent'=>(float)($coverage['player_matches_operational_fresh_percent']??0),
             'player_stats_due'=>(int)($coverage['player_stats_due']??0),
             'player_stats_never_checked'=>(int)($coverage['player_stats_never_checked']??0),
             'player_stats_fresh_percent'=>(float)($coverage['player_stats_fresh_percent']??0),
-            'player_stats_operational_due'=>(int)($coverage['player_stats_operational_due']??0),
-            'player_stats_operational_fresh_percent'=>(float)($coverage['player_stats_operational_fresh_percent']??0),
+            'current_matches_due'=>(int)($matches['current_due']??0),
+            'current_matches_fresh_percent'=>(float)($matches['current_fresh_percent']??0),
             'source'=>'green_native_core',
         ];
         $telemetry['warnings']=[];
-        $plans30=(int)($telemetry['successful_plans_30m']??0);
-        $classes=is_array($telemetry['work_classes']??null)?$telemetry['work_classes']:[];
-        foreach([
-            'matches'=>['due'=>(int)($coverage['player_matches_due']??0),'label'=>'Current matches'],
-            'stats'=>['due'=>(int)($coverage['player_stats_due']??0),'label'=>'Player stats'],
-        ] as $kind=>$state){
-            $recent=is_array($classes[$kind]['recent_30m']??null)?$classes[$kind]['recent_30m']:[];
-            $handed=(int)($recent['handed_out']??0);$ok=(int)($recent['browser_fetched_ok']??0);$failed=(int)($recent['browser_fetch_failed']??0);$accepted=(int)($recent['observations_accepted']??0);
-            if($state['due']>0&&$plans30>=3&&$handed===0){
-                $telemetry['warnings'][]=['code'=>'POSSIBLE_WORK_CLASS_STARVATION','class'=>$kind,'severity'=>'warning','message'=>$state['label'].' has due work but received no ACAMR tasks during at least three successful planning cycles in the last 30 minutes.'];
-            }elseif($handed>=3&&$ok===0&&$failed>=3){
-                $telemetry['warnings'][]=['code'=>'WORK_CLASS_FETCH_FAILURE','class'=>$kind,'severity'=>'warning','message'=>$state['label'].' tasks are being handed out but recent browser fetches are failing.'];
-            }elseif($ok>=3&&$accepted===0){
-                $telemetry['warnings'][]=['code'=>'WORK_CLASS_OBSERVATION_STALL','class'=>$kind,'severity'=>'warning','message'=>$state['label'].' browser fetches succeeded but no ACAMR observations were accepted in the last 30 minutes.'];
-            }
-        }
+        $telemetry['planner_state']='retired_green_primary';
+        $telemetry['legacy_work_class_warnings_applicable']=false;
         return $telemetry;
     };
 
