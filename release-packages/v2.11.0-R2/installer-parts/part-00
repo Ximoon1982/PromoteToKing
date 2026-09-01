@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+umask 077
+
+RELEASE="2.11.0 R2"
+BASE_VERSION="2.11.0"
+DEFAULT_TARGET="/homepages/43/d141198007/htdocs/PromoteToKing"
+TARGET="${1:-${P2K_TARGET:-$DEFAULT_TARGET}}"
+SELF="$0"
+EXPECTED_PAYLOAD_SHA="e79dbe4fe975fadd0d1c77b1a2b0a10205ba3a347401347198eb9899677b63e1"
+TMP=""
+BACKUP_DIR=""
+TRANSACTION_ACTIVE=0
+ROLLBACK_RUNNING=0
+
+log(){ printf '[P2K %s] %s\n' "$RELEASE" "$*"; }
+warn(){ printf '[P2K %s] WARNING: %s\n' "$RELEASE" "$*" >&2; }
+die(){ printf '[P2K %s] ERROR: %s\n' "$RELEASE" "$*" >&2; exit 1; }
+cleanup(){ [[ -n "${TMP:-}" && -d "$TMP" ]] && rm -rf "$TMP" || true; }
+
+restore_files(){
+  [[ -n "$BACKUP_DIR" && -d "$BACKUP_DIR" ]] || return 0
+  if [[ -f "$BACKUP_DIR/existing-files.txt" ]]; then
+    while IFS= read -r rel; do
+      [[ -n "$rel" ]] || continue
+      mkdir -p "$TARGET/$(dirname "$rel")"
+      cp -p "$BACKUP_DIR/files/$rel" "$TARGET/$rel"
+    done < "$BACKUP_DIR/existing-files.txt"
+  fi
+  if [[ -f "$BACKUP_DIR/created-files.txt" ]]; then
+    while IFS= read -r rel; do [[ -n "$rel" ]] && rm -f "$TARGET/$rel"; done < "$BACKUP_DIR/created-files.txt"
+  fi
+}
+rollback(){
+  local rc="${1:-1}"
+  [[ "$ROLLBACK_RUNNING" -eq 0 ]] || exit "$rc"
+  ROLLBACK_RUNNING=1
+  trap - ERR
+  warn "R2 installation failed; restoring the exact pre-R2 files."
+  restore_files || warn "One or more file restore operations reported an error."
+  TRANSACTION_ACTIVE=0
+  warn "Rollback complete. Backup retained at: $BACKUP_DIR"
+  cleanup
+  exit "$rc"
+}
+on_err(){ local rc=$?; if [[ "$TRANSACTION_ACTIVE" -eq 1 ]]; then rollback "$rc"; fi; cleanup; exit "$rc"; }
+trap on_err ERR
+trap cleanup EXIT
+
+[[ -d "$TARGET" ]] || die "Target directory does not exist: $TARGET"
+[[ -f "$TARGET/VERSION" ]] || die "Target VERSION file is missing."
+CURRENT_VERSION="$(tr -d '\r\n ' < "$TARGET/VERSION")"
+[[ "$CURRENT_VERSION" == "$BASE_VERSION" ]] || die "R2 requires deployed VERSION $BASE_VERSION; found $CURRENT_VERSION."
+
+for cmd in base64 sha256sum tar mktemp grep sed cp mkdir dirname awk tail install date tr; do command -v "$cmd" >/dev/null 2>&1 || die "Required command is unavailable: $cmd"; done
+
+for f in ui-v2.html TaskControl.html MatchCreationAnalyzer.htm assets/js/site-config.js; do [[ -f "$TARGET/$f" ]] || die "Required production file is missing: $f"; done
+
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/p2k-v2110-r2.XXXXXX")"
+PAYLOAD="$TMP/payload.tar.gz"
+PAYLOAD_DIR="$TMP/payload"
+mkdir -p "$PAYLOAD_DIR"
+MARKER_LINE="$(awk '/^__P2K_R2_PAYLOAD_BELOW__$/ {print NR+1; exit}' "$SELF")"
+[[ -n "$MARKER_LINE" ]] || die "Installer payload marker is missing."
+tail -n +"$MARKER_LINE" "$SELF" | base64 -d > "$PAYLOAD"
+ACTUAL_PAYLOAD_SHA="$(sha256sum "$PAYLOAD" | awk '{print $1}')"
+[[ "$ACTUAL_PAYLOAD_SHA" == "$EXPECTED_PAYLOAD_SHA" ]] || die "Embedded payload checksum mismatch."
+tar -xzf "$PAYLOAD" -C "$PAYLOAD_DIR"
+(cd "$PAYLOAD_DIR" && sha256sum -c INSTALLER_PAYLOAD_SHA256SUMS.txt >/dev/null) || die "Payload file checksum verification failed."
+
+if command -v node >/dev/null 2>&1; then
+  node --check "$PAYLOAD_DIR/assets/js/site-config.js" >/dev/null || die "site-config.js syntax check failed."
+  node --check "$PAYLOAD_DIR/assets/js/pages/v2-11-0-r2-admin-stability.js" >/dev/null || die "R2 stability module syntax check failed."
+fi
+grep -Fq 'v2-11-0-r2-admin-stability.js?v=2.11.0-r2' "$PAYLOAD_DIR/assets/js/site-config.js" || die "R2 loader marker missing from site-config payload."
+grep -Fq 'function ensureRecruitmentCard()' "$PAYLOAD_DIR/assets/js/pages/v2-11-0-r2-admin-stability.js" || die "Recruitment stability marker missing."
+grep -Fq 'function cleanupTaskControl()' "$PAYLOAD_DIR/assets/js/pages/v2-11-0-r2-admin-stability.js" || die "Maintenance cleanup marker missing."
+grep -Fq 'function embeddedHeightSender()' "$PAYLOAD_DIR/assets/js/pages/v2-11-0-r2-admin-stability.js" || die "Embedded-frame stability marker missing."
+
+CACHE_PAGES=(
+  ui-v2.html TeamPointsAdmin.html TaskControl.html MatchCreationAnalyzer.htm AnalyzeMatches.htm
+  ChallengeListAssistant.html AnalyzeMatch.html ClubIntelligence.html InsightsHealth.html
+  DataReconciliation.html TournamentManagement.html TaskLogs.html
+)
+TOUCHED=(assets/js/site-config.js assets/js/pages/v2-11-0-r2-admin-stability.js RELEASE_NOTES_v2.11.0_R2.md)
+for rel in "${CACHE_PAGES[@]}"; do [[ -f "$TARGET/$rel" ]] && TOUCHED+=("$rel"); done
+
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+BACKUP_DIR="$TARGET/data/release-backups/v2.11.0-R2-$STAMP"
+mkdir -p "$BACKUP_DIR/files"
+: > "$BACKUP_DIR/existing-files.txt"
+: > "$BACKUP_DIR/created-files.txt"
+for rel in "${TOUCHED[@]}"; do
+  if [[ -e "$TARGET/$rel" ]]; then
+    mkdir -p "$BACKUP_DIR/files/$(dirname "$rel")"
+    cp -p "$TARGET/$rel" "$BACKUP_DIR/files/$rel"
+    printf '%s\n' "$rel" >> "$BACKUP_DIR/existing-files.txt"
+  else
+    printf '%s\n' "$rel" >> "$BACKUP_DIR/created-files.txt"
+  fi
+done
+cp "$PAYLOAD_DIR/INSTALLER_PAYLOAD_SHA256SUMS.txt" "$BACKUP_DIR/payload-sha256s.txt"
+printf 'version=%s\nrevision=R2\npayload_sha256=%s\n' "$CURRENT_VER
