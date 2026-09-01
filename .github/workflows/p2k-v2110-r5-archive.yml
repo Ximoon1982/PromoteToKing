@@ -1,0 +1,14 @@
+name: P2K v2.11.0 R5 archive (frozen)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen:
+    runs-on: ubuntu-latest
+    steps:
+      - name: R5 archive is permanent
+        run: echo 'Validated R5 artifacts are retained under release-packages/v2.11.0-R5/.'

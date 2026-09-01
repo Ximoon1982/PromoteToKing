@@ -8,12 +8,18 @@ use P2K\TeamPoints\Auth;
 use P2K\TeamPoints\Http;
 use P2K\TeamPoints\PublicReadDatabase;
 
-const P2K_RECRUITMENT_SCHEMA = 1;
+const P2K_RECRUITMENT_SCHEMA = 2;
+const P2K_RECRUITMENT_MAX_CANDIDATES = 100000;
+const P2K_RECRUITMENT_MEMBERSHIP_BATCH_MAX = 2000;
+const P2K_RECRUITMENT_CHECKPOINT_MAX = 500;
 
 function p2k_recruitment_dir(): string
 {
     $config = p2k_tp_config();
-    $base = rtrim((string)($config['storage']['runtime_dir'] ?? dirname(__DIR__, 3) . '/data/runtime-v280'), '/\\');
+    $configured = trim((string)($config['storage']['runtime_dir'] ?? ''));
+    $base = $configured !== ''
+        ? rtrim($configured, '/\\')
+        : dirname(__DIR__, 3) . '/data/runtime-v280';
     $dir = $base . '/recruitment-admin';
     if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
         throw new RuntimeException('Unable to create the recruitment runtime directory.');
@@ -86,7 +92,7 @@ function p2k_recruitment_normalize_pool(mixed $input): array
         if ($username === '' || isset($seen[$key])) continue;
         $seen[$key] = true;
         $out[] = $username;
-        if (count($out) >= 10000) break;
+        if (count($out) >= P2K_RECRUITMENT_MAX_CANDIDATES) break;
     }
     return $out;
 }
@@ -113,7 +119,6 @@ function p2k_recruitment_criteria(array $body): array
         'maxSpm' => p2k_recruitment_number($body, 'maxSpm', null),
         'minAge' => p2k_recruitment_number($body, 'minAge', null),
         'excludeFormer' => !empty($body['excludeFormer']),
-        'parallelWorkers' => max(1, min(12, (int)($body['parallelWorkers'] ?? 4))),
     ];
     foreach (['minRating','maxRating','maxTimeout','maxRd','minGames','maxGames','minCompleted','maxOffline','maxSpm','minAge'] as $key) {
         if ($criteria[$key] !== null && $criteria[$key] < 0) {
@@ -135,15 +140,58 @@ function p2k_recruitment_metric(array $data, string $field): ?float
     return is_numeric($data[$field]) ? (float)$data[$field] : null;
 }
 
-function p2k_recruitment_membership_state(PDO $pdo, string $club, string $username): string
+/**
+ * Resolve Recruitment membership directly from canonical Green identity/player data.
+ * Returns lowercase input username => current|former|none.
+ */
+function p2k_recruitment_membership_states(PDO $pdo, array $usernames): array
 {
-    $key = function_exists('p2k_tp_username_key') ? p2k_tp_username_key($username) : strtolower(trim($username));
-    if ($key === '') return 'none';
-    $query = $pdo->prepare('SELECT current_member FROM p2k_tp_members WHERE club_slug=? AND username_key=? LIMIT 1');
-    $query->execute([$club, $key]);
-    $row = $query->fetch();
-    if (!is_array($row)) return 'none';
-    return !empty($row['current_member']) ? 'current' : 'former';
+    $input = [];
+    foreach ($usernames as $raw) {
+        $username = p2k_recruitment_username((string)$raw);
+        if ($username === '') continue;
+        $input[strtolower($username)] = $username;
+    }
+    $states = array_fill_keys(array_keys($input), 'none');
+    if ($input === []) return $states;
+
+    foreach (array_chunk(array_keys($input), 500) as $keys) {
+        $marks = implode(',', array_fill(0, count($keys), '?'));
+
+        $q = $pdo->prepare("SELECT username_key,current_member FROM p2k_g_players WHERE username_key IN ({$marks})");
+        $q->execute($keys);
+        foreach ($q->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $key = strtolower((string)($row['username_key'] ?? ''));
+            if (isset($states[$key])) $states[$key] = !empty($row['current_member']) ? 'current' : 'former';
+        }
+
+        $q = $pdo->prepare("SELECT m.username_key,p.current_member
+            FROM p2k_g_identity_map m
+            JOIN p2k_g_players p ON p.username_key=m.canonical_username_key
+            WHERE m.username_key IN ({$marks})");
+        $q->execute($keys);
+        foreach ($q->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $key = strtolower((string)($row['username_key'] ?? ''));
+            if (isset($states[$key])) $states[$key] = !empty($row['current_member']) ? 'current' : 'former';
+        }
+
+        $q = $pdo->prepare("SELECT a.username_key,p.current_member
+            FROM p2k_g_player_aliases a
+            JOIN p2k_g_players p ON p.chess_player_id=a.chess_player_id
+            WHERE a.username_key IN ({$marks})");
+        $q->execute($keys);
+        foreach ($q->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $key = strtolower((string)($row['username_key'] ?? ''));
+            if (isset($states[$key])) $states[$key] = !empty($row['current_member']) ? 'current' : 'former';
+        }
+    }
+    return $states;
+}
+
+function p2k_recruitment_membership_state(PDO $pdo, string $username): string
+{
+    $states = p2k_recruitment_membership_states($pdo, [$username]);
+    return $states[strtolower(p2k_recruitment_username($username))] ?? 'none';
 }
 
 function p2k_recruitment_evaluate(array $data, array $criteria): array
@@ -158,7 +206,8 @@ function p2k_recruitment_evaluate(array $data, array $criteria): array
     if ($p2k === 'current') $fail[] = 'already current P2K member';
     if (!empty($criteria['excludeFormer']) && $p2k === 'former') $fail[] = 'former P2K member';
 
-    if (!$closed && $error === '') {
+    $membershipRejected = $p2k === 'current' || (!empty($criteria['excludeFormer']) && $p2k === 'former');
+    if (!$closed && $error === '' && !$membershipRejected) {
         $checks = [
             ['daily_rating', 'minRating', 'min', 'Daily rating below minimum', 'Daily rating unavailable'],
             ['daily_rating', 'maxRating', 'max', 'Daily rating above maximum', 'Daily rating unavailable'],
@@ -175,10 +224,7 @@ function p2k_recruitment_evaluate(array $data, array $criteria): array
             $limit = $criteria[$criterion] ?? null;
             if ($limit === null) continue;
             $value = p2k_recruitment_metric($data, $field);
-            if ($value === null) {
-                $fail[] = $missing;
-                continue;
-            }
+            if ($value === null) { $fail[] = $missing; continue; }
             if (($mode === 'min' && $value < (float)$limit) || ($mode === 'max' && $value > (float)$limit)) $fail[] = $message;
         }
     }
@@ -191,7 +237,7 @@ function p2k_recruitment_evaluate(array $data, array $criteria): array
     ];
 }
 
-function p2k_recruitment_public_run(array $run): array
+function p2k_recruitment_public_run(array $run, bool $includeCandidates = true, bool $includeResults = true): array
 {
     if ($run === []) return [];
     $candidates = array_values((array)($run['candidates'] ?? []));
@@ -205,7 +251,6 @@ function p2k_recruitment_public_run(array $run): array
     });
     $selected = count(array_filter($results, static fn(array $row): bool => !empty($row['selected'])));
     $errors = count(array_filter($results, static fn(array $row): bool => trim((string)($row['data']['error'] ?? '')) !== ''));
-    $run['results'] = $results;
     $run['summary'] = [
         'total' => count($candidates),
         'checked' => count($results),
@@ -213,6 +258,8 @@ function p2k_recruitment_public_run(array $run): array
         'selected' => $selected,
         'errors' => $errors,
     ];
+    if ($includeCandidates) $run['candidates'] = $candidates; else unset($run['candidates']);
+    if ($includeResults) $run['results'] = $results; else unset($run['results']);
     return $run;
 }
 
@@ -228,6 +275,7 @@ try {
             'updatedAt'=>null,
             'candidates'=>[],
         ]);
+        $pool['maximumCandidates'] = P2K_RECRUITMENT_MAX_CANDIDATES;
         Http::json(['ok'=>true,'pool'=>$pool,'run'=>p2k_recruitment_public_run(p2k_recruitment_read('run', []))]);
     }
 
@@ -240,10 +288,27 @@ try {
             'schemaVersion'=>P2K_RECRUITMENT_SCHEMA,
             'revision'=>(int)($current['revision']??0)+1,
             'updatedAt'=>gmdate(DATE_ATOM),
+            'maximumCandidates'=>P2K_RECRUITMENT_MAX_CANDIDATES,
             'candidates'=>$candidates,
         ];
         p2k_recruitment_write('pool', $pool);
         Http::json(['ok'=>true,'pool'=>$pool]);
+    }
+
+    if ($action === 'membership-batch') {
+        Http::method('POST');
+        $body = Http::body();
+        $raw = is_array($body['usernames'] ?? null) ? $body['usernames'] : [];
+        if (count($raw) > P2K_RECRUITMENT_MEMBERSHIP_BATCH_MAX) {
+            throw new ApiException('Membership batch exceeds the supported size.', 400, 'MEMBERSHIP_BATCH_TOO_LARGE');
+        }
+        $usernames = [];
+        foreach ($raw as $value) {
+            $username = p2k_recruitment_username((string)$value);
+            if ($username !== '') $usernames[] = $username;
+        }
+        $states = p2k_recruitment_membership_states(PublicReadDatabase::core(), $usernames);
+        Http::json(['ok'=>true,'states'=>$states,'count'=>count($states),'source'=>'green_native_core']);
     }
 
     if ($action === 'start') {
@@ -255,25 +320,13 @@ try {
         $requestedCriteria = p2k_recruitment_criteria(is_array($body['criteria'] ?? null) ? $body['criteria'] : []);
         $run = p2k_recruitment_locked_run(static function(array $existing) use ($candidates, $pool, $requestedCriteria): array {
             $poolHash = hash('sha256', json_encode(array_map('strtolower', $candidates), JSON_UNESCAPED_SLASHES));
-            $resumable = $existing !== []
-                && ($existing['poolHash'] ?? '') === $poolHash
-                && !in_array((string)($existing['status'] ?? ''), ['completed','stopped'], true);
-            if ($resumable) {
-                $existing['status'] = 'running';
-                $existing['updatedAt'] = gmdate(DATE_ATOM);
-                return $existing;
-            }
+            $resumable = $existing !== [] && ($existing['poolHash'] ?? '') === $poolHash && !in_array((string)($existing['status'] ?? ''), ['completed','stopped'], true);
+            if ($resumable) { $existing['status'] = 'running'; $existing['updatedAt'] = gmdate(DATE_ATOM); return $existing; }
             return [
                 'schemaVersion'=>P2K_RECRUITMENT_SCHEMA,
                 'id'=>gmdate('Ymd\THis\Z') . '-' . bin2hex(random_bytes(3)),
-                'status'=>'running',
-                'createdAt'=>gmdate(DATE_ATOM),
-                'updatedAt'=>gmdate(DATE_ATOM),
-                'poolRevision'=>(int)($pool['revision']??0),
-                'poolHash'=>$poolHash,
-                'criteria'=>$requestedCriteria,
-                'candidates'=>$candidates,
-                'results'=>[],
+                'status'=>'running','createdAt'=>gmdate(DATE_ATOM),'updatedAt'=>gmdate(DATE_ATOM),
+                'poolRevision'=>(int)($pool['revision']??0),'poolHash'=>$poolHash,'criteria'=>$requestedCriteria,'candidates'=>$candidates,'results'=>[],
             ];
         });
         Http::json(['ok'=>true,'run'=>p2k_recruitment_public_run($run)]);
@@ -284,16 +337,13 @@ try {
         $run = p2k_recruitment_locked_run(static function(array $run): array {
             if ($run === []) throw new ApiException('No recruitment run exists.', 404, 'NO_RUN');
             if (($run['status'] ?? '') !== 'completed') $run['status'] = 'paused';
-            $run['updatedAt'] = gmdate(DATE_ATOM);
-            return $run;
+            $run['updatedAt'] = gmdate(DATE_ATOM); return $run;
         });
-        Http::json(['ok'=>true,'run'=>p2k_recruitment_public_run($run)]);
+        Http::json(['ok'=>true,'run'=>p2k_recruitment_public_run($run, false, false)]);
     }
 
     if ($action === 'restart') {
-        Http::method('POST');
-        p2k_recruitment_locked_run(static fn(array $run): array => []);
-        Http::json(['ok'=>true,'run'=>[]]);
+        Http::method('POST'); p2k_recruitment_locked_run(static fn(array $run): array => []); Http::json(['ok'=>true,'run'=>[]]);
     }
 
     if ($action === 'checkpoint') {
@@ -301,30 +351,26 @@ try {
         $body = Http::body();
         $runId = trim((string)($body['runId'] ?? ''));
         if ($runId === '') throw new ApiException('Recruitment run ID is required.', 400, 'RUN_ID_REQUIRED');
-        $incoming = is_array($body['results'] ?? null) ? array_slice($body['results'], 0, 50) : [];
+        $incoming = is_array($body['results'] ?? null) ? array_slice($body['results'], 0, P2K_RECRUITMENT_CHECKPOINT_MAX) : [];
         if ($incoming === []) throw new ApiException('No recruitment results supplied.', 400, 'EMPTY_CHECKPOINT');
 
-        $config = p2k_tp_config();
-        $club = strtolower((string)($config['app']['club_slug'] ?? 'promote-to-king'));
         $core = PublicReadDatabase::core();
+        $incomingNames = [];
+        foreach ($incoming as $row) if (is_array($row)) $incomingNames[] = (string)($row['username'] ?? '');
+        $membership = p2k_recruitment_membership_states($core, $incomingNames);
+        $accepted = [];
 
-        $run = p2k_recruitment_locked_run(static function(array $run) use ($incoming, $runId, $core, $club): array {
+        $run = p2k_recruitment_locked_run(static function(array $run) use ($incoming, $runId, $membership, &$accepted): array {
             if ($run === []) throw new ApiException('No recruitment run exists.', 404, 'NO_RUN');
-            if (!hash_equals((string)($run['id'] ?? ''), $runId)) {
-                throw new ApiException('The recruitment run changed. Reload before checkpointing more results.', 409, 'RUN_CHANGED');
-            }
+            if (!hash_equals((string)($run['id'] ?? ''), $runId)) throw new ApiException('The recruitment run changed. Reload before checkpointing more results.', 409, 'RUN_CHANGED');
             if (($run['status'] ?? '') === 'paused') throw new ApiException('The recruitment run is paused.', 409, 'RUN_PAUSED');
             if (($run['status'] ?? '') === 'completed') throw new ApiException('The recruitment run is already complete.', 409, 'RUN_COMPLETED');
 
             $candidateKeys = [];
-            foreach ((array)($run['candidates'] ?? []) as $candidate) {
-                $candidateKeys[strtolower((string)$candidate)] = (string)$candidate;
-            }
+            foreach ((array)($run['candidates'] ?? []) as $candidate) $candidateKeys[strtolower((string)$candidate)] = (string)$candidate;
             $results = is_array($run['results'] ?? null) ? array_values($run['results']) : [];
             $byKey = [];
-            foreach ($results as $index => $row) {
-                if (is_array($row)) $byKey[strtolower((string)($row['username'] ?? ''))] = $index;
-            }
+            foreach ($results as $index => $row) if (is_array($row)) $byKey[strtolower((string)($row['username'] ?? ''))] = $index;
 
             foreach ($incoming as $row) {
                 if (!is_array($row)) continue;
@@ -333,74 +379,42 @@ try {
                 if ($username === '' || !isset($candidateKeys[$key])) continue;
                 $data = is_array($row['data'] ?? null) ? $row['data'] : [];
                 $safe = [
-                    'daily_rating'=>p2k_recruitment_metric($data,'daily_rating'),
-                    'timeout_percent'=>p2k_recruitment_metric($data,'timeout_percent'),
-                    'current_daily_games'=>p2k_recruitment_metric($data,'current_daily_games'),
-                    'daily_rd'=>p2k_recruitment_metric($data,'daily_rd'),
-                    'completed_daily_games'=>p2k_recruitment_metric($data,'completed_daily_games'),
-                    'avg_seconds_per_move'=>p2k_recruitment_metric($data,'avg_seconds_per_move'),
-                    'last_online_days'=>p2k_recruitment_metric($data,'last_online_days'),
-                    'account_age_days'=>p2k_recruitment_metric($data,'account_age_days'),
-                    'p2k_state'=>p2k_recruitment_membership_state($core, $club, $candidateKeys[$key]),
-                    'closed'=>!empty($data['closed']),
-                    'error'=>trim(substr((string)($data['error']??''),0,500)),
+                    'daily_rating'=>p2k_recruitment_metric($data,'daily_rating'),'timeout_percent'=>p2k_recruitment_metric($data,'timeout_percent'),
+                    'current_daily_games'=>p2k_recruitment_metric($data,'current_daily_games'),'daily_rd'=>p2k_recruitment_metric($data,'daily_rd'),
+                    'completed_daily_games'=>p2k_recruitment_metric($data,'completed_daily_games'),'avg_seconds_per_move'=>p2k_recruitment_metric($data,'avg_seconds_per_move'),
+                    'last_online_days'=>p2k_recruitment_metric($data,'last_online_days'),'account_age_days'=>p2k_recruitment_metric($data,'account_age_days'),
+                    'p2k_state'=>$membership[$key] ?? 'none','closed'=>!empty($data['closed']),'error'=>trim(substr((string)($data['error']??''),0,500)),
                 ];
                 $evaluation = p2k_recruitment_evaluate($safe, (array)($run['criteria'] ?? []));
-                $record = [
-                    'username'=>$candidateKeys[$key],
-                    'checkedAt'=>gmdate(DATE_ATOM),
-                    'data'=>$safe,
-                ] + $evaluation;
-                if (isset($byKey[$key])) $results[$byKey[$key]] = $record;
-                else {
-                    $byKey[$key] = count($results);
-                    $results[] = $record;
-                }
+                $record = ['username'=>$candidateKeys[$key],'checkedAt'=>gmdate(DATE_ATOM),'data'=>$safe] + $evaluation;
+                if (isset($byKey[$key])) $results[$byKey[$key]] = $record; else { $byKey[$key] = count($results); $results[] = $record; }
+                $accepted[] = $record;
             }
-
             $run['results'] = $results;
             if (count($results) >= count((array)($run['candidates'] ?? []))) $run['status'] = 'completed';
-            $run['updatedAt'] = gmdate(DATE_ATOM);
-            return $run;
+            $run['updatedAt'] = gmdate(DATE_ATOM); return $run;
         });
-        Http::json(['ok'=>true,'run'=>p2k_recruitment_public_run($run)]);
+        Http::json(['ok'=>true,'run'=>p2k_recruitment_public_run($run, false, false),'results'=>$accepted]);
     }
 
     if ($action === 'csv') {
         Http::method('GET');
         $run = p2k_recruitment_read('run', []);
         if ($run === []) throw new ApiException('No recruitment run exists.', 404, 'NO_RUN');
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="p2k-recruitment-selected.csv"');
-        header('Cache-Control: no-store');
-        $out = fopen('php://output', 'wb');
-        if ($out === false) throw new RuntimeException('Unable to open CSV output.');
+        header('Content-Type: text/csv; charset=utf-8'); header('Content-Disposition: attachment; filename="p2k-recruitment-selected.csv"'); header('Cache-Control: no-store');
+        $out = fopen('php://output', 'wb'); if ($out === false) throw new RuntimeException('Unable to open CSV output.');
         fputcsv($out, ['username','daily_rating','timeout_percent','current_daily_games','daily_rd','completed_daily_games','avg_seconds_per_move','last_online_days','account_age_days','p2k_state','decision_reason'], ',', '"', '');
         foreach ((array)($run['results'] ?? []) as $row) {
-            if (!is_array($row) || empty($row['selected'])) continue;
-            $d = is_array($row['data'] ?? null) ? $row['data'] : [];
-            fputcsv($out, [
-                $row['username']??'',
-                $d['daily_rating']??'',
-                $d['timeout_percent']??'',
-                $d['current_daily_games']??'',
-                $d['daily_rd']??'',
-                $d['completed_daily_games']??'',
-                $d['avg_seconds_per_move']??'',
-                $d['last_online_days']??'',
-                $d['account_age_days']??'',
-                $d['p2k_state']??'',
-                $row['reason']??'',
-            ], ',', '"', '');
+            if (!is_array($row) || empty($row['selected'])) continue; $d = is_array($row['data'] ?? null) ? $row['data'] : [];
+            fputcsv($out, [$row['username']??'',$d['daily_rating']??'',$d['timeout_percent']??'',$d['current_daily_games']??'',$d['daily_rd']??'',$d['completed_daily_games']??'',$d['avg_seconds_per_move']??'',$d['last_online_days']??'',$d['account_age_days']??'',$d['p2k_state']??'',$row['reason']??''], ',', '"', '');
         }
-        fclose($out);
-        exit;
+        fclose($out); exit;
     }
 
     throw new ApiException('Unknown recruitment action.', 404, 'UNKNOWN_ACTION');
-} catch (ApiException $e) {
+} catch(ApiException $e) {
     Http::json(['ok'=>false,'error'=>['code'=>$e->errorCode,'message'=>$e->getMessage()]], $e->httpStatus);
-} catch (Throwable $e) {
+} catch(Throwable $e) {
     error_log('P2K recruitment admin: ' . $e);
     Http::json(['ok'=>false,'error'=>['code'=>'SERVER_ERROR','message'=>$e->getMessage()]], 500);
 }

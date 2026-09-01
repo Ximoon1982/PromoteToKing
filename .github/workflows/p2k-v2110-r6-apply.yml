@@ -1,0 +1,67 @@
+name: Apply P2K v2.11.0 R6 canonical Recruitment correction
+
+on:
+  push:
+    branches:
+      - release/v2.11.0
+    paths:
+      - .github/workflows/p2k-v2110-r6-apply.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-r6:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@v4
+        with:
+          ref: release/v2.11.0
+          fetch-depth: 0
+
+      - name: Apply R6 source correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/release/apply-v2110-r6.py
+
+      - name: Validate R6 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check assets/js/pages/dashboard-v2.js
+          node --check assets/js/pages/v2-11-0.js
+          node --check assets/js/pages/v2-11-0-green-primary.js
+          node --check assets/js/pages/v2-11-0-r2-admin-stability.js
+          node --check assets/js/pages/ui-version-gate.js
+          node --check assets/js/site-config.js
+          php -l server/team-points/public/recruitment-admin.php
+          grep -Fq 'mode:"native",nativeKey:"recruitment"' assets/js/pages/dashboard-v2.js
+          grep -Fq 'id="adminShellNativeDetailHost"' assets/js/pages/dashboard-v2.js
+          grep -Fq 'p2k-admin-shell-route' assets/js/pages/dashboard-v2.js
+          grep -Fq 'page==="administration"' assets/js/pages/dashboard-v2.js
+          grep -Fq 'processPriority(pending' assets/js/pages/v2-11-0.js
+          grep -Fq 'OAuth Bearer full throttle' assets/js/pages/v2-11-0.js
+          grep -Fq 'Candidates / second' assets/js/pages/v2-11-0.js
+          grep -Fq 'recruitmentMetricEta' assets/js/pages/v2-11-0.js
+          grep -Fq 'P2K_RECRUITMENT_CHECKPOINT_MAX = 500' server/team-points/public/recruitment-admin.php
+          ! grep -Fq 'recruitmentWorkers' assets/js/pages/v2-11-0.js
+          ! grep -Fq 'parallelWorkers' server/team-points/public/recruitment-admin.php
+          ! grep -Fq 'legacyTab.hidden = true' assets/js/pages/v2-11-0-green-primary.js
+          ! grep -Fq 'p2kRecruitmentFirstPaint' assets/js/pages/ui-version-gate.js
+          grep -Fq 'assets/js/pages/dashboard-v2.js?v=2.11.0-r6' ui-v2.html
+          grep -Fq 'assets/js/pages/ui-version-gate.js?v=2.11.0-r6' ui-v2.html
+          grep -Fq 'assets/js/site-config.js?v=2.11.0-r6' ui-v2.html
+          git diff --check
+
+      - name: Commit R6 correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'P2K release automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add assets/js/pages/dashboard-v2.js assets/js/pages/v2-11-0.js assets/js/pages/v2-11-0-green-primary.js assets/js/pages/v2-11-0-r2-admin-stability.js assets/js/pages/ui-version-gate.js assets/js/site-config.js server/team-points/public/recruitment-admin.php ui-v2.html
+          git diff --cached --check
+          git commit -m 'fix(2.11.0): canonical Recruitment routing and OAuth full throttle'
+          git push origin HEAD:release/v2.11.0

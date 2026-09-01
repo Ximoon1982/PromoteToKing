@@ -25,8 +25,8 @@
   });
 
   window.P2K_SITE_CONFIG = Object.freeze({
-    version: "2.10.9.8",
-    builtAt: "2026-09-01T08:46:30Z",
+    version: "2.11.0",
+    builtAt: "2026-09-01T16:30:00Z",
     schemaVersion: 6,
     siteName: existing.siteName || branding.title || "Promote to King",
     siteDescription: existing.siteDescription || branding.subtitle || "Play together. Improve together. Promote to King.",
@@ -40,6 +40,12 @@
         : ["1WL", "TCMAC", "KOTML", "TMCL", "WKCL", "PCL", "CW"]
     ),
     routes,
+    runtime: Object.freeze({
+      ...(existing.runtime || {}),
+      primaryBackend: "green",
+      recoveryBackend: "blue",
+      blueMode: "recovery-only"
+    }),
     serverStorage: Object.freeze({
       challengeClubListEndpoint: existing.serverStorage?.challengeClubListEndpoint || "api/challenge-club-list/",
       matchAssistantLogEndpoint: existing.serverStorage?.matchAssistantLogEndpoint || "api/match-assistant-log/",
@@ -61,41 +67,13 @@
       recruitmentAdminEndpoint: existing.serverStorage?.recruitmentAdminEndpoint || "server/team-points/public/recruitment-admin.php"
     }),
     modelVersions: Object.freeze({
-      matchAssistant: Object.freeze({
-        label: "Match Assistant eligibility and recommendation",
-        version: "FM-32",
-        source: "FindMatch v32"
-      }),
-      upcomingAnalysis: Object.freeze({
-        label: "Upcoming lineup, probability and recruitment",
-        version: "UA-45",
-        source: "Upcoming Matches Analyzer v45"
-      }),
-      matchCreation: Object.freeze({
-        label: "Match Creation scoring and secured outcomes",
-        version: "MC-23",
-        source: "Match Creation Analyzer v23"
-      }),
-      inProgressProjection: Object.freeze({
-        label: "In-progress match score projection",
-        version: "AM-3",
-        source: "Analyze Match v3"
-      }),
-      recruitmentEligibility: Object.freeze({
-        label: "Recruitment candidate eligibility",
-        version: "RM-2",
-        source: "Recruit Match stored-rating top-player model v2"
-      }),
-      challengeValidation: Object.freeze({
-        label: "Challenge validation, error classification, and recommendation",
-        version: "CL-4",
-        source: "Challenge validation and recommendation model v4"
-      }),
-      matchHistory: Object.freeze({
-        label: "Match registration history and probability evolution",
-        version: "MH-1",
-        source: "Match history model v1"
-      })
+      matchAssistant: Object.freeze({ label: "Match Assistant eligibility and recommendation", version: "FM-32", source: "FindMatch v32" }),
+      upcomingAnalysis: Object.freeze({ label: "Upcoming lineup, probability and recruitment", version: "UA-45", source: "Upcoming Matches Analyzer v45" }),
+      matchCreation: Object.freeze({ label: "Match Creation scoring and secured outcomes", version: "MC-23", source: "Match Creation Analyzer v23" }),
+      inProgressProjection: Object.freeze({ label: "In-progress match score projection", version: "AM-3", source: "Analyze Match v3" }),
+      recruitmentEligibility: Object.freeze({ label: "Recruitment candidate eligibility", version: "RM-2", source: "Recruit Match stored-rating top-player model v2" }),
+      challengeValidation: Object.freeze({ label: "Challenge validation, error classification, and recommendation", version: "CL-4", source: "Challenge validation and recommendation model v4" }),
+      matchHistory: Object.freeze({ label: "Match registration history and probability evolution", version: "MH-1", source: "Match history model v1" })
     }),
     api: Object.freeze({
       allowedOrigins: Object.freeze(["https://api.chess.com"]),
@@ -132,9 +110,44 @@
       analytics: existing.features?.analytics !== false,
       diagnostics: existing.features?.diagnostics !== false,
       trafficAnalytics: existing.features?.trafficAnalytics !== false,
-      analysisSynchronization: existing.features?.analysisSynchronization !== false
+      analysisSynchronization: existing.features?.analysisSynchronization !== false,
+      legacyAdministration: false,
+      blueProductionControls: false,
+      dataReconciliation: false
     })
   });
+})();
+
+// v2.11.0 canonical Administration routing. Old adminTool bookmarks remain usable,
+// but retired migration/reconciliation bookmarks land on their supported successors.
+(() => {
+  if (!/\/ui-v2\.html$/i.test(window.location.pathname)) return;
+  const url = new URL(window.location.href);
+  if (url.searchParams.get("page") !== "administration" || !url.searchParams.get("adminTool")) return;
+  const tool = String(url.searchParams.get("adminTool") || "").toLowerCase();
+  const map = {
+    upcoming: ["competitions", "daily", "upcoming"],
+    creation: ["competitions", "daily", "creation"],
+    challenge: ["competitions", "daily", "challenge"],
+    members: ["members", "", ""],
+    tasks: ["maintenance", "tasks", "control"],
+    diagnostics: ["maintenance", "diagnostics", "health"],
+    reconciliation: ["maintenance", "diagnostics", "health"],
+    intelligence: ["opponents", "opponents", "intelligence"],
+    logs: ["maintenance", "", ""],
+    storage: ["maintenance", "", ""],
+    migration: ["maintenance", "tasks", "control"],
+    open: ["competitions", "daily", ""],
+    "live-ranks": ["competitions", "", ""]
+  };
+  const target = map[tool] || ["misc", "", ""];
+  ["page", "adminTool", "adminContext"].forEach(key => url.searchParams.delete(key));
+  url.searchParams.set("ui", "v2");
+  url.searchParams.set("view", "admin");
+  url.searchParams.set("adminCategory", target[0]);
+  if (target[1]) url.searchParams.set("adminDetail", target[1]); else url.searchParams.delete("adminDetail");
+  if (target[2]) url.searchParams.set("adminDetailTab", target[2]); else url.searchParams.delete("adminDetailTab");
+  window.history.replaceState(window.history.state, "", url.href);
 })();
 
 // First-party cookieless traffic analytics. Loading is centralized here so every
@@ -151,15 +164,27 @@
   const script=document.createElement('script');script.src='assets/js/shared/chart-maximize.js?v=2.10.6.24';script.defer=true;script.dataset.p2kChartMaximize='1';const mount=()=>document.head.appendChild(script);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
 
-// Members Insights period/ranking enhancement. The module wraps the lazy Insights
-// factory, so it adds its controls without changing the large dashboard controller.
+// Members Insights period/ranking enhancement.
 (() => {
   if (document.querySelector('script[data-p2k-members-insights-enhancement]')) return;
   const script=document.createElement('script');script.src='assets/js/pages/members-insights-enhancement.js?v=2.10.9.7-members-ranking-2';script.async=false;script.dataset.p2kMembersInsightsEnhancement='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
 
-// v2.10.9.8 Recruitment admin and Members Insights result-coverage alignment.
+// v2.11.0 canonical toggle Administration + Recruitment native detail.
 (() => {
-  if (document.querySelector('script[data-p2k-v21098]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/v2-10-9-8.js?v=2.10.9.8';script.async=false;script.dataset.p2kV21098='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  if (document.querySelector('script[data-p2k-v2110]')) return;
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0.js?v=2.11.0-r6';script.async=false;script.dataset.p2kV2110='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+})();
+
+// Green-primary/retired migration cleanup.
+(() => {
+  if (document.querySelector('script[data-p2k-v2110-green-primary]')) return;
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-green-primary.js?v=2.11.0-r6';script.async=false;script.dataset.p2kV2110GreenPrimary='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+})();
+
+// Admin SPA/frame stability. Recruitment is a native detail and is explicitly
+// excluded from iframe stabilization; actual iframe tools retain dynamic height support.
+(() => {
+  if (document.querySelector('script[data-p2k-v2110-r2-admin-stability]')) return;
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r2-admin-stability.js?v=2.11.0-r6';script.async=false;script.dataset.p2kV2110R2AdminStability='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();

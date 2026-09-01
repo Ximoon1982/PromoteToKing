@@ -1,0 +1,80 @@
+name: Clean P2K v2.11.0 R6 Recruitment route special cases
+
+on:
+  push:
+    branches:
+      - release/v2.11.0
+    paths:
+      - .github/workflows/p2k-v2110-r6-cleanup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup-r6:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout R6 source
+        uses: actions/checkout@v4
+        with:
+          ref: release/v2.11.0
+          fetch-depth: 0
+
+      - name: Remove obsolete Recruitment special cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('assets/js/pages/v2-11-0.js')
+          text=p.read_text()
+          text,count=re.subn(r'\n  function syncEarlyRouteClass\(\) \{.*?\n  \}\n  syncEarlyRouteClass\(\);\n', '\n', text, count=1, flags=re.S)
+          if count != 1: raise SystemExit('syncEarlyRouteClass anchor not found')
+          p.write_text(text)
+
+          p=Path('assets/js/pages/v2-11-0-green-primary.js')
+          text=p.read_text()
+          text,count=re.subn(r'\n  function normalizeRecruitmentWorkers\(\) \{.*?\n  \}\n', '\n', text, count=1, flags=re.S)
+          if count != 1: raise SystemExit('normalizeRecruitmentWorkers anchor not found')
+          old='      if(document.documentElement.classList.contains("p2k-recruitment-route") && frame.id==="adminShellDetailFrame")return;\n'
+          if text.count(old) != 1: raise SystemExit('Green frame route special case not found')
+          text=text.replace(old,'',1)
+          text=text.replace('removeRetiredAdministration(); removeMcaMigrationControls(); normalizeRecruitmentWorkers(); normalizeFrames(); observe();','removeRetiredAdministration(); removeMcaMigrationControls(); normalizeFrames(); observe();',1)
+          text=text.replace('normalizeRoute(); removeRetiredAdministration(); removeMcaMigrationControls(); normalizeRecruitmentWorkers(); normalizeFrames();','normalizeRoute(); removeRetiredAdministration(); removeMcaMigrationControls(); normalizeFrames();',1)
+          if 'normalizeRecruitmentWorkers' in text: raise SystemExit('normalizeRecruitmentWorkers reference remains')
+          p.write_text(text)
+
+          p=Path('assets/js/pages/v2-11-0-r2-admin-stability.js')
+          text=p.read_text()
+          text,count=re.subn(r'\n  function recruitmentRoute\(\) \{.*?\n  \}\n', '\n', text, count=1, flags=re.S)
+          if count != 1: raise SystemExit('R2 recruitmentRoute helper not found')
+          p.write_text(text)
+          PY
+
+      - name: Validate canonical-only Recruitment routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check assets/js/pages/v2-11-0.js
+          node --check assets/js/pages/v2-11-0-green-primary.js
+          node --check assets/js/pages/v2-11-0-r2-admin-stability.js
+          ! grep -Fq 'p2k-recruitment-route' assets/js/pages/v2-11-0.js
+          ! grep -Fq 'p2k-recruitment-route' assets/js/pages/v2-11-0-green-primary.js
+          ! grep -Fq 'p2k-recruitment-route' assets/js/pages/v2-11-0-r2-admin-stability.js
+          ! grep -Fq 'recruitmentWorkers' assets/js/pages/v2-11-0-green-primary.js
+          grep -Fq 'mode:"native",nativeKey:"recruitment"' assets/js/pages/dashboard-v2.js
+          grep -Fq 'if(frameWrap)frameWrap.hidden=true' assets/js/pages/dashboard-v2.js
+          git diff --check
+
+      - name: Commit cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'P2K release automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add assets/js/pages/v2-11-0.js assets/js/pages/v2-11-0-green-primary.js assets/js/pages/v2-11-0-r2-admin-stability.js
+          git diff --cached --check
+          git commit -m 'fix(2.11.0): remove Recruitment route special cases'
+          git push origin HEAD:release/v2.11.0

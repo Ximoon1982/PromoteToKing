@@ -1,0 +1,40 @@
+SION" "$ACTUAL_PAYLOAD_SHA" > "$BACKUP_DIR/transaction.txt"
+TRANSACTION_ACTIVE=1
+
+mkdir -p "$TARGET/assets/js/pages"
+install -m 0644 "$PAYLOAD_DIR/assets/js/site-config.js" "$TARGET/assets/js/site-config.js"
+install -m 0644 "$PAYLOAD_DIR/assets/js/pages/v2-11-0-r2-admin-stability.js" "$TARGET/assets/js/pages/v2-11-0-r2-admin-stability.js"
+install -m 0644 "$PAYLOAD_DIR/RELEASE_NOTES_v2.11.0_R2.md" "$TARGET/RELEASE_NOTES_v2.11.0_R2.md"
+
+patch_cache_key(){
+  local rel="$1"
+  [[ -f "$TARGET/$rel" ]] || return 0
+  if grep -Fq 'assets/js/site-config.js?v=' "$TARGET/$rel"; then
+    sed -E -i "s#assets/js/site-config\.js\?v=[^\"']+#assets/js/site-config.js?v=2.11.0-r2#g" "$TARGET/$rel"
+  fi
+}
+for rel in "${CACHE_PAGES[@]}"; do patch_cache_key "$rel"; done
+
+# Test-only fault injection; inert unless explicitly requested by the installer test harness.
+if [[ "${P2K_R2_FORCE_FAIL:-0}" == "1" ]]; then false; fi
+
+[[ "$(sha256sum "$TARGET/assets/js/site-config.js" | awk '{print $1}')" == "$(sha256sum "$PAYLOAD_DIR/assets/js/site-config.js" | awk '{print $1}')" ]] || die "Installed site-config checksum mismatch."
+[[ "$(sha256sum "$TARGET/assets/js/pages/v2-11-0-r2-admin-stability.js" | awk '{print $1}')" == "$(sha256sum "$PAYLOAD_DIR/assets/js/pages/v2-11-0-r2-admin-stability.js" | awk '{print $1}')" ]] || die "Installed R2 module checksum mismatch."
+grep -Fq 'assets/js/site-config.js?v=2.11.0-r2' "$TARGET/ui-v2.html" || die "ui-v2 cache-key postcheck failed."
+grep -Fq 'assets/js/site-config.js?v=2.11.0-r2' "$TARGET/TaskControl.html" || die "TaskControl cache-key postcheck failed."
+grep -Fq 'assets/js/site-config.js?v=2.11.0-r2' "$TARGET/MatchCreationAnalyzer.htm" || die "Match Creation cache-key postcheck failed."
+[[ "$(tr -d '\r\n ' < "$TARGET/VERSION")" == "$BASE_VERSION" ]] || die "VERSION changed unexpectedly during R2 install."
+if command -v node >/dev/null 2>&1; then
+  node --check "$TARGET/assets/js/site-config.js" >/dev/null || die "Installed site-config syntax check failed."
+  node --check "$TARGET/assets/js/pages/v2-11-0-r2-admin-stability.js" >/dev/null || die "Installed R2 module syntax check failed."
+fi
+
+TRANSACTION_ACTIVE=0
+trap - ERR
+log "R2 installation successful. VERSION remains $BASE_VERSION."
+log "Recruitment: Admin → Members"
+log "Maintenance: Team Points (migration-era cutover/GAB/heatmap controls removed from the visible surface)"
+log "Embedded Admin frames: R2 live-height/visibility stability enabled"
+log "Rollback backup: $BACKUP_DIR"
+cleanup
+ex

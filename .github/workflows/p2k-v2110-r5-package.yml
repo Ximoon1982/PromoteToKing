@@ -1,0 +1,16 @@
+name: P2K v2.11.0 R5 archived package
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen:
+    runs-on: ubuntu-latest
+    steps:
+      - name: R5 is frozen
+        run: |
+          echo 'R5 is archived under release-packages/v2.11.0-R5/.'
+          echo 'Use the R6 workflow for subsequent release/v2.11.0 corrections.'
