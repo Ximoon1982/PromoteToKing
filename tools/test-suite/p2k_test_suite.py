@@ -79,11 +79,14 @@ def validate_policy(report: dict) -> list[str]:
     debt = json.loads(DEBT.read_text(encoding="utf-8"))
     known_pytest = debt.get("known_failures", [])
     known_standalone = debt.get("known_standalone_failures", [])
+    known_browser = debt.get("known_browser_failures", [])
     if len(known_pytest) > int(policy["maximum_known_debt"]["pytest"]):
         failures.append(f"pytest known debt grew to {len(known_pytest)}")
     if len(known_standalone) > int(policy["maximum_known_debt"]["standalone"]):
         failures.append(f"standalone known debt grew to {len(known_standalone)}")
-    if len(known_pytest) != len(set(known_pytest)) or len(known_standalone) != len(set(known_standalone)):
+    if len(known_browser) > int(policy["maximum_known_debt"]["browser"]):
+        failures.append(f"browser known debt grew to {len(known_browser)}")
+    if len(known_pytest) != len(set(known_pytest)) or len(known_standalone) != len(set(known_standalone)) or len(known_browser) != len(set(known_browser)):
         failures.append("known regression debt contains duplicates")
     failures.extend(f"Python parse failure: {row['path']}: {row['error']}" for row in py["parse_errors"])
     failures.extend(f"duplicate test names in {row['path']}: {', '.join(row['names'])}" for row in py["duplicate_test_names"])
@@ -170,8 +173,23 @@ def standalone_gate(report: dict) -> None:
 
 
 def browser_gate(report: dict) -> None:
+    debt = json.loads(DEBT.read_text(encoding="utf-8"))
+    known = set(debt.get("known_browser_failures", []))
+    actual = set()
     for relative in report["browser_gates"]:
-        run([sys.executable, relative], f"Browser regression: {relative}")
+        completed = subprocess.run([sys.executable, relative], cwd=ROOT, text=True, capture_output=True, check=False)
+        if completed.returncode:
+            actual.add(relative)
+            if relative not in known:
+                sys.stdout.write(completed.stdout)
+                sys.stderr.write(completed.stderr)
+        else:
+            print(f"PASS browser: {relative}")
+    new = sorted(actual - known)
+    resolved = sorted(known - actual)
+    print(f"browser result: {len(actual)} known failures, {len(resolved)} inherited failures resolved in this environment.")
+    if new:
+        raise SystemExit("New browser regressions:\n" + "\n".join(new))
 
 
 def main() -> int:

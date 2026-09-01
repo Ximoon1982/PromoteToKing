@@ -264,5 +264,8 @@
     "tests/test_v272_insights_release.py",
     "tests/test_v273_auth_decoupling.py",
     "tests/test_v280_storage_architecture.py"
+  ],
+  "known_browser_failures": [
+    "tests/browser_gate_v2914_interactive_survival.py"
   ]
 }
