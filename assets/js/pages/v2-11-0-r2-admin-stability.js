@@ -74,7 +74,7 @@
     if (overview) {
       const eyebrow = overview.querySelector(".eyebrow"); if (eyebrow) eyebrow.textContent = "Production runtime";
       const title = overview.querySelector("h2"); if (title) title.textContent = "Team Points control";
-      const description = overview.querySelector("h2 + p"); if (description) description.textContent = "Operational worker, freshness, queue, cycle and browser-accelerator controls for the production Team Points databases.";
+      const description = overview.querySelector("h2 + p"); if (description) description.textContent = "Operational worker, freshness, debt, cycle and browser-accelerator controls for the production Team Points databases.";
     }
     const refresh = byId("greenSchedulerRefresh"); if (refresh) refresh.textContent = "Refresh";
     const run = byId("greenRunNow"); if (run) run.textContent = "Run one Team Points slice";
@@ -109,10 +109,27 @@
       const value = String(node.textContent || "");
       if (value.includes("Green accelerator control")) node.textContent = value.replace("Green accelerator control", "Team Points accelerator control");
     });
+
+    const taskCard=host.querySelector('[data-admin-shell-card="tasks"]');
+    const taskDescription=taskCard?.querySelector(":scope > p");
+    if(taskDescription)taskDescription.textContent="CRON-compatible production Team Points worker, cycle, GFFL and accelerator state.";
+    labelForMetric("adminShellTaskPending","GFFL due");
+    labelForMetric("adminShellTaskFailed","Work errors");
+    labelForMetric("adminShellTaskGeneration","Cycle");
+    const taskSource=byId("adminShellSource_tasks");if(taskSource)taskSource.textContent="Green production runtime";
+
+    const diagnosticCard=host.querySelector('[data-admin-shell-card="diagnostics"]');
+    const diagnosticDescription=diagnosticCard?.querySelector(":scope > p");
+    if(diagnosticDescription)diagnosticDescription.textContent="Runtime, API and Green production integrity health.";
+    labelForMetric("adminShellDiagFailed","Work errors");
+    labelForMetric("adminShellDiagBoards","Finished unresolved");
+
     labelForMetric("adminShellFreshRatings","Fresh ratings");
     labelForMetric("adminShellFreshMatches","Current matches fresh");
     labelForMetric("adminShellFreshBoards","Boards due now");
     const source=byId("adminShellSource_freshness");if(source)source.textContent="Green Core / Analytics freshness";
+
+    labelForMetric("adminShellStorageLag","Analytics rebuild age");
   }
 
   function stabilizeAdminFrame() {
@@ -147,7 +164,7 @@
     };
     const schedule = () => requestAnimationFrame(send);
     schedule(); addEventListener("load", schedule, {once:true}); addEventListener("resize", schedule, {passive:true});
-    const ro = new ResizeObserver(schedule); ro.observe(document.documentElement); if (document.body) ro.observe(document.body);
+    if("ResizeObserver" in window){const ro = new ResizeObserver(schedule); ro.observe(document.documentElement); if (document.body) ro.observe(document.body);}
     const mo = new MutationObserver(schedule); if (document.body) mo.observe(document.body, {subtree:true, childList:true, attributes:true, characterData:true});
   }
 
