@@ -26,6 +26,7 @@ The browser audit initially passed six gates before reproducing the timing-sensi
 - All discovered browser gates share one full profile and a separate CI job.
 - Test dependencies are pinned independently from production.
 - Package validation remains separate because it verifies an exact artifact manifest.
+- The legacy `tests/validate_package.py` remains inventoried but is not used as the v2.11.1 artifact authority because its contract is frozen to v2.10.6.23. The v2.11.1 builder instead emits and verifies its own payload manifest plus top-level source/installer checksums.
 - A full-tree production-parity gate compares the branch with promoted R6 commit `93480c852fc4c554c9a404e5d68b0ac51efed04b`. The only permitted runtime difference is `server/team-points/src/OAuthSession.php`; unexpected HTML, CSS, JavaScript, PHP, image, configuration, manifest or other application changes fail CI.
 
 ## Inherited-debt triage

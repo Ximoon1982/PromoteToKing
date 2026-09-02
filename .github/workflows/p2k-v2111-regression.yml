@@ -76,7 +76,6 @@ jobs:
           mkdir "$RUNNER_TEMP/unpacked"
           unzip -q "$RUNNER_TEMP/v2111-build/PromoteToKing-v2.11.1-source.zip" -d "$RUNNER_TEMP/unpacked"
           cd "$RUNNER_TEMP/unpacked"
-          python tests/validate_package.py
           python tools/test-suite/p2k_test_suite.py regression
       - name: Verify first install, idempotent reinstall, rollback, manifest and checksums
         run: |
