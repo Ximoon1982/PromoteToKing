@@ -7,6 +7,7 @@ import argparse
 import ast
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -17,6 +18,22 @@ ROOT = Path(__file__).resolve().parents[2]
 TESTS = ROOT / "tests"
 POLICY = TESTS / "test-suite-policy.json"
 DEBT = TESTS / "known-regression-debt-v2.11.1.json"
+DEBT_POLICY = TESTS / "debt-classification-policy-v2.11.1.json"
+
+
+def classify_debt(debt: dict) -> dict[str, list[str]]:
+    policy = json.loads(DEBT_POLICY.read_text(encoding="utf-8"))
+    rules = [(row["category"], re.compile(row["pattern"])) for row in policy["ordered_rules"]]
+    classified = {category: [] for category in policy["categories"]}
+    items = debt.get("known_failures", []) + debt.get("known_standalone_failures", []) + debt.get("known_browser_failures", [])
+    for item in items:
+        for category, pattern in rules:
+            if pattern.search(item):
+                classified[category].append(item)
+                break
+        else:
+            raise ValueError(f"unclassified regression debt: {item}")
+    return classified
 
 
 def python_inventory() -> dict:
@@ -88,6 +105,12 @@ def validate_policy(report: dict) -> list[str]:
         failures.append(f"browser known debt grew to {len(known_browser)}")
     if len(known_pytest) != len(set(known_pytest)) or len(known_standalone) != len(set(known_standalone)) or len(known_browser) != len(set(known_browser)):
         failures.append("known regression debt contains duplicates")
+    try:
+        classified = classify_debt(debt)
+        if sum(map(len, classified.values())) != len(known_pytest) + len(known_standalone) + len(known_browser):
+            failures.append("known regression debt classification is incomplete")
+    except (KeyError, ValueError, re.error) as error:
+        failures.append(f"known regression debt classification failed: {error}")
     failures.extend(f"Python parse failure: {row['path']}: {row['error']}" for row in py["parse_errors"])
     failures.extend(f"duplicate test names in {row['path']}: {', '.join(row['names'])}" for row in py["duplicate_test_names"])
     return failures
@@ -202,6 +225,8 @@ def main() -> int:
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     print(f"P2K test inventory: {report['python']['module_count']} Python modules, {report['python']['pytest_functions']} pytest tests, {len(report['browser_gates'])} browser gates, {len(report['php_harnesses'])} PHP harnesses.")
+    debt_classes = classify_debt(json.loads(DEBT.read_text(encoding="utf-8")))
+    print("Inherited debt classification: " + ", ".join(f"{category}={len(items)}" for category, items in debt_classes.items()))
     if failures:
         for failure in failures:
             print(f"ERROR: {failure}", file=sys.stderr)

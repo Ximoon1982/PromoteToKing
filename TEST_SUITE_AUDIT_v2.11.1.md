@@ -2,7 +2,7 @@
 
 ## Release contract
 
-This is a test-infrastructure-only v2.11.1 increment. **No intentional product behavior change** is permitted. Promote to King must retain strict functional and visual parity, including existing UI, workflows, data semantics, storage behavior and appearance.
+Promote to King v2.11.1 retains strict functional and visual parity with the promoted v2.11.0 R6 baseline, including its UI, workflows, data semantics, storage behavior and appearance, **except for the explicitly approved seven-day sliding authentication/session-persistence hardening in `server/team-points/src/OAuthSession.php`**. No other intentional product behavior change is permitted.
 
 ## Audit baseline
 
@@ -26,6 +26,11 @@ The browser audit initially passed six gates before reproducing the timing-sensi
 - All discovered browser gates share one full profile and a separate CI job.
 - Test dependencies are pinned independently from production.
 - Package validation remains separate because it verifies an exact artifact manifest.
+- A full-tree production-parity gate compares the branch with promoted R6 commit `93480c852fc4c554c9a404e5d68b0ac51efed04b`. The only permitted runtime difference is `server/team-points/src/OAuthSession.php`; unexpected HTML, CSS, JavaScript, PHP, image, configuration, manifest or other application changes fail CI.
+
+## Inherited-debt triage
+
+Every frozen pytest, standalone and browser failure is classified through `tests/debt-classification-policy-v2.11.1.json` as an obsolete historical assertion, environment-dependent failure, or potential real defect. Rules are ordered, exhaustive and machine-validated. Obsolete assertions may be repaired only by updating tests to the current release contract. Environment-dependent items remain explicit until a deterministic harness replaces them. Potential real defects are deferred for investigation and must not trigger an unreviewed production change in v2.11.1.
 
 ## Consolidation decision
 
@@ -33,4 +38,4 @@ No inherited tests were deleted. The audit found fragmented execution and docume
 
 ## Safety
 
-The machinery reads source and fixtures only. It does not install application files, migrate schemas, write production configuration, contact authenticated production services, or modify runtime data.
+The regression and parity machinery reads source and fixtures only. It does not migrate schemas, write production configuration, contact authenticated production services, or modify runtime data. Package qualification uses isolated temporary directories.

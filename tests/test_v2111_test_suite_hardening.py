@@ -41,6 +41,21 @@ def test_policy_prevents_silent_regression_gate_loss():
         "tests/browser_startup_gate_v2810.py",
         "tests/browser_startup_gate_v289.py",
     ]
+    classified = load_runner().classify_debt(debt)
+    assert set(classified) == {"obsolete_historical_assertion", "environment_dependent", "potential_real_defect"}
+    assert sum(map(len, classified.values())) == 266
+
+
+def test_production_parity_allowlist_is_exactly_oauth_session():
+    parity_path = ROOT / "tools/test-suite/production_parity.py"
+    spec = importlib.util.spec_from_file_location("production_parity", parity_path)
+    parity = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(parity)
+    assert parity.R6_BASELINE == "93480c852fc4c554c9a404e5d68b0ac51efed04b"
+    assert parity.PRODUCTION_ALLOWLIST == {"server/team-points/src/OAuthSession.php"}
+    assert parity.unexpected(["assets/js/site-config.js"]) == ["assets/js/site-config.js"]
+    assert parity.unexpected(["tests/example.py", "server/team-points/src/OAuthSession.php"]) == []
 
 
 def test_current_branch_has_one_canonical_regression_workflow():
@@ -54,5 +69,5 @@ def test_current_branch_has_one_canonical_regression_workflow():
 
 def test_hardening_release_is_product_behavior_neutral():
     audit = (ROOT / "TEST_SUITE_AUDIT_v2.11.1.md").read_text(encoding="utf-8")
-    assert "No intentional product behavior change" in audit
+    assert "except for the explicitly approved seven-day sliding authentication/session-persistence hardening" in audit
     assert "functional and visual parity" in audit
