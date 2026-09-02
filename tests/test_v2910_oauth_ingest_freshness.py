@@ -39,16 +39,22 @@ def test_every_api_surface_gets_real_oauth_adapter_before_use():
     assert offenders == []
 
 
-def test_oauth_cookie_and_server_session_survive_browser_restart_but_token_expiry_wins():
+def test_oauth_cookie_and_server_session_use_seven_day_sliding_retention_and_refresh_tokens():
     oauth = text('server/team-points/src/OAuthSession.php')
-    assert 'SESSION_RETENTION_SECONDS = 90000' in oauth
+    assert 'SESSION_RETENTION_SECONDS = 604800' in oauth
     assert "session.gc_maxlifetime',(string)self::SESSION_RETENTION_SECONDS" in oauth
     assert "'lifetime'=>self::SESSION_RETENTION_SECONDS" in oauth
     assert "'httponly'=>true" in oauth and "'samesite'=>'Lax'" in oauth
     assert 'setcookie(self::SESSION_NAME,session_id()' in oauth
     assert "'expires'=>time()+self::SESSION_RETENTION_SECONDS" in oauth
     access = block(oauth, 'private static function accessToken()', 'private static function scope')
-    assert "$exp<=time()+5" in access and "unset($_SESSION['oauth_access'],$_SESSION['oauth_user'])" in access
+    assert "self::refreshAccessToken($a,$refreshToken)" in access
+    assert "$exp<=time()+5" in access and "unset($_SESSION['oauth_access'],$_SESSION['oauth_user']" in access
+    refresh = block(oauth, 'private static function refreshAccessToken', 'private static function scope')
+    assert "'grant_type'=>'refresh_token'" in refresh
+    assert "'refresh_token'=>$refreshToken" in refresh
+    assert "session_regenerate_id(true)" in refresh
+    assert "$_SESSION['oauth_user']['expires_at']=$expiresAt" in refresh
     # Browser-facing profile/session payload may expose expiry metadata, never the Bearer credential.
     info = block(oauth, 'public static function sessionInfo()', 'public static function login')
     assert "'expires_at'" in info

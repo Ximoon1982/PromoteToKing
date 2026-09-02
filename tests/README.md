@@ -1,13 +1,21 @@
-# Verification
+# Promote to King verification
 
-Run from the package root:
+Run the canonical v2.11.1 test entry point from the repository root:
 
-```text
-node tests/run-tests.js
-python tests/validate_package.py
-python tests/test_tracking_features.py
-python tests/test_server_storage.py
-python tests/test_php_backend.py
+```bash
+python tools/test-suite/p2k_test_suite.py audit --json
+python tools/test-suite/p2k_test_suite.py static
+python tools/test-suite/p2k_test_suite.py regression
+python tools/test-suite/p2k_test_suite.py browser
+python tools/test-suite/p2k_test_suite.py full
 ```
 
-The checks cover the unchanged v2.1.2 shell stylesheet, local resource integrity, JavaScript/Python/PHP syntax, null-safe scheduled logs, optimized registration-summary prefiltering, add-and-capture, follow/unfollow with archive retention, finished-data cleanup, history snapshots, v2.1.2-to-unified tracking migration with source removal, archived follow-back after upstream 404, log refresh wiring, and both packaged server implementations.
+- `audit` inventories every Python module, pytest function, browser gate, PHP harness and required legacy gate.
+- `static` adds Python compilation, JavaScript parsing, PHP linting and the canonical JavaScript feature regression.
+- `regression` adds every pytest-style module, then runs every legacy executable `test_*.py` module separately so historical `SystemExit` checks cannot abort pytest collection.
+- `browser` executes every discovered `browser*.py` gate without repeating source regressions.
+- `full` combines the regression and browser profiles.
+
+Install pinned test-only dependencies with `python -m pip install -r tests/requirements.txt`.
+
+`tests/validate_package.py` remains the exact packaging/archive gate and is intentionally separate from source-tree regression. The GitHub workflow `.github/workflows/p2k-v2111-regression.yml` runs source and browser profiles independently. These gates must not mutate production configuration, databases, caches, or external Chess.com state.

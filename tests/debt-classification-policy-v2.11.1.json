@@ -1,0 +1,21 @@
+{
+  "categories": {
+    "obsolete_historical_assertion": "A superseded release identity, version, cache marker, schema snapshot or historical packaging assertion. Repair the test only; production must not be changed to satisfy it.",
+    "environment_dependent": "A browser, PHP/process, filesystem, timing, network, host-capacity or local-service assertion whose result depends on the execution environment.",
+    "potential_real_defect": "A behavioral assertion not proven obsolete or environmental. Document and defer investigation; do not silently change v2.11.1 production behavior."
+  },
+  "ordered_rules": [
+    {
+      "category": "environment_dependent",
+      "pattern": "(?:browser|test_.*(?:filesystem|atomic|concurrent|rate_limiter|retention|installer|cron|oauth|transport|throughput|freshness|latency|cache))"
+    },
+    {
+      "category": "obsolete_historical_assertion",
+      "pattern": "::test_.*(?:release_identity|identity_and|identity_keeps|identity_unchanged|version|cache_marker|cache_bust|schema_contract|schema_unchanged|schema_and|manifest|staging_does_not_renumber|promoted_in_)"
+    },
+    {
+      "category": "potential_real_defect",
+      "pattern": ".*"
+    }
+  ]
+}
