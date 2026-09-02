@@ -19,7 +19,7 @@ PRODUCTION_ALLOWLIST = {
     "server/team-points/src/SqlReadGateway.php",
 }
 ENGINEERING_PREFIXES = (".github/", "tests/", "tools/")
-ENGINEERING_FILES = {"STRUCTURAL_CONSOLIDATION_v2.11.2.md"}
+ENGINEERING_FILES = {"STRUCTURAL_CONSOLIDATION_v2.11.2.md", "INSTALL_v2.11.2.md"}
 
 
 def changes() -> list[str]:

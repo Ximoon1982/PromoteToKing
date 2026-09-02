@@ -5,6 +5,7 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 BUILD=${1:-"$ROOT/build-v2112"}
 PAYLOAD="$BUILD/payload"
 INSTALLER="$BUILD/PromoteToKing_v2.11.2_STRUCTURAL_CONSOLIDATION.run"
+LAUNCHER="$BUILD/install-promote-to-king-2.11.2.sh"
 FILES=(
   server/team-points/src/AchievementArtwork.php
   server/team-points/src/AchievementCatalog.php
@@ -32,6 +33,8 @@ FILES=(server/team-points/src/AchievementArtwork.php server/team-points/src/Achi
 TMP=$(mktemp -d)
 BACKUP=$(mktemp -d)
 transaction=0
+CRONTAB_BIN=$(command -v crontab || true)
+if test -n "$CRONTAB_BIN"; then "$CRONTAB_BIN" -l > "$BACKUP/crontab.before" 2>/dev/null || : > "$BACKUP/crontab.before"; fi
 cleanup(){ rm -rf "$TMP" "$BACKUP"; }
 rollback(){
   if ((transaction)); then
@@ -43,7 +46,10 @@ rollback(){
 trap 'code=$?; rollback; cleanup; exit $code' ERR INT TERM
 trap cleanup EXIT
 test -f "$TARGET/VERSION"
-test "$(tr -d '\r\n[:space:]' < "$TARGET/VERSION")" = 2.11.0
+INSTALLED=$(tr -d '\r\n[:space:]' < "$TARGET/VERSION")
+case "$INSTALLED" in 2.11|2.11.*) ;; *) echo "ERROR: v2.11.2 requires an installed Promote to King 2.11.x tree; found '$INSTALLED'." >&2; exit 2;; esac
+echo "Installing Promote to King v2.11.2 structural consolidation over v$INSTALLED."
+echo "Application behavior, UI, data, authentication and CRON configuration will be preserved."
 line=$(awk -v marker="$MARKER" '$0==marker {print NR+1; exit}' "$0")
 tail -n +"$line" "$0" | base64 -d > "$TMP/payload.tar.gz"
 test "$(sha256sum "$TMP/payload.tar.gz" | awk '{print $1}')" = "$EXPECTED"
@@ -57,14 +63,55 @@ for file in "${FILES[@]}"; do install -m 0644 "$TMP/payload/$file" "$TARGET/$fil
 test "${P2K_FORCE_INSTALL_FAILURE:-0}" != 1
 install -m 0644 "$TMP/payload/V2112_SOURCE_HEAD.txt" "$TARGET/V2112_SOURCE_HEAD.txt"
 install -m 0644 "$TMP/payload/MANIFEST.sha256" "$TARGET/MANIFEST_v2.11.2.sha256"
+if test -n "$CRONTAB_BIN"; then
+  "$CRONTAB_BIN" -l > "$BACKUP/crontab.after" 2>/dev/null || : > "$BACKUP/crontab.after"
+  cmp -s "$BACKUP/crontab.before" "$BACKUP/crontab.after" || { echo 'ERROR: CRON entries changed unexpectedly.' >&2; false; }
+fi
 transaction=0
 echo 'Promote to King v2.11.2 structural consolidation installed.'
+echo 'Existing CRON entries were preserved unchanged.'
 exit 0
 __P2K_V2112_PAYLOAD_BELOW__
 INSTALLER_HEAD
 sed -i "s/__PAYLOAD_SHA__/$PAYLOAD_SHA/" "$INSTALLER"
 base64 -w 76 "$BUILD/payload.tar.gz" >> "$INSTALLER"
 chmod +x "$INSTALLER"
+cat > "$LAUNCHER" <<'LAUNCHER_BODY'
+#!/usr/bin/env bash
+set -euo pipefail
+HERE=$(cd "$(dirname "$0")" && pwd)
+TARGET=${1:-${P2K_SITE_ROOT:-}}
+if test -z "$TARGET"; then
+  echo "Usage: $0 /absolute/path/to/promote-to-king" >&2
+  echo "Or set P2K_SITE_ROOT and run: $0" >&2
+  exit 2
+fi
+test -d "$TARGET" || { echo "ERROR: target directory does not exist: $TARGET" >&2; exit 2; }
+exec "$HERE/PromoteToKing_v2.11.2_STRUCTURAL_CONSOLIDATION.run" "$TARGET"
+LAUNCHER_BODY
+chmod +x "$LAUNCHER"
+cat > "$BUILD/INSTALL_v2.11.2.txt" <<'INSTRUCTIONS'
+Promote to King v2.11.2 — Structural Consolidation & Maintainability
+
+Requirements
+  - An existing Promote to King 2.11.x installation.
+  - Bash plus standard tar, base64 and sha256sum utilities.
+  - Write access to the Promote to King installation directory.
+
+Recommended command
+  ./install-promote-to-king-2.11.2.sh /absolute/path/to/promote-to-king
+
+Environment-variable form
+  P2K_SITE_ROOT=/absolute/path/to/promote-to-king ./install-promote-to-king-2.11.2.sh
+
+Direct installer form
+  ./PromoteToKing_v2.11.2_STRUCTURAL_CONSOLIDATION.run /absolute/path/to/promote-to-king
+
+The installer validates the embedded payload and installed VERSION, applies only the
+v2.11.2 structural PHP files, preserves existing CRON entries, and rolls back all
+changed/new files if validation or installation fails. It does not alter configuration,
+runtime data, schemas, UI assets, authentication settings or scheduled jobs.
+INSTRUCTIONS
 git -C "$ROOT" archive --format=zip --output="$BUILD/PromoteToKing-v2.11.2-source.zip" HEAD
-(cd "$BUILD" && sha256sum PromoteToKing_v2.11.2_STRUCTURAL_CONSOLIDATION.run PromoteToKing-v2.11.2-source.zip > SHA256SUMS_v2.11.2.txt)
+(cd "$BUILD" && sha256sum PromoteToKing_v2.11.2_STRUCTURAL_CONSOLIDATION.run install-promote-to-king-2.11.2.sh INSTALL_v2.11.2.txt PromoteToKing-v2.11.2-source.zip > SHA256SUMS_v2.11.2.txt)
 (cd "$BUILD" && sha256sum -c SHA256SUMS_v2.11.2.txt)

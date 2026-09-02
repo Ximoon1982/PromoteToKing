@@ -100,10 +100,14 @@ jobs:
           test ! -e "$ROLLBACK/server/team-points/src/AnalyticsRefreshRuntime.php"
           test ! -e "$ROLLBACK/server/team-points/src/AchievementArtwork.php"
           (cd "$BUILD" && sha256sum -c SHA256SUMS_v2.11.2.txt)
+          test -x "$BUILD/install-promote-to-king-2.11.2.sh"
+          grep -Fq 'Existing CRON entries were preserved unchanged.' "$BUILD/PromoteToKing_v2.11.2_STRUCTURAL_CONSOLIDATION.run"
       - uses: actions/upload-artifact@v4
         with:
           name: PromoteToKing-v2.11.2-qualified
           path: |
             ${{ runner.temp }}/v2112-build/PromoteToKing-v2.11.2-source.zip
             ${{ runner.temp }}/v2112-build/PromoteToKing_v2.11.2_STRUCTURAL_CONSOLIDATION.run
+            ${{ runner.temp }}/v2112-build/install-promote-to-king-2.11.2.sh
+            ${{ runner.temp }}/v2112-build/INSTALL_v2.11.2.txt
             ${{ runner.temp }}/v2112-build/SHA256SUMS_v2.11.2.txt

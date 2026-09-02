@@ -46,3 +46,14 @@ def test_no_ui_api_schema_scheduler_or_authentication_files_changed():
     changed = subprocess.run(["git", "diff", "--name-only", f"{BASELINE}..HEAD"], cwd=ROOT, check=True, text=True, capture_output=True).stdout.splitlines()
     forbidden = ("assets/", "api/", "server/team-points/public/", "server/team-points/sql/", "ui-v2.html", "ClubIntelligence.html", "site-manifest.json", "reset-install-", "install-oauth-")
     assert not [path for path in changed if path.startswith(forbidden)]
+
+
+def test_installer_accepts_any_v211x_and_preserves_cron_contract():
+    builder = (ROOT / "tools/release/build-v2112-structural-package.sh").read_text(encoding="utf-8")
+    workflow = (ROOT / ".github/workflows/p2k-v2112-structural.yml").read_text(encoding="utf-8")
+    instructions = (ROOT / "INSTALL_v2.11.2.md").read_text(encoding="utf-8")
+    assert 'case "$INSTALLED" in 2.11|2.11.*)' in builder
+    assert 'crontab.before' in builder and 'crontab.after' in builder and 'cmp -s' in builder
+    assert "install-promote-to-king-2.11.2.sh" in builder and "INSTALL_v2.11.2.txt" in builder
+    assert "install-promote-to-king-2.11.2.sh" in workflow
+    assert "./install-promote-to-king-2.11.2.sh /absolute/path/to/promote-to-king" in instructions
