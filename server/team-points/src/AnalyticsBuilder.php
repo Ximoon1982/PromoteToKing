@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace P2K\TeamPoints;
 
 use PDO;
-use P2K\Shared\FilesystemCache;
-
 /**
  * Rebuildable projection layer for v2.8.0.
  *
@@ -64,30 +62,17 @@ final class AnalyticsBuilder
 
     private function runtimeRefreshPaths(string $clubSlug, string $domain = 'all'): array
     {
-        $cfg = \p2k_tp_config();
-        $storage = is_array($cfg['storage'] ?? null) ? $cfg['storage'] : [];
-        $root = FilesystemCache::runtimeRoot($storage) . '/analytics';
-        FilesystemCache::ensureProtectedDirectory($root);
-        $slug = preg_replace('/[^a-z0-9_-]+/i', '-', $clubSlug);
-        $suffix = $domain === 'all' ? '' : '-' . preg_replace('/[^a-z0-9_-]+/i', '-', $domain);
-        return [$root . '/refresh-' . $slug . $suffix . '.json', $root . '/refresh-' . $slug . $suffix . '.lock'];
+        return AnalyticsRefreshRuntime::paths($clubSlug, $domain);
     }
 
     private function readCompletedEpoch(string $marker): int
     {
-        if (!is_file($marker)) return 0;
-        $payload = json_decode((string)@file_get_contents($marker), true);
-        return is_array($payload) ? (int)($payload['completed_epoch'] ?? 0) : 0;
+        return AnalyticsRefreshRuntime::completedEpoch($marker);
     }
 
     private static function isLockWaitTimeout(\Throwable $exception): bool
     {
-        $message = strtolower($exception->getMessage());
-        if (str_contains($message, 'lock wait timeout') || str_contains($message, 'sqlstate[hy000]') && str_contains($message, '1205')) return true;
-        if ($exception instanceof \PDOException && is_array($exception->errorInfo ?? null)) {
-            return (int)($exception->errorInfo[1] ?? 0) === 1205;
-        }
-        return false;
+        return AnalyticsRefreshRuntime::isLockWaitTimeout($exception);
     }
 
     public function refreshIfDue(string $clubSlug, int $minimumSeconds = 1800, ?float $deadlineAt = null): array

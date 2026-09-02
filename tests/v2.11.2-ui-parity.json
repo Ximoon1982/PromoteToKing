@@ -1,0 +1,12 @@
+{
+  "baseline_commit": "b8bf26c7c41ca1914323717766bca995139291aa",
+  "files": {
+    "ui-v2.html": "60e34dbc8da6487a8a344416af0ae59a92f4e17c36ceeeae1464986e4dc32c84",
+    "ClubIntelligence.html": "0c8fb3c4179a82e35cd99a56e3eaef2c2fe9df4d3cb666f82f1cc6fc0e5ced36",
+    "assets/js/pages/dashboard-v2.js": "75eb679dd218b3a2139fb4070179d6d644cb1d88122f0a2bc299b483925942b8",
+    "assets/js/pages/admin-features.js": "2404f0e394f1f8a04445e4267c3d43e805c0f927af28127e8cd554f8aada01aa",
+    "assets/js/shared/api-client.js": "e4c1c970cf55bbd676a9e6b7b0ad9ec5a58921ab80ca5eaecf1b9a4bf57d2a1c",
+    "assets/css/dashboard-v2.css": "1ff3c4b912b3bd936473974426584d129499aba549bf3a8e39ff93bbfd1d3f81",
+    "site-manifest.json": "117b2f7026066482560c3bd862b8efb80756294f0ccaf9c0a3653b79b086f183"
+  }
+}

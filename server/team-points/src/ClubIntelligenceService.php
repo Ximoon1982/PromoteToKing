@@ -14,29 +14,31 @@ final class ClubIntelligenceService
     ) {}
 
     private ?array $memberRowsCache = null;
+    private ?SqlReadGateway $reads = null;
+
+    private function readGateway(): SqlReadGateway
+    {
+        return $this->reads ??= new SqlReadGateway();
+    }
 
     private function one(PDO $pdo, string $sql, array $args = []): array
     {
-        $q = $pdo->prepare($sql); $q->execute($args); $row = $q->fetch(PDO::FETCH_ASSOC);
-        return is_array($row) ? $row : [];
+        return $this->readGateway()->one($pdo, $sql, $args);
     }
 
     private function all(PDO $pdo, string $sql, array $args = []): array
     {
-        $q = $pdo->prepare($sql); $q->execute($args);
-        return $q->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        return $this->readGateway()->all($pdo, $sql, $args);
     }
 
     private function optionalOne(PDO $pdo, string $sql, array $args = []): array
     {
-        try { return $this->one($pdo,$sql,$args); }
-        catch (\Throwable $e) { error_log('P2K member intelligence optional query: '.$e->getMessage()); return []; }
+        return $this->readGateway()->optionalOne($pdo, $sql, $args);
     }
 
     private function optionalAll(PDO $pdo, string $sql, array $args = []): array
     {
-        try { return $this->all($pdo,$sql,$args); }
-        catch (\Throwable $e) { error_log('P2K member intelligence optional query: '.$e->getMessage()); return []; }
+        return $this->readGateway()->optionalAll($pdo, $sql, $args);
     }
 
     private static function epoch(?string $value): ?int

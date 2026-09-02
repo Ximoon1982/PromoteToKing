@@ -254,15 +254,8 @@ final class AchievementCatalog {
   $labels=['team-points'=>'Team Points','daily-ranks'=>'Daily ranks','live-ranks'=>'Live ranks','league-1wl'=>'1WL','league-pcl'=>'PCL','league-tcmac'=>'TCMAC','league-tmcl'=>'TMCL','league-kotml'=>'KOTML','mca-participation'=>'MCA participation','mca-placement'=>'MCA placement','mca-victories'=>'MCA victories','mca-streaks'=>'MCA streaks','mca-single-wins'=>'MCA single-arena wins','same-day-match-starts'=>'Same-day match starts','concurrent-games'=>'Concurrent games','achievement-breadth'=>'Achievement breadth','achievement-group-breadth'=>'Achievement group breadth','achievement-collector'=>'Collector','global-opposition'=>'Global opposition','chess960-specialization'=>'Chess960 specialization','activity-continuity'=>'Activity continuity','large-matches'=>'Large matches','rating-upsets'=>'Rating upsets','match-performance'=>'Match performance','tournament-versatility'=>'Tournament versatility','rivalry-turnaround'=>'Rivalry turnaround','consecutive-match-start-days'=>'Consecutive match-start days','match-impact'=>'Match Impact','close-calls'=>'Photo finish / close calls','winning-side'=>'Winning Side','opponent-variety'=>'Opponent Variety','old-foes'=>'Rematch / Old Foes'];
   return $labels[$category]??ucwords(str_replace('-',' ',$category));
  }
- private static function placeholder(string $key): string { return 'assets/images/achievements/placeholders/'.preg_replace('/[^a-z0-9_-]+/i','-',strtolower($key)).'.svg'; }
- private static function usableArtwork(string $path): bool {
-  if($path===''||$path==='p2k-logo.jpg')return false;
-  $full=dirname(__DIR__,3).'/'.ltrim($path,'/');
-  return is_file($full)&&filesize($full)>0;
- }
  private static function item(string $key,string $label,string $description,string $category,string $icon='p2k-logo.jpg',string $miniature=''):array{
-  if(!self::usableArtwork($icon))$icon=self::placeholder($key);
-  $miniature=$miniature?:$icon;if(!self::usableArtwork($miniature))$miniature=$icon;
+  [$icon,$miniature]=AchievementArtwork::resolve($key,$icon,$miniature);
   $family=self::familyForCategory($category);
   return ['key'=>$key,'label'=>$label,'description'=>$description,'criteria'=>$description,'category'=>$category,'category_label'=>self::categoryLabel($category),'family'=>$family['key'],'family_label'=>$family['label'],'icon'=>$icon,'miniature'=>$miniature];
  }

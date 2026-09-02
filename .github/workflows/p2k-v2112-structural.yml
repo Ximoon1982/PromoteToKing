@@ -1,0 +1,109 @@
+name: P2K v2.11.2 full regression gate
+
+on:
+  push:
+    branches: [release/v2.11.2]
+  pull_request:
+    branches: [main, release/v2.11.2]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit-and-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          coverage: none
+      - run: python -m pip install --disable-pip-version-check -r tests/requirements.txt
+      - run: python tools/test-suite/structural_parity.py
+      - run: python tools/test-suite/p2k_test_suite.py audit --json
+      - run: python tools/test-suite/p2k_test_suite.py regression
+
+  browser-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: audit-and-regression
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m pip install --disable-pip-version-check -r tests/requirements.txt
+          python -m playwright install --with-deps chromium
+          sudo ln -sf "$(find "$HOME/.cache/ms-playwright" -type f -name chrome -path '*chrome-linux*' | head -1)" /usr/bin/chromium
+      - run: python tools/test-suite/p2k_test_suite.py browser
+
+  package-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [audit-and-regression, browser-regression]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          coverage: none
+      - run: python -m pip install --disable-pip-version-check -r tests/requirements.txt
+      - name: Build checksummed source and installer artifacts
+        run: bash tools/release/build-v2112-structural-package.sh "$RUNNER_TEMP/v2112-build"
+      - name: Run canonical regression suite against unpacked source artifact
+        run: |
+          mkdir "$RUNNER_TEMP/unpacked"
+          unzip -q "$RUNNER_TEMP/v2112-build/PromoteToKing-v2.11.2-source.zip" -d "$RUNNER_TEMP/unpacked"
+          cd "$RUNNER_TEMP/unpacked"
+          python tools/test-suite/p2k_test_suite.py regression
+      - name: Verify first install, idempotent reinstall, rollback, manifest and checksums
+        run: |
+          BUILD="$RUNNER_TEMP/v2112-build"
+          TARGET="$RUNNER_TEMP/v2111-target"
+          ROLLBACK="$RUNNER_TEMP/v2111-rollback"
+          mkdir "$TARGET" "$ROLLBACK"
+          git archive b8bf26c7c41ca1914323717766bca995139291aa | tar -x -C "$TARGET"
+          git archive b8bf26c7c41ca1914323717766bca995139291aa | tar -x -C "$ROLLBACK"
+          INSTALLER="$BUILD/PromoteToKing_v2.11.2_STRUCTURAL_CONSOLIDATION.run"
+          "$INSTALLER" "$TARGET"
+          (cd "$TARGET" && sha256sum -c MANIFEST_v2.11.2.sha256)
+          (cd "$TARGET" && find server/team-points/src -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/before-reinstall.sha"
+          "$INSTALLER" "$TARGET"
+          (cd "$TARGET" && find server/team-points/src -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/after-reinstall.sha"
+          diff -u "$RUNNER_TEMP/before-reinstall.sha" "$RUNNER_TEMP/after-reinstall.sha"
+          (cd "$ROLLBACK" && find server/team-points/src -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/rollback-before.sha"
+          if P2K_FORCE_INSTALL_FAILURE=1 "$INSTALLER" "$ROLLBACK"; then exit 1; fi
+          (cd "$ROLLBACK" && find server/team-points/src -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/rollback-after.sha"
+          diff -u "$RUNNER_TEMP/rollback-before.sha" "$RUNNER_TEMP/rollback-after.sha"
+          test ! -e "$ROLLBACK/server/team-points/src/SqlReadGateway.php"
+          test ! -e "$ROLLBACK/server/team-points/src/AnalyticsRefreshRuntime.php"
+          test ! -e "$ROLLBACK/server/team-points/src/AchievementArtwork.php"
+          (cd "$BUILD" && sha256sum -c SHA256SUMS_v2.11.2.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PromoteToKing-v2.11.2-qualified
+          path: |
+            ${{ runner.temp }}/v2112-build/PromoteToKing-v2.11.2-source.zip
+            ${{ runner.temp }}/v2112-build/PromoteToKing_v2.11.2_STRUCTURAL_CONSOLIDATION.run
+            ${{ runner.temp }}/v2112-build/SHA256SUMS_v2.11.2.txt

@@ -1,0 +1,14 @@
+{
+  "release": "2.11.2",
+  "compatibility_facades": {
+    "ClubIntelligenceService": ["SqlReadGateway"],
+    "AnalyticsBuilder": ["AnalyticsRefreshRuntime"],
+    "AchievementCatalog": ["AchievementArtwork"]
+  },
+  "javascript_ownership": {
+    "assets/js/pages/dashboard-v2.js": ["navigation", "public-dashboard", "administration-shell", "insights", "hall-of-fame"],
+    "assets/js/pages/admin-features.js": ["admin-actions", "admin-diagnostics", "admin-detail-integration"],
+    "assets/js/shared/api-client.js": ["transport", "oauth-context", "request-deduplication", "compatibility-api"]
+  },
+  "frozen_contracts": ["public-method-signatures", "api-routes", "dom", "visual-assets", "script-order", "oauth-session", "schema", "scheduler"]
+}
