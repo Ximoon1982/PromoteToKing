@@ -1,0 +1,14 @@
+{
+  "baseline": "v2.11.1",
+  "frontend_bytes": {
+    "assets/js/shared/api-client.js": {"baseline": 73721, "current": 73721},
+    "assets/js/pages/admin-features.js": {"baseline": 56673, "current": 56673},
+    "assets/js/pages/dashboard-v2.js": {"baseline": 222130, "current": 222130}
+  },
+  "facade_bytes": {
+    "server/team-points/src/ClubIntelligenceService.php": {"baseline": 72377, "current": 72220},
+    "server/team-points/src/AnalyticsBuilder.php": {"baseline": 68886, "current": 67946},
+    "server/team-points/src/AchievementCatalog.php": {"baseline": 53821, "current": 53476}
+  },
+  "policy": "Frontend runtime bytes remain identical. Facades may shrink as internal responsibilities move behind signature-compatible collaborators."
+}

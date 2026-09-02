@@ -17,9 +17,14 @@ PRODUCTION_ALLOWLIST = {
     "server/team-points/src/AnalyticsRefreshRuntime.php",
     "server/team-points/src/ClubIntelligenceService.php",
     "server/team-points/src/SqlReadGateway.php",
+    "server/team-points/src/AdminJob/JobCheckpointStore.php",
+    "server/team-points/src/AdminJob/JobRunner.php",
+    "server/team-points/src/AdminJob/JobState.php",
+    "server/team-points/src/AdminJob/JobTelemetry.php",
+    "server/team-points/src/InternalErrorCategory.php",
 }
 ENGINEERING_PREFIXES = (".github/", "tests/", "tools/")
-ENGINEERING_FILES = {"STRUCTURAL_CONSOLIDATION_v2.11.2.md", "INSTALL_v2.11.2.md"}
+ENGINEERING_FILES = {"STRUCTURAL_CONSOLIDATION_v2.11.2.md", "INSTALL_v2.11.2.md", "ARCHITECTURE_v2.11.2.md", "PERSISTENCE_OWNERSHIP_v2.11.2.md"}
 
 
 def changes() -> list[str]:

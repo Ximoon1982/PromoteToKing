@@ -32,6 +32,7 @@ jobs:
           coverage: none
       - run: python -m pip install --disable-pip-version-check -r tests/requirements.txt
       - run: python tools/test-suite/structural_parity.py
+      - run: python tools/test-suite/architecture_gate.py
       - run: python tools/test-suite/p2k_test_suite.py audit --json
       - run: python tools/test-suite/p2k_test_suite.py regression
 

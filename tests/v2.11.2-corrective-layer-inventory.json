@@ -1,0 +1,9 @@
+{
+  "policy": "Old version names are not removal evidence.",
+  "classifications": {
+    "permanent_canonical": ["v2.11.0 R6 canonical Recruitment detail-host routing", "v2.11.1 OAuth session persistence"],
+    "compatibility_shim": ["historical cache/version gates", "legacy route aliases", "public PHP service facades"],
+    "defensive_corrective": ["filesystem retention", "queue deduplication", "transport convergence guards"],
+    "superseded_pending_proof": []
+  }
+}

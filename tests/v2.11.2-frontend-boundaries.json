@@ -1,0 +1,14 @@
+{
+  "layers": {"shared": 0, "feature": 1, "page": 2},
+  "modules": {
+    "shared/api-client": {"layer": "shared", "path": "assets/js/shared/api-client.js", "depends_on": []},
+    "feature/admin-features": {"layer": "feature", "path": "assets/js/pages/admin-features.js", "depends_on": ["shared/api-client"]},
+    "page/dashboard": {"layer": "page", "path": "assets/js/pages/dashboard-v2.js", "depends_on": ["shared/api-client", "feature/admin-features"]}
+  },
+  "planned_internal_ownership": {
+    "admin": ["admin-bootstrap", "admin-shell", "admin-router", "admin-navigation-state", "admin-detail-registry", "embedded-detail-host", "admin-session-controller"],
+    "dashboard": ["dashboard-bootstrap", "dashboard-home", "dashboard-members", "dashboard-matches", "dashboard-tournaments", "dashboard-maintenance", "dashboard-freshness", "dashboard-actions"],
+    "shared_api": ["request-transport", "authenticated-transport", "request-scheduler", "request-retry", "request-errors", "response-normalizer"]
+  },
+  "activation_rule": "No runtime split is activated until DOM, rendered and initialization-race parity replaces byte-level JS parity."
+}

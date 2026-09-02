@@ -13,11 +13,16 @@ FILES=(
   server/team-points/src/AnalyticsRefreshRuntime.php
   server/team-points/src/ClubIntelligenceService.php
   server/team-points/src/SqlReadGateway.php
+  server/team-points/src/AdminJob/JobCheckpointStore.php
+  server/team-points/src/AdminJob/JobRunner.php
+  server/team-points/src/AdminJob/JobState.php
+  server/team-points/src/AdminJob/JobTelemetry.php
+  server/team-points/src/InternalErrorCategory.php
 )
 
 rm -rf "$BUILD"
 mkdir -p "$PAYLOAD/server/team-points/src"
-for file in "${FILES[@]}"; do install -m 0644 "$ROOT/$file" "$PAYLOAD/$file"; done
+for file in "${FILES[@]}"; do mkdir -p "$PAYLOAD/$(dirname "$file")"; install -m 0644 "$ROOT/$file" "$PAYLOAD/$file"; done
 printf 'release=2.11.2\nsource_head=%s\nbaseline=2.11.1\n' "$(git -C "$ROOT" rev-parse HEAD)" > "$PAYLOAD/V2112_SOURCE_HEAD.txt"
 (cd "$PAYLOAD" && find . -type f ! -name MANIFEST.sha256 -print0 | sort -z | xargs -0 sha256sum > MANIFEST.sha256)
 tar -C "$PAYLOAD" -czf "$BUILD/payload.tar.gz" .
@@ -29,7 +34,7 @@ set -euo pipefail
 TARGET=${1:?Usage: installer.run TARGET}
 MARKER=__P2K_V2112_PAYLOAD_BELOW__
 EXPECTED=__PAYLOAD_SHA__
-FILES=(server/team-points/src/AchievementArtwork.php server/team-points/src/AchievementCatalog.php server/team-points/src/AnalyticsBuilder.php server/team-points/src/AnalyticsRefreshRuntime.php server/team-points/src/ClubIntelligenceService.php server/team-points/src/SqlReadGateway.php)
+FILES=(server/team-points/src/AchievementArtwork.php server/team-points/src/AchievementCatalog.php server/team-points/src/AnalyticsBuilder.php server/team-points/src/AnalyticsRefreshRuntime.php server/team-points/src/ClubIntelligenceService.php server/team-points/src/SqlReadGateway.php server/team-points/src/AdminJob/JobCheckpointStore.php server/team-points/src/AdminJob/JobRunner.php server/team-points/src/AdminJob/JobState.php server/team-points/src/AdminJob/JobTelemetry.php server/team-points/src/InternalErrorCategory.php)
 TMP=$(mktemp -d)
 BACKUP=$(mktemp -d)
 transaction=0
@@ -59,7 +64,7 @@ tar -C "$TMP/payload" -xzf "$TMP/payload.tar.gz"
 existing=(); for file in "${FILES[@]}"; do test ! -f "$TARGET/$file" || existing+=("$file"); done
 if ((${#existing[@]})); then tar -C "$TARGET" -cf "$BACKUP/existing.tar" "${existing[@]}"; else : > "$BACKUP/existing.tar"; fi
 transaction=1
-for file in "${FILES[@]}"; do install -m 0644 "$TMP/payload/$file" "$TARGET/$file"; done
+for file in "${FILES[@]}"; do mkdir -p "$TARGET/$(dirname "$file")"; install -m 0644 "$TMP/payload/$file" "$TARGET/$file"; done
 test "${P2K_FORCE_INSTALL_FAILURE:-0}" != 1
 install -m 0644 "$TMP/payload/V2112_SOURCE_HEAD.txt" "$TARGET/V2112_SOURCE_HEAD.txt"
 install -m 0644 "$TMP/payload/MANIFEST.sha256" "$TARGET/MANIFEST_v2.11.2.sha256"

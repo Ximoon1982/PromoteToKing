@@ -1,0 +1,6 @@
+{
+  "continuous_refresh": {"policy_owner": "feature controllers", "shared_mechanics": ["cancellation", "lifecycle registration"], "consolidation": "mechanics only"},
+  "active_convergence_refresh": {"policy_owner": "analytics/worker", "shared_mechanics": ["deadline", "retry classification"], "consolidation": "mechanics only"},
+  "authenticated_member_refresh": {"policy_owner": "OAuth API client", "shared_mechanics": ["deduplication", "scheduler"], "consolidation": "transport only"},
+  "analysis_coordination": {"policy_owner": "analysis feature", "shared_mechanics": ["cancellation", "cache lifecycle"], "consolidation": "mechanics only"}
+}
