@@ -2,6 +2,7 @@
 declare(strict_types=1);
 namespace P2K\TeamPoints;
 final class AchievementCatalog {
+ // Compatibility marker; fallback ownership moved to AchievementArtwork: assets/images/achievements/placeholders/
  public static function all(): array { return [
             self::item('first-match','First Match','Participate in your first recorded Promote to King team match.','matches','assets/images/achievements/first-match.png','assets/images/achievements/thumbs/128/first-match.webp'),
             self::item('first-point','First Step','Earn your first Team Point.','team-points','assets/images/achievements/first-point.png','assets/images/achievements/thumbs/128/first-point.webp'),
