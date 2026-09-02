@@ -50,7 +50,7 @@ def test_tracking_expires_every_source_after_start_plus_24h_and_explorer_applies
 
 def test_old_matches_are_record_once_not_continuously_refollowed_in_task_control():
     task = text('assets/js/pages/task-control.js')
-    admin = text('assets/js/pages/admin-features.js')
+    admin = '\n'.join(path.read_text() for path in (ROOT/'assets/js/admin').glob('*.js')) + text('assets/js/pages/admin-features.js')
     assert 'm.autoStopReason==="started-over-24h"?"Record once":"Follow"' in task
     assert 'Snapshot recorded once. Continuous tracking remains stopped because the match started more than 24 hours ago.' in task
     assert 'expiredByStart ? "Record once" : "Follow"' in admin

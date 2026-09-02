@@ -38,7 +38,7 @@ def main():
     registry = (ROOT / "server/shared/TaskRegistry.php").read_text()
     control = (ROOT / "server/control/public/api.php").read_text()
     shared_history = (ROOT / "assets/js/shared/match-history-ui.js").read_text()
-    admin_history = (ROOT / "assets/js/pages/admin-features.js").read_text()
+    admin_history = "\n".join(path.read_text() for path in (ROOT / "assets/js/admin").glob("*.js")) + (ROOT / "assets/js/pages/admin-features.js").read_text()
     cron_setup = (ROOT / "CRON_SETUP_v2.8.0.md").read_text()
 
     for token in ("MATCH_MONITORING_FIRST_DAY_SECONDS", "MATCH_MONITORING_DEFAULT_SECONDS", "MATCH_MONITORING_96H_SECONDS", "MATCH_MONITORING_48H_SECONDS", "samplingDue", "nextCaptureAt", "dueReferences", "deferredReferences"):

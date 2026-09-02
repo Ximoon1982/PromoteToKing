@@ -2,10 +2,10 @@
 """v2.8.10 browser semantic gate: startup/auth, source-of-truth, ACAMR and protected write headers."""
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-import json, re
+import json, os, re, shutil
 
 ROOT=Path(__file__).resolve().parents[1]
-CHROMIUM='/usr/bin/chromium'
+CHROMIUM=os.environ.get('P2K_CHROMIUM') or shutil.which('chromium')
 
 def clean_html(name):
     html=(ROOT/name).read_text(encoding='utf-8',errors='ignore')
@@ -92,7 +92,7 @@ def main():
   with sync_playwright() as p:
     browser=p.chromium.launch(headless=True,executable_path=CHROMIUM,args=['--no-sandbox','--disable-dev-shm-usage'])
     page=browser.new_page(); errors=[]; page.on('pageerror',lambda e: errors.append(str(e)))
-    page.set_content(clean_html('ui-v2.html'),wait_until='domcontentloaded');page.add_script_tag(content=DASH);page.add_script_tag(path=str(ROOT/'assets/js/pages/dashboard-v2.js'));page.wait_for_timeout(700)
+    page.set_content(clean_html('ui-v2.html'),wait_until='domcontentloaded');page.add_script_tag(content=DASH);page.add_script_tag(path=str(ROOT/'assets/js/admin/admin-shell.js'));page.add_script_tag(path=str(ROOT/'assets/js/admin/admin-session-controller.js'));page.add_script_tag(path=str(ROOT/'assets/js/admin/embedded-detail-host.js'));page.add_script_tag(path=str(ROOT/'assets/js/admin/tool-registry.js'));page.add_script_tag(path=str(ROOT/'assets/js/dashboard/personal-home.js'));page.add_script_tag(path=str(ROOT/'assets/js/dashboard/insights-controller.js'));page.add_script_tag(path=str(ROOT/'assets/js/dashboard/team-summary.js'));page.add_script_tag(path=str(ROOT/'assets/js/dashboard/match-assistant.js'));page.add_script_tag(path=str(ROOT/'assets/js/dashboard/match-list-dialog.js'));page.add_script_tag(path=str(ROOT/'assets/js/dashboard/dashboard-bootstrap.js'));page.add_script_tag(path=str(ROOT/'assets/js/pages/dashboard-v2.js'));page.wait_for_timeout(700)
     dash=page.evaluate('''() => ({status:document.getElementById('teamStatusBadge')?.textContent||'',members:document.getElementById('teamMembers')?.textContent||'',finished:document.getElementById('teamFinishedMatches')?.textContent||'',registered:document.getElementById('teamOpenRegistrations')?.textContent||'',ongoing:document.getElementById('teamActiveMatches')?.textContent||'',admin:window.P2K_ADMIN_MODE===true,calls:window.__apiCalls||[]})''')
     if page.locator('#dashboardAdministrationTab').count(): page.locator('#dashboardAdministrationTab').click(); page.wait_for_timeout(100)
     admin_hidden=page.evaluate("() => document.getElementById('administrationPage')?.hidden??null")

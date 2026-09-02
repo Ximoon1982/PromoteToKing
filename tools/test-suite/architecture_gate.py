@@ -29,6 +29,27 @@ def dependency_errors() -> list[str]:
         for dependency in modules[name]["depends_on"]: visit(dependency)
         visiting.remove(name); visited.add(name)
     for name in modules: visit(name)
+    for entrypoint, expected in data.get("entrypoints", {}).items():
+        html_path = ROOT / entrypoint
+        if not html_path.is_file():
+            errors.append(f"missing JS entrypoint: {entrypoint}")
+            continue
+        source = html_path.read_text(encoding="utf-8", errors="ignore")
+        scripts = [value.split("?", 1)[0] for value in re.findall(r"<script[^>]+src=[\"']([^\"']+)", source, re.I)]
+        positions = []
+        for name in expected:
+            path = modules[name]["path"]
+            if path not in scripts:
+                errors.append(f"entrypoint module missing: {entrypoint} -> {path}")
+                continue
+            positions.append(scripts.index(path))
+        if positions != sorted(positions):
+            errors.append(f"entrypoint module order invalid: {entrypoint}")
+        expected_set = set(expected)
+        for name in expected:
+            for dependency in modules[name]["depends_on"]:
+                if dependency in expected_set and expected.index(dependency) > expected.index(name):
+                    errors.append(f"entrypoint dependency loads late: {entrypoint}: {name} -> {dependency}")
     return errors
 
 

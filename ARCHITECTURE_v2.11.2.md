@@ -12,7 +12,7 @@ The canonical shell owns six-tab selection, deep links, history, the detail regi
 
 ## Compatibility policy
 
-Existing globals, routes, public PHP methods, API envelopes, DOM identifiers, script order and persistence formats are frozen. A compatibility facade may delegate internally but may not translate observable output. Shims remain until caller inventory proves they are unused.
+Existing globals, routes, public PHP methods, API envelopes, DOM identifiers, effective initialization order and persistence formats are frozen. New module scripts load immediately before their compatibility facade and do not introduce visible markup or styling. A compatibility facade may delegate internally but may not translate observable output. Shims remain until caller inventory proves they are unused.
 
 ## Admin jobs
 

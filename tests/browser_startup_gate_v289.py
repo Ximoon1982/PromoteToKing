@@ -6,10 +6,10 @@ Playwright. Release packaging runs it when Chromium + Playwright are available.
 """
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-import json, re, sys
+import json, os, re, shutil, sys
 
 ROOT = Path(__file__).resolve().parents[1]
-CHROMIUM = "/usr/bin/chromium"
+CHROMIUM = os.environ.get("P2K_CHROMIUM") or shutil.which("chromium")
 
 def clean_ui_html():
     html=(ROOT/'ui-v2.html').read_text(encoding='utf-8',errors='ignore')
@@ -73,6 +73,15 @@ def main():
         page=browser.new_page(); errors=[]; page.on('pageerror',lambda e: errors.append(str(e)))
         page.set_content(clean_ui_html(),wait_until='domcontentloaded')
         page.add_script_tag(content=DASH_BOOTSTRAP)
+        page.add_script_tag(path=str(ROOT/'assets/js/admin/admin-shell.js'))
+        page.add_script_tag(path=str(ROOT/'assets/js/admin/admin-session-controller.js'))
+        page.add_script_tag(path=str(ROOT/'assets/js/admin/embedded-detail-host.js'))
+        page.add_script_tag(path=str(ROOT/'assets/js/admin/tool-registry.js'))
+        page.add_script_tag(path=str(ROOT/'assets/js/dashboard/personal-home.js'))
+        page.add_script_tag(path=str(ROOT/'assets/js/dashboard/insights-controller.js'))
+        page.add_script_tag(path=str(ROOT/'assets/js/dashboard/team-summary.js'))
+        page.add_script_tag(path=str(ROOT/'assets/js/dashboard/match-assistant.js'))
+        page.add_script_tag(path=str(ROOT/'assets/js/dashboard/match-list-dialog.js'));page.add_script_tag(path=str(ROOT/'assets/js/dashboard/dashboard-bootstrap.js'))
         page.add_script_tag(path=str(ROOT/'assets/js/pages/dashboard-v2.js'))
         page.wait_for_timeout(350)
         dashboard=page.evaluate('''() => ({

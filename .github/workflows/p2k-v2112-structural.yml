@@ -89,17 +89,19 @@ jobs:
           INSTALLER="$BUILD/PromoteToKing_v2.11.2_STRUCTURAL_CONSOLIDATION.run"
           "$INSTALLER" "$TARGET"
           (cd "$TARGET" && sha256sum -c MANIFEST_v2.11.2.sha256)
-          (cd "$TARGET" && find server/team-points/src -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/before-reinstall.sha"
+          (cd "$TARGET" && find index.html ui-v2.html assets/js server/team-points/src -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/before-reinstall.sha"
           "$INSTALLER" "$TARGET"
-          (cd "$TARGET" && find server/team-points/src -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/after-reinstall.sha"
+          (cd "$TARGET" && find index.html ui-v2.html assets/js server/team-points/src -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/after-reinstall.sha"
           diff -u "$RUNNER_TEMP/before-reinstall.sha" "$RUNNER_TEMP/after-reinstall.sha"
-          (cd "$ROLLBACK" && find server/team-points/src -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/rollback-before.sha"
+          (cd "$ROLLBACK" && find index.html ui-v2.html assets/js server/team-points/src -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/rollback-before.sha"
           if P2K_FORCE_INSTALL_FAILURE=1 "$INSTALLER" "$ROLLBACK"; then exit 1; fi
-          (cd "$ROLLBACK" && find server/team-points/src -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/rollback-after.sha"
+          (cd "$ROLLBACK" && find index.html ui-v2.html assets/js server/team-points/src -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/rollback-after.sha"
           diff -u "$RUNNER_TEMP/rollback-before.sha" "$RUNNER_TEMP/rollback-after.sha"
           test ! -e "$ROLLBACK/server/team-points/src/SqlReadGateway.php"
           test ! -e "$ROLLBACK/server/team-points/src/AnalyticsRefreshRuntime.php"
           test ! -e "$ROLLBACK/server/team-points/src/AchievementArtwork.php"
+          test ! -e "$ROLLBACK/assets/js/dashboard/dashboard-bootstrap.js"
+          test ! -e "$ROLLBACK/assets/js/admin/admin-runtime.js"
           (cd "$BUILD" && sha256sum -c SHA256SUMS_v2.11.2.txt)
           test -x "$BUILD/install-promote-to-king-2.11.2.sh"
           grep -Fq 'Existing CRON entries were preserved unchanged.' "$BUILD/PromoteToKing_v2.11.2_STRUCTURAL_CONSOLIDATION.run"

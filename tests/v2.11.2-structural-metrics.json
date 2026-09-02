@@ -1,14 +1,32 @@
 {
   "baseline": "v2.11.1",
-  "frontend_bytes": {
+  "frontend_facade_bytes": {
     "assets/js/shared/api-client.js": {"baseline": 73721, "current": 73721},
-    "assets/js/pages/admin-features.js": {"baseline": 56673, "current": 56673},
-    "assets/js/pages/dashboard-v2.js": {"baseline": 222130, "current": 222130}
+    "assets/js/pages/admin-features.js": {"baseline": 56673, "current": 6075},
+    "assets/js/pages/dashboard-v2.js": {"baseline": 222130, "current": 39038}
   },
-  "facade_bytes": {
+  "extracted_frontend_modules": {
+    "assets/js/admin/admin-runtime.js": 1832,
+    "assets/js/admin/admin-session-controller.js": 29442,
+    "assets/js/admin/admin-shell.js": 42839,
+    "assets/js/admin/diagnostics-controller.js": 10552,
+    "assets/js/admin/embedded-detail-host.js": 4263,
+    "assets/js/admin/history-controller.js": 14432,
+    "assets/js/admin/logs-controller.js": 7783,
+    "assets/js/admin/match-management.js": 12481,
+    "assets/js/admin/recording-controller.js": 6840,
+    "assets/js/admin/tool-registry.js": 10407,
+    "assets/js/dashboard/dashboard-bootstrap.js": 13116,
+    "assets/js/dashboard/insights-controller.js": 36460,
+    "assets/js/dashboard/match-assistant.js": 24558,
+    "assets/js/dashboard/match-list-dialog.js": 4027,
+    "assets/js/dashboard/personal-home.js": 21496,
+    "assets/js/dashboard/team-summary.js": 10009
+  },
+  "php_facade_bytes": {
     "server/team-points/src/ClubIntelligenceService.php": {"baseline": 72377, "current": 72220},
     "server/team-points/src/AnalyticsBuilder.php": {"baseline": 68886, "current": 67946},
     "server/team-points/src/AchievementCatalog.php": {"baseline": 53821, "current": 53476}
   },
-  "policy": "Frontend runtime bytes remain identical. Facades may shrink as internal responsibilities move behind signature-compatible collaborators."
+  "policy": "Facade reductions and extracted-module sizes are exact-head metrics; behavior is governed by dependency, API, DOM, rendered and initialization-race parity gates."
 }

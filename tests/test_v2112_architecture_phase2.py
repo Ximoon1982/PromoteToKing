@@ -32,10 +32,11 @@ def test_corrective_layers_have_no_unproven_deletions():
     assert "Old version names are not removal evidence" in data["policy"]
 
 
-def test_frontend_activation_is_blocked_until_rendered_and_race_parity():
+def test_frontend_activation_requires_rendered_and_race_parity():
     data = json.loads((ROOT / "tests/v2.11.2-frontend-boundaries.json").read_text(encoding="utf-8"))
     assert data["layers"] == {"shared": 0, "feature": 1, "page": 2}
-    assert "DOM, rendered and initialization-race parity" in data["activation_rule"]
+    assert all(term in data["activation_rule"] for term in ["DOM", "rendered", "initialization-race parity"])
+    assert data["entrypoints"]["ui-v2.html"][-1] == "dashboard/facade"
 
 
 def test_public_endpoint_inventory_is_exact():
@@ -48,10 +49,12 @@ def test_public_endpoint_inventory_is_exact():
     assert actual == contract["files"]
 
 
-def test_structural_metrics_are_current_and_frontend_is_unchanged():
+def test_structural_metrics_are_current_and_facades_shrink():
     metrics = json.loads((ROOT / "tests/v2.11.2-structural-metrics.json").read_text(encoding="utf-8"))
-    for path, values in metrics["frontend_bytes"].items():
-        assert (ROOT / path).stat().st_size == values["current"] == values["baseline"]
-    for path, values in metrics["facade_bytes"].items():
+    for path, values in metrics["frontend_facade_bytes"].items():
         assert (ROOT / path).stat().st_size == values["current"]
         assert values["current"] <= values["baseline"]
+    for path, current in metrics["extracted_frontend_modules"].items():
+        assert (ROOT / path).stat().st_size == current
+    for path, values in metrics["php_facade_bytes"].items():
+        assert (ROOT / path).stat().st_size == values["current"] <= values["baseline"]

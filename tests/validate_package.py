@@ -60,7 +60,7 @@ def main():
             local=local_ref(value)
             if local: check((ROOT/local).is_file() or (local in declared_files and Path(local).suffix.lower() in image_ext), f"Missing local resource from {file.name}: {local}")
 
-    admin_js=(ROOT/"assets/js/pages/admin-features.js").read_text()
+    admin_js="\n".join(path.read_text() for path in (ROOT/"assets/js/admin").glob("*.js"))+(ROOT/"assets/js/pages/admin-features.js").read_text()
     referenced=set(re.findall(r'byId\("([A-Za-z0-9_-]+)"\)', admin_js))
     missing=sorted(referenced-all_ids)
     check(not missing, f"Admin JS IDs missing from index.html: {missing}")

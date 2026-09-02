@@ -7,6 +7,26 @@ PAYLOAD="$BUILD/payload"
 INSTALLER="$BUILD/PromoteToKing_v2.11.2_STRUCTURAL_CONSOLIDATION.run"
 LAUNCHER="$BUILD/install-promote-to-king-2.11.2.sh"
 FILES=(
+  index.html
+  ui-v2.html
+  assets/js/pages/admin-features.js
+  assets/js/pages/dashboard-v2.js
+  assets/js/admin/admin-runtime.js
+  assets/js/admin/admin-session-controller.js
+  assets/js/admin/admin-shell.js
+  assets/js/admin/diagnostics-controller.js
+  assets/js/admin/embedded-detail-host.js
+  assets/js/admin/history-controller.js
+  assets/js/admin/logs-controller.js
+  assets/js/admin/match-management.js
+  assets/js/admin/recording-controller.js
+  assets/js/admin/tool-registry.js
+  assets/js/dashboard/dashboard-bootstrap.js
+  assets/js/dashboard/insights-controller.js
+  assets/js/dashboard/match-assistant.js
+  assets/js/dashboard/match-list-dialog.js
+  assets/js/dashboard/personal-home.js
+  assets/js/dashboard/team-summary.js
   server/team-points/src/AchievementArtwork.php
   server/team-points/src/AchievementCatalog.php
   server/team-points/src/AnalyticsBuilder.php
@@ -34,7 +54,7 @@ set -euo pipefail
 TARGET=${1:?Usage: installer.run TARGET}
 MARKER=__P2K_V2112_PAYLOAD_BELOW__
 EXPECTED=__PAYLOAD_SHA__
-FILES=(server/team-points/src/AchievementArtwork.php server/team-points/src/AchievementCatalog.php server/team-points/src/AnalyticsBuilder.php server/team-points/src/AnalyticsRefreshRuntime.php server/team-points/src/ClubIntelligenceService.php server/team-points/src/SqlReadGateway.php server/team-points/src/AdminJob/JobCheckpointStore.php server/team-points/src/AdminJob/JobRunner.php server/team-points/src/AdminJob/JobState.php server/team-points/src/AdminJob/JobTelemetry.php server/team-points/src/InternalErrorCategory.php)
+FILES=(index.html ui-v2.html assets/js/pages/admin-features.js assets/js/pages/dashboard-v2.js assets/js/admin/admin-runtime.js assets/js/admin/admin-session-controller.js assets/js/admin/admin-shell.js assets/js/admin/diagnostics-controller.js assets/js/admin/embedded-detail-host.js assets/js/admin/history-controller.js assets/js/admin/logs-controller.js assets/js/admin/match-management.js assets/js/admin/recording-controller.js assets/js/admin/tool-registry.js assets/js/dashboard/dashboard-bootstrap.js assets/js/dashboard/insights-controller.js assets/js/dashboard/match-assistant.js assets/js/dashboard/match-list-dialog.js assets/js/dashboard/personal-home.js assets/js/dashboard/team-summary.js server/team-points/src/AchievementArtwork.php server/team-points/src/AchievementCatalog.php server/team-points/src/AnalyticsBuilder.php server/team-points/src/AnalyticsRefreshRuntime.php server/team-points/src/ClubIntelligenceService.php server/team-points/src/SqlReadGateway.php server/team-points/src/AdminJob/JobCheckpointStore.php server/team-points/src/AdminJob/JobRunner.php server/team-points/src/AdminJob/JobState.php server/team-points/src/AdminJob/JobTelemetry.php server/team-points/src/InternalErrorCategory.php)
 TMP=$(mktemp -d)
 BACKUP=$(mktemp -d)
 transaction=0
@@ -113,9 +133,9 @@ Direct installer form
   ./PromoteToKing_v2.11.2_STRUCTURAL_CONSOLIDATION.run /absolute/path/to/promote-to-king
 
 The installer validates the embedded payload and installed VERSION, applies only the
-v2.11.2 structural PHP files, preserves existing CRON entries, and rolls back all
+v2.11.2 structural runtime files, preserves existing CRON entries, and rolls back all
 changed/new files if validation or installation fails. It does not alter configuration,
-runtime data, schemas, UI assets, authentication settings or scheduled jobs.
+runtime data, schemas, visual styles/assets, authentication settings or scheduled jobs.
 INSTRUCTIONS
 git -C "$ROOT" archive --format=zip --output="$BUILD/PromoteToKing-v2.11.2-source.zip" HEAD
 (cd "$BUILD" && sha256sum PromoteToKing_v2.11.2_STRUCTURAL_CONSOLIDATION.run install-promote-to-king-2.11.2.sh INSTALL_v2.11.2.txt PromoteToKing-v2.11.2-source.zip > SHA256SUMS_v2.11.2.txt)

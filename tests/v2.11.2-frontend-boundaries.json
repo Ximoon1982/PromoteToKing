@@ -2,13 +2,29 @@
   "layers": {"shared": 0, "feature": 1, "page": 2},
   "modules": {
     "shared/api-client": {"layer": "shared", "path": "assets/js/shared/api-client.js", "depends_on": []},
-    "feature/admin-features": {"layer": "feature", "path": "assets/js/pages/admin-features.js", "depends_on": ["shared/api-client"]},
-    "page/dashboard": {"layer": "page", "path": "assets/js/pages/dashboard-v2.js", "depends_on": ["shared/api-client", "feature/admin-features"]}
+    "admin/runtime": {"layer": "feature", "path": "assets/js/admin/admin-runtime.js", "depends_on": ["shared/api-client"]},
+    "admin/logs": {"layer": "feature", "path": "assets/js/admin/logs-controller.js", "depends_on": ["admin/runtime"]},
+    "admin/diagnostics": {"layer": "feature", "path": "assets/js/admin/diagnostics-controller.js", "depends_on": ["admin/runtime"]},
+    "admin/history": {"layer": "feature", "path": "assets/js/admin/history-controller.js", "depends_on": ["admin/runtime"]},
+    "admin/matches": {"layer": "feature", "path": "assets/js/admin/match-management.js", "depends_on": ["admin/runtime"]},
+    "admin/recording": {"layer": "feature", "path": "assets/js/admin/recording-controller.js", "depends_on": ["admin/runtime"]},
+    "admin/facade": {"layer": "page", "path": "assets/js/pages/admin-features.js", "depends_on": ["admin/runtime", "admin/logs", "admin/diagnostics", "admin/history", "admin/matches", "admin/recording"]},
+    "dashboard/admin-shell": {"layer": "feature", "path": "assets/js/admin/admin-shell.js", "depends_on": ["shared/api-client"]},
+    "dashboard/admin-session": {"layer": "feature", "path": "assets/js/admin/admin-session-controller.js", "depends_on": ["dashboard/admin-shell"]},
+    "dashboard/embedded-host": {"layer": "feature", "path": "assets/js/admin/embedded-detail-host.js", "depends_on": []},
+    "dashboard/tools": {"layer": "feature", "path": "assets/js/admin/tool-registry.js", "depends_on": []},
+    "dashboard/personal": {"layer": "feature", "path": "assets/js/dashboard/personal-home.js", "depends_on": ["shared/api-client"]},
+    "dashboard/insights": {"layer": "feature", "path": "assets/js/dashboard/insights-controller.js", "depends_on": ["shared/api-client"]},
+    "dashboard/team": {"layer": "feature", "path": "assets/js/dashboard/team-summary.js", "depends_on": ["shared/api-client"]},
+    "dashboard/assistant": {"layer": "feature", "path": "assets/js/dashboard/match-assistant.js", "depends_on": []},
+    "dashboard/match-list": {"layer": "feature", "path": "assets/js/dashboard/match-list-dialog.js", "depends_on": []},
+    "dashboard/bootstrap": {"layer": "page", "path": "assets/js/dashboard/dashboard-bootstrap.js", "depends_on": ["dashboard/admin-shell", "dashboard/admin-session", "dashboard/embedded-host", "dashboard/tools", "dashboard/personal", "dashboard/insights", "dashboard/team", "dashboard/assistant", "dashboard/match-list"]},
+    "dashboard/facade": {"layer": "page", "path": "assets/js/pages/dashboard-v2.js", "depends_on": ["shared/api-client", "dashboard/bootstrap"]}
   },
-  "planned_internal_ownership": {
-    "admin": ["admin-bootstrap", "admin-shell", "admin-router", "admin-navigation-state", "admin-detail-registry", "embedded-detail-host", "admin-session-controller"],
-    "dashboard": ["dashboard-bootstrap", "dashboard-home", "dashboard-members", "dashboard-matches", "dashboard-tournaments", "dashboard-maintenance", "dashboard-freshness", "dashboard-actions"],
-    "shared_api": ["request-transport", "authenticated-transport", "request-scheduler", "request-retry", "request-errors", "response-normalizer"]
+  "entrypoints": {
+    "index.html": ["admin/runtime", "admin/logs", "admin/diagnostics", "admin/history", "admin/matches", "admin/recording", "admin/facade"],
+    "ui-v2.html": ["dashboard/admin-shell", "dashboard/admin-session", "dashboard/embedded-host", "dashboard/tools", "dashboard/personal", "dashboard/insights", "dashboard/team", "dashboard/assistant", "dashboard/match-list", "dashboard/bootstrap", "dashboard/facade"]
   },
-  "activation_rule": "No runtime split is activated until DOM, rendered and initialization-race parity replaces byte-level JS parity."
+  "activation_rule": "Runtime modules require static dependency, DOM, rendered and initialization-race parity gates.",
+  "compatibility": "Classic-script factories preserve synchronous global availability and established entrypoint order."
 }

@@ -7,7 +7,8 @@ const read = file => fs.readFileSync(path.join(root, file), "utf8");
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 
 const index = read("index.html");
-const admin = read("assets/js/pages/admin-features.js");
+const admin = ["admin-runtime", "logs-controller", "diagnostics-controller", "history-controller", "match-management", "recording-controller"]
+  .map(name => read(`assets/js/admin/${name}.js`)).concat(read("assets/js/pages/admin-features.js")).join("\n");
 const history = read("assets/js/shared/match-history-ui.js");
 const challenge = read("ChallengeListAssistant.html");
 const siteCss = read("assets/css/site.css");

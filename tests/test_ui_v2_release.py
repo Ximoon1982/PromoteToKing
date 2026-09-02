@@ -135,7 +135,7 @@ def main():
     site_config=(ROOT/"assets/js/site-config.js").read_text()
     check('version: "2.8.1"' in site_config and 'schemaVersion: 5' in site_config, "Runtime package metadata is stale")
     check('RUNTIME_VERSION = "2.8.1"' in (ROOT/"assets/js/shared/api-client.js").read_text(), "API client runtime version is stale")
-    admin_js=(ROOT/"assets/js/pages/admin-features.js").read_text()
+    admin_js="\n".join(path.read_text() for path in (ROOT/"assets/js/admin").glob("*.js"))+(ROOT/"assets/js/pages/admin-features.js").read_text()
     check('loaded: false' in admin_js and 'Team Points scheduler' in admin_js and 'cron_state' in admin_js, "Expanded diagnostics are missing")
     check('ClubTools/2.8.1' in (ROOT/"api/_common.php").read_text() and 'ClubToolsLocal/2.8.1' in (ROOT/"serve_local.py").read_text(), "Server runtime versions are stale")
     check('id="dashboardAdminToggleHost"' in dashboard.split('id="p2kAuthHost"')[0] and 'id="dashboardViewBar"' not in dashboard, "Admin toggle host must remain empty until local/OAuth authorization is resolved")
