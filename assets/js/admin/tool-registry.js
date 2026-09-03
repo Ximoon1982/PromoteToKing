@@ -66,6 +66,6 @@ function routeFallback(key) {
 return ({ find: "FindMatch.htm", upcoming: "AnalyzeMatches.htm", creation: "MatchCreationAnalyzer.htm", open: "AnalyzeMatch.html", recruit: "RecruitMatch.html", challenges: "ChallengeListAssistant.html", teamPoints: "TeamPointsAdmin.html" })[key] || "index.html";
 }
 
-return Object.freeze({ renderTools, routeFallback });
+return Object.freeze({ tools, renderTools, routeFallback });
 }});
 })();
