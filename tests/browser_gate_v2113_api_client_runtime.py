@@ -178,9 +178,9 @@ def main() -> None:
     assert result["origin"] == origin and result["synchronous"] is True, result
     assert result["dedupeCount"] == 1 and result["distinctCounts"] == [1, 1], result
     assert result["retryCount"] == 2 and result["permanent"]["status"] == 400, result
-    assert result["timeout"]["code"] == "REQUEST_TIMEOUT", result
+    assert result["timeout"]["code"] == "TIMEOUT", result
     assert result["gateway"]["method"] == "POST" and result["gateway"]["credentials"] == "same-origin", result
-    assert result["gateway"]["envelope"]["csrf"] == "csrf-runtime-oracle", result
+    assert result["gateway"]["headers"]["x-p2k-oauth-csrf"] == "csrf-runtime-oracle", result
     print(json.dumps({"api_client_runtime_equivalence":"passed","origin":origin,"page_errors":0,"deduplicated_fetches":result["dedupeCount"],"retry_fetches":result["retryCount"]}, indent=2))
 
 
