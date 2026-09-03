@@ -3,7 +3,7 @@
 "use strict";
 window.P2K_DASHBOARD_MODULES = window.P2K_DASHBOARD_MODULES || {};
 window.P2K_DASHBOARD_MODULES.matchListDialog = Object.freeze({create(context) {
-const { state, byId, matchBoardCount, matchListTotals, number } = context;
+const { state, byId, matchBoardCount, matchListTotals, number, setText, formatDateOnly } = context;
 function matchListLabel(status) {
     return ({ registered: "Registered matches", ongoing: "Ongoing matches", finished: "Finished matches" })[status] || "Matches";
   }
