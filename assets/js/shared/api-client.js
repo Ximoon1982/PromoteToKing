@@ -437,6 +437,26 @@
     });
   }
 
+  // v2.11.3: delegate request semantics when the bounded module is present.
+  // The local implementation remains temporarily as the direct-loader compatibility
+  // fallback until every production and test entrypoint is runtime-qualified.
+  const requestSemanticsFactory = window.P2K_API_MODULES?.requestSemantics?.create;
+  if (typeof requestSemanticsFactory === "function") {
+    const semantics = requestSemanticsFactory({ allowedOrigins: ALLOWED_ORIGINS });
+    normalizeUrl = semantics.normalizeUrl;
+    apiError = semantics.apiError;
+    abortError = semantics.abortError;
+    activityAwareOptions = semantics.activityAwareOptions;
+    timeoutError = semantics.timeoutError;
+    categoryForStatus = semantics.categoryForStatus;
+    normalizeError = semantics.normalizeError;
+    isCancelled = semantics.isCancelled;
+    isTransient = semantics.isTransient;
+    isPermanent = semantics.isPermanent;
+    userMessage = semantics.userMessage;
+    delay = semantics.delay;
+  }
+
   function endpointPriority(url) {
     let path = "";
     try { path = new URL(url).pathname.toLowerCase(); }

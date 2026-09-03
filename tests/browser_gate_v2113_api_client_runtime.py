@@ -163,6 +163,8 @@ def main() -> None:
                 page.on("pageerror", lambda error, key=mode: errors[key].append(str(error)))
                 page.goto(origin + "/runtime.html", wait_until="domcontentloaded")
                 page.add_script_tag(content=BOOTSTRAP)
+                if mode == "current":
+                    page.add_script_tag(path=str(ROOT / "assets/js/shared/api-request-semantics.js"))
                 page.add_script_tag(content=source)
                 snapshots[mode] = page.evaluate(SCENARIO)
                 page.close()
