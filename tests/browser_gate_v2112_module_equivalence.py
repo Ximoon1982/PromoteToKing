@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Execute baseline and modular dashboards and compare their settled DOM/state."""
+"""Compare baseline and modular Dashboard/Administration DOM and runtime state."""
 
 from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -29,6 +30,15 @@ MODULES = (
     "assets/js/dashboard/dashboard-bootstrap.js",
     "assets/js/pages/dashboard-v2.js",
 )
+ADMIN_MODULES = (
+    "assets/js/admin/admin-runtime.js",
+    "assets/js/admin/logs-controller.js",
+    "assets/js/admin/diagnostics-controller.js",
+    "assets/js/admin/history-controller.js",
+    "assets/js/admin/match-management.js",
+    "assets/js/admin/recording-controller.js",
+    "assets/js/pages/admin-features.js",
+)
 
 
 def baseline_dashboard() -> str:
@@ -36,6 +46,20 @@ def baseline_dashboard() -> str:
         ["git", "show", f"{BASELINE}:assets/js/pages/dashboard-v2.js"],
         cwd=ROOT, check=True, text=True, capture_output=True,
     ).stdout
+
+
+def baseline_admin() -> str:
+    return subprocess.run(
+        ["git", "show", f"{BASELINE}:assets/js/pages/admin-features.js"],
+        cwd=ROOT, check=True, text=True, capture_output=True,
+    ).stdout
+
+
+def clean_admin_html() -> str:
+    html = (ROOT / "index.html").read_text(encoding="utf-8", errors="ignore")
+    html = re.sub(r"<script\b[^>]*>.*?</script>", "", html, flags=re.I | re.S)
+    html = re.sub(r"\s+src=([\"'])[^\"']*\1", "", html, flags=re.I)
+    return html
 
 
 def settle(page) -> dict:
@@ -79,6 +103,35 @@ def main() -> None:
                 if missing:
                     raise AssertionError(f"Missing modular factories: {missing}")
             page.close()
+        admin_snapshots = {}
+        admin_errors = {}
+        for mode in ("baseline", "modular"):
+            page = browser.new_page()
+            admin_errors[mode] = []
+            page.on("pageerror", lambda error, key=mode: admin_errors[key].append(str(error)))
+            page.set_content(clean_admin_html(), wait_until="domcontentloaded")
+            page.add_script_tag(content="window.P2K_ADMIN_MODE = true;")
+            if mode == "baseline":
+                page.add_script_tag(content=baseline_admin())
+            else:
+                for relative in ADMIN_MODULES:
+                    page.add_script_tag(path=str(ROOT / relative))
+            page.wait_for_timeout(100)
+            admin_snapshots[mode] = page.evaluate("""() => ({
+              body: document.body.innerHTML,
+              adminOpenHidden: document.getElementById('adminOpen')?.hidden ?? null,
+              adminModalHidden: document.getElementById('adminModal')?.hidden ?? null,
+              adminTab: document.querySelector('.admin-tab[aria-selected="true"]')?.dataset.adminTab || '',
+              logTab: document.querySelector('.subtab[aria-selected="true"]')?.dataset.logTab || ''
+            })""")
+            if mode == "modular":
+                missing = page.evaluate("""() => [
+                  'runtime','logs','diagnostics','history_controller',
+                  'match_management','recording_controller'
+                ].filter(name => typeof window.P2K_ADMIN_FEATURE_MODULES?.[name]?.create !== 'function')""")
+                if missing:
+                    raise AssertionError(f"Missing Administration factories: {missing}")
+            page.close()
         browser.close()
     # The historical fixture itself emits one invalid-URL error under about:blank.
     # It is acceptable only when the modular runtime reproduces the exact baseline
@@ -93,8 +146,16 @@ def main() -> None:
         }
         comparable["body_equal"] = snapshots["baseline"]["body"] == snapshots["modular"]["body"]
         raise AssertionError(json.dumps({"errors": errors, "snapshots": comparable}, indent=2))
+    if admin_errors["baseline"] != admin_errors["modular"] or admin_errors["modular"] or admin_snapshots["baseline"] != admin_snapshots["modular"]:
+        comparable = {
+            mode: {key: value for key, value in snapshot.items() if key != "body"}
+            for mode, snapshot in admin_snapshots.items()
+        }
+        comparable["body_equal"] = admin_snapshots["baseline"]["body"] == admin_snapshots["modular"]["body"]
+        raise AssertionError(json.dumps({"admin_errors": admin_errors, "admin_snapshots": comparable}, indent=2))
     print(json.dumps({
         "module_equivalence": "passed",
+        "administration_equivalence": "passed",
         "shared_fixture_errors": errors["baseline"],
         "modular_only_errors": [],
     }, indent=2))
