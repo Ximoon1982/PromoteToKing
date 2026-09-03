@@ -17,6 +17,14 @@ def test_api_request_semantics_has_an_explicit_factory_boundary():
     assert "normalizeUrl, apiError, abortError, activityAwareOptions, timeoutError" in facade
 
 
+def test_api_transport_has_an_explicit_dependency_boundary():
+    module = text("assets/js/shared/api-transport.js")
+    facade = text("assets/js/shared/api-client.js")
+    assert "modules.transport = Object.freeze" in module
+    assert "nativeFetch, defaultTimeoutMs, jsonpEnabled, counters, integer" in module
+    assert "const { executeFetch, fetchSnapshot } = transportFactory" in facade
+
+
 def test_api_client_public_compatibility_surface_remains_owned_by_facade():
     facade = text("assets/js/shared/api-client.js")
     public = facade[facade.index("window.P2K_API_CLIENT = Object.freeze") :]
@@ -37,15 +45,17 @@ def test_v2113_parity_gate_is_anchored_and_explicit():
     assert 'visual_suffixes = (".css", ".png"' in gate
 
 
-def test_every_api_client_entrypoint_loads_request_semantics_first():
+def test_every_api_client_entrypoint_loads_dependencies_first():
     for html in sorted(ROOT.glob("*.htm*")):
         source = html.read_text(encoding="utf-8", errors="ignore")
         marker = "assets/js/shared/api-client.js"
         if marker not in source:
             continue
         dependency = "assets/js/shared/api-request-semantics.js"
+        transport = "assets/js/shared/api-transport.js"
         assert dependency in source, html.name
-        assert source.index(dependency) < source.index(marker), html.name
+        assert transport in source, html.name
+        assert source.index(dependency) < source.index(transport) < source.index(marker), html.name
 
 
 def test_v2113_dependency_inventory_covers_every_direct_loader():
@@ -55,4 +65,4 @@ def test_v2113_dependency_inventory_covers_every_direct_loader():
         if "assets/js/shared/api-client.js" in html.read_text(encoding="utf-8", errors="ignore")
     }
     assert set(inventory["entrypoints"]) == expected
-    assert inventory["modules"]["shared/api-client"]["depends_on"] == ["shared/api-request-semantics"]
+    assert inventory["modules"]["shared/api-client"]["depends_on"] == ["shared/api-request-semantics", "shared/api-transport"]

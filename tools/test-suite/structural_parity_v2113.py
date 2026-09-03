@@ -28,6 +28,7 @@ PRODUCTION_ALLOWLIST = {
     "ui-v2.html",
     "assets/js/shared/api-client.js",
     "assets/js/shared/api-request-semantics.js",
+    "assets/js/shared/api-transport.js",
 }
 ENGINEERING_PREFIXES = (".github/", "tests/", "tools/")
 ENGINEERING_FILES = {

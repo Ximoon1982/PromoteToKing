@@ -59,7 +59,7 @@ def main():
         page.on('pageerror', lambda error: errors.append(str(error)))
         page.set_content('<!doctype html><html><body><header class="site-header"></header></body></html>')
         page.add_script_tag(content=BOOTSTRAP)
-        page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-semantics.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js'))
+        page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-semantics.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-transport.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js'))
         page.evaluate('window.P2K_API_CLIENT.setOAuthBearerMode(true)')
 
         result = page.evaluate("""async () => {
