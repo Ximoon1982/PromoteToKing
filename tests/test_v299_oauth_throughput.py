@@ -8,7 +8,7 @@ def text(rel):
 
 
 def test_real_oauth_shared_transport_has_deep_adaptive_reservoir():
-    api = text("assets/js/shared/api-client.js")
+    api = text("assets/js/shared/api-client.js") + text("assets/js/shared/api-oauth-context.js")
     real = text("assets/js/shared/real-oauth.js")
     assert "const OAUTH_LOGICAL_CONCURRENCY = 256;" in api
     assert ("const OAUTH_INITIAL_RATE_CPS = 8;" in api) or ("const OAUTH_INITIAL_RATE_CPS = 30;" in api)
@@ -20,8 +20,8 @@ def test_real_oauth_shared_transport_has_deep_adaptive_reservoir():
     else:
         assert "Math.max(32, Math.min(512, Math.ceil(oauthGatewayRateTarget * 4)))" in api
         assert "Math.max(24, Math.min(480, Math.ceil(requestedRate * 3)))" in api
-    assert ("const concurrency = oauthBearerMode ? transportConcurrency" in api) or ("const concurrency = oauthBearerMode ? requestedConcurrency" in api)
-    assert "configuredConcurrency = oauthBearerMode ? OAUTH_LOGICAL_CONCURRENCY : 1" in api
+    assert "const concurrency = oauthContext.isBearerMode() ? requestedConcurrency" in api
+    assert "configuredConcurrency = oauthBearerMode ? oauthContext.logicalConcurrency : 1" in api
     assert "observeOAuthBatch" in api
     assert ("p2k-oauth-gateway-tuning-v2" in api) or ("p2k-oauth-gateway-tuning-v3" in api) or ("p2k-oauth-gateway-tuning-v4" in api)
     assert "waitForRealOAuthDecision" in api
@@ -162,12 +162,12 @@ def test_live_ranks_and_opponent_admin_server_steps_can_use_session_bearer():
 
 def test_fake_oauth_and_public_mode_remain_serial():
     fake = text("assets/js/shared/simulated-oauth.js")
-    api = text("assets/js/shared/api-client.js")
+    api = text("assets/js/shared/api-client.js") + text("assets/js/shared/api-oauth-context.js")
     assert "apiConcurrent: false" in fake
     assert "setConcurrentMode?.(false)" in fake
-    assert "configuredConcurrency = oauthBearerMode ? OAUTH_LOGICAL_CONCURRENCY : 1" in api
-    assert "if (oauthBearerMode) return" in api
-    assert "Math.min(MAX_CONCURRENCY, configuredConcurrency, adaptiveConcurrency)" in api
+    assert "configuredConcurrency = oauthBearerMode ? oauthContext.logicalConcurrency : 1" in api
+    assert "if (oauthContext.isBearerMode()) return" in api
+    assert "Math.min(maxConcurrency, configuredConcurrency(), adaptiveConcurrency())" in api
 
 
 def test_guest_copy_points_to_real_oauth_not_fake_mode():

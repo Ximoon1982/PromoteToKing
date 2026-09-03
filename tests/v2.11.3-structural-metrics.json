@@ -1,12 +1,13 @@
 {
   "baseline": "v2.11.2",
   "frontend_facade_bytes": {
-    "assets/js/shared/api-client.js": {"baseline": 73721, "current": 53679},
+    "assets/js/shared/api-client.js": {"baseline": 73721, "current": 29162},
     "assets/js/pages/admin-features.js": {"baseline": 6075, "current": 6075},
     "assets/js/pages/dashboard-v2.js": {"baseline": 39972, "current": 39972}
   },
   "extracted_frontend_modules": {
     "assets/js/shared/api-request-semantics.js": 7070,
+    "assets/js/shared/api-oauth-context.js": 26360,
     "assets/js/shared/api-transport.js": 8660,
     "assets/js/shared/api-request-coordinator.js": 8555,
     "assets/js/admin/admin-runtime.js": 1832,

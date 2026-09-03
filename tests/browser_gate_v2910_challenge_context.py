@@ -12,7 +12,7 @@ window.fetch=async(input,options={})=>{const url=String(input); if(url.includes(
 with sync_playwright() as p:
  b=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox','--disable-dev-shm-usage'])
  page=b.new_page(); errors=[]; page.on('pageerror',lambda e:errors.append(str(e)))
- page.set_content(html); page.add_script_tag(content=BOOT); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-semantics.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-transport.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-coordinator.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/real-oauth.js')); page.add_script_tag(path=str(ROOT/'assets/js/pages/challenge-list-assistant.js'))
+ page.set_content(html); page.add_script_tag(content=BOOT); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-semantics.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-oauth-context.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-transport.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-coordinator.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/real-oauth.js')); page.add_script_tag(path=str(ROOT/'assets/js/pages/challenge-list-assistant.js'))
  page.evaluate('window.P2K_REAL_OAUTH_READY')
  page.fill('#p2kRecommendationInput','alpha-club\nbeta-club\ngamma-club\ndelta-club')
  page.dispatch_event('#p2kRecommendationInput','input')

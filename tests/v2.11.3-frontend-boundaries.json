@@ -1,28 +1,29 @@
 {
   "modules": {
     "shared/api-request-semantics": {"layer": "shared", "path": "assets/js/shared/api-request-semantics.js", "depends_on": []},
+    "shared/api-oauth-context": {"layer": "shared", "path": "assets/js/shared/api-oauth-context.js", "depends_on": ["shared/api-request-semantics"]},
     "shared/api-transport": {"layer": "shared", "path": "assets/js/shared/api-transport.js", "depends_on": ["shared/api-request-semantics"]},
-    "shared/api-request-coordinator": {"layer": "shared", "path": "assets/js/shared/api-request-coordinator.js", "depends_on": ["shared/api-request-semantics", "shared/api-transport"]},
-    "shared/api-client": {"layer": "shared", "path": "assets/js/shared/api-client.js", "depends_on": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator"]}
+    "shared/api-request-coordinator": {"layer": "shared", "path": "assets/js/shared/api-request-coordinator.js", "depends_on": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport"]},
+    "shared/api-client": {"layer": "shared", "path": "assets/js/shared/api-client.js", "depends_on": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator"]}
   },
   "entrypoints": {
-    "AnalyzeMatch.html": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
-    "AnalyzeMatchModal.html": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
-    "AnalyzeMatches.htm": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
-    "ChallengeListAssistant.html": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
-    "DataReconciliation.html": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
-    "FindMatch.htm": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
-    "MatchCreationAnalyzer.htm": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
-    "RecruitMatch.html": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
-    "RecruitmentAdmin.html": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
-    "RecruitmentDemandPlanner.html": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
-    "TaskControl.html": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
-    "TeamPointsAdmin.html": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
-    "TeamPointsMigration.html": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
-    "TournamentAchievementBadgesDemo.html": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
-    "TournamentManagement.html": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
-    "index.html": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client", "admin/runtime", "admin/logs", "admin/diagnostics", "admin/history", "admin/matches", "admin/recording", "admin/facade"],
-    "ui-v2.html": ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client", "dashboard/admin-shell", "dashboard/admin-session", "dashboard/embedded-host", "dashboard/tools", "dashboard/personal", "dashboard/insights", "dashboard/team", "dashboard/assistant", "dashboard/match-list", "dashboard/bootstrap", "dashboard/facade"]
+    "AnalyzeMatch.html": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
+    "AnalyzeMatchModal.html": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
+    "AnalyzeMatches.htm": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
+    "ChallengeListAssistant.html": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
+    "DataReconciliation.html": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
+    "FindMatch.htm": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
+    "MatchCreationAnalyzer.htm": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
+    "RecruitMatch.html": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
+    "RecruitmentAdmin.html": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
+    "RecruitmentDemandPlanner.html": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
+    "TaskControl.html": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
+    "TeamPointsAdmin.html": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
+    "TeamPointsMigration.html": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
+    "TournamentAchievementBadgesDemo.html": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
+    "TournamentManagement.html": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client"],
+    "index.html": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client", "admin/runtime", "admin/logs", "admin/diagnostics", "admin/history", "admin/matches", "admin/recording", "admin/facade"],
+    "ui-v2.html": ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator", "shared/api-client", "dashboard/admin-shell", "dashboard/admin-session", "dashboard/embedded-host", "dashboard/tools", "dashboard/personal", "dashboard/insights", "dashboard/team", "dashboard/assistant", "dashboard/match-list", "dashboard/bootstrap", "dashboard/facade"]
   },
   "activation_rule": "Every direct API-client entrypoint loads explicit dependencies first; runtime activation requires real-origin equivalence and zero new page errors."
 }

@@ -32,7 +32,7 @@ def main():
     page=browser.new_page(); errors=[]; page.on('pageerror',lambda e:errors.append(str(e)))
     page.set_content('<!doctype html><meta charset="utf-8"><title>P0</title>')
     page.add_script_tag(content=BOOTSTRAP)
-    page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-semantics.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-transport.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-coordinator.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js'))
+    page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-semantics.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-oauth-context.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-transport.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-coordinator.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js'))
     page.evaluate('P2K_API_CLIENT.setOAuthBearerMode(true)')
     initial=page.evaluate('P2K_API_CLIENT.diagnostics()')
     assert initial['oauthGatewayRateTarget']==30,initial

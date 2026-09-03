@@ -46,7 +46,7 @@ def main():
         page=browser.new_page(); errors=[]; page.on('pageerror',lambda e:errors.append(str(e)))
         page.set_content(HTML)
         page.add_script_tag(content=BOOTSTRAP)
-        page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-semantics.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-transport.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-coordinator.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js'))
+        page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-semantics.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-oauth-context.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-transport.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-coordinator.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js'))
         page.evaluate('window.P2K_API_CLIENT.setOAuthBearerMode(true)')
         page.add_script_tag(path=str(ROOT/'assets/js/pages/match-creation-analyzer.js'))
         page.wait_for_function("document.getElementById('p2kCreationAnalyzeButton') && !document.getElementById('p2kCreationAnalyzeButton').disabled",timeout=10000)

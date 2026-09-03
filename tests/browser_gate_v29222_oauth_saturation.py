@@ -31,7 +31,7 @@ def main():
  with sync_playwright() as p:
   b=p.chromium.launch(headless=True,executable_path=CHROMIUM,args=['--no-sandbox','--disable-dev-shm-usage'])
   page=b.new_page(); errors=[]; page.on('pageerror',lambda e:errors.append(str(e)))
-  page.set_content('<html><body></body></html>'); page.add_script_tag(content=BOOT); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-semantics.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-transport.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-coordinator.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js'))
+  page.set_content('<html><body></body></html>'); page.add_script_tag(content=BOOT); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-semantics.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-oauth-context.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-transport.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-coordinator.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js'))
   page.evaluate('window.P2K_API_CLIENT.setOAuthBearerMode(true)')
   tiny=page.evaluate('''async()=>{const xs=[1,2].map(i=>`https://api.chess.com/pub/match/${i}`);await window.P2K_API_CLIENT.processPriority(xs,u=>window.P2K_API_CLIENT.json(u,{attempts:1,trafficClass:'background'}),{concurrency:2,getKey:u=>u});return window.P2K_API_CLIENT.diagnostics()}''')
   assert tiny['oauthGatewayMax']==256, tiny

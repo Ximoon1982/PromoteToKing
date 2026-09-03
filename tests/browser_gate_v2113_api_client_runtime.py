@@ -165,6 +165,7 @@ def main() -> None:
                 page.add_script_tag(content=BOOTSTRAP)
                 if mode == "current":
                     page.add_script_tag(path=str(ROOT / "assets/js/shared/api-request-semantics.js"))
+                    page.add_script_tag(path=str(ROOT / "assets/js/shared/api-oauth-context.js"))
                     page.add_script_tag(path=str(ROOT / "assets/js/shared/api-transport.js"))
                     page.add_script_tag(path=str(ROOT / "assets/js/shared/api-request-coordinator.js"))
                 page.add_script_tag(content=source)

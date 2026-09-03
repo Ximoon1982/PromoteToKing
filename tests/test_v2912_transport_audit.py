@@ -40,9 +40,9 @@ def test_oauth_session_uses_one_shared_launch_authority_and_continuous_feedback(
 
 
 def test_browser_gateway_is_multi_post_but_server_rate_authoritative():
-    # v2.11.3 keeps OAuth gateway policy in the facade while low-level request
-    # execution lives in its explicitly loaded transport dependency.
-    src = text("assets/js/shared/api-client.js") + "\n" + text("assets/js/shared/api-transport.js")
+    # v2.11.3 gives gateway policy explicit OAuth ownership while low-level
+    # request execution remains in the transport dependency.
+    src = text("assets/js/shared/api-client.js") + "\n" + text("assets/js/shared/api-oauth-context.js") + "\n" + text("assets/js/shared/api-transport.js")
     assert "OAUTH_GATEWAY_BATCH_SIZE = 32" in src
     assert "OAUTH_GATEWAY_MAX_POSTS = 6" in src
     assert "oauthGatewayActivePosts" in src

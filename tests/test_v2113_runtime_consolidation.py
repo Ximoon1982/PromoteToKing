@@ -33,6 +33,16 @@ def test_api_request_coordinator_has_an_explicit_dependency_boundary():
     assert "const { json, jsonDetailed } = requestCoordinatorFactory" in facade
 
 
+def test_api_oauth_context_owns_gateway_state_and_exposes_a_snapshot():
+    module = text("assets/js/shared/api-oauth-context.js")
+    facade = text("assets/js/shared/api-client.js")
+    assert "modules.oauthContext = Object.freeze" in module
+    assert "const oauthGatewayQueue = []" in module
+    assert "function adaptOAuthGateway(batch)" in module
+    assert "function diagnostics()" in module
+    assert "const oauthContext = oauthContextFactory" in facade
+
+
 def test_api_client_public_compatibility_surface_remains_owned_by_facade():
     facade = text("assets/js/shared/api-client.js")
     public = facade[facade.index("window.P2K_API_CLIENT = Object.freeze") :]
@@ -51,6 +61,7 @@ def test_v2113_parity_gate_is_anchored_and_explicit():
     assert '"assets/js/shared/api-client.js"' in gate
     assert '"assets/js/shared/api-request-semantics.js"' in gate
     assert '"assets/js/shared/api-request-coordinator.js"' in gate
+    assert '"assets/js/shared/api-oauth-context.js"' in gate
     assert 'visual_suffixes = (".css", ".png"' in gate
 
 
@@ -61,12 +72,14 @@ def test_every_api_client_entrypoint_loads_dependencies_first():
         if marker not in source:
             continue
         dependency = "assets/js/shared/api-request-semantics.js"
+        oauth = "assets/js/shared/api-oauth-context.js"
         transport = "assets/js/shared/api-transport.js"
         coordinator = "assets/js/shared/api-request-coordinator.js"
         assert dependency in source, html.name
+        assert oauth in source, html.name
         assert transport in source, html.name
         assert coordinator in source, html.name
-        assert source.index(dependency) < source.index(transport) < source.index(coordinator) < source.index(marker), html.name
+        assert source.index(dependency) < source.index(oauth) < source.index(transport) < source.index(coordinator) < source.index(marker), html.name
 
 
 def test_v2113_dependency_inventory_covers_every_direct_loader():
@@ -76,4 +89,4 @@ def test_v2113_dependency_inventory_covers_every_direct_loader():
         if "assets/js/shared/api-client.js" in html.read_text(encoding="utf-8", errors="ignore")
     }
     assert set(inventory["entrypoints"]) == expected
-    assert inventory["modules"]["shared/api-client"]["depends_on"] == ["shared/api-request-semantics", "shared/api-transport", "shared/api-request-coordinator"]
+    assert inventory["modules"]["shared/api-client"]["depends_on"] == ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator"]

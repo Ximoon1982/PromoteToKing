@@ -28,6 +28,7 @@ PRODUCTION_ALLOWLIST = {
     "ui-v2.html",
     "assets/js/shared/api-client.js",
     "assets/js/shared/api-request-semantics.js",
+    "assets/js/shared/api-oauth-context.js",
     "assets/js/shared/api-transport.js",
     "assets/js/shared/api-request-coordinator.js",
 }

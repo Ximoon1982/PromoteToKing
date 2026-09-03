@@ -8,7 +8,7 @@ def text(rel):
 
 
 def test_oauth_transport_controls_rate_not_only_concurrency():
-    api = text("assets/js/shared/api-client.js")
+    api = text("assets/js/shared/api-client.js") + text("assets/js/shared/api-oauth-context.js")
     oauth = text("server/team-points/src/OAuthSession.php")
     endpoint = text("server/team-points/public/oauth.php")
     assert ('const OAUTH_INITIAL_RATE_CPS = 8;' in api) or ('const OAUTH_INITIAL_RATE_CPS = 30;' in api)
@@ -28,7 +28,7 @@ def test_oauth_transport_controls_rate_not_only_concurrency():
 
 
 def test_rate_controller_remembers_safe_and_unsafe_bounds_and_converges():
-    api = text("assets/js/shared/api-client.js")
+    api = text("assets/js/shared/api-client.js") + text("assets/js/shared/api-oauth-context.js")
     assert 'oauthGatewaySafeRateTarget' in api
     assert 'oauthGatewayUnsafeRateTarget' in api
     assert 'oauthGatewayBestTargetRate' in api
@@ -49,7 +49,7 @@ def test_rate_controller_remembers_safe_and_unsafe_bounds_and_converges():
 
 
 def test_latency_baselines_are_endpoint_class_specific():
-    api = text("assets/js/shared/api-client.js")
+    api = text("assets/js/shared/api-client.js") + text("assets/js/shared/api-oauth-context.js")
     for name in ['match-detail','club-index','roster','club-profile','player-stats','player-matches','archive','player-profile']:
         assert name in api
     assert 'oauthGatewayLatencyByClass' in api
