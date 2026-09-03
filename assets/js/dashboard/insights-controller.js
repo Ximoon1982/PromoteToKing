@@ -3,7 +3,7 @@
 "use strict";
 window.P2K_DASHBOARD_MODULES = window.P2K_DASHBOARD_MODULES || {};
 window.P2K_DASHBOARD_MODULES.insights = Object.freeze({create(context) {
-const { state, byId, escapeHTML, number, setText, nativeLink, cellWithSub, statusChip, loadPublicCachedJSON, writeNavigationState, rankThumbnailAsset, originalRankAsset, adminEntryUsername, selectHallSubtab, showPublicPage, formatDateOnly } = context;
+const { state, byId, escapeHTML, number, setText, nativeLink, cellWithSub, statusChip, loadPublicCachedJSON, loadJSON, writeNavigationState, rankThumbnailAsset, originalRankAsset, adminEntryUsername, selectHallSubtab, showPublicPage, formatDateOnly, formatRelative, matchRulesLabel, matchTimeControlLabel, challengeProgress } = context;
   function insightAction(label, callback, className = "p2k-table-link-button") {
     const button = document.createElement("button");
     button.type = "button";

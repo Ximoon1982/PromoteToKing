@@ -3,7 +3,7 @@
 "use strict";
 window.P2K_DASHBOARD_MODULES = window.P2K_DASHBOARD_MODULES || {};
 window.P2K_DASHBOARD_MODULES.adminSession = Object.freeze({create(context) {
-const { state, byId, escapeHTML, number, setText, showToast, config, clubSlug, clubProfileAPI, loadJSON, setAdmin, renderView, writeNavigationState, adminShellOpenDetail, adminShellHref } = context;
+const { state, byId, escapeHTML, number, setText, showToast, config, clubSlug, clubProfileAPI, loadJSON, setAdmin, renderView, writeNavigationState, adminShellOpenDetail, adminShellHref, ensureAdminInterface, preservedURL, formatRelative, showInsightsModal, openMatchDetail } = context;
 function adminEntryUsername(entry) {
 if (entry && typeof entry === "object") return adminEntryUsername(entry.username || entry.name || entry.url || entry["@id"] || "");
 const value = String(entry || "").trim();

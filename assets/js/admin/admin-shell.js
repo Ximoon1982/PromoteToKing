@@ -4,7 +4,7 @@
 window.P2K_DASHBOARD_MODULES = window.P2K_DASHBOARD_MODULES || {};
 window.P2K_DASHBOARD_MODULES.adminShell = Object.freeze({
 create(context) {
-const { state, byId, escapeHTML, number, setText, applyOAuthContext, setIntegratedFrameActivity, ensureIntegratedFrame, writeNavigationState } = context;
+const { state, byId, escapeHTML, number, setText, applyOAuthContext, setIntegratedFrameActivity, ensureIntegratedFrame, writeNavigationState, tools } = context;
 const ADMIN_DETAIL_DEFS = {
   competitions: {
     daily: { title:"Daily Matches", tabs:[

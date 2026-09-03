@@ -214,6 +214,8 @@ const abs = Math.abs(delta);
 const units = abs < 3600000 ? [60000, "minute"] : abs < 86400000 ? [3600000, "hour"] : [86400000, "day"];
 return new Intl.RelativeTimeFormat("en-GB", { numeric: "auto" }).format(Math.round(-delta / units[0]), units[1]);
 };
+const challengeProgress = member => Array.isArray(member?.challenges) && member.challenges.length ? member.challenges : Array.isArray(member?.achievement_progress) ? member.achievement_progress : [];
+const matchURL = match => String(match?.url || match?.["@id"] || "").replace("https://api.chess.com/pub/match/", "https://www.chess.com/club/matches/");
 const publicReadCache = new Map();
 async function loadJSON(url, options = {}) {
 const resolved = new URL(String(url || ""), window.location.href);
@@ -288,14 +290,17 @@ toastTimer = window.setTimeout(() => { toast.hidden = true; }, 3500);
 }
 const { adminEntryUsername, clubAdminUsernames, ensureAdminPriorityCard, removeAdminPriorityCard, integratedAdminHref, adminPriorityActionHref, adminPriorityHealthRow, adminMatchListHtml, openAdminFreshMatchDetail, openAdminMetricModal, renderAdminPriorityCard, loadAdminPriorityHealth, renderAdminApiThroughput, stopAdminApiThroughput, scheduleAdminApiThroughput, loadAdminApiThroughput, configuredAdminUsernames, oauthSessionClaimsAdmin, validLocalAdminMarker, verifyAdmin } = window.P2K_DASHBOARD_MODULES.adminSession.create({
 state, byId, escapeHTML: value => escapeHTML(value), number, setText, showToast, config, clubSlug, clubProfileAPI,
-loadJSON, setAdmin, renderView, writeNavigationState,
+loadJSON, setAdmin, renderView, writeNavigationState, ensureAdminInterface, preservedURL, formatRelative,
+showInsightsModal: (...args) => showInsightsModal(...args),
+openMatchDetail: (...args) => openMatchDetail(...args),
 adminShellOpenDetail: (...args) => adminShellOpenDetail(...args),
 adminShellHref: (...args) => adminShellHref(...args)
 });
+const { tools, renderTools, routeFallback } = window.P2K_DASHBOARD_MODULES.adminTools.create({ byId, integratedAdminHref, preservedURL, config });
 const { adminDetailDefinition, adminShellHref, adminShellCard, adminMemberLookupCard, adminMemberLookupUtc, adminMemberLookupEventLabel, renderAdminMemberLookup, loadAdminMemberLookup, adminPanelMarkup, adminShellSet, adminShellAge, adminShellStatus, adminShellNumber, adminShellPercent, adminShellOpenDetail, adminShellCloseDetail, renderAdminShellDetail, adminShellActivate, adminShellJSON, loadAdminShellMetrics } = window.P2K_DASHBOARD_MODULES.adminShell.create({
 state, byId, escapeHTML: value => escapeHTML(value), number, setText, applyOAuthContext,
 setIntegratedFrameActivity: (...args) => setIntegratedFrameActivity(...args),
-ensureIntegratedFrame: (...args) => ensureIntegratedFrame(...args), writeNavigationState
+ensureIntegratedFrame: (...args) => ensureIntegratedFrame(...args), writeNavigationState, tools
 });
 function ensureAdminInterface() {
 const toggleHost = byId("dashboardAdminToggleHost");
@@ -552,17 +557,18 @@ return chip;
 const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
   const { insightAction, showInsightsModal, closeInsightsModal, normalizeTournamentName, tournamentAchievements, profileMetric, tournamentAchievementKeys, achievementCard, achievementEarnedDetail, achievementWebURL, openAchievementDetail, openAchievementNav, achievementDisplayBar, achievementCategoryLabel, achievementFamilyLabel, openAchievementCatalog, openUnifiedPlayerProfile, membersTableColumns, loadFeatureScriptWithRetry, dashboardInsightsContext, ensureDashboardInsightsModule, loadMemberInsights, loadMatchInsights, loadOpponentInsights, loadArenaInsights, openMatchDetail, renderNativeBarLine, getAchievementNavigation } = window.P2K_DASHBOARD_MODULES.insights.create({
     state, byId, escapeHTML, number, setText, nativeLink, cellWithSub, statusChip,
-    loadPublicCachedJSON, writeNavigationState, rankThumbnailAsset, originalRankAsset,
-    adminEntryUsername, selectHallSubtab, showPublicPage, formatDateOnly
+    loadPublicCachedJSON, loadJSON, writeNavigationState, rankThumbnailAsset, originalRankAsset,
+    adminEntryUsername, selectHallSubtab, showPublicPage, formatDateOnly, formatRelative,
+    matchRulesLabel, matchTimeControlLabel, challengeProgress
   });
 const { integratedFrames, setIntegratedFrameActivity, ensureIntegratedFrame } = window.P2K_DASHBOARD_MODULES.embeddedHost.create({ state, byId, applyOAuthContext });
   const { currentSession, memberRecord, renderPersonalJoinDate, rankForPoints, setPersonalRankImage, loadPersonalizedHome, renderDailyPersonalCard, renderLivePersonalCard, shortArenaName, renderLiveTeamData, renderTeamMode, renderPersonalCard, selectPersonalMode, renderPlayerPoints, renderLivePlayer, playerMatchKey, uniquePlayerMatches, renderPlayerActivity, playerMatchResult, playerMatchTitle, renderPlayerGamesSection, openPlayerGames, closePlayerGames, applySession, loadPersonalData } = window.P2K_DASHBOARD_MODULES.personalHome.create({
     state, byId, setText, number, escapeHTML, viewed, adminEntryUsername,
-    showPublicPage, selectHallSubtab, openAchievementCatalog, loadPublicCachedJSON,
+    showPublicPage, selectHallSubtab, openAchievementCatalog, loadPublicCachedJSON, loadJSON,
     writeNavigationState, verifyAdmin,
     loadRecommendations: (...args) => loadRecommendations(...args),
     renderLiveRanksNative: (...args) => renderLiveRanksNative(...args),
-    ranks, unrankedRank, rankThumbnailAsset, originalRankAsset
+    ranks, unrankedRank, rankThumbnailAsset, originalRankAsset, clubProfileAPI, formatDateOnly, matchURL
   });
   const { matchLists, matchBoardCount, matchListTotals, authoritativeMatchListTotals, hydrateDashboardMatchBoards, setMatchMetric, loadTeamData, renderGauge, renderTeamIndicators } = window.P2K_DASHBOARD_MODULES.teamSummary.create({
     state, byId, setText, number, loadJSON, loadPublicCachedJSON,
@@ -570,7 +576,7 @@ const { integratedFrames, setIntegratedFrameActivity, ensureIntegratedFrame } = 
   });
   const { stopRecommendationTimer, stopAssistantTimer, disposeRecommendationFrame, prepareEmbeddedMatchAssistant, resizeRecommendationFrame, recommendationError, loadRecommendations, displayRatingRange, recommendationCard, ensureDedicatedMatchAssistant, promoteMatchAssistantFrame, syncMatchAssistantLoadingState, revealMatchAssistantFrame, handleAdminEmbeddedNavigation, handleRecommendationMessage, openMatchAssistant, openMatchAssistantWithFilter, closeMatchAssistant } = window.P2K_DASHBOARD_MODULES.matchAssistant.create({
     state, byId, viewed, preservedURL, config, escapeHTML, number, setText,
-    writeNavigationState, adminDetailDefinition, renderAdminPriorityCard
+    writeNavigationState, adminDetailDefinition, renderAdminPriorityCard, renderTeamIndicators, formatDateOnly
   });
   let dashboardHallModulePromise = null;
   function dashboardHallContext() {
@@ -600,8 +606,7 @@ const { integratedFrames, setIntegratedFrameActivity, ensureIntegratedFrame } = 
   async function loadHall(options = {}) { return (await ensureDashboardHallModule()).loadHall(options); }
   async function openHallOfFame(button) { return (await ensureDashboardHallModule()).openHallOfFame(button); }
   function resetHallRanks() { ensureDashboardHallModule().then(api => api.resetHallRanks()).catch(error => console.warn(error)); }
-const { matchListLabel, renderDashboardMatchListRows, openDashboardMatchList, closeDashboardMatchList } = window.P2K_DASHBOARD_MODULES.matchListDialog.create({ state, byId, matchBoardCount, matchListTotals, number });
-const { renderTools, routeFallback } = window.P2K_DASHBOARD_MODULES.adminTools.create({ byId, integratedAdminHref, preservedURL, config });
+const { matchListLabel, renderDashboardMatchListRows, openDashboardMatchList, closeDashboardMatchList } = window.P2K_DASHBOARD_MODULES.matchListDialog.create({ state, byId, matchBoardCount, matchListTotals, number, setText, formatDateOnly });
 const dashboardBootstrap = window.P2K_DASHBOARD_MODULES.dashboardBootstrap.create({
   state,
   byId,
