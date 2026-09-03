@@ -4,7 +4,7 @@
 window.P2K_DASHBOARD_MODULES = window.P2K_DASHBOARD_MODULES || {};
 window.P2K_DASHBOARD_MODULES.matchAssistant = Object.freeze({
 create(context) {
-const { state, byId, viewed, preservedURL, config, escapeHTML, number, setText, writeNavigationState, adminDetailDefinition, renderAdminPriorityCard } = context;
+const { state, byId, viewed, preservedURL, config, escapeHTML, number, setText, writeNavigationState, adminDetailDefinition, renderAdminPriorityCard, renderTeamIndicators, formatDateOnly } = context;
   let recommendationInfoSequence = 0;
   function stopRecommendationTimer() {
     window.clearTimeout(state.recommendationTimer);
