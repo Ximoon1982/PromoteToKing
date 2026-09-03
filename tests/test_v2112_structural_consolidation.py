@@ -54,10 +54,16 @@ def test_no_api_schema_scheduler_or_authentication_contract_files_changed():
 
 def test_installer_accepts_any_v211x_and_preserves_cron_contract():
     builder = (ROOT / "tools/release/build-v2112-structural-package.sh").read_text(encoding="utf-8")
+    qualification = (ROOT / "tools/release/qualify-v2112-installer.sh").read_text(encoding="utf-8")
     workflow = (ROOT / ".github/workflows/p2k-v2112-structural.yml").read_text(encoding="utf-8")
     instructions = (ROOT / "INSTALL_v2.11.2.md").read_text(encoding="utf-8")
     assert 'case "$INSTALLED" in 2.11|2.11.*)' in builder
     assert 'crontab.before' in builder and 'crontab.after' in builder and 'cmp -s' in builder
     assert "install-promote-to-king-2.11.2.sh" in builder and "INSTALL_v2.11.2.txt" in builder
+    assert "93480c852fc4c554c9a404e5d68b0ac51efed04b" in qualification
+    assert "b8bf26c7c41ca1914323717766bca995139291aa" in qualification
+    assert "current-2.11.x:HEAD" in qualification
+    assert "protected_hashes" in qualification and "P2K_QUALIFICATION_CRONTAB" in qualification
     assert "install-promote-to-king-2.11.2.sh" in workflow
+    assert "qualify-v2112-installer.sh" in workflow
     assert "./install-promote-to-king-2.11.2.sh /absolute/path/to/promote-to-king" in instructions

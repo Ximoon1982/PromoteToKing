@@ -3,7 +3,7 @@
   "frontend_facade_bytes": {
     "assets/js/shared/api-client.js": {"baseline": 73721, "current": 73721},
     "assets/js/pages/admin-features.js": {"baseline": 56673, "current": 6075},
-    "assets/js/pages/dashboard-v2.js": {"baseline": 222130, "current": 39038}
+    "assets/js/pages/dashboard-v2.js": {"baseline": 222130, "current": 39208}
   },
   "extracted_frontend_modules": {
     "assets/js/admin/admin-runtime.js": 1832,
@@ -20,7 +20,7 @@
     "assets/js/dashboard/insights-controller.js": 36460,
     "assets/js/dashboard/match-assistant.js": 24558,
     "assets/js/dashboard/match-list-dialog.js": 4027,
-    "assets/js/dashboard/personal-home.js": 21496,
+    "assets/js/dashboard/personal-home.js": 21515,
     "assets/js/dashboard/team-summary.js": 10009
   },
   "php_facade_bytes": {
