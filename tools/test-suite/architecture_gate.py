@@ -13,6 +13,12 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def dependency_errors() -> list[str]:
     data = json.loads((ROOT / "tests/v2.11.2-frontend-boundaries.json").read_text(encoding="utf-8"))
+    overlay_path = ROOT / "tests/v2.11.3-frontend-boundaries.json"
+    if overlay_path.is_file():
+        overlay = json.loads(overlay_path.read_text(encoding="utf-8"))
+        data["modules"].update(overlay.get("modules", {}))
+        data["entrypoints"].update(overlay.get("entrypoints", {}))
+        data["activation_rule"] = overlay.get("activation_rule", data.get("activation_rule", ""))
     layers, modules = data["layers"], data["modules"]
     errors: list[str] = []
     for name, module in modules.items():

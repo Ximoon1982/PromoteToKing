@@ -9,6 +9,23 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 BASELINE = "4ececcc230ca07099b346cb47396ad00bedd5c21"
 PRODUCTION_ALLOWLIST = {
+    "AnalyzeMatch.html",
+    "AnalyzeMatchModal.html",
+    "AnalyzeMatches.htm",
+    "ChallengeListAssistant.html",
+    "DataReconciliation.html",
+    "FindMatch.htm",
+    "MatchCreationAnalyzer.htm",
+    "RecruitMatch.html",
+    "RecruitmentAdmin.html",
+    "RecruitmentDemandPlanner.html",
+    "TaskControl.html",
+    "TeamPointsAdmin.html",
+    "TeamPointsMigration.html",
+    "TournamentAchievementBadgesDemo.html",
+    "TournamentManagement.html",
+    "index.html",
+    "ui-v2.html",
     "assets/js/shared/api-client.js",
     "assets/js/shared/api-request-semantics.js",
 }

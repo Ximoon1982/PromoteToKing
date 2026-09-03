@@ -22,7 +22,7 @@ window.fetch=async(input,options={})=>{const url=String(input);
 def main():
   with sync_playwright() as p:
     b=p.chromium.launch(headless=True,executable_path=CHROMIUM,args=['--no-sandbox','--disable-dev-shm-usage']);page=b.new_page();errs=[];page.on('pageerror',lambda e:errs.append(str(e)))
-    page.set_content(HTML);page.add_script_tag(content=BOOTSTRAP);page.add_script_tag(path=str(ROOT/'assets/js/shared/api-cache.js'));page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js'));page.evaluate('window.P2K_API_CLIENT.setOAuthBearerMode(true)')
+    page.set_content(HTML);page.add_script_tag(content=BOOTSTRAP);page.add_script_tag(path=str(ROOT/'assets/js/shared/api-cache.js'));page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-semantics.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js'));page.evaluate('window.P2K_API_CLIENT.setOAuthBearerMode(true)')
     cache_result=page.evaluate('''async()=>{const urls=Array.from({length:200},(_,i)=>`https://api.chess.com/pub/match/${900000+i}`);const old=Date.now()-2*86400000;await Promise.all(urls.slice(0,150).map(u=>P2K_API_CACHE.put({url:u,body:JSON.stringify({status:'finished','@id':u}),status:200,statusText:'OK',headers:{'content-type':'application/json'},etag:'',lastModified:'',fetchedAt:old,transport:'fetch',matchState:'finished'})));window.__gateway=[];const batch=await P2K_API_CLIENT.processPriority(urls,u=>P2K_API_CLIENT.json(u),{getKey:u=>u});await new Promise(r=>setTimeout(r,150));return{settled:batch.settled,diag:P2K_API_CLIENT.diagnostics(),cache:P2K_API_CACHE.diagnostics(),gateway:window.__gateway.slice()}}''')
     assert cache_result['settled']==200,cache_result
     detail_network=sum(x['size'] for x in cache_result['gateway'] if x['isDetail'])

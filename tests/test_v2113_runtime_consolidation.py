@@ -14,7 +14,7 @@ def test_api_request_semantics_has_an_explicit_factory_boundary():
     assert "modules.requestSemantics = Object.freeze" in module
     assert "create({ allowedOrigins })" in module
     assert "requestSemanticsFactory({ allowedOrigins: ALLOWED_ORIGINS })" in facade
-    assert "normalizeUrl = semantics.normalizeUrl" in facade
+    assert "normalizeUrl, apiError, abortError, activityAwareOptions, timeoutError" in facade
 
 
 def test_api_client_public_compatibility_surface_remains_owned_by_facade():
@@ -35,3 +35,24 @@ def test_v2113_parity_gate_is_anchored_and_explicit():
     assert '"assets/js/shared/api-client.js"' in gate
     assert '"assets/js/shared/api-request-semantics.js"' in gate
     assert 'visual_suffixes = (".css", ".png"' in gate
+
+
+def test_every_api_client_entrypoint_loads_request_semantics_first():
+    for html in sorted(ROOT.glob("*.htm*")):
+        source = html.read_text(encoding="utf-8", errors="ignore")
+        marker = "assets/js/shared/api-client.js"
+        if marker not in source:
+            continue
+        dependency = "assets/js/shared/api-request-semantics.js"
+        assert dependency in source, html.name
+        assert source.index(dependency) < source.index(marker), html.name
+
+
+def test_v2113_dependency_inventory_covers_every_direct_loader():
+    inventory = __import__("json").loads(text("tests/v2.11.3-frontend-boundaries.json"))
+    expected = {
+        html.name for html in ROOT.glob("*.htm*")
+        if "assets/js/shared/api-client.js" in html.read_text(encoding="utf-8", errors="ignore")
+    }
+    assert set(inventory["entrypoints"]) == expected
+    assert inventory["modules"]["shared/api-client"]["depends_on"] == ["shared/api-request-semantics"]

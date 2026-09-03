@@ -67,7 +67,7 @@ def main():
         # Deliberately no ?oauth=2: this simulates returning to a clean URL with a persisted P2KOAUTH cookie/server session.
         page.set_content('<!doctype html><html><body><header class="site-header"></header></body></html>')
         page.add_script_tag(content=BOOTSTRAP)
-        page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js'))
+        page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-semantics.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js'))
         page.add_script_tag(path=str(ROOT/'assets/js/shared/real-oauth.js'))
         page.evaluate('window.P2K_REAL_OAUTH_READY')
         state = page.evaluate('''async () => {

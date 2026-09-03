@@ -34,7 +34,7 @@ def main():
             return realFetch(input,options);
           };
         }""")
-        page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js'))
+        page.add_script_tag(path=str(ROOT/'assets/js/shared/api-request-semantics.js')); page.add_script_tag(path=str(ROOT/'assets/js/shared/api-client.js'))
         result=page.evaluate("""async()=>{
           P2K_API_CLIENT.setOAuthBearerMode(true);
           const urls=Array.from({length:96},(_,i)=>`https://api.chess.com/pub/match/${800000+i}`);

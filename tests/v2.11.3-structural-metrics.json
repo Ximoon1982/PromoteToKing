@@ -1,0 +1,33 @@
+{
+  "baseline": "v2.11.2",
+  "frontend_facade_bytes": {
+    "assets/js/shared/api-client.js": {"baseline": 73721, "current": 68045},
+    "assets/js/pages/admin-features.js": {"baseline": 6075, "current": 6075},
+    "assets/js/pages/dashboard-v2.js": {"baseline": 39972, "current": 39972}
+  },
+  "extracted_frontend_modules": {
+    "assets/js/shared/api-request-semantics.js": 7070,
+    "assets/js/admin/admin-runtime.js": 1832,
+    "assets/js/admin/admin-session-controller.js": 29530,
+    "assets/js/admin/admin-shell.js": 42846,
+    "assets/js/admin/diagnostics-controller.js": 10552,
+    "assets/js/admin/embedded-detail-host.js": 4263,
+    "assets/js/admin/history-controller.js": 14432,
+    "assets/js/admin/logs-controller.js": 7783,
+    "assets/js/admin/match-management.js": 12481,
+    "assets/js/admin/recording-controller.js": 6840,
+    "assets/js/admin/tool-registry.js": 10414,
+    "assets/js/dashboard/dashboard-bootstrap.js": 13116,
+    "assets/js/dashboard/insights-controller.js": 36545,
+    "assets/js/dashboard/match-assistant.js": 24621,
+    "assets/js/dashboard/match-list-dialog.js": 4052,
+    "assets/js/dashboard/personal-home.js": 21567,
+    "assets/js/dashboard/team-summary.js": 10009
+  },
+  "php_facade_bytes": {
+    "server/team-points/src/ClubIntelligenceService.php": {"baseline": 72220, "current": 72220},
+    "server/team-points/src/AnalyticsBuilder.php": {"baseline": 67946, "current": 67946},
+    "server/team-points/src/AchievementCatalog.php": {"baseline": 53476, "current": 53476}
+  },
+  "policy": "v2.11.3 facade reductions and extracted-module sizes are exact-head metrics; runtime equivalence governs activation."
+}

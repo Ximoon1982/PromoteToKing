@@ -50,7 +50,10 @@ def test_public_endpoint_inventory_is_exact():
 
 
 def test_structural_metrics_are_current_and_facades_shrink():
-    metrics = json.loads((ROOT / "tests/v2.11.2-structural-metrics.json").read_text(encoding="utf-8"))
+    metrics_path = ROOT / "tests/v2.11.3-structural-metrics.json"
+    if not metrics_path.is_file():
+        metrics_path = ROOT / "tests/v2.11.2-structural-metrics.json"
+    metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
     for path, values in metrics["frontend_facade_bytes"].items():
         assert (ROOT / path).stat().st_size == values["current"]
         assert values["current"] <= values["baseline"]
