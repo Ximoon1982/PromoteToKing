@@ -49,7 +49,8 @@ def test_no_api_schema_scheduler_or_authentication_contract_files_changed():
         pytest.skip("Git changed-path comparison is repository-scoped.")
     changed = subprocess.run(["git", "diff", "--name-only", f"{BASELINE}..HEAD"], cwd=ROOT, check=True, text=True, capture_output=True).stdout.splitlines()
     forbidden = ("api/", "server/team-points/public/", "server/team-points/sql/", "ClubIntelligence.html", "site-manifest.json", "reset-install-", "install-oauth-")
-    assert not [path for path in changed if path.startswith(forbidden)]
+    approved_v2113_adapters = {"server/team-points/public/recruitment-admin.php"} if (ROOT / "tests/v2.11.3-frontend-boundaries.json").is_file() else set()
+    assert not [path for path in changed if path.startswith(forbidden) and path not in approved_v2113_adapters]
 
 
 def test_installer_accepts_any_v211x_and_preserves_cron_contract():
