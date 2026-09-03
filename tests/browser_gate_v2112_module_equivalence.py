@@ -58,6 +58,10 @@ def baseline_admin() -> str:
 def clean_admin_html() -> str:
     html = (ROOT / "index.html").read_text(encoding="utf-8", errors="ignore")
     html = re.sub(r"<script\b[^>]*>.*?</script>", "", html, flags=re.I | re.S)
+    html = re.sub(
+        r"<meta[^>]+http-equiv=[\"']Content-Security-Policy[\"'][^>]*>",
+        "", html, flags=re.I,
+    )
     html = re.sub(r"\s+src=([\"'])[^\"']*\1", "", html, flags=re.I)
     return html
 
