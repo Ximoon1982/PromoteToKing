@@ -103,3 +103,34 @@ def test_v2113_dependency_inventory_covers_every_direct_loader():
     }
     assert set(inventory["entrypoints"]) == expected
     assert inventory["modules"]["shared/api-client"]["depends_on"] == ["shared/api-request-semantics", "shared/api-oauth-context", "shared/api-transport", "shared/api-request-coordinator"]
+
+
+def test_async_ownership_audit_keeps_policy_with_each_feature():
+    inventory = __import__("json").loads(text("tests/v2.11.3-async-ownership.json"))
+    assert inventory["admin_job"] == {
+        "role": "read-only normalized observation",
+        "scheduler": False,
+        "persistence_owner": False,
+        "adopted_candidate": "recruitment_scan",
+    }
+    assert inventory["runtimes"]["recruitment_scan"]["decision"] == "adopted_read_only"
+    retained = {
+        name for name, runtime in inventory["runtimes"].items()
+        if runtime["decision"] == "retain_feature_owner"
+    }
+    assert retained == {
+        "continuous_refresh",
+        "active_convergence_refresh",
+        "authenticated_member_refresh",
+        "analysis_coordination",
+    }
+    assert "universal async engine" in inventory["forbidden_changes"]
+
+
+def test_v2113_architecture_documents_observable_parity_and_no_universal_engine():
+    architecture = text("ARCHITECTURE_v2.11.3.md")
+    consolidation = text("RUNTIME_CONSOLIDATION_v2.11.3.md")
+    assert "preserving v2.11.2 UI, display, DOM, routes, payloads" in architecture
+    assert "no universal async engine" in architecture
+    assert "read-only `AdminJob` adapter" in consolidation
+    assert "CRON entries" in consolidation

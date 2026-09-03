@@ -1,0 +1,44 @@
+{
+  "contract": "Preserve existing behavior, scheduling and persistence; consolidate ownership only where policy does not move.",
+  "admin_job": {
+    "role": "read-only normalized observation",
+    "scheduler": false,
+    "persistence_owner": false,
+    "adopted_candidate": "recruitment_scan"
+  },
+  "runtimes": {
+    "recruitment_scan": {
+      "policy_owner": "Recruitment JSON run and endpoint",
+      "shared_boundary": ["normalized telemetry"],
+      "decision": "adopted_read_only"
+    },
+    "continuous_refresh": {
+      "policy_owner": "feature controllers",
+      "shared_boundary": ["cancellation", "lifecycle registration"],
+      "decision": "retain_feature_owner"
+    },
+    "active_convergence_refresh": {
+      "policy_owner": "analytics/worker",
+      "shared_boundary": ["deadline", "retry classification"],
+      "decision": "retain_feature_owner"
+    },
+    "authenticated_member_refresh": {
+      "policy_owner": "OAuth API client",
+      "shared_boundary": ["deduplication", "request scheduling"],
+      "decision": "retain_feature_owner"
+    },
+    "analysis_coordination": {
+      "policy_owner": "analysis feature",
+      "shared_boundary": ["cancellation", "cache lifecycle"],
+      "decision": "retain_feature_owner"
+    }
+  },
+  "forbidden_changes": [
+    "universal async engine",
+    "new scheduler",
+    "checkpoint migration",
+    "database schema change",
+    "CRON change",
+    "authentication/session change"
+  ]
+}
