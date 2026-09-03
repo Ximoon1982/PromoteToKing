@@ -89,9 +89,9 @@ jobs:
           PY
 
           expected_session=2c911e19a1fdd63cc982d643133a8202de04615b
-          expected_shell=336330f4a0117dca02ecb1032396f27e50992135
-          expected_insights=3f953df5f7efabfb2b6b1a8531b9ec80e5fca138
-          expected_dashboard=1b13628df1042525eb6ba94711b58dc8665b4490
+          expected_shell=4fd5d31f549c45337c7ed50d9732850b35934dd8
+          expected_insights=adf6e652928d4003c66de5c758cc60df112f1954
+          expected_dashboard=26eca51f0c217dc61d2abdc8f3b43082ac29fb50
 
           test "$(git hash-object assets/js/admin/admin-session-controller.js)" = "$expected_session"
           test "$(git hash-object assets/js/admin/admin-shell.js)" = "$expected_shell"
