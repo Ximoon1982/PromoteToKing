@@ -60,6 +60,8 @@ def test_installer_accepts_any_v211x_and_preserves_cron_contract():
     assert 'case "$INSTALLED" in 2.11|2.11.*)' in builder
     assert 'crontab.before' in builder and 'crontab.after' in builder and 'cmp -s' in builder
     assert "install-promote-to-king-2.11.2.sh" in builder and "INSTALL_v2.11.2.txt" in builder
+    assert "2ca1fc191aeef444b4886b53e25a54a83820c25c" in qualification
+    assert "8863366bde7cb6989ce0b99aed650c3d0dfd5c01" in qualification
     assert "93480c852fc4c554c9a404e5d68b0ac51efed04b" in qualification
     assert "b8bf26c7c41ca1914323717766bca995139291aa" in qualification
     assert "current-2.11.x:HEAD" in qualification

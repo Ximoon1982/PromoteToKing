@@ -8,6 +8,8 @@ WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
 BASELINES=(
+  "v2.11.0-initial:2ca1fc191aeef444b4886b53e25a54a83820c25c"
+  "v2.11.0-R4:8863366bde7cb6989ce0b99aed650c3d0dfd5c01"
   "v2.11.0-R6:93480c852fc4c554c9a404e5d68b0ac51efed04b"
   "v2.11.1:b8bf26c7c41ca1914323717766bca995139291aa"
   "current-2.11.x:HEAD"
