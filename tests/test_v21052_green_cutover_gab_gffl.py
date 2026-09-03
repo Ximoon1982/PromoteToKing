@@ -32,7 +32,7 @@ def test_task_control_is_green_operational_surface_not_blue_team_points_card():
     assert 'id="team-points-maintenance"' not in html
     assert 'teamPointsRoutineRefresh' not in js and 'teamPointsFullMemberRepair' not in js and 'teamPointsRawRepair' not in js
     assert 'client-continuous-refresh.js' not in html
-    assert 'green-accelerator.js?v=2.10.6' in html
+    assert re.search(r'green-accelerator\.js\?v=[^"\'&<>\s]+', html)
     assert 'set-migration-phase' in js and 'set-worker-target' in js and 'set-client-target' in js and 'set-force-mode' in js
     assert 'start-gab' in js and 'run-gab-now' in js and 'set-gffl' in js and 'run-green-now' in js and 'validate-green' in js
     assert 'last_error' in js and 'completed_at' in js

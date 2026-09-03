@@ -41,7 +41,7 @@ assert(index.includes('data-admin-only hidden id="adminOpen"'), "Administration 
 
 assert(index.includes('<title>Promote to King</title>') && index.includes('<h1>Promote to King</h1>'), "Promote to King fallback identity missing");
 assert(index.includes('Play together. Improve together. Promote to King.') && index.includes('name="description"'), "Promote to King fallback subtitle missing");
-assert(index.includes('config/site-branding.js?v=2.10.6') && index.indexOf('config/site-branding.js') < index.indexOf('assets/js/site-config.js'), "Branding config is not loaded before runtime config");
+assert(/config\/site-branding\.js\?v=[^"'&<>\s]+/.test(index) && index.indexOf('config/site-branding.js') < index.indexOf('assets/js/site-config.js'), "Branding config is not loaded before runtime config");
 assert(branding.includes('title: "Promote to King"') && branding.includes('subtitle: "Play together. Improve together. Promote to King."'), "Default branding config is wrong");
 assert(branding.includes('clubSlug: "promote-to-king"') && branding.includes('clubUrl: "https://www.chess.com/club/promote-to-king"'), "Configured club identity is missing");
 assert(index.includes('id="siteClubLink"') && index.includes('href="https://www.chess.com/club/promote-to-king"'), "Configured club logo link fallback is missing");

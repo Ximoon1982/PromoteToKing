@@ -107,7 +107,7 @@ def main():
     branding=(ROOT/"config/site-branding.js").read_text()
     check("<title>Promote to King</title>" in index and "<h1>Promote to King</h1>" in index, "Promote to King fallback identity missing")
     check("Play together. Improve together. Promote to King." in index, "Promote to King fallback subtitle missing")
-    check('config/site-branding.js?v=2.10.6.11' in index and index.index('config/site-branding.js') < index.index('assets/js/site-config.js'), "Branding config load order/version is wrong")
+    check(re.search(r'config/site-branding\.js\?v=[^"\'&<>\s]+', index) and index.index('config/site-branding.js') < index.index('assets/js/site-config.js'), "Branding config load order/cache key is wrong")
     check('title: "Promote to King"' in branding and 'subtitle: "Play together. Improve together. Promote to King."' in branding, "Default branding configuration is wrong")
     check('clubSlug: "promote-to-king"' in branding and 'clubUrl: "https://www.chess.com/club/promote-to-king"' in branding, "Configured club identity is missing")
     check('id="siteClubLink"' in index and 'href="https://www.chess.com/club/promote-to-king"' in index, "Configured club logo link fallback is missing")

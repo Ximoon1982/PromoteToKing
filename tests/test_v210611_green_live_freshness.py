@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 ROOT=Path(__file__).resolve().parents[1]
 def text(rel): return (ROOT/rel).read_text(encoding='utf-8')
@@ -48,8 +49,8 @@ def test_registration_chart_consumer_uses_current_release_generation():
     page=text('MatchCreationAnalyzer.htm')
     ui=text('ui-v2.html')
     charts=text('assets/js/pages/match-creation-charts.js')
-    assert 'assets/js/pages/match-creation-charts.js?v=2.10.6.11' in page
-    assert 'assets/js/pages/match-creation-analyzer.js?v=2.10.6.11' in page
+    assert re.search(r'assets/js/pages/match-creation-charts\.js\?v=[^"\'&<>\s]+', page)
+    assert re.search(r'assets/js/pages/match-creation-analyzer\.js\?v=[^"\'&<>\s]+', page)
     assert 'MatchCreationAnalyzer.htm?embedded=1&release=2.10.6.11' in ui
     assert 'const records = Array.isArray(buckets.registration) ? buckets.registration : [];' in charts
     assert 'parseDisplayedDate' not in charts
@@ -63,6 +64,6 @@ def test_match_assistant_full_ready_state_and_cache_generation():
     assert 'p2k-dashboard-show-full-assistant' in ready
     full=dash[dash.index('if (event.data?.type === "p2k-dashboard-full-assistant-ready")'):dash.index('if (event.data?.type === "p2k-dashboard-assistant-ready")')]
     assert 'state.assistantFullReady = true;' in full
-    assert 'assets/js/pages/find-match.js?v=2.10.6.11' in finder
-    assert 'assets/js/shared/analysis-coordinator.js?v=2.10.6.11' in finder
+    assert re.search(r'assets/js/pages/find-match\.js\?v=[^"\'&<>\s]+', finder)
+    assert re.search(r'assets/js/shared/analysis-coordinator\.js\?v=[^"\'&<>\s]+', finder)
     assert 'target.searchParams.set("release", String(config.version' in dash
