@@ -1,8 +1,9 @@
 from pathlib import Path
+from source_contract import dashboard_source
 
 ROOT = Path(__file__).resolve().parents[1]
 ui = (ROOT / 'ui-v2.html').read_text(encoding='utf-8')
-dashboard = (ROOT / 'assets/js/pages/dashboard-v2.js').read_text(encoding='utf-8')
+dashboard = dashboard_source()
 finder = (ROOT / 'assets/js/pages/find-match.js').read_text(encoding='utf-8')
 css = (ROOT / 'assets/css/dashboard-v2.css').read_text(encoding='utf-8')
 

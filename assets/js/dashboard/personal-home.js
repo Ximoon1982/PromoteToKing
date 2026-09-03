@@ -3,7 +3,7 @@
 "use strict";
 window.P2K_DASHBOARD_MODULES = window.P2K_DASHBOARD_MODULES || {};
 window.P2K_DASHBOARD_MODULES.personalHome = Object.freeze({create(context) {
-const { state, byId, setText, number, escapeHTML, viewed, adminEntryUsername, showPublicPage, selectHallSubtab, openAchievementCatalog, loadPublicCachedJSON, writeNavigationState, verifyAdmin, loadRecommendations, renderLiveRanksNative, ranks, unrankedRank, rankThumbnailAsset } = context;
+const { state, byId, setText, number, escapeHTML, viewed, adminEntryUsername, showPublicPage, selectHallSubtab, openAchievementCatalog, loadPublicCachedJSON, writeNavigationState, verifyAdmin, loadRecommendations, renderLiveRanksNative, ranks, unrankedRank, rankThumbnailAsset, originalRankAsset } = context;
   function currentSession() { return window.P2K_AUTH?.getSession?.() || null; }
   function memberRecord(payload, username) {
     const key = adminEntryUsername(username);

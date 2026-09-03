@@ -1,5 +1,6 @@
 from pathlib import Path
 from PIL import Image
+from source_contract import dashboard_source
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -9,7 +10,7 @@ def check(condition, message):
 
 def main():
     page = (ROOT / 'TournamentAchievementBadgesDemo.html').read_text()
-    dashboard = (ROOT / 'assets/js/pages/dashboard-v2.js').read_text()
+    dashboard = dashboard_source()
     css = (ROOT / 'assets/css/dashboard-v2.css').read_text()
     worker = (ROOT / 'server/team-points/src/Worker.php').read_text()
     repository = (ROOT / 'server/team-points/src/Repository.php').read_text()

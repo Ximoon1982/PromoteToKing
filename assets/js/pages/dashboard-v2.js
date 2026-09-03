@@ -287,14 +287,15 @@ toast.hidden = false;
 toastTimer = window.setTimeout(() => { toast.hidden = true; }, 3500);
 }
 const { adminEntryUsername, clubAdminUsernames, ensureAdminPriorityCard, removeAdminPriorityCard, integratedAdminHref, adminPriorityActionHref, adminPriorityHealthRow, adminMatchListHtml, openAdminFreshMatchDetail, openAdminMetricModal, renderAdminPriorityCard, loadAdminPriorityHealth, renderAdminApiThroughput, stopAdminApiThroughput, scheduleAdminApiThroughput, loadAdminApiThroughput, configuredAdminUsernames, oauthSessionClaimsAdmin, validLocalAdminMarker, verifyAdmin } = window.P2K_DASHBOARD_MODULES.adminSession.create({
-state, byId, escapeHTML, number, setText, showToast, config, clubSlug, clubProfileAPI,
+state, byId, escapeHTML: value => escapeHTML(value), number, setText, showToast, config, clubSlug, clubProfileAPI,
 loadJSON, setAdmin, renderView, writeNavigationState,
 adminShellOpenDetail: (...args) => adminShellOpenDetail(...args),
 adminShellHref: (...args) => adminShellHref(...args)
 });
 const { adminDetailDefinition, adminShellHref, adminShellCard, adminMemberLookupCard, adminMemberLookupUtc, adminMemberLookupEventLabel, renderAdminMemberLookup, loadAdminMemberLookup, adminPanelMarkup, adminShellSet, adminShellAge, adminShellStatus, adminShellNumber, adminShellPercent, adminShellOpenDetail, adminShellCloseDetail, renderAdminShellDetail, adminShellActivate, adminShellJSON, loadAdminShellMetrics } = window.P2K_DASHBOARD_MODULES.adminShell.create({
-state, byId, escapeHTML, number, setText, applyOAuthContext,
-setIntegratedFrameActivity, ensureIntegratedFrame, writeNavigationState
+state, byId, escapeHTML: value => escapeHTML(value), number, setText, applyOAuthContext,
+setIntegratedFrameActivity: (...args) => setIntegratedFrameActivity(...args),
+ensureIntegratedFrame: (...args) => ensureIntegratedFrame(...args), writeNavigationState
 });
 function ensureAdminInterface() {
 const toggleHost = byId("dashboardAdminToggleHost");
@@ -561,7 +562,7 @@ const { integratedFrames, setIntegratedFrameActivity, ensureIntegratedFrame } = 
     writeNavigationState, verifyAdmin,
     loadRecommendations: (...args) => loadRecommendations(...args),
     renderLiveRanksNative: (...args) => renderLiveRanksNative(...args),
-    ranks, unrankedRank, rankThumbnailAsset
+    ranks, unrankedRank, rankThumbnailAsset, originalRankAsset
   });
   const { matchLists, matchBoardCount, matchListTotals, authoritativeMatchListTotals, hydrateDashboardMatchBoards, setMatchMetric, loadTeamData, renderGauge, renderTeamIndicators } = window.P2K_DASHBOARD_MODULES.teamSummary.create({
     state, byId, setText, number, loadJSON, loadPublicCachedJSON,
