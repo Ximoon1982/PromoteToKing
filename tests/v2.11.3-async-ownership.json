@@ -4,13 +4,14 @@
     "role": "read-only normalized observation",
     "scheduler": false,
     "persistence_owner": false,
-    "adopted_candidate": "recruitment_scan"
+    "telemetry_adapter": "recruitment_scan",
+    "execution_adoption": "deferred_no_safe_candidate"
   },
   "runtimes": {
     "recruitment_scan": {
       "policy_owner": "Recruitment JSON run and endpoint",
       "shared_boundary": ["normalized telemetry"],
-      "decision": "adopted_read_only"
+      "decision": "telemetry_adapter_only"
     },
     "continuous_refresh": {
       "policy_owner": "feature controllers",

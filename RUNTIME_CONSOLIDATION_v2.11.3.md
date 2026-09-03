@@ -15,13 +15,15 @@ This is a behavior-equivalent consolidation release. It preserves the complete v
 
 | Runtime | Policy owner retained | Shared boundary | Decision |
 |---|---|---|---|
-| Recruitment scan | Recruitment JSON run and endpoint | Read-only AdminJob telemetry | Adopted |
+| Recruitment scan | Recruitment JSON run and endpoint | Read-only AdminJob telemetry | Telemetry adapter only |
 | Continuous refresh | Feature controllers | Cancellation and lifecycle registration | Retained |
 | Active convergence refresh | Analytics/worker | Deadline and retry classification | Retained |
 | Authenticated-member refresh | OAuth API client | Deduplication and request scheduling | Retained |
 | Analysis coordination | Analysis feature | Cancellation and cache lifecycle | Retained |
 
-The retained runtimes are intentionally not forced into `AdminJob`: doing so would either move policy into a generic layer or require persistence/scheduling changes, both outside this release contract.
+The retained runtimes are intentionally not forced into `AdminJob`: doing so would either move policy into a generic layer or require persistence/scheduling changes, both outside this release contract. Recruitment likewise remains authoritative for execution, lifecycle, checkpoint persistence and response formatting. The v2.11.3 adapter is useful shared telemetry, but it is not described as full lifecycle adoption.
+
+No genuinely safe bounded execution-level adoption candidate was found. Recruitment would require changing its JSON lifecycle and endpoint workflow; the Team Points worker would require changing SQL job/checkpoint and cancellation policy; fair-play reconciliation would require changing its SQL state transitions; the browser runtimes would require moving feature-specific retry, deadline or cache policy. Execution-level `AdminJob` adoption is therefore deferred rather than forced into this behavior-equivalent release.
 
 ## Qualification rules
 

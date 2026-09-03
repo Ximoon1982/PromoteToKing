@@ -111,9 +111,10 @@ def test_async_ownership_audit_keeps_policy_with_each_feature():
         "role": "read-only normalized observation",
         "scheduler": False,
         "persistence_owner": False,
-        "adopted_candidate": "recruitment_scan",
+        "telemetry_adapter": "recruitment_scan",
+        "execution_adoption": "deferred_no_safe_candidate",
     }
-    assert inventory["runtimes"]["recruitment_scan"]["decision"] == "adopted_read_only"
+    assert inventory["runtimes"]["recruitment_scan"]["decision"] == "telemetry_adapter_only"
     retained = {
         name for name, runtime in inventory["runtimes"].items()
         if runtime["decision"] == "retain_feature_owner"
@@ -134,6 +135,7 @@ def test_v2113_architecture_documents_observable_parity_and_no_universal_engine(
     assert "no universal async engine" in architecture
     assert "read-only `AdminJob` adapter" in consolidation
     assert "CRON entries" in consolidation
+    assert "No genuinely safe bounded execution-level adoption candidate was found" in consolidation
 
 
 def test_v2113_incremental_installer_covers_every_representative_211_baseline():
@@ -175,3 +177,71 @@ def test_every_qualified_build_has_a_non_semantic_unique_static_asset_key():
     builder = text("tools/release/build-v2113-runtime-package.sh")
     assert "STATIC_ASSET_CACHE_KEY.txt" in builder
     assert "P2K_BUILD_ID" in builder
+
+
+def test_cache_key_stamps_all_local_js_and_stylesheets_and_preserves_external_urls(tmp_path):
+    import importlib.util
+
+    module_path = ROOT / "tools/release/static_asset_cache_key.py"
+    spec = importlib.util.spec_from_file_location("static_asset_cache_key_fixture", module_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    html = tmp_path / "nested" / "page.html"
+    html.parent.mkdir()
+    html.write_text(
+        '<script src="assets/js/admin/admin-shell.js?v=2.11.2&mode=embedded#boot"></script>'
+        '<script src="assets/js/admin/admin-session-controller.js"></script>'
+        '<script src="assets/js/admin/tool-registry.js?v=stale"></script>'
+        '<script src="assets/js/dashboard/match-assistant.js?v=2.11.2"></script>'
+        '<script src="assets/js/pages/dashboard-v2.js?v=2.11.3"></script>'
+        '<script src="assets/js/shared/api-client.js?v=old"></script>'
+        '<link href="assets/css/site.css?theme=dark" rel="stylesheet">'
+        '<script src="https://cdn.example/app.js?v=external"></script>',
+        encoding="utf-8",
+    )
+    key = module.make_key("2.11.3", "b" * 40, "qualified-build-comprehensive")
+    assert module.stamp(tmp_path, key) == 7
+    assert module.verify(
+        tmp_path,
+        key,
+        ("admin-shell.js", "admin-session-controller.js", "tool-registry.js", "match-assistant.js", "dashboard-v2.js", "api-client.js"),
+    ) == 7
+    stamped = html.read_text(encoding="utf-8")
+    assert f"?v={key}&mode=embedded#boot" in stamped
+    assert f"site.css?theme=dark&v={key}" in stamped
+    assert "https://cdn.example/app.js?v=external" in stamped
+
+
+def test_cache_key_verifier_rejects_missing_stale_duplicate_and_semantic_only_keys(tmp_path):
+    import importlib.util
+    import pytest
+
+    module_path = ROOT / "tools/release/static_asset_cache_key.py"
+    spec = importlib.util.spec_from_file_location("static_asset_cache_key_rejections", module_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    html = tmp_path / "page.htm"
+    key = module.make_key("2.11.3", "c" * 40, "qualified-build-rejections")
+    for url in (
+        "assets/js/app.js",
+        "assets/js/app.js?v=stale",
+        f"assets/js/app.js?v={key}&v={key}",
+        "assets/css/site.css?v=2.11.3",
+    ):
+        tag = f'<link rel="stylesheet" href="{url}">' if ".css" in url else f'<script src="{url}"></script>'
+        html.write_text(tag, encoding="utf-8")
+        with pytest.raises(SystemExit, match="Static-asset cache-key qualification failed"):
+            module.verify(tmp_path, key)
+
+
+def test_frozen_release_workflows_do_not_route_later_main_prs_to_historical_gates():
+    v2111 = text(".github/workflows/p2k-v2111-regression.yml")
+    v2112 = text(".github/workflows/p2k-v2112-structural.yml")
+    v2113 = text(".github/workflows/p2k-v2113-runtime.yml")
+    assert "branches: [main, release/v2.11.1]" not in v2111
+    assert "branches: [main, release/v2.11.2]" not in v2112
+    assert "branches: [release/v2.11.1]" in v2111 and "workflow_dispatch:" in v2111
+    assert "branches: [release/v2.11.2]" in v2112 and "workflow_dispatch:" in v2112
+    assert "branches: [main, release/v2.11.3]" in v2113

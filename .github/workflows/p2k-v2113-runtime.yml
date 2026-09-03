@@ -84,7 +84,10 @@ jobs:
           CACHE_KEY=$(sed -n 's/^cache_key=//p' STATIC_ASSET_CACHE_KEY.txt)
           SOURCE_HEAD=$(sed -n 's/^source_head=//p' STATIC_ASSET_CACHE_KEY.txt)
           BUILD_ID=$(sed -n 's/^build_id=//p' STATIC_ASSET_CACHE_KEY.txt)
-          python tools/release/static_asset_cache_key.py verify --root . --version 2.11.3 --source-head "$SOURCE_HEAD" --build-id "$BUILD_ID" | grep -Fx "$CACHE_KEY"
+          python tools/release/static_asset_cache_key.py verify --root . --version 2.11.3 --source-head "$SOURCE_HEAD" --build-id "$BUILD_ID" \
+            --require-basename admin-shell.js --require-basename admin-session-controller.js \
+            --require-basename tool-registry.js --require-basename match-assistant.js \
+            --require-basename dashboard-v2.js --require-basename api-client.js | grep -Fx "$CACHE_KEY"
           python tools/test-suite/p2k_test_suite.py regression
       - name: Verify all 2.11.x baselines, reinstall, rollback, manifest and CRON
         run: bash tools/release/qualify-v2113-installer.sh "$RUNNER_TEMP/v2113-build"

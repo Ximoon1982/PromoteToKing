@@ -10,7 +10,9 @@ v2.11.3 consolidates runtime ownership while preserving v2.11.2 UI, display, DOM
 
 ## Administrative jobs
 
-`AdminJob` is an observation boundary, not a scheduler or persistence framework. Recruitment scan is the single adopted candidate because its existing JSON run already owns identity, lifecycle, candidates and results. `RecruitmentRunStateReader` reads that state without saving or migrating it; `JobRunner` exposes normalized telemetry only. Start, pause, resume, checkpoint and response-envelope policy remain with Recruitment.
+`AdminJob` is an observation boundary in v2.11.3, not a scheduler or persistence framework. Recruitment scan uses a read-only telemetry adapter because its existing JSON run already owns identity, lifecycle, candidates and results. `RecruitmentRunStateReader` reads that state without saving or migrating it; `JobRunner` exposes normalized telemetry only. Start, pause, resume, checkpoint and response-envelope policy remain with Recruitment. This is not execution-level lifecycle adoption.
+
+An execution-level candidate audit covered Recruitment, the SQL-backed Team Points worker, fair-play reconciliation and the remaining asynchronous runtimes. Each candidate couples execution to existing persistence, scheduling, cancellation, retry or public workflow policy. Moving any of those responsibilities would exceed this release's behavior-equivalence contract, so execution-level `AdminJob` adoption is explicitly deferred to a separately approved release.
 
 ## Async ownership decision
 

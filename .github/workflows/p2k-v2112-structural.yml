@@ -4,7 +4,7 @@ on:
   push:
     branches: [release/v2.11.2]
   pull_request:
-    branches: [main, release/v2.11.2]
+    branches: [release/v2.11.2]
   workflow_dispatch:
 
 # Final exact-head qualification trigger after homepage runtime dependency restoration.

@@ -9,6 +9,7 @@ LAUNCHER="$BUILD/install-promote-to-king-2.11.3.sh"
 SOURCE_HEAD=$(git -C "$ROOT" rev-parse HEAD)
 BUILD_ID=${P2K_BUILD_ID:-local-$(date -u +%Y%m%dT%H%M%S%N)-$$}
 CACHE_KEY=$(python3 "$ROOT/tools/release/static_asset_cache_key.py" key --version 2.11.3 --source-head "$SOURCE_HEAD" --build-id "$BUILD_ID")
+REQUIRED_CACHE_ASSETS=(admin-shell.js admin-session-controller.js tool-registry.js match-assistant.js dashboard-v2.js api-client.js)
 FILES=(
   AnalyzeMatch.html
   AnalyzeMatchModal.html
@@ -71,6 +72,8 @@ rm -rf "$BUILD"
 mkdir -p "$PAYLOAD/server/team-points/src"
 for file in "${FILES[@]}"; do mkdir -p "$PAYLOAD/$(dirname "$file")"; install -m 0644 "$ROOT/$file" "$PAYLOAD/$file"; done
 python3 "$ROOT/tools/release/static_asset_cache_key.py" stamp --root "$PAYLOAD" --version 2.11.3 --source-head "$SOURCE_HEAD" --build-id "$BUILD_ID" >/dev/null
+VERIFY_ARGS=(); for asset in "${REQUIRED_CACHE_ASSETS[@]}"; do VERIFY_ARGS+=(--require-basename "$asset"); done
+python3 "$ROOT/tools/release/static_asset_cache_key.py" verify --root "$PAYLOAD" --version 2.11.3 --source-head "$SOURCE_HEAD" --build-id "$BUILD_ID" "${VERIFY_ARGS[@]}" >/dev/null
 printf 'release=2.11.3\nsource_head=%s\nsupported_baseline=2.11.x\n' "$SOURCE_HEAD" > "$PAYLOAD/V2113_SOURCE_HEAD.txt"
 printf 'release=2.11.3\nsource_head=%s\nbuild_id=%s\ncache_key=%s\n' "$SOURCE_HEAD" "$BUILD_ID" "$CACHE_KEY" > "$PAYLOAD/STATIC_ASSET_CACHE_KEY.txt"
 (cd "$PAYLOAD" && find . -type f ! -name MANIFEST.sha256 -print0 | sort -z | xargs -0 sha256sum > MANIFEST.sha256)
@@ -171,6 +174,7 @@ INSTRUCTIONS
 mkdir -p "$BUILD/source"
 git -C "$ROOT" archive HEAD | tar -x -C "$BUILD/source"
 python3 "$ROOT/tools/release/static_asset_cache_key.py" stamp --root "$BUILD/source" --version 2.11.3 --source-head "$SOURCE_HEAD" --build-id "$BUILD_ID" >/dev/null
+python3 "$ROOT/tools/release/static_asset_cache_key.py" verify --root "$BUILD/source" --version 2.11.3 --source-head "$SOURCE_HEAD" --build-id "$BUILD_ID" "${VERIFY_ARGS[@]}" >/dev/null
 install -m 0644 "$PAYLOAD/STATIC_ASSET_CACHE_KEY.txt" "$BUILD/source/STATIC_ASSET_CACHE_KEY.txt"
 (cd "$BUILD/source" && zip -qr "$BUILD/PromoteToKing-v2.11.3-source.zip" .)
 (cd "$BUILD" && sha256sum PromoteToKing_v2.11.3_RUNTIME_CONSOLIDATION.run install-promote-to-king-2.11.3.sh INSTALL_v2.11.3.txt PromoteToKing-v2.11.3-source.zip > SHA256SUMS_v2.11.3.txt)

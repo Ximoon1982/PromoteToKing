@@ -1,20 +1,29 @@
 #!/usr/bin/env python3
-"""Stamp and verify immutable build-specific cache keys for qualified assets."""
+"""Stamp and verify one immutable build key across local HTML JS/CSS references."""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
 import re
+import sys
 from pathlib import Path
+from typing import NamedTuple
+from urllib.parse import urlsplit, urlunsplit
 
-ASSETS = (
-    "assets/js/shared/api-request-semantics.js",
-    "assets/js/shared/api-oauth-context.js",
-    "assets/js/shared/api-transport.js",
-    "assets/js/shared/api-request-coordinator.js",
-    "assets/js/shared/api-client.js",
+TAG_PATTERN = re.compile(r"<(?:script|link)\b[^>]*>", re.IGNORECASE | re.DOTALL)
+ATTRIBUTE_PATTERN = re.compile(
+    r"(?P<prefix>\b(?P<name>src|href|rel)\s*=\s*)(?P<quote>['\"])(?P<value>.*?)(?P=quote)",
+    re.IGNORECASE | re.DOTALL,
 )
+SCHEME_PATTERN = re.compile(r"^[a-z][a-z0-9+.-]*:", re.IGNORECASE)
+
+
+class StaticReference(NamedTuple):
+    html: Path
+    asset: str
+    key: str | None
+    key_count: int
 
 
 def make_key(version: str, source_head: str, build_id: str) -> str:
@@ -25,38 +34,113 @@ def make_key(version: str, source_head: str, build_id: str) -> str:
 
 
 def html_files(root: Path):
-    yield from root.glob("*.html")
-    yield from root.glob("*.htm")
+    yield from sorted(path for path in root.rglob("*") if path.suffix.lower() in {".html", ".htm"})
 
 
-def stamp(root: Path, key: str) -> None:
-    changed = 0
+def attributes(tag: str) -> dict[str, str]:
+    return {match.group("name").lower(): match.group("value") for match in ATTRIBUTE_PATTERN.finditer(tag)}
+
+
+def cache_sensitive_url(tag: str) -> tuple[str, str] | None:
+    attrs = attributes(tag)
+    if tag.lower().startswith("<script"):
+        attribute, suffix = "src", ".js"
+    else:
+        if "stylesheet" not in attrs.get("rel", "").lower().split():
+            return None
+        attribute, suffix = "href", ".css"
+    url = attrs.get(attribute, "").strip()
+    if not url or url.startswith(("//", "#")) or SCHEME_PATTERN.match(url):
+        return None
+    if not urlsplit(url).path.lower().endswith(suffix):
+        return None
+    return attribute, url
+
+
+def replace_cache_key(url: str, key: str) -> str:
+    parts = urlsplit(url)
+    tokens = parts.query.split("&") if parts.query else []
+    rewritten: list[str] = []
+    replaced = False
+    for token in tokens:
+        if token.partition("=")[0] == "v":
+            if not replaced:
+                rewritten.append(f"v={key}")
+                replaced = True
+            continue
+        rewritten.append(token)
+    if not replaced:
+        rewritten.append(f"v={key}")
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, "&".join(rewritten), parts.fragment))
+
+
+def rewrite_tag(tag: str, key: str) -> tuple[str, bool]:
+    found = cache_sensitive_url(tag)
+    if found is None:
+        return tag, False
+    attribute, url = found
+    stamped = replace_cache_key(url, key)
+
+    def replace(match: re.Match[str]) -> str:
+        if match.group("name").lower() != attribute:
+            return match.group(0)
+        return f"{match.group('prefix')}{match.group('quote')}{stamped}{match.group('quote')}"
+
+    return ATTRIBUTE_PATTERN.sub(replace, tag), stamped != url
+
+
+def stamp(root: Path, key: str) -> int:
+    reference_count = 0
     for path in html_files(root):
         source = path.read_text(encoding="utf-8")
-        for asset in ASSETS:
-            source, count = re.subn(re.escape(asset) + r"\?v=[^\"'<>\s]+", f"{asset}?v={key}", source)
-            changed += count
-        path.write_text(source, encoding="utf-8")
-    if changed == 0:
-        raise SystemExit("No qualified static-asset references were stamped")
+
+        def replace(match: re.Match[str]) -> str:
+            nonlocal reference_count
+            tag, _ = rewrite_tag(match.group(0), key)
+            if cache_sensitive_url(tag) is not None:
+                reference_count += 1
+            return tag
+
+        stamped = TAG_PATTERN.sub(replace, source)
+        if stamped != source:
+            path.write_text(stamped, encoding="utf-8")
+    if reference_count == 0:
+        raise SystemExit("No local JavaScript or stylesheet references were found")
+    return reference_count
 
 
-def verify(root: Path, key: str) -> None:
+def references(root: Path) -> list[StaticReference]:
+    result: list[StaticReference] = []
+    for path in html_files(root):
+        source = path.read_text(encoding="utf-8")
+        for tag_match in TAG_PATTERN.finditer(source):
+            found = cache_sensitive_url(tag_match.group(0))
+            if found is None:
+                continue
+            _, url = found
+            tokens = urlsplit(url).query.split("&") if urlsplit(url).query else []
+            keys = [token.partition("=")[2] for token in tokens if token.partition("=")[0] == "v"]
+            result.append(StaticReference(path.relative_to(root), urlsplit(url).path, keys[0] if keys else None, len(keys)))
+    return result
+
+
+def verify(root: Path, key: str, required_basenames: tuple[str, ...] = ()) -> int:
     if not re.fullmatch(r"p2k-[0-9.]+-[0-9a-f]{12}-[0-9a-f]{16}", key):
         raise SystemExit(f"Invalid build-specific cache key: {key!r}")
-    references = 0
-    failures: list[str] = []
-    for path in html_files(root):
-        source = path.read_text(encoding="utf-8")
-        for asset in ASSETS:
-            for found in re.findall(re.escape(asset) + r"\?v=([^\"'<>\s]+)", source):
-                references += 1
-                if found != key:
-                    failures.append(f"{path.name}: {asset}?v={found}")
-    if references == 0:
-        failures.append("no qualified static-asset references found")
+    found = references(root)
+    failures = [
+        f"{item.html}: {item.asset} has "
+        + ("no cache key" if item.key_count == 0 else f"{item.key_count} cache keys" if item.key_count != 1 else f"stale key {item.key!r}")
+        for item in found
+        if item.key_count != 1 or item.key != key
+    ]
+    basenames = {Path(item.asset).name for item in found if item.key_count == 1 and item.key == key}
+    failures.extend(f"required packaged asset reference missing: {name}" for name in required_basenames if name not in basenames)
+    if not found:
+        failures.append("no local JavaScript or stylesheet references found")
     if failures:
         raise SystemExit("Static-asset cache-key qualification failed:\n" + "\n".join(failures))
+    return len(found)
 
 
 def main() -> int:
@@ -66,6 +150,7 @@ def main() -> int:
     parser.add_argument("--version", required=True)
     parser.add_argument("--source-head", required=True)
     parser.add_argument("--build-id", required=True)
+    parser.add_argument("--require-basename", action="append", default=[])
     args = parser.parse_args()
     key = make_key(args.version, args.source_head, args.build_id)
     if args.mode == "key":
@@ -73,8 +158,9 @@ def main() -> int:
         return 0
     if args.root is None:
         parser.error("--root is required for stamp and verify")
-    (stamp if args.mode == "stamp" else verify)(args.root, key)
+    count = stamp(args.root, key) if args.mode == "stamp" else verify(args.root, key, tuple(args.require_basename))
     print(key)
+    print(f"Verified {count} local JS/CSS references.", file=sys.stderr)
     return 0
 
 

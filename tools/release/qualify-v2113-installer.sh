@@ -69,7 +69,10 @@ for entry in "${BASELINES[@]}"; do
   CACHE_KEY=$(sed -n 's/^cache_key=//p' "$target/STATIC_ASSET_CACHE_KEY.txt")
   SOURCE_HEAD=$(sed -n 's/^source_head=//p' "$target/STATIC_ASSET_CACHE_KEY.txt")
   BUILD_ID=$(sed -n 's/^build_id=//p' "$target/STATIC_ASSET_CACHE_KEY.txt")
-  python3 "$ROOT/tools/release/static_asset_cache_key.py" verify --root "$target" --version 2.11.3 --source-head "$SOURCE_HEAD" --build-id "$BUILD_ID" | grep -Fx "$CACHE_KEY"
+  python3 "$ROOT/tools/release/static_asset_cache_key.py" verify --root "$BUILD/payload" --version 2.11.3 --source-head "$SOURCE_HEAD" --build-id "$BUILD_ID" \
+    --require-basename admin-shell.js --require-basename admin-session-controller.js \
+    --require-basename tool-registry.js --require-basename match-assistant.js \
+    --require-basename dashboard-v2.js --require-basename api-client.js | grep -Fx "$CACHE_KEY"
   protected_hashes "$target" "$WORK/$label.protected-after"
   diff -u "$WORK/$label.protected-before" "$WORK/$label.protected-after"
   test "$CRON_BEFORE" = "$(sha256sum "$WORK/crontab")"
