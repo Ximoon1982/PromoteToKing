@@ -14,7 +14,7 @@ def block(src, start, end):
 
 def test_real_oauth_reactivates_from_server_session_on_clean_urls_everywhere():
     real = text('assets/js/shared/real-oauth.js')
-    api = text('assets/js/shared/api-client.js')
+    api = text('assets/js/shared/api-client.js') + text('assets/js/shared/api-request-coordinator.js')
     guard = text('assets/js/shared/admin-page-guard.js')
     tabs = text('assets/js/pages/site-tabs.js')
     dashboard = text('assets/js/pages/dashboard-v2.js')
@@ -62,7 +62,7 @@ def test_oauth_cookie_and_server_session_use_seven_day_sliding_retention_and_ref
 
 
 def test_universal_observation_transport_covers_relevant_p2k_endpoints_and_only_network_refreshes():
-    api = text('assets/js/shared/api-client.js')
+    api = text('assets/js/shared/api-client.js') + text('assets/js/shared/api-request-coordinator.js')
     useful = block(api, 'function usefulObservation', 'function compactObservationPayload')
     assert '/matches`' in useful and '/members`' in useful
     assert r'^\/pub\/match\/\d+' in useful

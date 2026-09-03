@@ -52,7 +52,7 @@ def test_acamr_server_claims_distribute_adaptively_without_acamr_schema_table():
 
 
 def test_acamr_observations_are_tagged_and_server_verification_remains_authoritative():
-    api=text('assets/js/shared/api-client.js')
+    api=text('assets/js/shared/api-client.js')+text('assets/js/shared/api-request-coordinator.js')
     observe=text('server/team-points/public/observe.php')
     ingestor=text('server/team-points/src/ObservationIngestor.php')
     assert 'result.observationSource = options.observationSource' in api

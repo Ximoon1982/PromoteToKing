@@ -5,7 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def text(path): return (ROOT / path).read_text(encoding='utf-8')
 
 def test_shared_client_posts_useful_chess_payloads_non_blocking():
-    s=text('assets/js/shared/api-client.js')
+    s=text('assets/js/shared/api-client.js')+text('assets/js/shared/api-request-coordinator.js')
     assert 'opportunisticObservationEndpoint' in s
     assert 'function usefulObservation' in s
     assert '/pub/club/${club}/matches' in s

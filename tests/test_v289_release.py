@@ -44,7 +44,7 @@ def test_acamr_reenabled_with_original_scope_boundary():
     auth=text("assets/js/shared/authenticated-member-refresh.js")
     plan=text("server/team-points/public/acamr-plan.php")
     observe=text("server/team-points/public/observe.php")
-    api=text("assets/js/shared/api-client.js")
+    api=text("assets/js/shared/api-client.js")+text("assets/js/shared/api-request-coordinator.js")
     assert "realOAuthSession(session)" in auth and "simulated && oauthFlagEnabled()" in auth
     assert "'club_points'=>true" in plan and "'member_points'=>true" in plan
     assert "'tournaments'=>false" in plan and "'match_registration'=>false" in plan

@@ -8,7 +8,7 @@
   "extracted_frontend_modules": {
     "assets/js/shared/api-request-semantics.js": 7070,
     "assets/js/shared/api-transport.js": 8660,
-    "assets/js/shared/api-request-coordinator.js": 8367,
+    "assets/js/shared/api-request-coordinator.js": 8555,
     "assets/js/admin/admin-runtime.js": 1832,
     "assets/js/admin/admin-session-controller.js": 29530,
     "assets/js/admin/admin-shell.js": 42846,

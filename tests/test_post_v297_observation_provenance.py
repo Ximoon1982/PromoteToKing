@@ -15,7 +15,7 @@ def test_schema_separates_observed_from_verified_freshness_and_shadow_ratings():
 def test_acamr_claim_is_bound_to_exact_server_assigned_task():
     plan=text('server/team-points/public/acamr-plan.php')
     client=text('assets/js/shared/authenticated-member-refresh.js')
-    api=text('assets/js/shared/api-client.js')
+    api=text('assets/js/shared/api-client.js')+text('assets/js/shared/api-request-coordinator.js')
     observe=text('server/team-points/public/observe.php')
     store=text('server/team-points/src/AcamrClaimStore.php')
     assert 'AcamrClaimStore' in plan and 'bin2hex(random_bytes(24))' in store
@@ -99,13 +99,13 @@ def test_claim_receipts_are_bounded_and_expire():
     assert "(int)($row['expires_at']??0)<$now-60" in store
 
 def test_passive_observation_cannot_dedupe_away_claim_receipt():
-    api=text('assets/js/shared/api-client.js')
+    api=text('assets/js/shared/api-client.js')+text('assets/js/shared/api-request-coordinator.js')
     assert 'const dedupeKey = claimBacked && claimToken' in api
     assert '`${source}:${claimToken}:${url}`' in api
     assert '`${source}:${url}`' in api
 
 def test_stale_if_error_cannot_satisfy_claimed_freshness():
-    api=text('assets/js/shared/api-client.js')
+    api=text('assets/js/shared/api-client.js')+text('assets/js/shared/api-request-coordinator.js')
     assert 'if (result.cacheState !== "STALE_IF_ERROR")' in api
     assert 'result.observationClaimToken = options.observationClaimToken' in api
     assert 'result.observationClaimKind = options.observationClaimKind' in api

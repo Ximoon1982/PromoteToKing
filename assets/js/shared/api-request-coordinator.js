@@ -66,6 +66,8 @@
             const promise = refresh(normalizedUrl, cachedEntry, {
               ...options, signal: null, priority: -100, trafficClass: "background", cacheMode: "network-only"
             }).then(async snapshot => {
+              // The caller received stale-but-usable cache data, but the completed background
+              // network validation is still valuable to the universal observation pipeline.
               try {
                 const data = await cachedData(snapshot, normalizedUrl);
                 queueObservation(normalizedUrl, data, {
