@@ -52,3 +52,48 @@ jobs:
           python -m playwright install --with-deps chromium
           sudo ln -sf "$(find "$HOME/.cache/ms-playwright" -type f -name chrome -path '*chrome-linux*' | head -1)" /usr/bin/chromium
       - run: python tools/test-suite/p2k_test_suite.py browser
+
+  package-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [audit-and-regression, browser-regression]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          coverage: none
+      - run: python -m pip install --disable-pip-version-check -r tests/requirements.txt
+      - name: Build checksummed source and installer artifacts
+        env:
+          P2K_BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}-v2113-package
+        run: bash tools/release/build-v2113-runtime-package.sh "$RUNNER_TEMP/v2113-build"
+      - name: Run canonical regression suite against unpacked source artifact
+        run: |
+          mkdir "$RUNNER_TEMP/unpacked"
+          unzip -q "$RUNNER_TEMP/v2113-build/PromoteToKing-v2.11.3-source.zip" -d "$RUNNER_TEMP/unpacked"
+          cd "$RUNNER_TEMP/unpacked"
+          CACHE_KEY=$(sed -n 's/^cache_key=//p' STATIC_ASSET_CACHE_KEY.txt)
+          SOURCE_HEAD=$(sed -n 's/^source_head=//p' STATIC_ASSET_CACHE_KEY.txt)
+          BUILD_ID=$(sed -n 's/^build_id=//p' STATIC_ASSET_CACHE_KEY.txt)
+          python tools/release/static_asset_cache_key.py verify --root . --version 2.11.3 --source-head "$SOURCE_HEAD" --build-id "$BUILD_ID" | grep -Fx "$CACHE_KEY"
+          python tools/test-suite/p2k_test_suite.py regression
+      - name: Verify all 2.11.x baselines, reinstall, rollback, manifest and CRON
+        run: bash tools/release/qualify-v2113-installer.sh "$RUNNER_TEMP/v2113-build"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PromoteToKing-v2.11.3-qualified
+          path: |
+            ${{ runner.temp }}/v2113-build/PromoteToKing-v2.11.3-source.zip
+            ${{ runner.temp }}/v2113-build/PromoteToKing_v2.11.3_RUNTIME_CONSOLIDATION.run
+            ${{ runner.temp }}/v2113-build/install-promote-to-king-2.11.3.sh
+            ${{ runner.temp }}/v2113-build/INSTALL_v2.11.3.txt
+            ${{ runner.temp }}/v2113-build/SHA256SUMS_v2.11.3.txt

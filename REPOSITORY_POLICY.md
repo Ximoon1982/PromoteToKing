@@ -29,3 +29,7 @@ Never commit production credentials, OAuth tokens, database passwords, private k
 ## Artwork
 
 Approved artwork masters and their release derivatives are version controlled. Artwork approved for a future release may be staged on the corresponding `next/` branch before catalogue integration.
+
+# Qualified-build static asset identity
+
+Every qualified build must use a unique, immutable static-asset cache key derived from its exact source revision and build identity. The displayed semantic version is not a build identity and must never be the sole cache key, including when multiple qualified builds display the same semantic version. Package qualification must reject missing, semantic-version-only, inconsistent or reused build keys.

@@ -134,3 +134,44 @@ def test_v2113_architecture_documents_observable_parity_and_no_universal_engine(
     assert "no universal async engine" in architecture
     assert "read-only `AdminJob` adapter" in consolidation
     assert "CRON entries" in consolidation
+
+
+def test_v2113_incremental_installer_covers_every_representative_211_baseline():
+    builder = text("tools/release/build-v2113-runtime-package.sh")
+    qualification = text("tools/release/qualify-v2113-installer.sh")
+    workflow = text(".github/workflows/p2k-v2113-runtime.yml")
+    instructions = text("INSTALL_v2.11.3.md")
+    assert 'case "$INSTALLED" in 2.11|2.11.*)' in builder
+    for revision in (
+        "2ca1fc191aeef444b4886b53e25a54a83820c25c",
+        "8863366bde7cb6989ce0b99aed650c3d0dfd5c01",
+        "93480c852fc4c554c9a404e5d68b0ac51efed04b",
+        "b8bf26c7c41ca1914323717766bca995139291aa",
+        "4ececcc230ca07099b346cb47396ad00bedd5c21",
+        "current-2.11.x:HEAD",
+    ):
+        assert revision in qualification
+    assert "protected_hashes" in qualification
+    assert "P2K_FORCE_INSTALL_FAILURE=1" in qualification
+    assert "P2K_QUALIFICATION_CRONTAB" in qualification
+    assert "build-v2113-runtime-package.sh" in workflow
+    assert "qualify-v2113-installer.sh" in workflow
+    assert "./install-promote-to-king-2.11.3.sh /absolute/path/to/promote-to-king" in instructions
+
+
+def test_every_qualified_build_has_a_non_semantic_unique_static_asset_key():
+    import importlib.util
+
+    module_path = ROOT / "tools/release/static_asset_cache_key.py"
+    spec = importlib.util.spec_from_file_location("static_asset_cache_key", module_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    first = module.make_key("2.11.3", "a" * 40, "qualified-build-1")
+    second = module.make_key("2.11.3", "a" * 40, "qualified-build-2")
+    assert first != second
+    assert first != "2.11.3" and second != "2.11.3"
+    assert "Every qualified build must use a unique" in text("REPOSITORY_POLICY.md")
+    builder = text("tools/release/build-v2113-runtime-package.sh")
+    assert "STATIC_ASSET_CACHE_KEY.txt" in builder
+    assert "P2K_BUILD_ID" in builder
