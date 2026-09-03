@@ -27,3 +27,11 @@ def test_api_client_public_compatibility_surface_remains_owned_by_facade():
         "setConcurrency", "observeOAuthBatch", "diagnostics",
     ):
         assert contract in public
+
+
+def test_v2113_parity_gate_is_anchored_and_explicit():
+    gate = text("tools/test-suite/structural_parity_v2113.py")
+    assert 'BASELINE = "4ececcc230ca07099b346cb47396ad00bedd5c21"' in gate
+    assert '"assets/js/shared/api-client.js"' in gate
+    assert '"assets/js/shared/api-request-semantics.js"' in gate
+    assert 'visual_suffixes = (".css", ".png"' in gate
