@@ -1,0 +1,54 @@
+name: P2K v2.11.3 runtime consolidation gate
+
+on:
+  push:
+    branches: [release/v2.11.3]
+  pull_request:
+    branches: [main, release/v2.11.3]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit-and-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          coverage: none
+      - run: python -m pip install --disable-pip-version-check -r tests/requirements.txt
+      - run: python tools/test-suite/structural_parity.py
+      - run: python tools/test-suite/architecture_gate.py
+      - run: python tools/test-suite/p2k_test_suite.py audit --json
+      - run: python tools/test-suite/p2k_test_suite.py regression
+
+  browser-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: audit-and-regression
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m pip install --disable-pip-version-check -r tests/requirements.txt
+          python -m playwright install --with-deps chromium
+          sudo ln -sf "$(find "$HOME/.cache/ms-playwright" -type f -name chrome -path '*chrome-linux*' | head -1)" /usr/bin/chromium
+      - run: python tools/test-suite/p2k_test_suite.py browser
