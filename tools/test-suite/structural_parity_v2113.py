@@ -29,6 +29,7 @@ PRODUCTION_ALLOWLIST = {
     "assets/js/shared/api-client.js",
     "assets/js/shared/api-request-semantics.js",
     "assets/js/shared/api-transport.js",
+    "assets/js/shared/api-request-coordinator.js",
 }
 ENGINEERING_PREFIXES = (".github/", "tests/", "tools/")
 ENGINEERING_FILES = {
