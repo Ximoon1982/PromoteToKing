@@ -570,7 +570,7 @@ const { integratedFrames, setIntegratedFrameActivity, ensureIntegratedFrame } = 
   });
   const { stopRecommendationTimer, stopAssistantTimer, disposeRecommendationFrame, prepareEmbeddedMatchAssistant, resizeRecommendationFrame, recommendationError, loadRecommendations, displayRatingRange, recommendationCard, ensureDedicatedMatchAssistant, promoteMatchAssistantFrame, syncMatchAssistantLoadingState, revealMatchAssistantFrame, handleAdminEmbeddedNavigation, handleRecommendationMessage, openMatchAssistant, openMatchAssistantWithFilter, closeMatchAssistant } = window.P2K_DASHBOARD_MODULES.matchAssistant.create({
     state, byId, viewed, preservedURL, config, escapeHTML, number, setText,
-    writeNavigationState, adminDetailDefinition
+    writeNavigationState, adminDetailDefinition, renderAdminPriorityCard
   });
   let dashboardHallModulePromise = null;
   function dashboardHallContext() {
