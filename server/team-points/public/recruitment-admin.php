@@ -7,6 +7,8 @@ use P2K\TeamPoints\ApiException;
 use P2K\TeamPoints\Auth;
 use P2K\TeamPoints\Http;
 use P2K\TeamPoints\PublicReadDatabase;
+use P2K\TeamPoints\AdminJob\JobRunner;
+use P2K\TeamPoints\AdminJob\RecruitmentRunStateReader;
 
 const P2K_RECRUITMENT_SCHEMA = 2;
 const P2K_RECRUITMENT_MAX_CANDIDATES = 100000;
@@ -251,10 +253,12 @@ function p2k_recruitment_public_run(array $run, bool $includeCandidates = true, 
     });
     $selected = count(array_filter($results, static fn(array $row): bool => !empty($row['selected'])));
     $errors = count(array_filter($results, static fn(array $row): bool => trim((string)($row['data']['error'] ?? '')) !== ''));
+    $job = (new JobRunner(new RecruitmentRunStateReader(static fn(): array => $run)))
+        ->observe((string)($run['id'] ?? ''));
     $run['summary'] = [
-        'total' => count($candidates),
-        'checked' => count($results),
-        'pending' => max(0, count($candidates) - count($results)),
+        'total' => (int)($job['total'] ?? count($candidates)),
+        'checked' => (int)($job['completed'] ?? count($results)),
+        'pending' => (int)($job['checkpoint_backlog'] ?? max(0, count($candidates) - count($results))),
         'selected' => $selected,
         'errors' => $errors,
     ];

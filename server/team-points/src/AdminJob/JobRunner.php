@@ -6,7 +6,7 @@ namespace P2K\TeamPoints\AdminJob;
 /** Compatibility adapter for existing runners; it does not introduce scheduling policy. */
 final class JobRunner
 {
-    public function __construct(private readonly JobCheckpointStore $checkpoints) {}
+    public function __construct(private readonly JobStateReader $checkpoints) {}
 
     public function observe(string $jobId): ?array
     {

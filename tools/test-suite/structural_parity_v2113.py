@@ -31,6 +31,11 @@ PRODUCTION_ALLOWLIST = {
     "assets/js/shared/api-oauth-context.js",
     "assets/js/shared/api-transport.js",
     "assets/js/shared/api-request-coordinator.js",
+    "server/team-points/public/recruitment-admin.php",
+    "server/team-points/src/AdminJob/JobCheckpointStore.php",
+    "server/team-points/src/AdminJob/JobRunner.php",
+    "server/team-points/src/AdminJob/JobStateReader.php",
+    "server/team-points/src/AdminJob/RecruitmentRunStateReader.php",
 }
 ENGINEERING_PREFIXES = (".github/", "tests/", "tools/")
 ENGINEERING_FILES = {

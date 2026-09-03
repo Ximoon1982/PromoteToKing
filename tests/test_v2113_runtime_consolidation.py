@@ -55,6 +55,19 @@ def test_api_client_public_compatibility_surface_remains_owned_by_facade():
         assert contract in public
 
 
+def test_recruitment_uses_read_only_admin_job_adapter_without_new_policy():
+    reader = text("server/team-points/src/AdminJob/RecruitmentRunStateReader.php")
+    runner = text("server/team-points/src/AdminJob/JobRunner.php")
+    endpoint = text("server/team-points/public/recruitment-admin.php")
+    assert "implements JobStateReader" in reader
+    assert "new JobRunner(new RecruitmentRunStateReader" in endpoint
+    assert "'total' => (int)($job['total']" in endpoint
+    assert "'checked' => (int)($job['completed']" in endpoint
+    assert "'pending' => (int)($job['checkpoint_backlog']" in endpoint
+    assert "function run" not in runner and "function schedule" not in runner
+    assert "function save" not in reader
+
+
 def test_v2113_parity_gate_is_anchored_and_explicit():
     gate = text("tools/test-suite/structural_parity_v2113.py")
     assert 'BASELINE = "4ececcc230ca07099b346cb47396ad00bedd5c21"' in gate
