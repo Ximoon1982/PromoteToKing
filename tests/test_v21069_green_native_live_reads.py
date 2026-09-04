@@ -36,7 +36,9 @@ def test_compatibility_analytics_refreshes_during_gab():
     compat=text('server/team-points-green/src/GreenCompatibility.php')
     block=compat[compat.index('public function maybeRebuildAnalytics'):compat.index('/**\n     * Public-read contract audit')]
     assert "gab_status" not in block
-    assert '$this->rebuildAnalytics();return true;' in block
+    assert 'refreshIfNeeded($this->green->clubSlug)' in block
+    assert 'refreshAchievementsIfNeeded($this->green->clubSlug)' in block
+    assert "'reason'=>$ran?'source_changed':'watermarks_current'" in block
     assert 'GAB remains a historical' in compat
 
 
