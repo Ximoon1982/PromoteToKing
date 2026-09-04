@@ -245,3 +245,10 @@ def test_frozen_release_workflows_do_not_route_later_main_prs_to_historical_gate
     assert "branches: [release/v2.11.1]" in v2111 and "workflow_dispatch:" in v2111
     assert "branches: [release/v2.11.2]" in v2112 and "workflow_dispatch:" in v2112
     assert "branches: [main, release/v2.11.3]" in v2113
+
+
+def test_v2113_qualification_checks_out_and_packages_the_exact_branch_head():
+    workflow = text(".github/workflows/p2k-v2113-runtime.yml")
+    head_expression = "${{ github.event.pull_request.head.sha || github.sha }}"
+    assert workflow.count(f"ref: {head_expression}") == 3
+    assert f'test "$SOURCE_HEAD" = "{head_expression}"' in workflow

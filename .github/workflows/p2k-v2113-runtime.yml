@@ -17,6 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
@@ -43,6 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
@@ -60,6 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
@@ -84,6 +87,7 @@ jobs:
           CACHE_KEY=$(sed -n 's/^cache_key=//p' STATIC_ASSET_CACHE_KEY.txt)
           SOURCE_HEAD=$(sed -n 's/^source_head=//p' STATIC_ASSET_CACHE_KEY.txt)
           BUILD_ID=$(sed -n 's/^build_id=//p' STATIC_ASSET_CACHE_KEY.txt)
+          test "$SOURCE_HEAD" = "${{ github.event.pull_request.head.sha || github.sha }}"
           python tools/release/static_asset_cache_key.py verify --root . --version 2.11.3 --source-head "$SOURCE_HEAD" --build-id "$BUILD_ID" \
             --require-basename admin-shell.js --require-basename admin-session-controller.js \
             --require-basename tool-registry.js --require-basename match-assistant.js \
