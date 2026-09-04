@@ -1,10 +1,10 @@
-name: P2K v2.11.3 runtime consolidation gate
+name: P2K v2.11.4 operational robustness gate
 
 on:
   push:
-    branches: [release/v2.11.3]
+    branches: [release/v2.11.4]
   pull_request:
-    branches: [release/v2.11.3]
+    branches: [main, release/v2.11.4]
   workflow_dispatch:
 
 permissions:
@@ -32,7 +32,7 @@ jobs:
           php-version: "8.5"
           coverage: none
       - run: python -m pip install --disable-pip-version-check -r tests/requirements.txt
-      - run: python tools/test-suite/structural_parity_v2113.py
+      - run: python tools/test-suite/structural_parity_v2114.py
       - run: python tools/test-suite/architecture_gate.py
       - run: python tools/test-suite/p2k_test_suite.py audit --json
       - run: python tools/test-suite/p2k_test_suite.py regression
@@ -77,30 +77,30 @@ jobs:
       - run: python -m pip install --disable-pip-version-check -r tests/requirements.txt
       - name: Build checksummed source and installer artifacts
         env:
-          P2K_BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}-v2113-package
-        run: bash tools/release/build-v2113-runtime-package.sh "$RUNNER_TEMP/v2113-build"
+          P2K_BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}-v2114-package
+        run: bash tools/release/build-v2114-operational-package.sh "$RUNNER_TEMP/v2114-build"
       - name: Run canonical regression suite against unpacked source artifact
         run: |
           mkdir "$RUNNER_TEMP/unpacked"
-          unzip -q "$RUNNER_TEMP/v2113-build/PromoteToKing-v2.11.3-source.zip" -d "$RUNNER_TEMP/unpacked"
+          unzip -q "$RUNNER_TEMP/v2114-build/PromoteToKing-v2.11.4-source.zip" -d "$RUNNER_TEMP/unpacked"
           cd "$RUNNER_TEMP/unpacked"
           CACHE_KEY=$(sed -n 's/^cache_key=//p' STATIC_ASSET_CACHE_KEY.txt)
           SOURCE_HEAD=$(sed -n 's/^source_head=//p' STATIC_ASSET_CACHE_KEY.txt)
           BUILD_ID=$(sed -n 's/^build_id=//p' STATIC_ASSET_CACHE_KEY.txt)
           test "$SOURCE_HEAD" = "${{ github.event.pull_request.head.sha || github.sha }}"
-          python tools/release/static_asset_cache_key.py verify --root . --version 2.11.3 --source-head "$SOURCE_HEAD" --build-id "$BUILD_ID" \
+          python tools/release/static_asset_cache_key.py verify --root . --version 2.11.4 --source-head "$SOURCE_HEAD" --build-id "$BUILD_ID" \
             --require-basename admin-shell.js --require-basename admin-session-controller.js \
             --require-basename tool-registry.js --require-basename match-assistant.js \
             --require-basename dashboard-v2.js --require-basename api-client.js | grep -Fx "$CACHE_KEY"
           python tools/test-suite/p2k_test_suite.py regression
       - name: Verify all 2.11.x baselines, reinstall, rollback, manifest and CRON
-        run: bash tools/release/qualify-v2113-installer.sh "$RUNNER_TEMP/v2113-build"
+        run: bash tools/release/qualify-v2114-installer.sh "$RUNNER_TEMP/v2114-build"
       - uses: actions/upload-artifact@v4
         with:
-          name: PromoteToKing-v2.11.3-qualified
+          name: PromoteToKing-v2.11.4-qualified
           path: |
-            ${{ runner.temp }}/v2113-build/PromoteToKing-v2.11.3-source.zip
-            ${{ runner.temp }}/v2113-build/PromoteToKing_v2.11.3_RUNTIME_CONSOLIDATION.run
-            ${{ runner.temp }}/v2113-build/install-promote-to-king-2.11.3.sh
-            ${{ runner.temp }}/v2113-build/INSTALL_v2.11.3.txt
-            ${{ runner.temp }}/v2113-build/SHA256SUMS_v2.11.3.txt
+            ${{ runner.temp }}/v2114-build/PromoteToKing-v2.11.4-source.zip
+            ${{ runner.temp }}/v2114-build/PromoteToKing_v2.11.4_OPERATIONAL_ROBUSTNESS.run
+            ${{ runner.temp }}/v2114-build/install-promote-to-king-2.11.4.sh
+            ${{ runner.temp }}/v2114-build/INSTALL_v2.11.4.txt
+            ${{ runner.temp }}/v2114-build/SHA256SUMS_v2.11.4.txt

@@ -58,15 +58,22 @@ try {
 
     $compatibilityStatus = static function (bool $runSmoke = false) use ($repo): array {
         $gab = (new GreenAnalyticsBootstrap($repo))->status();
-        $smoke = null;
+        $parityLane = null;
+        foreach ((array)($gab['lanes'] ?? []) as $lane) if ((string)($lane['lane_key'] ?? '') === 'read_parity') {$parityLane=$lane;break;}
+        $recordedSmoke = null;
+        if (is_array($parityLane) && !empty($parityLane['cursor_json'])) {$decoded=json_decode((string)$parityLane['cursor_json'],true);if(is_array($decoded))$recordedSmoke=$decoded;}
+        $smoke = $recordedSmoke;
         if ($runSmoke) {
             try { $smoke = (new GreenCompatibility($repo))->smokeTest(); }
             catch (Throwable $e) { $smoke = ['ready'=>false,'error'=>$e->getMessage()]; }
         }
+        $laneStatus=(string)($parityLane['status']??'pending');$ready=$laneStatus==='completed'&&!empty($recordedSmoke['ready']);
+        $checks=(array)($smoke['checks']??[]);$mismatches=[];foreach($checks as $key=>$value)if($value!==true)$mismatches[]=(string)$key;
         return [
             'production_gate' => false,
             'gab' => $gab,
             'smoke' => $smoke,
+            'parity' => ['ready'=>$ready,'state'=>$ready?'complete':($laneStatus==='error'?'failed':'pending'),'lane_status'=>$laneStatus,'checked_at'=>$parityLane['completed_at']??$parityLane['updated_at']??null,'mismatches'=>$mismatches,'last_error'=>$parityLane['last_error']??null],
             'note' => 'Compatibility/GAB work is technical debt only and does not gate Green production in 2.11.0.',
         ];
     };
@@ -82,8 +89,9 @@ try {
         $lastAt = is_array($last) ? (string)($last['completed_at'] ?? $last['started_at'] ?? '') : '';
         $lastEpoch = $lastAt !== '' ? strtotime($lastAt.' UTC') : false;
         $age = $lastEpoch === false ? null : max(0,time()-$lastEpoch);
-        $status = is_array($last) ? strtolower((string)($last['status'] ?? 'unknown')) : 'unknown';
+        $status = is_array($last) ? strtolower((string)($last['operational_status'] ?? $last['status'] ?? 'unknown')) : 'unknown';
         $healthy = in_array($status,['running','success'],true) && ($age===null || $age<=180);
+        $compatibility=$compatibilityStatus(false);
         GreenConfig::json([
             'ok'=>true,
             'effective_public_source'=>PublicReadDatabase::source(),
@@ -120,7 +128,8 @@ try {
             'blue_mode'=>'recovery_only',
             'technical'=>$technicalReadiness(),
             'operational'=>$operationalValidation($summary),
-            'compatibility'=>$compatibilityStatus(false),
+            'green_public_adapter_ready'=>(bool)($compatibility['parity']['ready']??false),
+            'compatibility'=>$compatibility,
             'green'=>$summary,
             'blue_reference'=>$comparison,
             'blue_reference_error'=>$comparisonError,
