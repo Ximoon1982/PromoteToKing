@@ -1541,7 +1541,7 @@ final class GreenRepository
 
     public function recentInvocations(int $limit=20): array
     {
-        $limit=max(1,min(100,$limit));return $this->core->query('SELECT invocation_id,cycle_no,mode,stage_start,stage_finish,status,started_at,completed_at,runtime_ms,request_count,summary_json FROM p2k_g_invocations ORDER BY invocation_id DESC LIMIT '.$limit)->fetchAll()?:[];
+        $limit=max(1,min(100,$limit));return $this->core->query("SELECT invocation_id,cycle_no,mode,stage_start,stage_finish,status,CASE WHEN status='running' AND started_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL 15 MINUTE) THEN 'stale_running' ELSE status END operational_status,started_at,completed_at,runtime_ms,request_count,summary_json FROM p2k_g_invocations ORDER BY invocation_id DESC LIMIT ".$limit)->fetchAll()?:[];
     }
 
     public function recentCycleDurations(int $limit=10): array

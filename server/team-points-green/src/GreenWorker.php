@@ -43,6 +43,7 @@ final class GreenWorker
     private int $requestCount=0;
     private array $achieved=[];
     private array $timingsMs=[];
+    private array $maintenance=[];
     private ?int $coreLockRuntimeMs=null;
 
     public function __construct(?GreenRepository $repo=null,?int $hardBudgetSeconds=null,?int $softTargetSeconds=null,array $context=[])
@@ -307,6 +308,7 @@ final class GreenWorker
             'core_lock_runtime_ms'=>$coreMs,
             'post_lock_maintenance_ms'=>max(0,$runtimeMs-$coreMs),
             'timings_ms'=>$this->timingsMs,
+            'maintenance'=>$this->maintenance,
             'request_count'=>$this->requestCount,
             'batch_counts'=>$this->achieved,
             'soft_target_seconds'=>$this->softTargetSeconds,
@@ -328,7 +330,7 @@ final class GreenWorker
             // to a five-minute minimum and never let an opportunistic rebuild fail the
             // finite Green worker after its lock has already been released.
             try{$rebuilt=$this->timed('green_analytics',fn()=>$this->repo->maybeRebuildAnalytics($this->cycle,300));if($rebuilt)$this->inc('green_analytics_rebuilds');}catch(\Throwable $e){$this->inc('green_analytics_errors');}
-            try{$rebuilt=$this->timed('compat_analytics',fn()=>(new GreenCompatibility($this->repo))->maybeRebuildAnalytics(300));if($rebuilt)$this->inc('compat_analytics_rebuilds');}catch(\Throwable $e){$this->inc('compat_analytics_errors');}
+            try{$detail=$this->timed('compat_analytics',fn()=>(new GreenCompatibility($this->repo))->maybeRebuildAnalytics(300));$this->maintenance['compat_analytics']=$detail;if(!empty($detail['ran']))$this->inc('compat_analytics_rebuilds');else $this->inc('compat_analytics_skips');}catch(\Throwable $e){$this->inc('compat_analytics_errors');$this->maintenance['compat_analytics']=['ran'=>false,'reason'=>'error','error'=>$e->getMessage()];}
         }finally{try{$this->repo->core->query("SELECT RELEASE_LOCK('p2k_green_analytics_maintenance')");}catch(\Throwable $ignored){}}
     }
 
@@ -393,7 +395,7 @@ final class GreenWorker
             $this->repo->finishInvocation($invocation,'success',$invStarted,['request_count'=>$this->requestCount,'achieved'=>$this->achieved,'timings_ms'=>$this->timingsMs,'finish_state'=>$finishState,'gscf'=>$result['telemetry']]);
             return $result;
         }catch(\Throwable $e){
-            $finalStatus='error';$this->repo->core->prepare("UPDATE p2k_g_state SET last_worker_finish=UTC_TIMESTAMP(),last_worker_status='error',last_error=? WHERE club_slug=?")->execute([substr($e->getMessage(),0,2000),$this->repo->clubSlug]);
+            $finalStatus='error';try{$this->repo->core->prepare("UPDATE p2k_g_state SET last_worker_finish=UTC_TIMESTAMP(),last_worker_status='error',last_error=? WHERE club_slug=?")->execute([substr($e->getMessage(),0,2000),$this->repo->clubSlug]);}catch(\Throwable $ignored){}
             if($invocation>0){try{$this->repo->finishInvocation($invocation,'error',$invStarted,['request_count'=>$this->requestCount,'error'=>$e->getMessage(),'achieved'=>$this->achieved,'timings_ms'=>$this->timingsMs]);}catch(\Throwable $ignored){}}
             return $this->resultEnvelope(['ok'=>false,'status'=>'error','error'=>$e->getMessage(),'state'=>$this->repo->state()],$invStarted,$leaseResult);
         }
