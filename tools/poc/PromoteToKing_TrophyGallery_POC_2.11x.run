@@ -6,7 +6,7 @@ ROOT="${1:-$DEFAULT_ROOT}"
 ACTION="${2:-install}"
 
 POC_SOURCE_COMMIT="aed6ad0fcebd95e0dd176f3eeb33e9d30b714505"
-POC_CACHE_KEY="poc-aed6ad0fcebd-20260905"
+POC_CACHE_KEY="poc-aed6ad0fcebd-20260905-r2"
 RAW_URL="https://raw.githubusercontent.com/Ximoon1982/PromoteToKing/${POC_SOURCE_COMMIT}/assets/js/admin/trophy-gallery-poc.js"
 
 if [[ "$ACTION" != "install" && "$ACTION" != "--remove" && "$ACTION" != "remove" ]]; then
@@ -47,14 +47,35 @@ raw_url = os.environ["P2K_TROPHY_RAW_URL"]
 registry = root / "assets/js/admin/tool-registry.js"
 poc_target = root / "assets/js/admin/trophy-gallery-poc.js"
 ui = root / "ui-v2.html"
+state_dir = root / ".p2k-poc-state"
+state_path = state_dir / "trophy-gallery-overlay.json"
 
 begin = "/* P2K_TROPHY_GALLERY_POC_OVERLAY_BEGIN */"
 end = "/* P2K_TROPHY_GALLERY_POC_OVERLAY_END */"
 sentinel = "return Object.freeze({ tools, renderTools, routeFallback });"
+registry_src_re = re.compile(r'assets/js/admin/tool-registry\.js\?v=[^\"\'<> ]+')
+
 
 def die(msg: str, code: int = 10) -> None:
     print(f"ERROR: {msg}", file=sys.stderr)
     raise SystemExit(code)
+
+
+def strip_overlay(text: str) -> str:
+    pattern = re.compile(re.escape(begin) + r".*?" + re.escape(end) + r"\n?", re.S)
+    return pattern.sub("", text)
+
+
+def write_atomic(path: Path, data: str | bytes, mode_from: Path | None = None) -> None:
+    tmp = path.with_name(path.name + ".p2k-trophy.tmp")
+    if isinstance(data, str):
+        tmp.write_text(data, encoding="utf-8")
+    else:
+        tmp.write_bytes(data)
+    if mode_from and mode_from.exists():
+        shutil.copymode(mode_from, tmp)
+    os.replace(tmp, path)
+
 
 if not root.is_dir():
     die(f"P2K root does not exist: {root}")
@@ -67,14 +88,43 @@ if not re.search(r"\b2\.11\.\d+", ui_text):
     die("No 2.11.x version evidence found in ui-v2.html; refusing to patch an unknown tree.")
 if sentinel not in registry_text:
     die("Current tool-registry.js does not contain the expected v2.11.x registry sentinel; no changes made.")
+ui_match = registry_src_re.search(ui_text)
+if not ui_match:
+    die("ui-v2.html does not contain the expected tool-registry.js asset reference; no changes made.")
+
+existing_state = None
+if state_path.is_file():
+    try:
+        existing_state = json.loads(state_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        die(f"Existing Trophy Gallery overlay state is unreadable: {exc}")
+
+legacy_overlay = begin in registry_text and existing_state is None
+if "trophy-gallery-poc.js" in registry_text and begin not in registry_text:
+    die("This P2K tree already references trophy-gallery-poc.js outside the overlay marker. It may already contain the feature branch; refusing to duplicate it.")
 
 stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
 backup = root / ".p2k-poc-backups" / f"trophy-gallery-{stamp}"
 backup.mkdir(parents=True, exist_ok=False)
 shutil.copy2(registry, backup / "tool-registry.js")
-had_poc = poc_target.exists()
-if had_poc:
+shutil.copy2(ui, backup / "ui-v2.html")
+had_poc_now = poc_target.exists()
+if had_poc_now:
     shutil.copy2(poc_target, backup / "trophy-gallery-poc.js")
+if state_path.is_file():
+    shutil.copy2(state_path, backup / "overlay-state.json")
+
+original_registry_src = (
+    existing_state.get("original_registry_src")
+    if isinstance(existing_state, dict) and existing_state.get("original_registry_src")
+    else ui_match.group(0)
+)
+# v1 of this overlay created the POC payload but had no state file. Treat that as overlay-owned.
+original_poc_existed = (
+    bool(existing_state.get("original_poc_existed"))
+    if isinstance(existing_state, dict)
+    else (had_poc_now and not legacy_overlay)
+)
 
 manifest = {
     "created_utc": stamp,
@@ -82,60 +132,57 @@ manifest = {
     "root": str(root),
     "source_commit": source_commit,
     "registry_sha256_before": hashlib.sha256(registry.read_bytes()).hexdigest(),
-    "poc_existed_before": had_poc,
+    "ui_sha256_before": hashlib.sha256(ui.read_bytes()).hexdigest(),
+    "poc_existed_before_this_run": had_poc_now,
+    "legacy_overlay_upgrade": legacy_overlay,
 }
 (backup / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
-def restore() -> None:
+
+def rollback() -> None:
     shutil.copy2(backup / "tool-registry.js", registry)
-    if had_poc:
+    shutil.copy2(backup / "ui-v2.html", ui)
+    if (backup / "trophy-gallery-poc.js").is_file():
         shutil.copy2(backup / "trophy-gallery-poc.js", poc_target)
     else:
         poc_target.unlink(missing_ok=True)
+    if (backup / "overlay-state.json").is_file():
+        state_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(backup / "overlay-state.json", state_path)
+    elif not existing_state:
+        state_path.unlink(missing_ok=True)
 
-def strip_overlay(text: str) -> str:
-    pattern = re.compile(
-        re.escape(begin) + r".*?" + re.escape(end) + r"\n?",
-        re.S,
-    )
-    return pattern.sub("", text)
 
 try:
     if action in ("--remove", "remove"):
-        if begin not in registry_text:
-            if "trophy-gallery-poc.js" in registry_text:
-                die("A Trophy Gallery loader exists but is not owned by this overlay installer; refusing to remove native/branch integration.")
-            print("Trophy Gallery POC overlay is not installed; nothing to remove.")
-        else:
-            patched = strip_overlay(registry_text)
-            tmp = registry.with_suffix(".js.p2k-trophy-remove.tmp")
-            tmp.write_text(patched, encoding="utf-8")
-            shutil.copymode(registry, tmp)
-            os.replace(tmp, registry)
+        patched_registry = strip_overlay(registry_text)
+        patched_ui = ui_text
+        if existing_state and existing_state.get("original_registry_src"):
+            patched_ui, count = registry_src_re.subn(existing_state["original_registry_src"], patched_ui, count=1)
+            if count != 1:
+                die("Could not restore the original tool-registry asset URL from overlay state.")
+        elif ui_match.group(0).endswith(cache_key):
+            die("The overlay cache URL is present but no restoration state exists; refusing an unsafe HTML guess.")
+
+        write_atomic(registry, patched_registry, registry)
+        write_atomic(ui, patched_ui, ui)
+        if not original_poc_existed:
             poc_target.unlink(missing_ok=True)
-            print("Trophy Gallery POC overlay removed.")
+        state_path.unlink(missing_ok=True)
+        print("Trophy Gallery POC overlay removed.")
         print(f"Backup retained at: {backup}")
         raise SystemExit(0)
-
-    if "trophy-gallery-poc.js" in registry_text and begin not in registry_text:
-        die("This P2K tree already references trophy-gallery-poc.js outside the overlay marker. It may already contain the feature branch; refusing to duplicate it.")
 
     source_override = os.environ.get("P2K_TROPHY_POC_SOURCE_FILE", "").strip()
     if source_override:
         source = Path(source_override).read_bytes()
     else:
-        req = urllib.request.Request(
-            raw_url,
-            headers={"User-Agent": "PromoteToKing-TrophyGallery-POC-Installer/1"},
-        )
+        req = urllib.request.Request(raw_url, headers={"User-Agent": "PromoteToKing-TrophyGallery-POC-Installer/2"})
         try:
             with urllib.request.urlopen(req, timeout=30) as response:
                 source = response.read()
         except Exception as exc:
-            die(
-                "Could not fetch the immutable Trophy Gallery POC payload from GitHub. "
-                f"Network error: {exc}. No production files have been changed."
-            )
+            die(f"Could not fetch the immutable Trophy Gallery POC payload from GitHub: {exc}")
 
     try:
         source_text = source.decode("utf-8")
@@ -170,25 +217,25 @@ loadTrophyGalleryPocOverlay();
     if sentinel not in clean_registry:
         die("Registry sentinel disappeared while preparing patch.")
     patched_registry = clean_registry.replace(sentinel, block + sentinel, 1)
+    patched_ui, count = registry_src_re.subn(
+        f"assets/js/admin/tool-registry.js?v={cache_key}", ui_text, count=1
+    )
+    if count != 1:
+        die("Could not apply the Trophy Gallery cache-busting registry URL.")
 
     poc_target.parent.mkdir(parents=True, exist_ok=True)
-    poc_tmp = poc_target.with_suffix(".js.p2k-trophy.tmp")
-    poc_tmp.write_bytes(source)
-    if poc_target.exists():
-        shutil.copymode(poc_target, poc_tmp)
-    os.replace(poc_tmp, poc_target)
-
-    reg_tmp = registry.with_suffix(".js.p2k-trophy.tmp")
-    reg_tmp.write_text(patched_registry, encoding="utf-8")
-    shutil.copymode(registry, reg_tmp)
-    os.replace(reg_tmp, registry)
+    write_atomic(poc_target, source, poc_target if poc_target.exists() else None)
+    write_atomic(registry, patched_registry, registry)
+    write_atomic(ui, patched_ui, ui)
 
     final_registry = registry.read_text(encoding="utf-8")
     final_poc = poc_target.read_text(encoding="utf-8")
+    final_ui = ui.read_text(encoding="utf-8")
     checks = {
         "overlay_begin_once": final_registry.count(begin) == 1,
         "overlay_end_once": final_registry.count(end) == 1,
         "payload_reference_once": final_registry.count("trophy-gallery-poc.js?v=" + cache_key) == 1,
+        "registry_cache_url_once": final_ui.count("tool-registry.js?v=" + cache_key) == 1,
         "payload_runtime_marker": "P2K_TROPHY_GALLERY_POC" in final_poc,
         "admin_gate_marker": "isAdminVisible()" in final_poc,
     }
@@ -203,7 +250,19 @@ loadTrophyGalleryPocOverlay();
             if result.returncode:
                 die(f"JavaScript syntax validation failed for {path}: {result.stderr.strip()}")
 
+    state_dir.mkdir(parents=True, exist_ok=True)
+    state = {
+        "overlay_version": 2,
+        "source_commit": source_commit,
+        "cache_key": cache_key,
+        "original_registry_src": original_registry_src,
+        "original_poc_existed": original_poc_existed,
+        "installed_utc": stamp,
+    }
+    state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+
     manifest["registry_sha256_after"] = hashlib.sha256(registry.read_bytes()).hexdigest()
+    manifest["ui_sha256_after"] = hashlib.sha256(ui.read_bytes()).hexdigest()
     manifest["poc_sha256"] = hashlib.sha256(poc_target.read_bytes()).hexdigest()
     manifest["cache_key"] = cache_key
     manifest["validation"] = checks
@@ -214,6 +273,7 @@ loadTrophyGalleryPocOverlay();
     print(f"Runtime source commit: {source_commit}")
     print(f"Cache key: {cache_key}")
     print(f"Backup: {backup}")
+    print("Cache bust: ui-v2.html now requests the patched tool-registry.js with the POC key.")
     print("Visibility: admin-authenticated users only.")
     print("No PHP, database, configuration, storage, OAuth or CRON files were changed.")
 except BaseException:
@@ -221,7 +281,7 @@ except BaseException:
     if isinstance(exc, SystemExit) and exc.code == 0:
         raise
     try:
-        restore()
+        rollback()
         print(f"Rollback completed from: {backup}", file=sys.stderr)
     except Exception as restore_exc:
         print(f"WARNING: automatic rollback failed: {restore_exc}", file=sys.stderr)
