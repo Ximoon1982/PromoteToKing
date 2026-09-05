@@ -27,6 +27,7 @@ jobs:
         run: |
           node --check assets/js/admin/tool-registry.js
           node --check assets/js/admin/trophy-gallery-poc.js
+          node --check assets/js/admin/trophy-gallery-poc-admin-nav-fix.js
       - name: Installer shell syntax
         run: |
           bash -n tools/poc/PromoteToKing_TrophyGallery_POC_2.11x.run
@@ -43,6 +44,7 @@ jobs:
           allowed = {
               'assets/js/admin/tool-registry.js',
               'assets/js/admin/trophy-gallery-poc.js',
+              'assets/js/admin/trophy-gallery-poc-admin-nav-fix.js',
               'tests/test_trophy_gallery_poc.py',
               'tests/test_trophy_gallery_overlay_installer.py',
               '.github/workflows/trophy-gallery-poc.yml',
