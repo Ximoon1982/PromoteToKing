@@ -18,8 +18,8 @@ def test_trophy_gallery_poc_is_loaded_only_through_admin_registry():
 
 def test_trophy_gallery_poc_mounts_hall_and_admin_surfaces():
     poc = text("assets/js/admin/trophy-gallery-poc.js")
-    assert 'data.hallSubtab="trophies"' in poc
-    assert 'data.hallPanel="trophies"' in poc
+    assert 'tab.dataset.hallSubtab="trophies"' in poc
+    assert 'panel.dataset.hallPanel="trophies"' in poc
     assert 'p2kTrophyAdminPanel' in poc
     assert 'adminToolGrid' in poc
     assert 'data-trophy-admin-card' in poc
