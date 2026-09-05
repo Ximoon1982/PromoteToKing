@@ -61,7 +61,6 @@ const link = document.createElement("a"); link.className = "dashboard-button"; l
 link.href = tool.adminTool ? integratedAdminHref(tool.adminTool, tool.adminContext ? { adminContext: tool.adminContext } : {}) : tool.path ? preservedURL(tool.path).href : tool.classic ? preservedURL("index.html", { classic: true }).href : preservedURL(config.routes?.[tool.route] || routeFallback(tool.route)).href;
 foot.append(category, link); card.append(head, title, description, foot); host.appendChild(card);
 });
-window.P2K_TROPHY_GALLERY_POC?.mount?.(context);
 }
 function routeFallback(key) {
 return ({ find: "FindMatch.htm", upcoming: "AnalyzeMatches.htm", creation: "MatchCreationAnalyzer.htm", open: "AnalyzeMatch.html", recruit: "RecruitMatch.html", challenges: "ChallengeListAssistant.html", teamPoints: "TeamPointsAdmin.html" })[key] || "index.html";
