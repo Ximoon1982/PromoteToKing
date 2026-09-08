@@ -331,15 +331,20 @@ final class GreenCompatibility
         $this->ensureSchema();$builder=new AnalyticsBuilder($this->green->core,$this->green->analytics);$all=$builder->rebuildAll($this->green->clubSlug);$ach=$builder->refreshAchievementsIfNeeded($this->green->clubSlug);$this->green->core->prepare('UPDATE p2k_g_state SET compat_analytics_rebuilt_at=UTC_TIMESTAMP() WHERE club_slug=?')->execute([$this->green->clubSlug]);return ['analytics'=>$all,'achievements'=>$ach];
     }
 
-    public function maybeRebuildAnalytics(int $minimumSeconds=30): bool
+    public function maybeRebuildAnalytics(int $minimumSeconds=30): array
     {
         // Green is authoritative even while GAB backfill/reconciliation is still converging.
         // Keep the mature public Analytics contracts current from the live Green projection
         // instead of freezing p2k_an_* until bootstrap completion. GAB remains a historical
         // completeness/backfill lane, not a freshness gate.
         $s=$this->green->state();$last=(string)($s['compat_analytics_rebuilt_at']??'');
-        if($last!==''&&($ts=strtotime($last.' UTC'))!==false&&$ts>time()-max(30,$minimumSeconds))return false;
-        $this->rebuildAnalytics();return true;
+        if($last!==''&&($ts=strtotime($last.' UTC'))!==false&&$ts>time()-max(30,$minimumSeconds))return ['ran'=>false,'reason'=>'cadence','last_rebuilt_at'=>$last];
+        $builder=new AnalyticsBuilder($this->green->core,$this->green->analytics);
+        $analytics=$builder->refreshIfNeeded($this->green->clubSlug);
+        $achievements=$builder->refreshAchievementsIfNeeded($this->green->clubSlug);
+        $ran=!empty($analytics['refreshed'])||!empty($achievements['refreshed']);
+        if($ran)$this->green->core->prepare('UPDATE p2k_g_state SET compat_analytics_rebuilt_at=UTC_TIMESTAMP() WHERE club_slug=?')->execute([$this->green->clubSlug]);
+        return ['ran'=>$ran,'reason'=>$ran?'source_changed':'watermarks_current','analytics'=>$analytics,'achievements'=>$achievements];
     }
 
     /**
