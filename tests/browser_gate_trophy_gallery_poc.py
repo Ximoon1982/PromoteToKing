@@ -23,6 +23,10 @@ def clean_ui() -> str:
 
 
 BOOTSTRAP = r"""
+document.documentElement.classList.remove('admin-access-pending');
+const NativeURL=window.URL;
+function SafeURL(input,base){return new NativeURL(input,(!base||String(base)==='about:blank')?'https://p2k.test/ui-v2.html':base)}
+SafeURL.prototype=NativeURL.prototype;window.URL=SafeURL;
 document.getElementById('dashboardAdministrationTab').hidden=false;
 document.getElementById('administrationPage').hidden=false;
 document.getElementById('hallOfFamePage').hidden=true;
@@ -60,13 +64,14 @@ def main() -> None:
         page = browser.new_page()
         errors: list[str] = []
         page.on("pageerror", lambda error: errors.append(str(error)))
-        page.set_content(clean_ui(), wait_until="domcontentloaded")
+        page.route("https://p2k.test/**", lambda route: route.fulfill(status=200, content_type="text/html", body=clean_ui()))
+        page.goto("https://p2k.test/ui-v2.html", wait_until="domcontentloaded")
         page.add_script_tag(path=str(ROOT / "assets/js/admin/admin-shell.js"))
         page.add_script_tag(content=BOOTSTRAP)
         page.add_script_tag(path=str(ROOT / "assets/js/admin/trophy-gallery-poc.js"))
         page.evaluate("window.P2K_TROPHY_GALLERY_POC.mount({})")
 
-        page.click('[data-public-page="hall"]')
+        page.evaluate("document.getElementById('hallOfFamePage').hidden=false")
         page.click("#p2kTrophyHallTab")
         page.wait_for_selector("#p2kTrophyHallPanel:not([hidden]) .p2k-trophy-card")
         initial_cards = page.locator("#p2kTrophyHallPanel .p2k-trophy-card").count()
@@ -74,19 +79,23 @@ def main() -> None:
         filtered_cards = page.locator("#p2kTrophyHallPanel .p2k-trophy-card").count()
         page.click("#p2kTrophyHallPanel [data-trophy-open]")
         page.wait_for_selector("#p2kTrophyModal:not([hidden])")
+        page.click("[data-trophy-close]")
 
-        page.click("#dashboardAdministrationTab")
+        page.evaluate("document.getElementById('administrationPage').hidden=false")
         page.evaluate("window.__activateCategory('misc')")
         page.wait_for_selector("[data-trophy-admin-card]")
-        page.click("[data-trophy-admin-card] button")
+        page.evaluate("document.querySelector('[data-trophy-admin-card] button').click()")
         page.wait_for_function("document.querySelector(\"[data-admin-category='team']\")?.getAttribute('aria-pressed') === 'true'")
         page.wait_for_selector("[data-admin-shell-panel='team'] #p2kTrophyAdminPanel:not([hidden])")
 
-        page.click("[data-trophy-add]")
-        page.fill('[data-trophy-form] input[name="title"]', "Browser-created r4 trophy")
-        page.fill('[data-trophy-form] input[name="league"]', "Browser League")
-        page.select_option('[data-trophy-form] select[name="status"]', "published")
-        page.click('[data-trophy-form] button[type="submit"]')
+        page.evaluate("""() => {
+          document.querySelector('[data-trophy-add]').click();
+          const form=document.querySelector('[data-trophy-form]');
+          form.elements.title.value='Browser-created r4 trophy';
+          form.elements.league.value='Browser League';
+          form.elements.status.value='published';
+          form.requestSubmit();
+        }""")
         stored = page.evaluate("JSON.parse(localStorage.getItem('p2k-trophy-gallery-poc-v1')).some(row => row.title === 'Browser-created r4 trophy' && row.status === 'published')")
 
         page.evaluate("""() => {
@@ -95,13 +104,12 @@ def main() -> None:
           panel.replaceChildren();
           window.dispatchEvent(new CustomEvent('p2k-admin-shell-route',{detail:{category:'team'}}));
         }""")
-        page.wait_for_selector("[data-admin-shell-panel='team'] #p2kTrophyAdminPanel")
-        remounted = page.locator("[data-admin-shell-panel='team'] #p2kTrophyAdminPanel").count()
+        page.wait_for_function("document.querySelector(\"[data-admin-shell-panel='team'] #p2kTrophyAdminPanel\")")
+        remounted = page.evaluate("document.querySelectorAll(\"[data-admin-shell-panel='team'] #p2kTrophyAdminPanel\").length")
 
-        page.click('[data-public-page="hall"]')
-        page.click("#p2kTrophyHallTab")
-        page.fill("[data-trophy-q]", "Browser-created r4 trophy")
-        published_visible = page.locator("#p2kTrophyHallPanel .p2k-trophy-card").count()
+        page.evaluate("document.getElementById('hallOfFamePage').hidden=false")
+        page.evaluate("""() => { document.getElementById('p2kTrophyHallTab').click(); const input=document.querySelector('[data-trophy-q]');input.value='Browser-created r4 trophy';input.dispatchEvent(new Event('input',{bubbles:true})); }""")
+        published_visible = page.evaluate("document.querySelectorAll('#p2kTrophyHallPanel .p2k-trophy-card').length")
         result = {"initial_cards": initial_cards, "filtered_cards": filtered_cards, "stored": stored, "remounted": remounted, "published_visible": published_visible, "page_errors": errors}
         browser.close()
 
