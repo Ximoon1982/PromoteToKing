@@ -1,4 +1,4 @@
-name: Trophy Gallery POC smoke gate
+name: Trophy Gallery POC r4 qualification
 
 on:
   push:
