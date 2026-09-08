@@ -11,11 +11,11 @@ ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = ROOT / "tools/poc/PromoteToKing_TrophyGallery_POC_2.11x.run"
 V2114_BASE = "6706e619d310e2c74fe2734cfcef8dd2f83d70d1"
 R3_HEAD = "1c1c256037b9742b6e23d2975a62beaa7c188f8e"
-RUNTIME_COMMIT = "1512a6fa0cd9316df6c24a11b74fd2ba21defeb7"
+RUNTIME_COMMIT = "5c39ea5ce5a845b64e0100cde0ba851211694008"
 FIXTURE_BUILD_ID = "trophy-r4-fixture"
 FIXTURE_IDENTITY = hashlib.sha256(f"{V2114_BASE}\0{FIXTURE_BUILD_ID}".encode()).hexdigest()[:16]
 QUALIFIED_REGISTRY_SRC = f"assets/js/admin/tool-registry.js?v=p2k-2.11.4-{V2114_BASE[:12]}-{FIXTURE_IDENTITY}"
-POC_CACHE_KEY = "poc-1512a6fa0cd9-20260908-r4"
+POC_CACHE_KEY = "poc-5c39ea5ce5a8-20260908-r4"
 POC_TOKEN = f"p2k_trophy_poc={POC_CACHE_KEY}"
 BEGIN = "/* P2K_TROPHY_GALLERY_POC_OVERLAY_BEGIN */"
 END = "/* P2K_TROPHY_GALLERY_POC_OVERLAY_END */"
