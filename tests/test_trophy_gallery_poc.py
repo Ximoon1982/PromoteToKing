@@ -10,7 +10,7 @@ def text(path: str) -> str:
 def test_trophy_gallery_poc_is_loaded_only_through_admin_registry():
     registry = text("assets/js/admin/tool-registry.js")
     poc = text("assets/js/admin/trophy-gallery-poc.js")
-    assert "trophy-gallery-poc.js?v=" in registry
+    assert "trophy-gallery-poc.js?v=poc-1512a6fa0cd9-20260908-r4" in registry
     assert "dashboardAdministrationTab" in poc
     assert "isAdminVisible()" in poc
     assert "if(!isAdminVisible())return" in poc
