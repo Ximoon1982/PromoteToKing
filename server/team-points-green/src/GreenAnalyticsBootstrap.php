@@ -104,7 +104,7 @@ final class GreenAnalyticsBootstrap
             $first=null;foreach($rows as $r){if((string)($r['status']??'')!=='completed'){$first=(string)$r['lane_key'];break;}}
             $this->green->core->prepare("UPDATE p2k_g_state SET gab_status='running',gab_phase=?,gab_completed_at=NULL WHERE club_slug=?")->execute([$first?:'not_started',$this->green->clubSlug]);$s=$this->green->state();
         }
-        $fractions=[];$completedLanes=0;
+        $fractions=[];$completedLanes=0;$progressNumerator=0;$progressDenominator=0;$lastRealProgressAt=null;
         foreach($rows as &$r){
             $status=(string)($r['status']??'pending');$total=(int)($r['total_rows']??0);$done=(int)($r['processed_rows']??0);$key=(string)($r['lane_key']??'');
             if($status==='completed'){$completedLanes++;$fraction=1.0;}
@@ -117,11 +117,14 @@ final class GreenAnalyticsBootstrap
             }elseif($key==='read_parity'){$r['progress_mode']='audit';$r['attempted_rows']=$done;$r['display_total_rows']=$status==='pending'?0:$total;}
             else{$r['progress_mode']='finite';$r['attempted_rows']=$done;}
             if($status==='pending')$r['display_processed_rows']=0;else $r['display_processed_rows']=$status==='completed'&&$total>0?min($done,$total):$done;
+            if($total>0){$progressDenominator+=$total;if($status==='completed')$progressNumerator+=$total;elseif($key==='compat_reconciliation'&&isset($r['last_full_pass_remaining']))$progressNumerator+=max(0,min($total,$total-(int)$r['last_full_pass_remaining']));else $progressNumerator+=max(0,min($total,$done));}
+            if(($done>0||(int)($r['changed_rows']??0)>0||$status==='completed')&&!empty($r['updated_at'])&&($lastRealProgressAt===null||strcmp((string)$r['updated_at'],$lastRealProgressAt)>0))$lastRealProgressAt=(string)$r['updated_at'];
         }unset($r);
         $percent=$fractions?round(100*array_sum($fractions)/count($fractions),2):0.0;
         if((string)($s['gab_status']??'')==='ready'&&$allCompleted)$percent=100.0;elseif($percent>=100.0)$percent=99.9;
-        $ext=$this->green->core->query("SELECT COUNT(*) total,COALESCE(SUM(status='completed'),0) completed,COALESCE(SUM(status='pending'),0) pending,COALESCE(SUM(status='failed'),0) failed FROM p2k_g_gab_external_work WHERE kind='gab_opponent_profile'")->fetch(PDO::FETCH_ASSOC)?:[];
-        return ['status'=>(string)($s['gab_status']??'not_started'),'phase'=>(string)($s['gab_phase']??'not_started'),'started_at'=>$s['gab_started_at']??null,'completed_at'=>$s['gab_completed_at']??null,'last_error'=>$s['gab_last_error']??null,'percent'=>$percent,'completed_lanes'=>$completedLanes,'total_lanes'=>count($rows),'lanes'=>$rows,'external'=>$ext];
+        $ext=$this->green->core->query("SELECT COUNT(*) total,COALESCE(SUM(status='completed'),0) completed,COALESCE(SUM(status='pending'),0) pending,COALESCE(SUM(status='failed'),0) failed,COALESCE(SUM(status='completed' AND last_http_status IN (404,410)),0) terminal_retired,COALESCE(SUM(status='pending' AND (retry_after IS NULL OR retry_after<=UTC_TIMESTAMP())),0) currently_due,MIN(CASE WHEN status IN ('pending','failed') THEN updated_at END) oldest_unresolved FROM p2k_g_gab_external_work WHERE kind='gab_opponent_profile'")->fetch(PDO::FETCH_ASSOC)?:[];
+        $convergence=['progress_numerator'=>$progressNumerator,'progress_denominator'=>$progressDenominator,'total_obligations'=>$progressDenominator,'completed'=>$progressNumerator,'unresolved'=>max(0,$progressDenominator-$progressNumerator),'retryable'=>(int)($ext['pending']??0),'terminal_retired'=>(int)($ext['terminal_retired']??0),'currently_due'=>(int)($ext['currently_due']??0),'oldest_unresolved'=>$ext['oldest_unresolved']??null,'last_real_progress_at'=>$lastRealProgressAt,'display_percent_is_lane_weighted'=>true];
+        return ['status'=>(string)($s['gab_status']??'not_started'),'phase'=>(string)($s['gab_phase']??'not_started'),'started_at'=>$s['gab_started_at']??null,'completed_at'=>$s['gab_completed_at']??null,'last_error'=>$s['gab_last_error']??null,'percent'=>$percent,'completed_lanes'=>$completedLanes,'total_lanes'=>count($rows),'convergence'=>$convergence,'lanes'=>$rows,'external'=>$ext];
     }
     private function lane(): ?array {$q=$this->green->core->query("SELECT * FROM p2k_g_gab_lanes WHERE status<>'completed' ORDER BY priority LIMIT 1");$r=$q->fetch(PDO::FETCH_ASSOC);return is_array($r)?$r:null;}
     private function setLane(string $key,string $status,array $extra=[]): void
