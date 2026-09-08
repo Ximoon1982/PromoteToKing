@@ -5,8 +5,8 @@ DEFAULT_ROOT="/kunden/homepages/43/d141198007/htdocs/PromoteToKing"
 ROOT="${1:-$DEFAULT_ROOT}"
 ACTION="${2:-install}"
 
-POC_SOURCE_COMMIT="1512a6fa0cd9316df6c24a11b74fd2ba21defeb7"
-POC_CACHE_KEY="poc-1512a6fa0cd9-20260908-r4"
+POC_SOURCE_COMMIT="5c39ea5ce5a845b64e0100cde0ba851211694008"
+POC_CACHE_KEY="poc-5c39ea5ce5a8-20260908-r4"
 RAW_URL="https://raw.githubusercontent.com/Ximoon1982/PromoteToKing/${POC_SOURCE_COMMIT}/assets/js/admin/trophy-gallery-poc.js"
 
 if [[ "$ACTION" != "install" && "$ACTION" != "--remove" && "$ACTION" != "remove" ]]; then

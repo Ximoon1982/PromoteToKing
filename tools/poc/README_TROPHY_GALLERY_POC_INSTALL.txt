@@ -9,7 +9,7 @@ Promote to King 2.11.x tree without replacing the full application.
 Runtime source
 --------------
 feature/trophy-gallery-poc runtime commit:
-1512a6fa0cd9316df6c24a11b74fd2ba21defeb7
+5c39ea5ce5a845b64e0100cde0ba851211694008
 
 The installer retrieves trophy-gallery-poc.js from that exact immutable GitHub
 commit over HTTPS. It does not track a moving branch.
@@ -25,7 +25,7 @@ Files changed in the target P2K tree
    - only the assets/js/admin/tool-registry.js URL is adjusted for the test
      overlay.
    - the existing qualified v= fingerprint is preserved byte-for-byte.
-   - a separate p2k_trophy_poc=poc-1512a6fa0cd9-20260908-r4 query token is
+   - a separate p2k_trophy_poc=poc-5c39ea5ce5a8-20260908-r4 query token is
      appended so browsers cannot reuse the pre-overlay cached registry.
 
 Example on a qualified v2.11.4 build
@@ -34,7 +34,7 @@ Before:
 assets/js/admin/tool-registry.js?v=p2k-2.11.4-<source-revision>-<build-identity>
 
 During POC test:
-assets/js/admin/tool-registry.js?v=p2k-2.11.4-<source-revision>-<build-identity>&p2k_trophy_poc=poc-1512a6fa0cd9-20260908-r4
+assets/js/admin/tool-registry.js?v=p2k-2.11.4-<source-revision>-<build-identity>&p2k_trophy_poc=poc-5c39ea5ce5a8-20260908-r4
 
 Removal returns the URL to the original qualified form.
 
@@ -90,6 +90,13 @@ reused.
 
 If the HTML document itself is still cached unusually aggressively, open once:
 https://www.promotetoking.org/ui-v2.html?ui=v2&page=dashboard&poc=trophy-r4
+
+Authorized administrators can open the editor directly with:
+https://www.promotetoking.org/ui-v2.html?ui=v2&page=administration&adminCategory=team&trophy=1
+
+The Trophy runtime waits for the existing Administration shell and opens the
+Team panel only after the normal P2K authorization has made Administration
+visible. The query parameter does not grant or bypass Administration access.
 
 Remove the test overlay
 -----------------------
