@@ -52,6 +52,10 @@ def test_adapter_parity_comes_from_recorded_read_parity_not_a_missing_payload_fl
     assert "payload?.compatibility?.parity" in task_control
     assert "Adapter installed · parity complete" in task_control
     assert "payload?.compatibility?.smoke?.checks" in task_control
+    status = api[api.index("if ($action === 'status')"):api.index("if ($action === 'comparison')")]
+    assert status.index("$compatibility = $compatibilityStatus(false);") < status.index("'green_public_adapter_ready'")
+    runtime_health = api[api.index("if ($action === 'runtime-health')"):api.index("if ($action === 'status')")]
+    assert "$compatibilityStatus(false)" not in runtime_health
 
 
 def test_stale_invocations_are_classified_read_only_and_error_finalization_is_attempted():
@@ -66,3 +70,4 @@ def test_stale_invocations_are_classified_read_only_and_error_finalization_is_at
     assert failure.index("catch(\\Throwable $ignored){}") < failure.index("finishInvocation($invocation,'error'")
     assert "$last['operational_status'] ?? $last['status']" in api
     assert "last.operational_status||last.status" in task_control
+    assert 'esc(r.operational_status||r.status||"")' in task_control

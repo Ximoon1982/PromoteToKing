@@ -35,6 +35,7 @@ jobs:
       - run: python tools/test-suite/structural_parity_v2114.py
       - run: python tools/test-suite/architecture_gate.py
       - run: python tools/test-suite/p2k_test_suite.py audit --json
+      - run: php tests/php_v2114_green_status_endpoint_harness.php
       - run: python tools/test-suite/p2k_test_suite.py regression
 
   browser-regression:

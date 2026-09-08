@@ -47,6 +47,7 @@ def test_v2114_workflow_owns_main_prs_and_frozen_v2113_does_not():
     assert "branches: [main, release/v2.11.3]" not in historical
     assert "build-v2114-operational-package.sh" in current
     assert "qualify-v2114-installer.sh" in current
+    assert "php tests/php_v2114_green_status_endpoint_harness.php" in current
 
 
 def test_v2114_builder_reuses_comprehensive_immutable_cache_key_gate():

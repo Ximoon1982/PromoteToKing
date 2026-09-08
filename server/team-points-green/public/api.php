@@ -91,7 +91,6 @@ try {
         $age = $lastEpoch === false ? null : max(0,time()-$lastEpoch);
         $status = is_array($last) ? strtolower((string)($last['operational_status'] ?? $last['status'] ?? 'unknown')) : 'unknown';
         $healthy = in_array($status,['running','success'],true) && ($age===null || $age<=180);
-        $compatibility=$compatibilityStatus(false);
         GreenConfig::json([
             'ok'=>true,
             'effective_public_source'=>PublicReadDatabase::source(),
@@ -114,6 +113,7 @@ try {
 
     if ($action === 'status') {
         $summary = $repo->greenSummary();
+        $compatibility = $compatibilityStatus(false);
         $comparison = null;
         $comparisonError = null;
         try { $comparison = $cmp->summary(); }
