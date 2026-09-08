@@ -10,10 +10,19 @@ def text(path: str) -> str:
 def test_trophy_gallery_poc_is_loaded_only_through_admin_registry():
     registry = text("assets/js/admin/tool-registry.js")
     poc = text("assets/js/admin/trophy-gallery-poc.js")
-    assert "trophy-gallery-poc.js?v=poc-dcd71c8e-1" in registry
+    assert "trophy-gallery-poc.js?v=" in registry
     assert "dashboardAdministrationTab" in poc
     assert "isAdminVisible()" in poc
     assert "if(!isAdminVisible())return" in poc
+
+
+def test_trophy_gallery_uses_current_team_admin_shell_without_a_second_hotfix():
+    poc = text("assets/js/admin/trophy-gallery-poc.js")
+    assert "[data-admin-category='team']" in poc
+    assert "[data-admin-shell-panel='team']" in poc
+    assert 'window.addEventListener("p2k-admin-shell-route"' in poc
+    assert "[data-admin-group='tools']" not in poc
+    assert not (ROOT / "assets/js/admin/trophy-gallery-poc-admin-nav-fix.js").exists()
 
 
 def test_trophy_gallery_poc_mounts_hall_and_admin_surfaces():

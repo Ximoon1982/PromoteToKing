@@ -201,12 +201,16 @@ function openModal(id){
 }
 
 function ensureAdminPanel(){
-  if(!isAdminVisible())return;const admin=document.getElementById("administrationPage");if(!admin)return;
-  let toolsPanel=$("[data-admin-group-panel='tools']",admin);if(!toolsPanel)toolsPanel=admin;
+  if(!isAdminVisible())return;const target=teamAdminPanel();if(!target)return;
   let panel=document.getElementById("p2kTrophyAdminPanel");
-  if(!panel){panel=document.createElement("article");panel.id="p2kTrophyAdminPanel";panel.className="p2k-trophy-admin";toolsPanel.insertBefore(panel,toolsPanel.firstChild);}
-  renderAdmin();ensureAdminCard();
+  const created=!panel;
+  if(!panel){panel=document.createElement("article");panel.id="p2kTrophyAdminPanel";panel.className="p2k-trophy-admin";}
+  if(panel.parentElement!==target)target.appendChild(panel);
+  if(created)renderAdmin();
+  ensureAdminCard();
 }
+function adminRoot(){ return document.getElementById("adminDashboardPanel")||document.getElementById("administrationPage"); }
+function teamAdminPanel(){ return adminRoot()?.querySelector("[data-admin-shell-panel='team']")||document.querySelector("[data-admin-shell-panel='team']"); }
 function ensureAdminCard(){
   const host=document.getElementById("adminToolGrid");if(!host||host.querySelector("[data-trophy-admin-card]"))return;
   const card=document.createElement("article");card.className="dashboard-tool-card";card.dataset.trophyAdminCard="1";
@@ -215,7 +219,8 @@ function ensureAdminCard(){
 }
 function openAdminPanel(){
   const adminTab=document.getElementById("dashboardAdministrationTab");adminTab?.click();
-  setTimeout(()=>{const admin=document.getElementById("administrationPage");const toolsButton=admin?.querySelector("[data-admin-group='tools']");toolsButton?.click();setTimeout(()=>document.getElementById("p2kTrophyAdminPanel")?.scrollIntoView({behavior:"smooth",block:"start"}),50);},50);
+  const open=(attempt=0)=>{ensureAdminPanel();const root=adminRoot(),teamButton=root?.querySelector("[data-admin-category='team']"),panel=document.getElementById("p2kTrophyAdminPanel");if(!root||!teamButton||!panel){if(attempt<8)setTimeout(()=>open(attempt+1),40);return;}teamButton.click();setTimeout(()=>{ensureAdminPanel();const current=document.getElementById("p2kTrophyAdminPanel");if(!current)return;current.hidden=false;current.scrollIntoView({behavior:"smooth",block:"start"});},40);};
+  setTimeout(open,40);
 }
 function renderAdmin(){
   const panel=document.getElementById("p2kTrophyAdminPanel");if(!panel)return;if(!state.selectedId||!selected())state.selectedId=state.records[0]?.id||"";const record=selected();
@@ -248,6 +253,8 @@ function mount(context={}){
   const adminTab=document.getElementById("dashboardAdministrationTab");
   if(adminTab){const observer=new MutationObserver(sync);observer.observe(adminTab,{attributes:true,attributeFilter:["hidden"]});}
   const grid=document.getElementById("adminToolGrid");if(grid){const observer=new MutationObserver(()=>{if(isAdminVisible())ensureAdminCard();});observer.observe(grid,{childList:true});}
+  window.addEventListener("p2k-admin-shell-route",()=>setTimeout(ensureAdminPanel,0));
+  const host=document.getElementById("adminDashboardHost")||document.getElementById("administrationPage");if(host){let queued=false;const observer=new MutationObserver(()=>{if(queued)return;queued=true;setTimeout(()=>{queued=false;ensureAdminPanel();},0);});observer.observe(host,{childList:true,subtree:true});}
   sync();state.mounted=true;
 }
 window.P2K_TROPHY_GALLERY_POC=Object.freeze({mount,openAdminPanel,openHall:openHallFromAdmin,get records(){return clone(state.records);}});
