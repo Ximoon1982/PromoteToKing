@@ -65,11 +65,16 @@ def main() -> None:
         errors: list[str] = []
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.route("https://p2k.test/**", lambda route: route.fulfill(status=200, content_type="text/html", body=clean_ui()))
-        page.goto("https://p2k.test/ui-v2.html", wait_until="domcontentloaded")
+        page.goto("https://p2k.test/ui-v2.html?ui=v2&page=administration&adminCategory=team&trophy=1", wait_until="domcontentloaded")
         page.add_script_tag(path=str(ROOT / "assets/js/admin/admin-shell.js"))
         page.add_script_tag(content=BOOTSTRAP)
         page.add_script_tag(path=str(ROOT / "assets/js/admin/trophy-gallery-poc.js"))
         page.evaluate("window.P2K_TROPHY_GALLERY_POC.mount({})")
+
+        page.wait_for_function("document.querySelector(\"[data-admin-category='team']\")?.getAttribute('aria-pressed') === 'true'")
+        page.wait_for_selector("[data-admin-shell-panel='team'] #p2kTrophyAdminPanel:not([hidden])")
+        deep_link_panels = page.locator("#p2kTrophyAdminPanel").count()
+        deep_link_cards = page.locator("[data-trophy-admin-card]").count()
 
         page.evaluate("document.getElementById('hallOfFamePage').hidden=false")
         page.click("#p2kTrophyHallTab")
@@ -110,11 +115,12 @@ def main() -> None:
         page.evaluate("document.getElementById('hallOfFamePage').hidden=false")
         page.evaluate("""() => { document.getElementById('p2kTrophyHallTab').click(); const input=document.querySelector('[data-trophy-q]');input.value='Browser-created r4 trophy';input.dispatchEvent(new Event('input',{bubbles:true})); }""")
         published_visible = page.evaluate("document.querySelectorAll('#p2kTrophyHallPanel .p2k-trophy-card').length")
-        result = {"initial_cards": initial_cards, "filtered_cards": filtered_cards, "stored": stored, "remounted": remounted, "published_visible": published_visible, "page_errors": errors}
+        result = {"initial_cards": initial_cards, "filtered_cards": filtered_cards, "stored": stored, "remounted": remounted, "published_visible": published_visible, "deep_link_panels": deep_link_panels, "deep_link_cards": deep_link_cards, "page_errors": errors}
         browser.close()
 
     assert initial_cards >= 1 and filtered_cards == 1, result
     assert stored is True and remounted == 1 and published_visible == 1, result
+    assert deep_link_panels == 1 and deep_link_cards == 1, result
     assert errors == [], result
     print(json.dumps({"trophy_gallery_poc_runtime": "passed", **result}, indent=2))
 

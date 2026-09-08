@@ -132,7 +132,8 @@ const css = `
 @media(max-width:760px){.p2k-trophy-stats{grid-template-columns:repeat(2,1fr)}.p2k-trophy-modal-body,.p2k-trophy-admin-layout{grid-template-columns:1fr}.p2k-trophy-admin-form{grid-template-columns:1fr}.p2k-trophy-admin-form label.is-wide{grid-column:auto}}
 `;
 
-const state = { mounted:false, records:[], selectedId:"", crop:{zoom:1,x:0,y:0,threshold:0}, cropImage:null, context:null };
+const state = { mounted:false, records:[], selectedId:"", crop:{zoom:1,x:0,y:0,threshold:0}, cropImage:null, context:null, deepLinkOpened:false };
+const deepLinkRequested = new URLSearchParams(window.location.search).get("trophy") === "1";
 const $ = (selector, root=document) => root.querySelector(selector);
 const $$ = (selector, root=document) => [...root.querySelectorAll(selector)];
 const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[ch]));
@@ -219,9 +220,10 @@ function ensureAdminCard(){
 }
 function openAdminPanel(){
   const adminTab=document.getElementById("dashboardAdministrationTab");adminTab?.click();
-  const open=(attempt=0)=>{ensureAdminPanel();const root=adminRoot(),teamButton=root?.querySelector("[data-admin-category='team']"),panel=document.getElementById("p2kTrophyAdminPanel");if(!root||!teamButton||!panel){if(attempt<8)setTimeout(()=>open(attempt+1),40);return;}teamButton.click();setTimeout(()=>{ensureAdminPanel();const current=document.getElementById("p2kTrophyAdminPanel");if(!current)return;current.hidden=false;current.scrollIntoView({behavior:"smooth",block:"start"});},40);};
+  const open=(attempt=0)=>{if(!isAdminVisible())return;ensureAdminPanel();const root=adminRoot(),teamButton=root?.querySelector("[data-admin-category='team']"),panel=document.getElementById("p2kTrophyAdminPanel");if(!root||!teamButton||!panel){if(attempt<50)setTimeout(()=>open(attempt+1),100);return;}teamButton.click();setTimeout(()=>{ensureAdminPanel();const current=document.getElementById("p2kTrophyAdminPanel");if(!current)return;current.hidden=false;current.scrollIntoView({behavior:"smooth",block:"start"});},40);};
   setTimeout(open,40);
 }
+function maybeOpenDeepLink(){ if(!deepLinkRequested||state.deepLinkOpened||!isAdminVisible())return;state.deepLinkOpened=true;openAdminPanel(); }
 function renderAdmin(){
   const panel=document.getElementById("p2kTrophyAdminPanel");if(!panel)return;if(!state.selectedId||!selected())state.selectedId=state.records[0]?.id||"";const record=selected();
   panel.innerHTML=`<div class="p2k-trophy-admin-head"><div><p class="dashboard-eyebrow">Admin-only proof of concept</p><h2>Trophy Gallery administration</h2><p>POC state is browser-local. Production persistence/API is intentionally not introduced on this branch.</p></div><div class="p2k-trophy-admin-actions"><button type="button" data-trophy-add class="is-primary">Add trophy</button><button type="button" data-trophy-reset>Reset POC data</button><button type="button" data-trophy-open-hall>Open Hall gallery</button></div></div><div class="p2k-trophy-admin-layout"><div class="p2k-trophy-admin-list">${state.records.map(r=>`<button type="button" class="p2k-trophy-admin-row ${r.id===state.selectedId?"is-selected":""}" data-trophy-select="${esc(r.id)}"><span><strong>${esc(r.title)}</strong><br><small>${esc(r.league)} · ${esc(r.year)}</small></span><span class="p2k-trophy-badge ${r.status==='draft'?'is-draft':''}">${esc(r.status)}</span></button>`).join("")}</div>${record?editorMarkup(record):'<div class="p2k-trophy-empty">Add the first trophy.</div>'}</div>`;
@@ -247,7 +249,7 @@ function addRecord(){ const r={id:slug(),status:"draft",league:"New league",year
 function resetData(){ if(!confirm("Reset the Trophy Gallery POC to its imported seed data?"))return;state.records=clone(SEED);state.selectedId=state.records[0].id;saveRecords();renderAdmin();renderHall(); }
 function openHallFromAdmin(){ const hall=document.querySelector("[data-public-page='hall']");hall?.click();setTimeout(()=>{ensureHall();activateTrophyHall();document.getElementById("p2kTrophyHallPanel")?.scrollIntoView({behavior:"smooth",block:"start"});},60); }
 
-function sync(){ if(!isAdminVisible())return;ensureStyle();ensureHall();ensureAdminPanel();ensureModal(); }
+function sync(){ if(!isAdminVisible())return;ensureStyle();ensureHall();ensureAdminPanel();ensureModal();maybeOpenDeepLink(); }
 function mount(context={}){
   state.context=context;state.records=loadRecords();if(!state.selectedId)state.selectedId=state.records[0]?.id||"";
   const adminTab=document.getElementById("dashboardAdministrationTab");
