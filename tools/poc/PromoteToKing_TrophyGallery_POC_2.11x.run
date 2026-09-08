@@ -5,8 +5,8 @@ DEFAULT_ROOT="/kunden/homepages/43/d141198007/htdocs/PromoteToKing"
 ROOT="${1:-$DEFAULT_ROOT}"
 ACTION="${2:-install}"
 
-POC_SOURCE_COMMIT="aed6ad0fcebd95e0dd176f3eeb33e9d30b714505"
-POC_CACHE_KEY="poc-aed6ad0fcebd-20260905-r3"
+POC_SOURCE_COMMIT="1512a6fa0cd9316df6c24a11b74fd2ba21defeb7"
+POC_CACHE_KEY="poc-1512a6fa0cd9-20260908-r4"
 RAW_URL="https://raw.githubusercontent.com/Ximoon1982/PromoteToKing/${POC_SOURCE_COMMIT}/assets/js/admin/trophy-gallery-poc.js"
 
 if [[ "$ACTION" != "install" && "$ACTION" != "--remove" && "$ACTION" != "remove" ]]; then
@@ -134,7 +134,7 @@ original_registry_src = (
     else strip_poc_token(current_registry_src)
 )
 # r2 replaced the v= key rather than appending a POC token. Its state retains the
-# qualified pre-overlay URL, so r3 deliberately returns to that URL before adding
+# qualified pre-overlay URL, so r4 deliberately returns to that URL before adding
 # the separate POC token.
 base_registry_src = original_registry_src if existing_state else strip_poc_token(current_registry_src)
 original_poc_existed = (
@@ -201,7 +201,7 @@ try:
     if source_override:
         source = Path(source_override).read_bytes()
     else:
-        req = urllib.request.Request(raw_url, headers={"User-Agent": "PromoteToKing-TrophyGallery-POC-Installer/3"})
+        req = urllib.request.Request(raw_url, headers={"User-Agent": "PromoteToKing-TrophyGallery-POC-Installer/4"})
         try:
             with urllib.request.urlopen(req, timeout=30) as response:
                 source = response.read()
@@ -276,7 +276,7 @@ loadTrophyGalleryPocOverlay();
 
     state_dir.mkdir(parents=True, exist_ok=True)
     state = {
-        "overlay_version": 3,
+        "overlay_version": 4,
         "source_commit": source_commit,
         "cache_key": cache_key,
         "original_registry_src": original_registry_src,

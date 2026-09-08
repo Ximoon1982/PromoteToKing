@@ -37,6 +37,18 @@ jobs:
         run: python tests/browser_gate_trophy_gallery_poc.py
       - name: Trophy Gallery overlay installer lifecycle
         run: python -m pytest -q tests/test_trophy_gallery_overlay_installer.py
+      - name: Verify inherited v2.11.4 structural baseline
+        run: |
+          git worktree add --detach /tmp/p2k-qualified-v2114 6706e619d310e2c74fe2734cfcef8dd2f83d70d1
+          (cd /tmp/p2k-qualified-v2114 && python tools/test-suite/structural_parity_v2114.py)
+      - name: Inherited architecture and canonical audit
+        run: |
+          python tools/test-suite/architecture_gate.py
+          python tools/test-suite/p2k_test_suite.py audit --json
+      - name: Full canonical P2K regression
+        run: python tools/test-suite/p2k_test_suite.py regression
+      - name: Full canonical P2K browser regression
+        run: python tools/test-suite/p2k_test_suite.py browser
       - name: Keep POC isolated from v2.11.4
         run: |
           git diff --name-only 6706e619d310e2c74fe2734cfcef8dd2f83d70d1..HEAD | tee /tmp/changed
