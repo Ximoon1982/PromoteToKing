@@ -1,134 +1,41 @@
 <?php
 declare(strict_types=1);
-
 namespace P2K\TrophyGallery;
 
+use DateTimeImmutable;
 use RuntimeException;
+use Throwable;
 
 final class TrophyGalleryStore
 {
-    private string $root;
-    private string $catalog;
-    private string $artwork;
+    public const SCHEMA_VERSION=2;
+    private string $root; private string $catalog; private string $artwork; private string $trash;
+    public function __construct(?string $root=null){$this->root=rtrim($root?:dirname(__DIR__,3).'/data/trophy-gallery','/');$this->catalog=$this->root.'/catalog.json';$this->artwork=$this->root.'/artwork';$this->trash=$this->root.'/.trash';foreach([$this->root,$this->artwork,$this->trash]as$d)if(!is_dir($d)&&!mkdir($d,0750,true)&&!is_dir($d))throw new RuntimeException('Trophy data directory is unavailable.');}
 
-    public function __construct(?string $root = null)
-    {
-        $this->root = $root ?: dirname(__DIR__, 3) . '/data/trophy-gallery';
-        $this->catalog = $this->root . '/catalog.json';
-        $this->artwork = $this->root . '/artwork';
-        $this->ensureDirectories();
-    }
+    public function catalogue(bool $publishedOnly=false):array{$c=$this->read();$rows=$c['records'];if($publishedOnly){$rows=array_values(array_filter($rows,static fn($r)=>($r['status']??'')==='published'));$allow=array_flip(['id','league','competition','award','title','award_date','description_md','award_page','competition_page','result_table_url','vignette_media_id','modal_media_id','matches']);$rows=array_map(static fn($r)=>array_intersect_key($r,$allow),$rows);}usort($rows,static fn($a,$b)=>strcmp((string)($b['award_date']??''),(string)($a['award_date']??''))?:strcmp((string)($a['title']??''),(string)($b['title']??''))?:strcmp((string)$a['id'],(string)$b['id']));return['schema_version'=>self::SCHEMA_VERSION,'revision'=>$c['revision'],'records'=>$rows];}
+    public function records(bool $publishedOnly=false):array{return $this->catalogue($publishedOnly)['records'];}
 
-    public function records(bool $publishedOnly = false): array
-    {
-        $catalog = $this->readCatalog();
-        $records = is_array($catalog['records'] ?? null) ? $catalog['records'] : [];
-        if ($publishedOnly) $records = array_values(array_filter($records, static fn(array $r): bool => ($r['status'] ?? '') === 'published'));
-        usort($records, static fn(array $a, array $b): int => strcmp((string)($b['award_date'] ?? ''), (string)($a['award_date'] ?? '')) ?: strcmp((string)($b['id'] ?? ''), (string)($a['id'] ?? '')));
-        return $records;
-    }
+    public function save(array $in,?int $expected=null):array{return $this->change(function(&$c)use($in){$now=gmdate(DATE_ATOM);$id=$this->id((string)($in['id']??''));$i=$this->index($c,$id);$old=$i===null?[]:$c['records'][$i];$r=['id'=>$id,'status'=>($in['status']??'')==='published'?'published':'draft','league'=>$this->text($in['league']??'',160),'competition'=>$this->text($in['competition']??'',200),'award'=>$this->text($in['award']??'',200),'title'=>$this->text($in['title']??'',240),'award_date'=>$this->date($in['award_date']??''),'description_md'=>$this->text($in['description_md']??'',12000),'award_page'=>$this->url($in['award_page']??''),'competition_page'=>$this->url($in['competition_page']??''),'result_table_url'=>$this->url($in['result_table_url']??''),'vignette_media_id'=>(string)($old['vignette_media_id']??''),'modal_media_id'=>(string)($old['modal_media_id']??''),'matches'=>$this->matches($in['matches']??[]),'migration_review'=>$this->review($in['migration_review']??($old['migration_review']??[])),'created_at'=>(string)($old['created_at']??$now),'updated_at'=>$now];if($r['title']===''||$r['league']==='')throw new RuntimeException('Title and league are required.');if($i===null)$c['records'][]=$r;else$c['records'][$i]=$r;return$r;},$expected);}
 
-    public function save(array $input): array
-    {
-        return $this->mutate(function (array &$catalog) use ($input): array {
-            $now = gmdate('c');
-            $id = $this->id((string)($input['id'] ?? ''));
-            $index = null;
-            foreach ($catalog['records'] as $i => $record) if (($record['id'] ?? '') === $id) { $index = $i; break; }
-            $previous = $index === null ? [] : $catalog['records'][$index];
-            $record = [
-                'id' => $id,
-                'status' => ($input['status'] ?? '') === 'published' ? 'published' : 'draft',
-                'league' => $this->text($input['league'] ?? '', 160),
-                'competition' => $this->text($input['competition'] ?? '', 200),
-                'award' => $this->text($input['award'] ?? '', 200),
-                'title' => $this->text($input['title'] ?? '', 240),
-                'award_date' => $this->date($input['award_date'] ?? ''),
-                'description_md' => $this->text($input['description_md'] ?? '', 12000),
-                'source_url' => $this->url($input['source_url'] ?? ''),
-                'competition_url' => $this->url($input['competition_url'] ?? ''),
-                'award_url' => $this->url($input['award_url'] ?? ''),
-                'vignette_media_id' => $this->mediaId($input['vignette_media_id'] ?? ''),
-                'modal_media_id' => $this->mediaId($input['modal_media_id'] ?? ''),
-                'matches' => $this->matches($input['matches'] ?? []),
-                'created_at' => (string)($previous['created_at'] ?? $now),
-                'updated_at' => $now,
-            ];
-            if ($record['title'] === '' || $record['league'] === '' || $record['award_date'] === '') throw new RuntimeException('Title, league and award date are required.');
-            if ($index === null) $catalog['records'][] = $record; else $catalog['records'][$index] = $record;
-            return $record;
-        });
-    }
+    public function duplicate(string $id,?int $expected=null):array{$files=[];try{return$this->change(function(&$c)use($id,&$files){$i=$this->index($c,$this->id($id,false));if($i===null)throw new RuntimeException('Trophy record not found.');$src=$c['records'][$i];$copy=$src;$copy['id']=$this->id('');$copy['title']=$this->text($src['title'].' — Copy',240);$copy['status']='draft';$copy['created_at']=$copy['updated_at']=gmdate(DATE_ATOM);foreach(['vignette','modal']as$slot){$field=$slot.'_media_id';$oldId=(string)($src[$field]??'');$copy[$field]='';$old=$c['media'][$oldId]??null;if(!is_array($old)||($old['owner_trophy_id']??'')!==$src['id'])continue;$from=$this->path($old);if(!is_file($from))continue;$newId=bin2hex(random_bytes(16));$name=$newId.'.'.pathinfo((string)$old['file'],PATHINFO_EXTENSION);$to=$this->artwork.'/'.$name;if(!copy($from,$to))throw new RuntimeException('Artwork could not be copied.');chmod($to,0640);$files[]=$to;$media=$old;$media['id']=$newId;$media['file']=$name;$media['owner_trophy_id']=$copy['id'];$media['slot']=$slot;$media['created_at']=gmdate(DATE_ATOM);$c['media'][$newId]=$media;$copy[$field]=$newId;}$c['records'][]=$copy;return$copy;},$expected);}catch(Throwable$e){foreach($files as$f)@unlink($f);throw$e;}}
 
-    public function delete(string $id): array
-    {
-        return $this->mutate(function (array &$catalog) use ($id): array {
-            $id = $this->id($id); $deleted = null;
-            $catalog['records'] = array_values(array_filter($catalog['records'], static function (array $r) use ($id, &$deleted): bool { if (($r['id'] ?? '') === $id) { $deleted = $r; return false; } return true; }));
-            if (!$deleted) throw new RuntimeException('Trophy record not found.');
-            return $deleted;
-        });
-    }
+    public function delete(string $id,?int $expected=null):array{$id=$this->id($id,false);$snapshot=$this->read();if($this->index($snapshot,$id)===null)throw new RuntimeException('Trophy record not found.');$staged=[];foreach($snapshot['media']as$m)if(is_array($m)&&($m['owner_trophy_id']??'')===$id){$from=$this->path($m);if(!is_file($from))continue;$to=$this->trash.'/'.basename($from).'.'.bin2hex(random_bytes(4));if(!rename($from,$to)){foreach(array_reverse($staged)as[$a,$b])@rename($b,$a);throw new RuntimeException('Owned artwork could not be staged.');}$staged[]=[$from,$to];}try{$out=$this->change(function(&$c)use($id){$i=$this->index($c,$id);if($i===null)throw new RuntimeException('Trophy record not found.');$r=$c['records'][$i];array_splice($c['records'],$i,1);foreach(array_keys($c['media'])as$mid)if(($c['media'][$mid]['owner_trophy_id']??'')===$id)unset($c['media'][$mid]);return$r;},$expected);foreach($staged as[, $to])@unlink($to);return$out;}catch(Throwable$e){foreach(array_reverse($staged)as[$from,$to])@rename($to,$from);throw$e;}}
 
-    public function upload(array $file): array
-    {
-        $error = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
-        if ($error !== UPLOAD_ERR_OK) throw new RuntimeException('Artwork upload failed.');
-        $tmp = (string)($file['tmp_name'] ?? ''); $size = (int)($file['size'] ?? 0);
-        if ($size < 1 || $size > 10 * 1024 * 1024 || !is_uploaded_file($tmp)) throw new RuntimeException('Artwork must be a browser upload no larger than 10 MB.');
-        $info = @getimagesize($tmp); $mime = strtolower((string)($info['mime'] ?? ''));
-        $extensions = ['image/png'=>'png','image/jpeg'=>'jpg','image/webp'=>'webp'];
-        if (!isset($extensions[$mime]) || ($info[0] ?? 0) > 6000 || ($info[1] ?? 0) > 6000) throw new RuntimeException('Artwork must be PNG, JPEG or WebP up to 6000 × 6000.');
-        $id = bin2hex(random_bytes(16)); $name = $id . '.' . $extensions[$mime]; $target = $this->artwork . '/' . $name;
-        if (!move_uploaded_file($tmp, $target)) throw new RuntimeException('Artwork could not be stored.');
-        chmod($target, 0640);
-        return $this->mutate(function (array &$catalog) use ($id, $name, $mime, $size, $info): array {
-            $media = ['id'=>$id,'file'=>$name,'mime'=>$mime,'bytes'=>$size,'width'=>(int)$info[0],'height'=>(int)$info[1],'created_at'=>gmdate('c')];
-            $catalog['media'][$id] = $media; return $media;
-        });
-    }
+    public function uploadAndAssign(array $file,string $owner,string $slot,string $source,?int $expected=null):array{$owner=$this->id($owner,false);if(!in_array($slot,['vignette','modal'],true))throw new RuntimeException('Invalid artwork slot.');if(!in_array($source,['upload','engraving'],true))throw new RuntimeException('Invalid artwork source.');[$tmp,$meta]=$this->validateUpload($file);$id=bin2hex(random_bytes(16));$name=$id.'.'.$meta['extension'];$target=$this->artwork.'/'.$name;if(!move_uploaded_file($tmp,$target))throw new RuntimeException('Artwork could not be stored.');chmod($target,0640);$old=null;try{$out=$this->change(function(&$c)use($owner,$slot,$source,$id,$name,$meta,&$old){$i=$this->index($c,$owner);if($i===null)throw new RuntimeException('Save the Trophy before assigning artwork.');$field=$slot.'_media_id';$oldId=(string)($c['records'][$i][$field]??'');$candidate=$c['media'][$oldId]??null;if(is_array($candidate)&&($candidate['owner_trophy_id']??'')===$owner)$old=$candidate;$m=['id'=>$id,'owner_trophy_id'=>$owner,'slot'=>$slot,'source'=>$source,'file'=>$name,'mime'=>$meta['mime'],'bytes'=>$meta['bytes'],'width'=>$meta['width'],'height'=>$meta['height'],'created_at'=>gmdate(DATE_ATOM)];$c['media'][$id]=$m;$c['records'][$i][$field]=$id;$c['records'][$i]['updated_at']=gmdate(DATE_ATOM);if(is_array($old))unset($c['media'][$oldId]);return['media'=>$m,'record'=>$c['records'][$i]];},$expected);}catch(Throwable$e){@unlink($target);throw$e;}if(is_array($old))@unlink($this->path($old));return$out;}
 
-    public function media(string $id): array
-    {
-        $catalog = $this->readCatalog(); $id = $this->mediaId($id);
-        $media = $catalog['media'][$id] ?? null;
-        if (!is_array($media)) throw new RuntimeException('Artwork not found.');
-        $path = $this->artwork . '/' . basename((string)$media['file']);
-        if (!is_file($path)) throw new RuntimeException('Artwork file is missing.');
-        return [$media, $path];
-    }
+    public function media(string $id):array{$c=$this->read();$id=$this->mediaId($id);$m=$c['media'][$id]??null;if(!is_array($m))throw new RuntimeException('Artwork not found.');$p=$this->path($m);if(!is_file($p))throw new RuntimeException('Artwork file is missing.');return[array_intersect_key($m,array_flip(['id','mime','bytes','width','height','created_at'])),$p];}
+    public function audit(bool $purge=false):array{$c=$this->read();$used=[];foreach($c['records']as$r)foreach(['vignette_media_id','modal_media_id']as$f)if(($r[$f]??'')!=='')$used[(string)$r[$f]]=true;$ids=array_values(array_diff(array_keys($c['media']),array_keys($used)));$known=[];foreach($c['media']as$m)if(is_array($m))$known[(string)($m['file']??'')]=true;$files=[];foreach(glob($this->artwork.'/*')?:[]as$p){$n=basename($p);if(is_file($p)&&preg_match('/^[a-f0-9]{32}\.(?:png|jpg|webp)$/',$n)&&!isset($known[$n]))$files[]=$n;}sort($ids);sort($files);if($purge&&($ids||$files)){$this->change(function(&$locked)use($ids){foreach($ids as$id)unset($locked['media'][$id]);return null;},$c['revision']);foreach($ids as$id){$m=$c['media'][$id]??null;if(is_array($m))@unlink($this->path($m));}foreach($files as$n)@unlink($this->artwork.'/'.$n);}return['orphan_media_ids'=>$ids,'orphan_files'=>$files,'orphan_count'=>count($ids)+count($files),'purged'=>$purge?count($ids)+count($files):0];}
 
-    public function audit(bool $purge = false): array
-    {
-        return $this->mutate(function (array &$catalog) use ($purge): array {
-            $used = [];
-            foreach ($catalog['records'] as $record) foreach (['vignette_media_id','modal_media_id'] as $field) if (($record[$field] ?? '') !== '') $used[(string)$record[$field]] = true;
-            $orphans = array_values(array_diff(array_keys($catalog['media']), array_keys($used)));
-            if ($purge) foreach ($orphans as $id) { $entry=$catalog['media'][$id]; @unlink($this->artwork.'/'.basename((string)$entry['file'])); unset($catalog['media'][$id]); }
-            return ['orphan_media_ids'=>$orphans,'orphan_count'=>count($orphans),'purged'=>$purge ? count($orphans) : 0];
-        });
-    }
-
-    private function ensureDirectories(): void { foreach ([$this->root,$this->artwork] as $dir) if (!is_dir($dir) && !mkdir($dir, 0750, true) && !is_dir($dir)) throw new RuntimeException('Trophy data directory is unavailable.'); }
-    private function readCatalog(): array
-    {
-        if (!is_file($this->catalog)) return ['version'=>1,'records'=>[],'media'=>[]];
-        $fh=fopen($this->catalog,'rb'); if(!$fh)throw new RuntimeException('Trophy catalog is unavailable.'); flock($fh,LOCK_SH); $raw=stream_get_contents($fh); flock($fh,LOCK_UN); fclose($fh);
-        $value=json_decode((string)$raw,true); if(!is_array($value))throw new RuntimeException('Trophy catalog is invalid.');
-        $value['records']=is_array($value['records']??null)?$value['records']:[]; $value['media']=is_array($value['media']??null)?$value['media']:[]; return $value;
-    }
-    private function mutate(callable $callback): mixed
-    {
-        $lock=fopen($this->root.'/.catalog.lock','c+'); if(!$lock||!flock($lock,LOCK_EX))throw new RuntimeException('Trophy catalog lock is unavailable.');
-        $catalog=$this->readCatalog(); $result=$callback($catalog); $catalog['version']=1; $catalog['updated_at']=gmdate('c');
-        $tmp=$this->catalog.'.tmp.'.bin2hex(random_bytes(6)); $json=json_encode($catalog,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)."\n";
-        if(file_put_contents($tmp,$json,LOCK_EX)===false||!rename($tmp,$this->catalog)){@unlink($tmp);flock($lock,LOCK_UN);fclose($lock);throw new RuntimeException('Trophy catalog could not be saved.');}
-        chmod($this->catalog,0640); flock($lock,LOCK_UN); fclose($lock); return $result;
-    }
-    private function id(string $value): string { $value=strtolower(trim($value)); if($value==='')$value='trophy-'.bin2hex(random_bytes(8)); if(!preg_match('/^[a-z0-9][a-z0-9_-]{2,79}$/',$value))throw new RuntimeException('Invalid trophy ID.'); return $value; }
-    private function text(mixed $value,int $max): string { $value=trim((string)$value); if(strlen($value)>$max)throw new RuntimeException('A trophy field is too long.'); return $value; }
-    private function date(mixed $value): string { $value=trim((string)$value); return preg_match('/^\d{4}-\d{2}-\d{2}$/',$value)?$value:''; }
-    private function url(mixed $value): string { $value=trim((string)$value); if($value==='')return ''; $parts=parse_url($value); if(!is_array($parts)||!in_array(strtolower((string)($parts['scheme']??'')),['http','https'],true)||($parts['host']??'')==='')throw new RuntimeException('Links must use HTTP or HTTPS.'); return $value; }
-    private function mediaId(mixed $value): string { $value=trim((string)$value); if($value!==''&&!preg_match('/^[a-f0-9]{32}$/',$value))throw new RuntimeException('Invalid media ID.'); return $value; }
-    private function matches(mixed $value): array { if(!is_array($value))return []; $result=[]; foreach($value as $id){$id=(int)$id;if($id>0)$result[]=$id;} return array_values(array_unique($result)); }
+    private function read():array{if(!is_file($this->catalog))return['schema_version'=>self::SCHEMA_VERSION,'revision'=>0,'records'=>[],'media'=>[]];$fh=fopen($this->catalog,'rb');if(!$fh)throw new RuntimeException('Trophy catalogue is unavailable.');flock($fh,LOCK_SH);$raw=stream_get_contents($fh);flock($fh,LOCK_UN);fclose($fh);$c=json_decode((string)$raw,true);if(!is_array($c))throw new RuntimeException('Trophy catalogue is invalid.');return['schema_version'=>(int)($c['schema_version']??$c['version']??1),'revision'=>max(0,(int)($c['revision']??0)),'records'=>is_array($c['records']??null)?array_values($c['records']):[],'media'=>is_array($c['media']??null)?$c['media']:[]];}
+    private function change(callable $fn,?int$expected):array{$lock=fopen($this->root.'/.catalog.lock','c+');if(!$lock||!flock($lock,LOCK_EX))throw new RuntimeException('Trophy catalogue lock is unavailable.');$tmp='';try{$c=$this->read();if($expected!==null&&$expected!==$c['revision'])throw new RuntimeException('Trophy catalogue changed; reload before saving.');$value=$fn($c);$c['schema_version']=self::SCHEMA_VERSION;unset($c['version']);$c['revision']++;$c['updated_at']=gmdate(DATE_ATOM);$json=json_encode($c,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)."\n";$tmp=$this->catalog.'.tmp.'.bin2hex(random_bytes(6));$fh=fopen($tmp,'xb');if(!$fh)throw new RuntimeException('Trophy catalogue temporary file could not be created.');try{if(fwrite($fh,$json)!==strlen($json)||!fflush($fh))throw new RuntimeException('Trophy catalogue could not be saved.');if(function_exists('fsync'))@fsync($fh);}finally{fclose($fh);}chmod($tmp,0640);if(!rename($tmp,$this->catalog))throw new RuntimeException('Trophy catalogue could not be replaced.');return['value'=>$value,'revision'=>$c['revision']];}finally{if($tmp!=='')@unlink($tmp);flock($lock,LOCK_UN);fclose($lock);}}
+    private function validateUpload(array$f):array{if((int)($f['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK)throw new RuntimeException('Artwork upload failed.');$tmp=(string)($f['tmp_name']??'');$bytes=(int)($f['size']??0);if($bytes<1||$bytes>10485760||!is_uploaded_file($tmp))throw new RuntimeException('Artwork must be a browser upload no larger than 10 MB.');$i=@getimagesize($tmp);$mime=strtolower((string)($i['mime']??''));$ext=['image/png'=>'png','image/jpeg'=>'jpg','image/webp'=>'webp'];if(!isset($ext[$mime])||(int)($i[0]??0)<1||(int)($i[1]??0)<1||(int)$i[0]>6000||(int)$i[1]>6000)throw new RuntimeException('Artwork must be a genuine PNG, JPEG or WebP up to 6000 × 6000.');return[$tmp,['extension'=>$ext[$mime],'mime'=>$mime,'bytes'=>$bytes,'width'=>(int)$i[0],'height'=>(int)$i[1]]];}
+    private function path(array$m):string{$n=(string)($m['file']??'');if(!preg_match('/^[a-f0-9]{32}\.(?:png|jpg|webp)$/',$n))throw new RuntimeException('Invalid managed artwork path.');return$this->artwork.'/'.$n;}
+    private function index(array$c,string$id):?int{foreach($c['records']as$i=>$r)if(($r['id']??'')===$id)return$i;return null;}
+    private function id(string$v,bool$generate=true):string{$v=strtolower(trim($v));if($v===''&&$generate)$v='trophy-'.bin2hex(random_bytes(8));if(!preg_match('/^[a-z0-9][a-z0-9_-]{2,79}$/',$v))throw new RuntimeException('Invalid trophy ID.');return$v;}
+    private function text(mixed$v,int$max):string{$v=trim((string)$v);if(strlen($v)>$max)throw new RuntimeException('A Trophy field is too long.');return$v;}
+    private function date(mixed$v):string{$v=trim((string)$v);if($v==='')return'';$d=DateTimeImmutable::createFromFormat('!Y-m-d',$v);if(!$d||$d->format('Y-m-d')!==$v)throw new RuntimeException('Award date must use YYYY-MM-DD.');return$v;}
+    private function url(mixed$v):string{$v=trim((string)$v);if($v==='')return'';$p=parse_url($v);if(!is_array($p)||!in_array(strtolower((string)($p['scheme']??'')),['http','https'],true)||($p['host']??'')==='')throw new RuntimeException('Links must use HTTP or HTTPS.');return$v;}
+    private function mediaId(mixed$v):string{$v=trim((string)$v);if(!preg_match('/^[a-f0-9]{32}$/',$v))throw new RuntimeException('Invalid media ID.');return$v;}
+    private function matches(mixed$v):array{if(!is_array($v))return[];$out=[];foreach($v as$x){if(is_scalar($x))$x=['match_id'=>$x];if(!is_array($x))continue;$id=(int)($x['match_id']??0);if($id>0)$out[(string)$id]=['match_id'=>$id,'name'=>$this->text($x['name']??('Match '.$id),300)];}return array_values($out);}
+    private function review(mixed$v):array{if(!is_array($v))return[];$out=[];foreach(array_slice($v,0,20)as$x){$x=$this->text($x,500);if($x!=='')$out[]=$x;}return$out;}
 }
