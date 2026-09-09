@@ -8,7 +8,7 @@ def text(path: str) -> str:
 def test_trophy_gallery_is_loaded_through_normal_registry():
     registry = text("assets/js/admin/tool-registry.js")
     runtime = text("assets/js/admin/trophy-gallery-poc.js")
-    assert "trophy-gallery-poc.js?v=poc-a7555ea1e512-20260909-r5" in registry
+    assert "trophy-gallery-poc.js?v=poc-2eb78908eea4-20260909-r5" in registry
     assert "P2K_TROPHY_GALLERY_POC" in runtime
     assert "mountAdmin" in runtime and "mountPublic" in runtime
 
@@ -29,7 +29,7 @@ def test_server_persistence_and_security_contracts_are_present():
     api = text("server/trophy-gallery/public/api.php")
     store = text("server/trophy-gallery/src/TrophyGalleryStore.php")
     assert "Auth::requireAdmin()" in api
-    assert "records(true)" in api and "records(false)" in api
+    assert "catalogue(true)" in api and "catalogue(false)" in api
     assert "LOCK_EX" in store and "rename($tmp,$this->catalog)" in store
     assert "is_uploaded_file" in store and "getimagesize" in store
     assert "image/svg" not in store
@@ -39,5 +39,5 @@ def test_public_standalone_and_grouping_are_available():
     runtime = text("assets/js/admin/trophy-gallery-poc.js")
     standalone = text("trophies/index.html")
     assert 'state.group==="league"' in runtime
-    assert '<option value="chronology">Chronology</option>' in runtime
+    assert '<option value="chronology">Chronological</option>' in runtime
     assert 'id="p2kTrophyStandalone"' in standalone

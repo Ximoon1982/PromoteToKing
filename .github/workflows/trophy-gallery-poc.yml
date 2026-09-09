@@ -39,13 +39,17 @@ jobs:
           bash -n tools/poc/PromoteToKing_TrophyGallery_POC_2.11x.run
           bash -n tools/poc/install-trophy-gallery-poc.sh
       - name: Trophy Gallery POC static contract
-        run: python -m pytest -q tests/test_trophy_gallery_poc.py tests/test_trophy_gallery_r5.py
+        run: python -m pytest -q tests/test_trophy_gallery_poc.py tests/test_trophy_gallery_r5.py tests/test_trophy_gallery_media_lifecycle.py
+      - name: Exact engraving POC 1.9.1 equivalence
+        run: python tests/browser_compare_trophy_engraving.py
       - name: Trophy Gallery POC browser runtime
         run: python tests/browser_gate_trophy_gallery_poc.py
       - name: Trophy Gallery installed-overlay browser runtime
         run: python tests/browser_gate_trophy_gallery_overlay.py
       - name: Trophy Gallery overlay installer lifecycle
-        run: python -m pytest -q tests/test_trophy_gallery_overlay_installer.py
+        run: |
+          python tools/poc/build-trophy-gallery-r5-payload.py --check
+          python -m pytest -q tests/test_trophy_gallery_overlay_installer.py
       - name: Verify inherited v2.11.4 structural baseline
         run: |
           git worktree add --detach /tmp/p2k-qualified-v2114 6706e619d310e2c74fe2734cfcef8dd2f83d70d1
@@ -82,15 +86,20 @@ jobs:
               'server/trophy-gallery/src/TrophyGalleryStore.php',
               'server/trophy-gallery/public/api.php',
               'server/trophy-gallery/public/media.php',
+              'server/trophy-gallery/resources/catalog.seed.json',
               'trophies/index.html',
               'tools/poc/engraving/README.md',
+              'tools/poc/engraving/reference/P2K_1WL_Engraving_POC_v1.9.1.html',
               'tests/test_trophy_gallery_r5.py',
+              'tests/test_trophy_gallery_media_lifecycle.py',
+              'tests/browser_compare_trophy_engraving.py',
               'tests/browser_gate_trophy_gallery_poc.py',
               'tests/browser_gate_trophy_gallery_overlay.py',
               'tests/test_trophy_gallery_poc.py',
               'tests/test_trophy_gallery_overlay_installer.py',
               '.github/workflows/trophy-gallery-poc.yml',
               'tools/poc/PromoteToKing_TrophyGallery_POC_2.11x.run',
+              'tools/poc/build-trophy-gallery-r5-payload.py',
               'tools/poc/install-trophy-gallery-poc.sh',
               'tools/poc/README_TROPHY_GALLERY_POC_INSTALL.txt',
           }

@@ -5,10 +5,10 @@ Purpose
 -------
 Installs the persistent Trophy Gallery r5 feature over an existing Promote to
 King 2.11.x tree. The immutable payload source is commit:
-a7555ea1e512e99261c4b2ae6451b9496cf89450
+2eb78908eea47276be705ea91b900f5bdad06ee3
 
 The unique r5 browser cache key is:
-poc-a7555ea1e512-20260909-r5
+poc-2eb78908eea4-20260909-r5
 
 Install or upgrade
 ------------------
@@ -18,11 +18,12 @@ chmod +x PromoteToKing_TrophyGallery_POC_2.11x.run install-trophy-gallery-poc.sh
 Direct command:
 ./PromoteToKing_TrophyGallery_POC_2.11x.run /kunden/homepages/43/d141198007/htdocs/PromoteToKing install
 
-The installer accepts a current r4 overlay and upgrades it in place. It downloads
-only the named r5 files from the immutable commit, preserves the qualified
-tool-registry cache identity while appending the r5 token, creates a timestamped
-backup, validates the installed tree, and automatically rolls back on failure.
-Reinstallation is idempotent.
+The installer accepts the qualified r4 overlay and upgrades it in place. Its
+complete hash-verified payload is embedded in the .run file; installation makes
+no GitHub or other network request. It preserves the qualified P2K v= identity,
+adds a separate immutable r5 token, creates timestamped backups, validates the
+installed tree, and automatically rolls back on failure. Reinstallation is
+idempotent.
 
 Data and safety
 ---------------

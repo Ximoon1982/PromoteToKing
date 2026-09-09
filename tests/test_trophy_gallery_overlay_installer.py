@@ -6,9 +6,9 @@ import subprocess
 ROOT=Path(__file__).resolve().parents[1]
 INSTALLER=ROOT/"tools/poc/PromoteToKing_TrophyGallery_POC_2.11x.run"
 BASE="6706e619d310e2c74fe2734cfcef8dd2f83d70d1"
-R4="50bb91e78a3a887872db6ffebfaa1798de1f6c91"
-R5="a7555ea1e512e99261c4b2ae6451b9496cf89450"
-KEY="poc-a7555ea1e512-20260909-r5"
+R4="4938f5cc8ed111702f867eee9e941e4c896e6163"
+R5="2eb78908eea47276be705ea91b900f5bdad06ee3"
+KEY="poc-2eb78908eea4-20260909-r5"
 
 def git_bytes(ref,path): return subprocess.run(["git","show",f"{ref}:{path}"],cwd=ROOT,check=True,capture_output=True).stdout
 def tree(tmp):
@@ -21,8 +21,7 @@ def tree(tmp):
  return root,archive
 def snapshot(root): return {str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file() and '.p2k-poc-' not in str(p)}
 def invoke(root,archive,action="install"):
- env=os.environ.copy();env["P2K_TROPHY_ARCHIVE_FILE"]=str(archive)
- return subprocess.run(["bash",str(INSTALLER),str(root),action],env=env,text=True,capture_output=True,timeout=120)
+ return subprocess.run(["bash",str(INSTALLER),str(root),action],text=True,capture_output=True,timeout=120)
 
 def test_r5_install_reinstall_remove_and_persistent_data(tmp_path):
  root,archive=tree(tmp_path);before=snapshot(root);cron=(root/"cron.txt").read_bytes();catalog=(root/"data/trophy-gallery/catalog.json").read_bytes()
@@ -35,9 +34,22 @@ def test_r5_install_reinstall_remove_and_persistent_data(tmp_path):
  removed=invoke(root,archive,"remove");assert removed.returncode==0,removed.stdout+removed.stderr
  assert snapshot(root)==before and (root/"cron.txt").read_bytes()==cron and (root/"data/trophy-gallery/catalog.json").read_bytes()==catalog
 
+def test_installer_is_self_contained_and_pins_exact_runtime():
+ head=INSTALLER.read_bytes().split(b"__P2K_TROPHY_R5_PAYLOAD_BELOW__\n",1)[0].decode()
+ assert R5 in head and KEY in head and BASE in head
+ assert "urllib" not in head and "github.com" not in head and "P2K_TROPHY_ARCHIVE_FILE" not in head
+ assert INSTALLER.stat().st_size>10_000_000
+
 def test_r5_failed_archive_rolls_back_exact_tree_and_cron(tmp_path):
- root,_=tree(tmp_path);bad=tmp_path/"bad.tar.gz";bad.write_bytes(b"not an archive");before=snapshot(root)
- result=invoke(root,bad);assert result.returncode!=0
+ root,archive=tree(tmp_path);before=snapshot(root)
+ broken=tmp_path/"broken.run";data=INSTALLER.read_bytes();broken.write_bytes(data[:-100]+b"corrupt\n");broken.chmod(0o755)
+ result=subprocess.run(["bash",str(broken),str(root),"install"],text=True,capture_output=True,timeout=120);assert result.returncode!=0
+ assert snapshot(root)==before
+
+def test_forced_post_install_failure_rolls_back_exact_tree_and_data(tmp_path):
+ root,archive=tree(tmp_path);before=snapshot(root);env=os.environ.copy();env["P2K_TROPHY_TEST_FAIL_AFTER_INSTALL"]="1"
+ result=subprocess.run(["bash",str(INSTALLER),str(root),"install"],env=env,text=True,capture_output=True,timeout=120)
+ assert result.returncode!=0 and "Rollback completed" in result.stderr
  assert snapshot(root)==before
 
 def test_r4_overlay_is_upgraded_without_losing_data(tmp_path):
@@ -48,3 +60,8 @@ def test_r4_overlay_is_upgraded_without_losing_data(tmp_path):
  marker=root/"data/trophy-gallery/catalog.json";original=marker.read_bytes()
  upgraded=invoke(root,archive);assert upgraded.returncode==0,upgraded.stdout+upgraded.stderr
  assert KEY in (root/"ui-v2.html").read_text() and marker.read_bytes()==original
+ removed=invoke(root,archive,"remove");assert removed.returncode==0,removed.stdout+removed.stderr
+ assert marker.read_bytes()==original
+ for path in ("ui-v2.html","assets/js/admin/tool-registry.js","assets/js/admin/admin-shell.js","assets/js/pages/dashboard-v2.js"):
+  assert (root/path).read_bytes()==git_bytes(BASE,path)
+ assert not (root/"assets/js/admin/trophy-gallery-poc.js").exists()
