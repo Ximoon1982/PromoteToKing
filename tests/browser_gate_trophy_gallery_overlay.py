@@ -21,7 +21,8 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "6706e619d310e2c74fe2734cfcef8dd2f83d70d1"
 BUILD_ID = "trophy-installed-overlay-e2e"
-CACHE = "poc-5c39ea5ce5a8-20260908-r4"
+RUNTIME = "a7555ea1e512e99261c4b2ae6451b9496cf89450"
+CACHE = "poc-a7555ea1e512-20260909-r5"
 CHROMIUM = os.environ.get("P2K_CHROMIUM") or shutil.which("chromium") or "/usr/bin/chromium"
 
 
@@ -46,6 +47,12 @@ class FixtureHandler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return True
+        if parsed.path.endswith("/server/team-points/public/session.php"):
+            body=b'{"ok":true,"username":"ximoon","csrf":"fixture-admin-csrf"}'
+            self.send_response(200);self.send_header("Content-Type","application/json");self.send_header("Content-Length",str(len(body)));self.end_headers();self.wfile.write(body);return True
+        if parsed.path.endswith("/server/trophy-gallery/public/api.php"):
+            body=b'{"ok":true,"records":[]}'
+            self.send_response(200);self.send_header("Content-Type","application/json");self.send_header("Content-Length",str(len(body)));self.end_headers();self.wfile.write(body);return True
         if parsed.path.endswith(".php") or "/api/" in parsed.path:
             body = b'{"ok":true,"rows":[],"items":[],"matches":[],"members":[]}'
             self.send_response(200)
@@ -77,8 +84,10 @@ def production_tree():
                 "python3", str(ROOT / "tools/release/static_asset_cache_key.py"), "stamp",
                 "--root", str(tree), "--version", "2.11.4", "--source-head", BASE, "--build-id", BUILD_ID,
             ], cwd=ROOT, check=True, capture_output=True, text=True)
+            archive = Path(tmp) / "r5.tar.gz"
+            subprocess.run(["git","archive","--format=tar.gz",f"--prefix=PromoteToKing-{RUNTIME}/","-o",str(archive),RUNTIME],cwd=ROOT,check=True)
             env = os.environ.copy()
-            env["P2K_TROPHY_POC_SOURCE_FILE"] = str(ROOT / "assets/js/admin/trophy-gallery-poc.js")
+            env["P2K_TROPHY_ARCHIVE_FILE"] = str(archive)
             installed = subprocess.run([
                 "bash", str(ROOT / "tools/poc/PromoteToKing_TrophyGallery_POC_2.11x.run"), str(tree), "install",
             ], cwd=ROOT, env=env, check=False, capture_output=True, text=True)
@@ -113,17 +122,15 @@ def main() -> None:
                 page.wait_for_function("window.P2K_TROPHY_GALLERY_POC !== undefined", timeout=15000)
                 page.wait_for_function("document.getElementById('dashboardAdministrationTab')?.hidden === false", timeout=15000)
                 page.wait_for_function("document.querySelector(\"[data-admin-category='team']\")?.getAttribute('aria-pressed') === 'true'", timeout=15000)
-                page.wait_for_selector("[data-admin-shell-panel='team'] #p2kTrophyAdminPanel:not([hidden])", timeout=15000)
+                page.wait_for_selector("#adminShellNativeDetailHost[data-native-detail='trophy-gallery']:not([hidden]) form", timeout=15000)
 
-                card = page.locator("[data-trophy-admin-card]")
-                panel = page.locator("#p2kTrophyAdminPanel")
+                card = page.locator("[data-admin-shell-card='trophies']")
+                panel = page.locator("#adminShellNativeDetailHost[data-native-detail='trophy-gallery']")
                 assert card.count() == 1 and panel.count() == 1
-                page.locator("[data-admin-category='maintenance']").click()
-                page.locator("[data-admin-category='misc']").click()
-                card.locator("button").click()
-                page.wait_for_function("document.querySelector(\"[data-admin-category='team']\")?.getAttribute('aria-pressed') === 'true'")
-                page.evaluate("window.dispatchEvent(new CustomEvent('p2k-admin-shell-route',{detail:{category:'team'}}))")
-                page.wait_for_selector("[data-admin-shell-panel='team'] #p2kTrophyAdminPanel")
+                page.locator("#adminShellDetailBack").click()
+                page.wait_for_selector("[data-admin-shell-panel='team']:not([hidden]) [data-admin-shell-card='trophies']")
+                card.locator("a").first.click()
+                page.wait_for_selector("#adminShellNativeDetailHost[data-native-detail='trophy-gallery']:not([hidden]) form")
                 assert card.count() == 1 and panel.count() == 1
 
                 registry_requests = [u for u in script_requests if "/assets/js/admin/tool-registry.js?" in u]
@@ -132,7 +139,7 @@ def main() -> None:
                     "runtime_defined": page.evaluate("window.P2K_TROPHY_GALLERY_POC !== undefined"),
                     "admin_active": page.evaluate("window.P2K_ADMIN_MODE === true && document.getElementById('adminDashboardHost')?.hidden === false"),
                     "team_active": page.locator("[data-admin-category='team']").get_attribute("aria-pressed") == "true",
-                    "cards": card.count(), "panels": panel.count(),
+                    "cards": card.count(), "panels": panel.count(), "admin_form":page.locator("#adminShellNativeDetailHost form").count(),
                     "registry_requests": registry_requests, "trophy_requests": trophy_requests,
                     "page_errors": errors, "bad_local": bad_local,
                 }
@@ -143,7 +150,7 @@ def main() -> None:
             thread.join(timeout=5)
 
     assert result["runtime_defined"] and result["admin_active"] and result["team_active"], result
-    assert result["cards"] == 1 and result["panels"] == 1, result
+    assert result["cards"] == 1 and result["panels"] == 1 and result["admin_form"] == 1, result
     assert len(result["registry_requests"]) == 1 and len(result["trophy_requests"]) == 1, result
     assert result["page_errors"] == [] and result["bad_local"] == [], result
     print(json.dumps({"trophy_gallery_installed_overlay": "passed", **result}, indent=2))

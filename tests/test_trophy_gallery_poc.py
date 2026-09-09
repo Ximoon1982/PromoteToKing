@@ -8,7 +8,7 @@ def text(path: str) -> str:
 def test_trophy_gallery_is_loaded_through_normal_registry():
     registry = text("assets/js/admin/tool-registry.js")
     runtime = text("assets/js/admin/trophy-gallery-poc.js")
-    assert "trophy-gallery-poc.js?v=" in registry
+    assert "trophy-gallery-poc.js?v=poc-a7555ea1e512-20260909-r5" in registry
     assert "P2K_TROPHY_GALLERY_POC" in runtime
     assert "mountAdmin" in runtime and "mountPublic" in runtime
 

@@ -1,110 +1,45 @@
-Promote to King — Trophy Gallery POC overlay installer r4
-=========================================================
+Promote to King — Trophy Gallery r5 installer
+================================================
 
 Purpose
 -------
-Installs the admin-only Trophy Gallery proof of concept on top of an existing
-Promote to King 2.11.x tree without replacing the full application.
+Installs the persistent Trophy Gallery r5 feature over an existing Promote to
+King 2.11.x tree. The immutable payload source is commit:
+a7555ea1e512e99261c4b2ae6451b9496cf89450
 
-Runtime source
---------------
-feature/trophy-gallery-poc runtime commit:
-5c39ea5ce5a845b64e0100cde0ba851211694008
+The unique r5 browser cache key is:
+poc-a7555ea1e512-20260909-r5
 
-The installer retrieves trophy-gallery-poc.js from that exact immutable GitHub
-commit over HTTPS. It does not track a moving branch.
-
-Files changed in the target P2K tree
-------------------------------------
-1. assets/js/admin/tool-registry.js
-   - a marked Trophy Gallery loader block is inserted before the existing
-     v2.11.x registry return.
-2. assets/js/admin/trophy-gallery-poc.js
-   - the POC runtime payload.
-3. ui-v2.html
-   - only the assets/js/admin/tool-registry.js URL is adjusted for the test
-     overlay.
-   - the existing qualified v= fingerprint is preserved byte-for-byte.
-   - a separate p2k_trophy_poc=poc-5c39ea5ce5a8-20260908-r4 query token is
-     appended so browsers cannot reuse the pre-overlay cached registry.
-
-Example on a qualified v2.11.4 build
-----------------------------
-Before:
-assets/js/admin/tool-registry.js?v=p2k-2.11.4-<source-revision>-<build-identity>
-
-During POC test:
-assets/js/admin/tool-registry.js?v=p2k-2.11.4-<source-revision>-<build-identity>&p2k_trophy_poc=poc-5c39ea5ce5a8-20260908-r4
-
-Removal returns the URL to the original qualified form.
-
-No PHP, database, configuration, data/storage, OAuth or CRON files are changed.
-
-Safety
-------
-- Requires a 2.11.x marker in ui-v2.html.
-- Requires the expected v2.11.x admin-registry sentinel.
-- Refuses to duplicate a native Trophy Gallery integration referenced outside
-  the overlay marker.
-- Makes a timestamped backup under:
-  .p2k-poc-backups/trophy-gallery-<UTC timestamp>/
-- Stores overlay restoration state under:
-  .p2k-poc-state/trophy-gallery-overlay.json
-- Rolls back automatically if post-install validation fails.
-- Reinstallation is idempotent: one loader block and one POC cache token only.
-- r4 recognizes and upgrades the earlier v1 loader-only overlay.
-- r4 also recognizes the short-lived r2 overlay that replaced v= and restores
-  the original qualified fingerprint before appending the separate POC token.
-- r4 upgrades the current r3 overlay in place while retaining the original
-  qualified v2.11.4 registry fingerprint for exact removal.
-
-Qualification
--------------
-The branch gate executes the installer against exact v2.11.4 ui-v2.html and
-tool-registry.js files from qualified main, stamped with a build-specific
-v2.11.4 cache key. It proves:
-- clean install;
-- immediate reinstall / idempotency;
-- remove / exact restoration of ui-v2.html and tool-registry.js;
-- upgrade from the v1 loader-only overlay;
-- upgrade from the r2 replaced-v cache form;
-- upgrade from the current r3 overlay and exact removal afterward;
-- failed-validation rollback;
-- preservation of the qualified v2.11.4 registry fingerprint;
-- JavaScript and shell syntax;
-- isolation from qualified v2.11.4 commit 6706e619d310e2c74fe2734cfcef8dd2f83d70d1.
-
-Install / upgrade an earlier overlay
-------------------------------------
+Install or upgrade
+------------------
 chmod +x PromoteToKing_TrophyGallery_POC_2.11x.run install-trophy-gallery-poc.sh
 ./install-trophy-gallery-poc.sh /kunden/homepages/43/d141198007/htdocs/PromoteToKing
 
-Or directly:
-./PromoteToKing_TrophyGallery_POC_2.11x.run /kunden/homepages/43/d141198007/htdocs/PromoteToKing
+Direct command:
+./PromoteToKing_TrophyGallery_POC_2.11x.run /kunden/homepages/43/d141198007/htdocs/PromoteToKing install
 
-After installation
-------------------
-Reload ui-v2.html. The modified document requests tool-registry.js with the
-additional POC cache token, so a previously cached qualified registry is not
-reused.
+The installer accepts a current r4 overlay and upgrades it in place. It downloads
+only the named r5 files from the immutable commit, preserves the qualified
+tool-registry cache identity while appending the r5 token, creates a timestamped
+backup, validates the installed tree, and automatically rolls back on failure.
+Reinstallation is idempotent.
 
-If the HTML document itself is still cached unusually aggressively, open once:
-https://www.promotetoking.org/ui-v2.html?ui=v2&page=dashboard&poc=trophy-r4
+Data and safety
+---------------
+Catalog and managed artwork are stored below data/trophy-gallery/. This directory
+is not overwritten, backed up as application code, or deleted by removal. Existing
+configuration, databases, OAuth/session state, other data/storage and CRON are not
+modified. Admin writes use the established P2K admin session and CSRF protection.
 
-Authorized administrators can open the editor directly with:
+Public gallery:
+https://www.promotetoking.org/trophies/
+
+Authorized Administration deep link:
 https://www.promotetoking.org/ui-v2.html?ui=v2&page=administration&adminCategory=team&trophy=1
 
-The Trophy runtime waits for the existing Administration shell and opens the
-Team panel only after the normal P2K authorization has made Administration
-visible. The query parameter does not grant or bypass Administration access.
+Remove code while retaining Trophy data
+----------------------------------------
+./PromoteToKing_TrophyGallery_POC_2.11x.run /kunden/homepages/43/d141198007/htdocs/PromoteToKing remove
 
-Remove the test overlay
------------------------
-./PromoteToKing_TrophyGallery_POC_2.11x.run /kunden/homepages/43/d141198007/htdocs/PromoteToKing --remove
-
-Notes
------
-- The POC stores edits in browser localStorage; it does not write to the P2K DB.
-- The Trophy Hall tab and Trophy Gallery admin panel mount only when the existing
-  P2K Administration tab is unlocked for an authenticated admin.
-- Seed trophy artwork uses the image URLs already incorporated into the POC.
+Removal restores the exact pre-r5 managed files and deliberately retains
+data/trophy-gallery/. A data purge is never implicit.
