@@ -2,69 +2,42 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-
 def text(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
-
-def test_trophy_gallery_poc_is_loaded_only_through_admin_registry():
+def test_trophy_gallery_is_loaded_through_normal_registry():
     registry = text("assets/js/admin/tool-registry.js")
-    poc = text("assets/js/admin/trophy-gallery-poc.js")
-    assert "trophy-gallery-poc.js?v=poc-5c39ea5ce5a8-20260908-r4" in registry
-    assert "dashboardAdministrationTab" in poc
-    assert "isAdminVisible()" in poc
-    assert "if(!isAdminVisible())return" in poc
+    runtime = text("assets/js/admin/trophy-gallery-poc.js")
+    assert "trophy-gallery-poc.js?v=" in registry
+    assert "P2K_TROPHY_GALLERY_POC" in runtime
+    assert "mountAdmin" in runtime and "mountPublic" in runtime
 
+def test_trophy_gallery_uses_standard_team_native_detail():
+    shell = text("assets/js/admin/admin-shell.js")
+    assert 'trophies: { title:"Trophy Gallery"' in shell
+    assert 'mode:"native",nativeKey:"trophy-gallery"' in shell
+    assert 'adminShellCard({key:"trophies",category:"team"' in shell
+    assert "p2kTrophyAdminPanel" not in shell
 
-def test_trophy_gallery_uses_current_team_admin_shell_without_a_second_hotfix():
-    poc = text("assets/js/admin/trophy-gallery-poc.js")
-    assert "[data-admin-category='team']" in poc
-    assert "[data-admin-shell-panel='team']" in poc
-    assert 'window.addEventListener("p2k-admin-shell-route"' in poc
-    assert "[data-admin-group='tools']" not in poc
-    assert not (ROOT / "assets/js/admin/trophy-gallery-poc-admin-nav-fix.js").exists()
+def test_deep_link_maps_to_existing_authorized_administration_route():
+    navigation = text("assets/js/pages/dashboard-v2.js")
+    assert 'params.get("trophy") === "1" ? "trophies"' in navigation
+    assert 'params.get("trophy") === "1" ? "gallery"' in navigation
+    assert "dashboardAdministrationTab" not in text("assets/js/admin/trophy-gallery-poc.js")
 
+def test_server_persistence_and_security_contracts_are_present():
+    api = text("server/trophy-gallery/public/api.php")
+    store = text("server/trophy-gallery/src/TrophyGalleryStore.php")
+    assert "Auth::requireAdmin()" in api
+    assert "records(true)" in api and "records(false)" in api
+    assert "LOCK_EX" in store and "rename($tmp,$this->catalog)" in store
+    assert "is_uploaded_file" in store and "getimagesize" in store
+    assert "image/svg" not in store
+    assert "players" not in store
 
-def test_trophy_gallery_deep_link_is_authorization_gated():
-    poc = text("assets/js/admin/trophy-gallery-poc.js")
-    assert 'get("trophy") === "1"' in poc
-    assert "maybeOpenDeepLink" in poc
-    assert "!isAdminVisible()" in poc
-
-
-def test_trophy_gallery_poc_mounts_hall_and_admin_surfaces():
-    poc = text("assets/js/admin/trophy-gallery-poc.js")
-    assert 'tab.dataset.hallSubtab="trophies"' in poc
-    assert 'panel.dataset.hallPanel="trophies"' in poc
-    assert 'p2kTrophyAdminPanel' in poc
-    assert 'adminToolGrid' in poc
-    assert 'data-trophy-admin-card' in poc
-
-
-def test_trophy_gallery_poc_has_imported_visuals_and_workflow_controls():
-    poc = text("assets/js/admin/trophy-gallery-poc.js")
-    for marker in (
-        "php169n9ussq2pv6QXsaHt.png",
-        "phpbdkgpmqj53bj0Fpy5XH.png",
-        "php693lr5tfd7f59LBxG9p.png",
-        "php5vt7kffnmide1GmnI0E.png",
-    ):
-        assert marker in poc
-    for marker in (
-        'status: "published"',
-        'status: "draft"',
-        "Add trophy",
-        "Publish",
-        "Duplicate",
-        "Delete",
-        "Detour threshold",
-        "Use processed PNG",
-    ):
-        assert marker in poc
-
-
-def test_trophy_gallery_poc_does_not_introduce_server_persistence():
-    poc = text("assets/js/admin/trophy-gallery-poc.js")
-    assert "localStorage" in poc
-    assert "fetch(" not in poc
-    assert "XMLHttpRequest" not in poc
+def test_public_standalone_and_grouping_are_available():
+    runtime = text("assets/js/admin/trophy-gallery-poc.js")
+    standalone = text("trophies/index.html")
+    assert 'state.group==="league"' in runtime
+    assert '<option value="chronology">Chronology</option>' in runtime
+    assert 'id="p2kTrophyStandalone"' in standalone

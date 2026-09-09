@@ -30,7 +30,8 @@ const ADMIN_DETAIL_DEFS = {
       {key:"forecast",label:"Forecast",src:"ClubIntelligence.html?embedded=1&tab=forecast&release=2.10.6.14"},
       {key:"snapshots",label:"Snapshots",src:"ClubIntelligence.html?embedded=1&tab=snapshots&release=2.10.6.14"},
       {key:"anomalies",label:"Anomalies",src:"ClubIntelligence.html?embedded=1&tab=anomalies&release=2.10.6.14"}
-    ]}
+    ]},
+    trophies: { title:"Trophy Gallery", tabs:[{key:"gallery",label:"Trophy Gallery",mode:"native",nativeKey:"trophy-gallery"}]}
   },
   opponents: {
     opponents: { title:"Opponent intelligence", tabs:[
@@ -124,7 +125,10 @@ members: [
   adminShellCard({key:"aliases",category:"members",eyebrow:"Members",title:"Aliases & name changes",description:"Canonical identity mappings, possible renames and review state.",metrics:[{label:"Known names",id:"adminShellAliasMappings"},{label:"Review queue",id:"adminShellAliasReview"},{label:"Confirmed",id:"adminShellAliasConfirmed"}],source:"MIAC identity graph",links:[{label:"Open aliases",tab:"aliases"}]}),
   adminShellCard({key:"recruitment",category:"members",eyebrow:"Members",title:"Recruitment",description:"Maintain the candidate pool and evaluate prospective members against Daily activity, reliability and membership criteria.",metrics:[{label:"Candidates",id:"adminRecruitmentCandidates"},{label:"Checked",id:"adminRecruitmentChecked"},{label:"Selected",id:"adminRecruitmentSelected"}],source:"Green Core + Chess.com OAuth",links:[{label:"Open Recruitment",tab:"recruitment"}]})
 ],
-team: [adminShellCard({key:"team",category:"team",eyebrow:"Team",title:"Club intelligence",description:"Authoritative team health, Club Points, snapshots, forecast and current anomalies.",metrics:[{label:"Club points",id:"adminShellTeamPoints"},{label:"Current members",id:"adminShellTeamMembers"},{label:"Open anomalies",id:"adminShellTeamAnomalies"}],source:"Green Core · Club Intelligence",links:[{label:"Open club intelligence",tab:"overview"},{label:"Forecast",tab:"forecast",secondary:true}]})],
+team: [
+  adminShellCard({key:"team",category:"team",eyebrow:"Team",title:"Club intelligence",description:"Authoritative team health, Club Points, snapshots, forecast and current anomalies.",metrics:[{label:"Club points",id:"adminShellTeamPoints"},{label:"Current members",id:"adminShellTeamMembers"},{label:"Open anomalies",id:"adminShellTeamAnomalies"}],source:"Green Core · Club Intelligence",links:[{label:"Open club intelligence",tab:"overview"},{label:"Forecast",tab:"forecast",secondary:true}]}),
+  adminShellCard({key:"trophies",category:"team",eyebrow:"Team",title:"Trophy Gallery",description:"Create, publish and maintain the club trophy archive and its managed artwork.",metrics:[{label:"Catalog",id:"adminTrophyCatalog",value:"Persistent",note:"JSON + managed media"}],source:"Trophy Gallery catalog",links:[{label:"Open Trophy Gallery",tab:"gallery"}]})
+],
 opponents: [adminShellCard({key:"opponents",category:"opponents",eyebrow:"Opponents",title:"Opponent intelligence",description:"Recurring opponents, historical outcomes and opponent maintenance intelligence.",metrics:[{label:"Profiles",id:"adminShellOpponentProfiles"},{label:"Recent opponents",id:"adminShellOpponentRecent"},{label:"Review needed",id:"adminShellOpponentReview"}],source:"Club Intelligence · Green match history",links:[{label:"Open opponent intelligence",tab:"intelligence"},{label:"Challenge assistant",tab:"challenge",secondary:true}]})],
 maintenance: [
   adminShellCard({key:"diagnostics",category:"maintenance",eyebrow:"Maintenance",title:"Diagnostics",description:"Runtime and API health with direct access to diagnostic details.",metrics:[{label:"Open anomalies",id:"adminShellDiagAnomalies"},{label:"Failed queue",id:"adminShellDiagFailed"},{label:"Unresolved boards",id:"adminShellDiagBoards"}],source:"Club Intelligence · runtime diagnostics",links:[{label:"Open diagnostics",tab:"health"},{label:"Data reconciliation",tab:"reconciliation",secondary:true}]}),
@@ -186,7 +190,7 @@ function renderAdminShellDetail(){
     setIntegratedFrameActivity("");
     if(frameWrap)frameWrap.hidden=true;
     if(frame){frame.hidden=true;frame.removeAttribute("data-p2k-r2-stable");}
-    if(nativeHost){nativeHost.hidden=false;nativeHost.dataset.nativeDetail=nativeKey||validTab.key;}
+    if(nativeHost){nativeHost.hidden=false;nativeHost.dataset.nativeDetail=nativeKey||validTab.key;if(nativeKey==="trophy-gallery")window.P2K_TROPHY_GALLERY_POC?.mountAdmin?.(nativeHost);}
     return;
   }
   if(nativeHost){nativeHost.hidden=true;nativeHost.replaceChildren();nativeHost.removeAttribute("data-native-detail");}

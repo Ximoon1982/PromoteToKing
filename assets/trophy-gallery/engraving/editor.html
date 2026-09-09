@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>P2K 1WL Engraving POC v1.9</title>
+<style>
+@font-face{
+  font-family:'P2KFullSans';
+  src:url('./P2KFullSans.ttf') format('truetype');
+  font-style:italic;
+  font-weight:600;
+  font-display:block;
+}
+
+:root{--bg:#0f151d;--panel:#151e28;--panel2:#1b2530;--line:#354556;--text:#edf3fa;--muted:#b8c3d2;--field:#0e141b;--accent:#c79b34;}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:linear-gradient(180deg,#0b1016,#121a24);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif}
+.wrap{max-width:1600px;margin:auto;padding:18px}
+.grid{display:grid;grid-template-columns:430px minmax(0,1fr);gap:18px;align-items:start}
+.card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 18px 42px rgba(0,0,0,.24)}
+h1{font-size:28px;margin:0 0 8px} .sub{margin:0 0 12px;color:var(--muted);line-height:1.48}
+label{display:block;font-weight:760;margin:12px 0 6px}
+select,textarea,input[type=range]{width:100%}
+select,textarea{background:var(--field);color:var(--text);border:1px solid #3b4a5b;border-radius:10px;padding:10px 12px;font:inherit}
+textarea{resize:vertical;min-height:74px;line-height:1.28}
+button{cursor:pointer;border:1px solid #7a6020;background:linear-gradient(180deg,#d0a748,#a87b24);color:#1d1608;border-radius:10px;padding:10px 14px;font-weight:800}
+button.secondary{background:linear-gradient(180deg,#2a3644,#212c38);border-color:#425164;color:#eef4fb}
+button.ghost{background:transparent;border-color:#495b70;color:#e9f0f7}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.small{font-size:12px;color:var(--muted)}
+.sep{height:1px;background:#2f3d4c;margin:14px 0}
+.hidden{display:none !important}
+.previewCard{display:flex;flex-direction:column;gap:12px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.toolbar .left, .toolbar .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.previewWrap{position:relative;display:flex;align-items:center;justify-content:center;min-height:78vh;height:min(78vh,980px);border-radius:16px;border:1px solid var(--line);overflow:hidden;padding:12px}
+.previewWrap.checker{background:
+  linear-gradient(45deg,#e6e6e6 25%, transparent 25%),
+  linear-gradient(-45deg,#e6e6e6 25%, transparent 25%),
+  linear-gradient(45deg, transparent 75%, #e6e6e6 75%),
+  linear-gradient(-45deg, transparent 75%, #e6e6e6 75%);
+  background-size:28px 28px;background-position:0 0,0 14px,14px -14px,-14px 0;background-color:#f5f5f5;}
+.previewWrap.dark{background:#161a1f}
+.previewWrap.light{background:#ffffff}
+canvas{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;}
+.info{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+.pill{display:inline-flex;padding:5px 10px;border-radius:999px;background:#0d141c;border:1px solid #334353}
+fieldset{margin:0;padding:0;border:0}
+.legend{font-size:13px;color:var(--muted);margin-top:4px}
+.chk{display:flex;align-items:center;gap:8px;margin:10px 0 0}
+.chk input{width:auto}
+@media (max-width:1100px){.grid{grid-template-columns:1fr} .previewWrap{min-height:68vh;height:min(68vh,820px)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="grid">
+    <div class="card">
+      <h1>P2K 1WL Engraving POC v1.9</h1>
+      <p class="sub">Unified POC for <b>medals</b>, <b>pre-2026 cups</b>, and <b>2026 crystal trophies</b>. Trophy lettering now uses the same full-SANS engraved italic engraving language as the approved medal lettering. Medal rendering now uses the approved long-ribbon transparent blanks, the approved inner-circle text zones, and the full-SANS engraved italic proportions derived from the 2025 1WL medal references. Crystal trophies now reuse the same embedded full-SANS engraving settings as the medals/cups, and the bronze/silver top safe zone is trimmed on the left to stay off the metal.</p>
+
+      <div class="row">
+        <div>
+          <label for="awardType">Award type</label>
+          <select id="awardType">
+            <option value="medal">Medal</option>
+            <option value="cup">Pre-2026 cup</option>
+            <option value="crystal">2026 crystal trophy</option>
+          </select>
+        </div>
+        <div>
+          <label for="finish">Finish</label>
+          <select id="finish">
+            <option value="gold">Gold</option>
+            <option value="silver">Silver</option>
+            <option value="bronze">Bronze</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="chk"><input id="showGuides" type="checkbox"><label for="showGuides" style="margin:0;font-weight:700">Show text safe zones</label></div>
+
+      <div class="sep"></div>
+
+      <fieldset id="medalControls">
+        <label for="upperText">Upper text · 2025 reference style</label>
+        <textarea id="upperText"></textarea>
+        <div class="row3"><span class="small">Upper size</span><span class="small" id="medalUpperSizeVal"></span></div>
+        <input id="medalUpperSize" type="range" min="70" max="140" step="1" value="100">
+        <div class="row3"><span class="small">Upper vertical offset (0 = new +30 baseline)</span><span class="small" id="medalUpperYVal"></span></div>
+        <input id="medalUpperY" type="range" min="-40" max="40" step="1" value="0">
+
+        <label for="middleText">Middle text · vertically centered</label>
+        <textarea id="middleText"></textarea>
+        <div class="row3"><span class="small">Middle size</span><span class="small" id="medalMiddleSizeVal"></span></div>
+        <input id="medalMiddleSize" type="range" min="70" max="140" step="1" value="100">
+        <div class="row3"><span class="small">Middle vertical offset (0 = new +30 baseline)</span><span class="small" id="medalMiddleYVal"></span></div>
+        <input id="medalMiddleY" type="range" min="-60" max="60" step="1" value="0">
+
+        <label for="lowerText">Lower text · 2025 reference style</label>
+        <textarea id="lowerText"></textarea>
+        <div class="row3"><span class="small">Lower size (100 = former 130%)</span><span class="small" id="medalLowerSizeVal"></span></div>
+        <input id="medalLowerSize" type="range" min="70" max="140" step="1" value="100">
+        <div class="row3"><span class="small">Lower vertical offset (0 = new +30 baseline)</span><span class="small" id="medalLowerYVal"></span></div>
+        <input id="medalLowerY" type="range" min="-40" max="40" step="1" value="0">
+      </fieldset>
+
+      <fieldset id="cupControls" class="hidden">
+        <label for="cupPlaque">Cup plaque text</label>
+        <textarea id="cupPlaque"></textarea>
+        <div class="row3"><span class="small">Plaque size</span><span class="small" id="cupSizeVal"></span></div>
+        <input id="cupSize" type="range" min="70" max="140" step="1" value="100">
+        <div class="row3"><span class="small">Plaque vertical offset</span><span class="small" id="cupYVal"></span></div>
+        <input id="cupY" type="range" min="-40" max="40" step="1" value="0">
+      </fieldset>
+
+      <fieldset id="crystalControls" class="hidden">
+        <label for="crystalTop">Top crystal text</label>
+        <textarea id="crystalTop"></textarea>
+        <div class="row3"><span class="small">Top size</span><span class="small" id="crystalTopSizeVal"></span></div>
+        <input id="crystalTopSize" type="range" min="70" max="140" step="1" value="100">
+        <div class="row3"><span class="small">Top vertical offset</span><span class="small" id="crystalTopYVal"></span></div>
+        <input id="crystalTopY" type="range" min="-60" max="60" step="1" value="0">
+
+        <label for="crystalBottom">Bottom plaque text</label>
+        <textarea id="crystalBottom"></textarea>
+        <div class="row3"><span class="small">Bottom size</span><span class="small" id="crystalBottomSizeVal"></span></div>
+        <input id="crystalBottomSize" type="range" min="70" max="140" step="1" value="100">
+        <div class="row3"><span class="small">Bottom vertical offset</span><span class="small" id="crystalBottomYVal"></span></div>
+        <input id="crystalBottomY" type="range" min="-40" max="40" step="1" value="0">
+        <div class="legend">Trophy typography now follows the approved medal lettering: full-SANS engraved italic, weight 400, with the same light engraved bevel/shadow treatment.</div>
+      </fieldset>
+
+      <div class="sep"></div>
+      <div class="row">
+        <button id="sampleBtn">Load sample</button>
+        <button id="clearBtn" class="secondary">Clear text</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button id="downloadBtn">Download PNG</button>
+        <button id="resetBtn" class="ghost">Reset sliders</button>
+      </div>
+    </div>
+
+    <div class="card previewCard">
+      <div class="toolbar">
+        <div class="left">
+          <button class="ghost" data-bg="checker">Checker</button>
+          <button class="ghost" data-bg="dark">Dark</button>
+          <button class="ghost" data-bg="light">Light</button>
+        </div>
+        <div class="right info">
+          <span class="pill" id="infoLabel">Loading…</span>
+          <span class="pill" id="infoSize"></span>
+        </div>
+      </div>
+      <div class="previewWrap checker" id="previewWrap">
+        <canvas id="canvas"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const ASSETS = {"medal_gold":"./medal_gold.png","medal_silver":"./medal_silver.png","medal_bronze":"./medal_bronze.png","cup_gold":"./cup_gold.png","cup_silver":"./cup_silver.png","cup_bronze":"./cup_bronze.png","crystal_gold":"./crystal_gold.png","crystal_silver":"./crystal_silver.png","crystal_bronze":"./crystal_bronze.png"};
+const CONFIGS = {
+  medal: {
+    // Approved layout on the 1086×1448 long-ribbon transparent medal blanks.
+    // All boxes remain inside the inner circle; middle is vertically centered on the medal face.
+    silver: {upper:[0.2790055249,0.4903314917,0.4419889503,0.0690607735], middle:[0.2421731123,0.6077348066,0.5156537753,0.1104972376], lower:[0.2974217311,0.7700276243,0.4051565378,0.0621546961]},
+    gold:   {upper:[0.2790055249,0.4903314917,0.4419889503,0.0690607735], middle:[0.2421731123,0.6077348066,0.5156537753,0.1104972376], lower:[0.2974217311,0.7700276243,0.4051565378,0.0621546961]},
+    bronze: {upper:[0.2790055249,0.4903314917,0.4419889503,0.0690607735], middle:[0.2421731123,0.6077348066,0.5156537753,0.1104972376], lower:[0.2974217311,0.7700276243,0.4051565378,0.0621546961]}
+  },
+  cup: {
+    silver: {plaque:[0.31,0.778,0.38,0.095]},
+    gold:   {plaque:[0.315,0.784,0.37,0.087]},
+    bronze: {plaque:[0.315,0.783,0.37,0.089]}
+  },
+  crystal: {
+    gold:   {top:[0.2162729156,0.1575046325,0.5458290422,0.2161828289], bottom:[0.3099897013,0.8807906115,0.4191555098,0.0772081532]},
+    silver: {top:[0.2295000000,0.1575046325,0.5315000000,0.2161828289], bottom:[0.3182286303,0.8968499074,0.4191555098,0.0648548487]},
+    bronze: {top:[0.2295000000,0.1575046325,0.5315000000,0.2161828289], bottom:[0.3099897013,0.8807906115,0.4191555098,0.0772081532]}
+  }
+};
+
+const SAMPLE_TEXTS = {"medal": {"gold": {"upper": "ONE WORLD\nLeague 2025", "middle": "The Golden\nPhoenix", "lower": "U1800 20+"}, "silver": {"upper": "ONE WORLD\nLeague 2025", "middle": "France", "lower": "U1800 20+"}, "bronze": {"upper": "ONE WORLD\nLeague 2025", "middle": "France-Deutsch-\nland Group", "lower": "U1800 20+"}}, "cup": {"gold": {"plaque": "Promote\nto King"}, "silver": {"plaque": "Europe\nNational Team"}, "bronze": {"plaque": "1 day per\nmove club"}}, "crystal": {"gold": {"top": "Promote\nto King", "bottom": "7WL Winter\nChampions 2026"}, "silver": {"top": "Team\nEngland", "bottom": "7WL Winter\nChampions 2026"}, "bronze": {"top": "Team\nAustralia", "bottom": "7WL Winter\nChampions 2026"}}};
+
+const els = {
+  awardType: document.getElementById('awardType'), finish: document.getElementById('finish'), showGuides: document.getElementById('showGuides'),
+  upperText: document.getElementById('upperText'), middleText: document.getElementById('middleText'), lowerText: document.getElementById('lowerText'),
+  medalUpperSize: document.getElementById('medalUpperSize'), medalUpperY: document.getElementById('medalUpperY'), medalMiddleSize: document.getElementById('medalMiddleSize'), medalMiddleY: document.getElementById('medalMiddleY'), medalLowerSize: document.getElementById('medalLowerSize'), medalLowerY: document.getElementById('medalLowerY'),
+  medalUpperSizeVal: document.getElementById('medalUpperSizeVal'), medalUpperYVal: document.getElementById('medalUpperYVal'), medalMiddleSizeVal: document.getElementById('medalMiddleSizeVal'), medalMiddleYVal: document.getElementById('medalMiddleYVal'), medalLowerSizeVal: document.getElementById('medalLowerSizeVal'), medalLowerYVal: document.getElementById('medalLowerYVal'),
+  cupPlaque: document.getElementById('cupPlaque'), cupSize: document.getElementById('cupSize'), cupY: document.getElementById('cupY'), cupSizeVal: document.getElementById('cupSizeVal'), cupYVal: document.getElementById('cupYVal'),
+  crystalTop: document.getElementById('crystalTop'), crystalBottom: document.getElementById('crystalBottom'), crystalTopSize: document.getElementById('crystalTopSize'), crystalTopY: document.getElementById('crystalTopY'), crystalBottomSize: document.getElementById('crystalBottomSize'), crystalBottomY: document.getElementById('crystalBottomY'), crystalTopSizeVal: document.getElementById('crystalTopSizeVal'), crystalTopYVal: document.getElementById('crystalTopYVal'), crystalBottomSizeVal: document.getElementById('crystalBottomSizeVal'), crystalBottomYVal: document.getElementById('crystalBottomYVal'),
+  medalControls: document.getElementById('medalControls'), cupControls: document.getElementById('cupControls'), crystalControls: document.getElementById('crystalControls'),
+  sampleBtn: document.getElementById('sampleBtn'), clearBtn: document.getElementById('clearBtn'), downloadBtn: document.getElementById('downloadBtn'), resetBtn: document.getElementById('resetBtn'),
+  previewWrap: document.getElementById('previewWrap'), infoLabel: document.getElementById('infoLabel'), infoSize: document.getElementById('infoSize'), canvas: document.getElementById('canvas')
+};
+const ctx = els.canvas.getContext('2d');
+const images = {};
+
+function splitLines(v) { return (v || '').split(/\n+/).map(s => s.trim()).filter(Boolean); }
+function normBox(norm, img) { return [norm[0]*img.width, norm[1]*img.height, norm[2]*img.width, norm[3]*img.height]; }
+function roundedRectPath(ctx,x,y,w,h,r) { ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+const REFERENCE_GLYPH = {
+  // Approved full-SANS direction from the latest specimen.
+  // The font is embedded above to keep the result identical across browsers.
+  fontFamily: "'P2KFullSans', 'Lato', 'Arial', sans-serif",
+  italic: true,
+  weight: 600,
+  xScale: 0.955,
+  yScale: 1.015,
+  trackingEm: -0.004,
+  lineGapTight: -0.045,
+  lineGapNormal: -0.025,
+  hiDx: -1.15,
+  hiDy: -1.15,
+  shadowDx: 1.55,
+  shadowDy: 1.55,
+  bevelDepth: 2,
+  trenchDepth: 3
+};
+
+function applyReferenceFontTransform(x, y, xScale, yScale) {
+  ctx.translate(x, y);
+  ctx.scale(xScale || 1, yScale || 1);
+  ctx.translate(-x, -y);
+}
+
+function updateVisibleControls() {
+  const t = els.awardType.value;
+  els.medalControls.classList.toggle('hidden', t !== 'medal');
+  els.cupControls.classList.toggle('hidden', t !== 'cup');
+  els.crystalControls.classList.toggle('hidden', t !== 'crystal');
+}
+
+function updateSliderLabels() {
+  els.medalUpperSizeVal.textContent = els.medalUpperSize.value + '%';
+  els.medalMiddleSizeVal.textContent = els.medalMiddleSize.value + '%';
+  els.medalLowerSizeVal.textContent = els.medalLowerSize.value + '%';
+  els.medalUpperYVal.textContent = els.medalUpperY.value + ' px';
+  els.medalMiddleYVal.textContent = els.medalMiddleY.value + ' px';
+  els.medalLowerYVal.textContent = els.medalLowerY.value + ' px';
+  els.cupSizeVal.textContent = els.cupSize.value + '%';
+  els.cupYVal.textContent = els.cupY.value + ' px';
+  els.crystalTopSizeVal.textContent = els.crystalTopSize.value + '%';
+  els.crystalTopYVal.textContent = els.crystalTopY.value + ' px';
+  els.crystalBottomSizeVal.textContent = els.crystalBottomSize.value + '%';
+  els.crystalBottomYVal.textContent = els.crystalBottomY.value + ' px';
+}
+
+function setBg(name) {
+  els.previewWrap.classList.remove('checker','dark','light');
+  els.previewWrap.classList.add(name);
+}
+
+function fitText(lines, box, fontFamily, italic, weight, maxPx, minPx, lineGap) {
+  let size = maxPx;
+  while (size >= minPx) {
+    ctx.font = `${italic ? 'italic ' : ''}${weight} ${size}px ${fontFamily}`;
+    const widths = lines.map(line => ctx.measureText(line).width);
+    const lineH = size * (1 + lineGap);
+    const totalH = lines.length ? (lines.length * lineH - size * lineGap) : 0;
+    if ((Math.max(0,...widths) <= box[2]) && totalH <= box[3]) return {size};
+    size -= 1;
+  }
+  return {size:minPx};
+}
+
+function drawSimpleEngravedText(lines, box, style, opts={}) {
+  if (!lines.length) return;
+  const fontFamily = opts.fontFamily || style.font || REFERENCE_GLYPH.fontFamily;
+  const italic = opts.italic !== false;
+  const weight = opts.weight || REFERENCE_GLYPH.weight;
+  const lineGap = opts.lineGap ?? REFERENCE_GLYPH.lineGapNormal;
+  const xScale = opts.xScale || 1;
+  const yScale = opts.yScale || 1;
+  const fit = fitText(lines, [box[0], box[1], box[2] / xScale, box[3]], fontFamily, italic, weight, opts.maxPx || 72, opts.minPx || 14, lineGap);
+  let size = Math.max(opts.minPx || 14, Math.floor(fit.size * (opts.scale || 1)));
+  while (size > (opts.minPx || 14)) {
+    ctx.font = `${italic ? 'italic ' : ''}${weight} ${size}px ${fontFamily}`;
+    const widest = Math.max(...lines.map(line => ctx.measureText(line).width), 0) * xScale;
+    const totalH = lines.length * size + (lines.length - 1) * size * lineGap;
+    if (widest <= box[2] && totalH <= box[3]) break;
+    size -= 1;
+  }
+  const lineH = size * (1 + lineGap);
+  const totalH = lines.length * lineH - size * lineGap;
+  const x = box[0] + box[2] / 2;
+  let y = box[1] + (box[3] - totalH) / 2 + size * 0.80 + (opts.yShift || 0);
+  const shadowDx = opts.shadowDx ?? REFERENCE_GLYPH.shadowDx;
+  const shadowDy = opts.shadowDy ?? REFERENCE_GLYPH.shadowDy;
+  const hiDx = opts.hiDx ?? REFERENCE_GLYPH.hiDx;
+  const hiDy = opts.hiDy ?? REFERENCE_GLYPH.hiDy;
+  const bevelDepth = Math.max(1, Math.round(opts.bevelDepth ?? REFERENCE_GLYPH.bevelDepth));
+  const trenchDepth = Math.max(1, Math.round(opts.trenchDepth ?? REFERENCE_GLYPH.trenchDepth));
+  const strokeW = opts.strokeW ?? Math.max(0.75, size * 0.018);
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = `${italic ? 'italic ' : ''}${weight} ${size}px ${fontFamily}`;
+
+  for (const line of lines) {
+    // Deep lower-right trench. Repeated discrete passes keep it crisp instead of blurry.
+    for (let i = trenchDepth; i >= 1; i--) {
+      const k = i / trenchDepth;
+      ctx.save();
+      applyReferenceFontTransform(x, y, xScale, yScale);
+      ctx.globalAlpha = 0.48 + 0.38 * k;
+      ctx.fillStyle = style.shadow;
+      ctx.fillText(line, x + shadowDx * i, y + shadowDy * i);
+      ctx.restore();
+    }
+
+    // Broad upper-left bevel followed by a narrow specular edge.
+    for (let i = bevelDepth; i >= 1; i--) {
+      const k = i / bevelDepth;
+      ctx.save();
+      applyReferenceFontTransform(x, y, xScale, yScale);
+      ctx.globalAlpha = 0.48 + 0.40 * k;
+      ctx.fillStyle = style.highlight;
+      ctx.fillText(line, x + hiDx * i, y + hiDy * i);
+      ctx.restore();
+    }
+
+    if (style.stroke) {
+      ctx.save();
+      applyReferenceFontTransform(x, y, xScale, yScale);
+      ctx.lineWidth = strokeW;
+      ctx.strokeStyle = style.stroke;
+      ctx.strokeText(line, x, y);
+      ctx.restore();
+    }
+
+    // Metallic face of the cut letter.
+    ctx.save();
+    applyReferenceFontTransform(x, y, xScale, yScale);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = style.fill;
+    ctx.fillText(line, x, y);
+    ctx.restore();
+
+    y += lineH;
+  }
+  ctx.restore();
+}
+
+function drawVGrooveTextBlock(lines, box, style, opts={}) {
+  if (!lines.length) return;
+  const fontFamily = opts.fontFamily || 'Arial Narrow, Arial, sans-serif';
+  const italic = opts.italic !== false;
+  const weight = opts.weight || 600;
+  const lineGap = opts.lineGap ?? 0.10;
+  const fit = fitText(lines, box, fontFamily, italic, weight, opts.maxPx || 72, opts.minPx || 14, lineGap);
+  let size = Math.max(opts.minPx || 14, Math.floor(fit.size * (opts.scale || 1)));
+  while (size > (opts.minPx || 14)) {
+    ctx.font = `${italic ? 'italic ' : ''}${weight} ${size}px ${fontFamily}`;
+    const widest = Math.max(...lines.map(line => ctx.measureText(line).width), 0);
+    const totalH = lines.length * size + (lines.length - 1) * size * lineGap;
+    if (widest <= box[2] && totalH <= box[3]) break;
+    size -= 1;
+  }
+  const lineH = size * (1 + lineGap);
+  const totalH = lines.length * lineH - size * lineGap;
+  const cx = box[0] + box[2] / 2;
+  let y = box[1] + (box[3] - totalH) / 2 + size * 0.80 + (opts.yShift || 0);
+  const depth = Math.max(2, (opts.depth || 7));
+  const softness = Math.max(1, (opts.softness || 2));
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = `${italic ? 'italic ' : ''}${weight} ${size}px ${fontFamily}`;
+  for (const line of lines) {
+    // deep lower-right trench
+    for (let i = depth; i >= 1; i--) {
+      const t = i / depth;
+      ctx.fillStyle = rgbaShade(style.trench, 0.78 + 0.22 * (1 - t), 0.92);
+      ctx.fillText(line, cx + i, y + i);
+    }
+    // rounded interior transition
+    for (let i = softness; i >= 1; i--) {
+      ctx.fillStyle = rgba(style.midtone[0], style.midtone[1], style.midtone[2], Math.min(1, 0.58 + i * 0.11));
+      ctx.fillText(line, cx + Math.max(0, Math.floor(i/2)), y + Math.max(0, Math.floor(i/2)));
+    }
+    // bright upper-left bevel
+    for (let i = depth; i >= 1; i--) {
+      const t = i / depth;
+      ctx.fillStyle = rgbaShade(style.bevel, 0.88 + 0.12 * (1 - t), Math.min(1, 0.58 + i * 0.055));
+      ctx.fillText(line, cx - i, y - i);
+    }
+    // thin specular edge
+    ctx.fillStyle = rgba(style.bevel[0], style.bevel[1], style.bevel[2], 0.38);
+    ctx.fillText(line, cx - depth - 1, y - depth - 1);
+    // groove face
+    ctx.fillStyle = rgba(style.face[0], style.face[1], style.face[2], 1);
+    ctx.fillText(line, cx, y);
+    y += lineH;
+  }
+  ctx.restore();
+}
+
+function rgba(r,g,b,a) { return `rgba(${r},${g},${b},${a})`; }
+function rgbaShade(rgb, factor, alpha=1) { return `rgba(${Math.round(rgb[0]*factor)},${Math.round(rgb[1]*factor)},${Math.round(rgb[2]*factor)},${alpha})`; }
+
+function medalStyle(finish) {
+  // Approved 1WL full-SANS engraved lettering:
+  // semibold italic, clean sans proportions, crisp metallic bevel and trench.
+  return {
+    silver: {
+      font:REFERENCE_GLYPH.fontFamily,
+      fill:'rgba(46,47,50,0.95)',
+      shadow:'rgba(16,17,19,0.68)',
+      highlight:'rgba(255,255,255,0.72)',
+      stroke:'rgba(118,122,127,0.20)'
+    },
+    gold: {
+      font:REFERENCE_GLYPH.fontFamily,
+      fill:'rgba(111,67,10,0.95)',
+      shadow:'rgba(59,33,4,0.70)',
+      highlight:'rgba(255,238,184,0.67)',
+      stroke:'rgba(154,102,22,0.18)'
+    },
+    bronze: {
+      font:REFERENCE_GLYPH.fontFamily,
+      fill:'rgba(96,48,25,0.95)',
+      shadow:'rgba(52,25,12,0.72)',
+      highlight:'rgba(255,220,190,0.62)',
+      stroke:'rgba(137,78,44,0.18)'
+    }
+  }[finish];
+}
+
+function medalLowerStyle(finish) {
+  // Same approved medal typography, but with stronger tonal separation for the small lower line.
+  const base = medalStyle(finish);
+  return {
+    font: base.font,
+    fill: finish === 'silver' ? 'rgba(28,29,32,0.99)' : (finish === 'gold' ? 'rgba(78,43,4,0.99)' : 'rgba(68,31,14,0.99)'),
+    shadow: finish === 'silver' ? 'rgba(5,6,7,0.90)' : (finish === 'gold' ? 'rgba(35,18,1,0.92)' : 'rgba(34,14,6,0.92)'),
+    highlight: finish === 'silver' ? 'rgba(255,255,255,0.90)' : (finish === 'gold' ? 'rgba(255,244,199,0.84)' : 'rgba(255,229,205,0.82)'),
+    stroke: finish === 'silver' ? 'rgba(105,109,115,0.34)' : (finish === 'gold' ? 'rgba(130,82,14,0.30)' : 'rgba(118,60,30,0.30)')
+  };
+}
+
+function trophyMedalStyle(finish) {
+  // Trophy text intentionally reuses the approved medal typographic language.
+  return medalStyle(finish);
+}
+
+function cupStyle(finish) {
+  return {
+    silver: {font:REFERENCE_GLYPH.fontFamily, fill:'rgba(236,238,243,0.97)', shadow:'rgba(34,38,42,0.94)', highlight:'rgba(255,255,255,0.42)', stroke:'rgba(180,186,195,0.18)', max:54},
+    gold:   {font:REFERENCE_GLYPH.fontFamily, fill:'rgba(255,243,208,0.98)', shadow:'rgba(109,73,18,0.96)', highlight:'rgba(255,255,244,0.40)', stroke:'rgba(120,82,19,0.16)', max:52},
+    bronze: {font:REFERENCE_GLYPH.fontFamily, fill:'rgba(255,239,212,0.98)', shadow:'rgba(103,66,18,0.96)', highlight:'rgba(255,249,238,0.38)', stroke:'rgba(124,81,32,0.16)', max:52}
+  }[finish];
+}
+function crystalStyle(finish, area) {
+  const base = {
+    gold:   {top:{face:[181,121,18], trench:[72,38,5], bevel:[255,239,188], midtone:[206,151,53]}, bottom:{face:[244,229,194], trench:[86,58,21], bevel:[255,248,229], midtone:[220,193,138]}},
+    silver: {top:{face:[128,133,142], trench:[55,61,69], bevel:[249,252,255], midtone:[179,188,199]}, bottom:{face:[235,237,242], trench:[63,69,77], bevel:[255,255,255], midtone:[190,198,207]}},
+    bronze: {top:{face:[143,88,47], trench:[71,37,20], bevel:[247,225,203], midtone:[184,126,86]}, bottom:{face:[244,226,201], trench:[90,58,26], bevel:[255,246,234], midtone:[218,184,144]}}
+  };
+  return base[finish][area];
+}
+
+function drawGuides(img, conf) {
+  ctx.save();
+  ctx.lineWidth = 3;
+  if (els.awardType.value === 'medal') {
+    for (const [k,c] of [['upper','#2fd2ff'],['middle','#7de6ff'],['lower','#ffc247']]) {
+      const b = normBox(conf[k], img); ctx.strokeStyle = c; ctx.fillStyle = c + '22'; ctx.fillRect(b[0],b[1],b[2],b[3]); ctx.strokeRect(b[0],b[1],b[2],b[3]);
+    }
+  } else if (els.awardType.value === 'cup') {
+    const b = normBox(conf.plaque,img); ctx.strokeStyle='#ffc247'; ctx.fillStyle='#ffc24722'; ctx.fillRect(b[0],b[1],b[2],b[3]); ctx.strokeRect(b[0],b[1],b[2],b[3]);
+  } else {
+    const top = normBox(conf.top,img), bottom = normBox(conf.bottom,img);
+    ctx.strokeStyle='#2fd2ff'; ctx.fillStyle='#2fd2ff22'; roundedRectPath(ctx, top[0], top[1], top[2], top[3], 24); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle='#ffc247'; ctx.fillStyle='#ffc24722'; roundedRectPath(ctx, bottom[0], bottom[1], bottom[2], bottom[3], 8); ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawMedal() {
+  const finish = els.finish.value, img = images[`medal_${finish}`], conf = CONFIGS.medal[finish];
+  ctx.canvas.width = img.width; ctx.canvas.height = img.height; ctx.clearRect(0,0,img.width,img.height); ctx.drawImage(img,0,0);
+  const style = medalStyle(finish);
+  const lowerStyle = medalLowerStyle(finish);
+
+  // Approved 2025 1WL proportions.
+  // NEW baseline: every medal text field is shifted +30 px vertically while the UI still displays 0 px.
+  // NEW lower-size baseline: UI 100% = the former 130% size.
+  const baselineY = 30;
+  drawSimpleEngravedText(splitLines(els.upperText.value), normBox(conf.upper,img), style, {
+    fontFamily:REFERENCE_GLYPH.fontFamily,maxPx:45,minPx:14,scale:Number(els.medalUpperSize.value)/100,
+    yShift:baselineY+Number(els.medalUpperY.value),weight:REFERENCE_GLYPH.weight,italic:REFERENCE_GLYPH.italic,xScale:REFERENCE_GLYPH.xScale,yScale:REFERENCE_GLYPH.yScale,lineGap:REFERENCE_GLYPH.lineGapTight,
+    hiDx:REFERENCE_GLYPH.hiDx,hiDy:REFERENCE_GLYPH.hiDy,shadowDx:0.92,shadowDy:0.92,strokeW:0.55
+  });
+  drawSimpleEngravedText(splitLines(els.middleText.value), normBox(conf.middle,img), style, {
+    fontFamily:REFERENCE_GLYPH.fontFamily,maxPx:76,minPx:18,scale:Number(els.medalMiddleSize.value)/100,
+    yShift:baselineY+Number(els.medalMiddleY.value),weight:REFERENCE_GLYPH.weight,italic:REFERENCE_GLYPH.italic,xScale:REFERENCE_GLYPH.xScale,yScale:REFERENCE_GLYPH.yScale,lineGap:-0.08,
+    hiDx:-0.82,hiDy:-0.82,shadowDx:1.02,shadowDy:1.02,strokeW:0.62
+  });
+  drawSimpleEngravedText(splitLines(els.lowerText.value), normBox(conf.lower,img), lowerStyle, {
+    fontFamily:REFERENCE_GLYPH.fontFamily,maxPx:39,minPx:13,scale:1.30*Number(els.medalLowerSize.value)/100,
+    yShift:baselineY+Number(els.medalLowerY.value),weight:REFERENCE_GLYPH.weight,italic:REFERENCE_GLYPH.italic,xScale:REFERENCE_GLYPH.xScale,yScale:REFERENCE_GLYPH.yScale,lineGap:-0.02,
+    hiDx:-0.82,hiDy:-0.82,shadowDx:1.18,shadowDy:1.18,strokeW:0.66
+  });
+  if (els.showGuides.checked) drawGuides(img, conf);
+  els.infoLabel.textContent = `Medal · ${finish} · approved full-SANS engraved italic`;
+  els.infoSize.textContent = `${img.width} × ${img.height} px`;
+}
+function drawCup() {
+  const finish = els.finish.value, img = images[`cup_${finish}`], conf = CONFIGS.cup[finish];
+  ctx.canvas.width = img.width; ctx.canvas.height = img.height; ctx.clearRect(0,0,img.width,img.height); ctx.drawImage(img,0,0);
+  const style = trophyMedalStyle(finish);
+  drawSimpleEngravedText(splitLines(els.cupPlaque.value), normBox(conf.plaque,img), style, {
+    fontFamily:REFERENCE_GLYPH.fontFamily,maxPx:54,minPx:16,scale:Number(els.cupSize.value)/100,
+    yShift:Number(els.cupY.value)+(finish==='silver'?-2:(finish==='gold'?3:2)),weight:REFERENCE_GLYPH.weight,italic:REFERENCE_GLYPH.italic,xScale:REFERENCE_GLYPH.xScale,yScale:REFERENCE_GLYPH.yScale,lineGap:-0.03,
+    hiDx:REFERENCE_GLYPH.hiDx,hiDy:REFERENCE_GLYPH.hiDy,shadowDx:0.98,shadowDy:0.98,strokeW:0.58
+  });
+  if (els.showGuides.checked) drawGuides(img, conf);
+  els.infoLabel.textContent = `Pre-2026 cup · ${finish} · full-SANS engraved lettering`;
+  els.infoSize.textContent = `${img.width} × ${img.height} px`;
+}
+function drawCrystal() {
+  const finish = els.finish.value, img = images[`crystal_${finish}`], conf = CONFIGS.crystal[finish];
+  ctx.canvas.width = img.width; ctx.canvas.height = img.height; ctx.clearRect(0,0,img.width,img.height); ctx.drawImage(img,0,0);
+  const style = trophyMedalStyle(finish);
+
+  // Same font/style language as the approved medals: full-SANS engraved italic, weight 400,
+  // light upper-left highlight and lower-right engraved shadow.
+  drawSimpleEngravedText(splitLines(els.crystalTop.value), normBox(conf.top,img), style, {
+    fontFamily:REFERENCE_GLYPH.fontFamily,maxPx:82,minPx:18,scale:Number(els.crystalTopSize.value)/100,
+    yShift:Number(els.crystalTopY.value),weight:REFERENCE_GLYPH.weight,italic:REFERENCE_GLYPH.italic,xScale:REFERENCE_GLYPH.xScale,yScale:REFERENCE_GLYPH.yScale,lineGap:-0.05,
+    hiDx:-0.82,hiDy:-0.82,shadowDx:1.05,shadowDy:1.05,strokeW:0.62
+  });
+  drawSimpleEngravedText(splitLines(els.crystalBottom.value), normBox(conf.bottom,img), style, {
+    fontFamily:REFERENCE_GLYPH.fontFamily,maxPx:38,minPx:12,scale:Number(els.crystalBottomSize.value)/100,
+    yShift:Number(els.crystalBottomY.value),weight:REFERENCE_GLYPH.weight,italic:REFERENCE_GLYPH.italic,xScale:REFERENCE_GLYPH.xScale,yScale:REFERENCE_GLYPH.yScale,lineGap:-0.04,
+    hiDx:REFERENCE_GLYPH.hiDx,hiDy:REFERENCE_GLYPH.hiDy,shadowDx:0.95,shadowDy:0.95,strokeW:0.56
+  });
+  if (els.showGuides.checked) drawGuides(img, conf);
+  els.infoLabel.textContent = `2026 crystal trophy · ${finish} · full-SANS engraved lettering`;
+  els.infoSize.textContent = `${img.width} × ${img.height} px`;
+}
+function render() { updateSliderLabels(); const t=els.awardType.value; if (t==='medal') drawMedal(); else if (t==='cup') drawCup(); else drawCrystal(); }
+function loadSample() { const t=els.awardType.value, f=els.finish.value, s=SAMPLE_TEXTS[t][f]; if (t==='medal') {els.upperText.value=s.upper; els.middleText.value=s.middle; els.lowerText.value=s.lower;} else if (t==='cup') {els.cupPlaque.value=s.plaque;} else {els.crystalTop.value=s.top; els.crystalBottom.value=s.bottom;} render(); }
+function clearTexts() { [els.upperText,els.middleText,els.lowerText,els.cupPlaque,els.crystalTop,els.crystalBottom].forEach(el=>el.value=''); render(); }
+function resetSliders() { [['medalUpperSize',100],['medalUpperY',0],['medalMiddleSize',100],['medalMiddleY',0],['medalLowerSize',100],['medalLowerY',0],['cupSize',100],['cupY',0],['crystalTopSize',100],['crystalTopY',0],['crystalBottomSize',100],['crystalBottomY',0]].forEach(([id,val])=>els[id].value=val); render(); }
+function downloadPNG() { els.canvas.toBlob(blob => { if(window.parent!==window){window.parent.postMessage({type:'p2k-trophy-engraving',name:`p2k-1wl-${els.awardType.value}-${els.finish.value}.png`,blob},location.origin);return;} const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`p2k-1wl-${els.awardType.value}-${els.finish.value}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),0);},'image/png'); }
+
+async function loadImages() {
+  const keys = Object.keys(ASSETS);
+  await Promise.all(keys.map(key => new Promise((resolve, reject) => {
+    const im = new Image(); im.onload = () => { images[key] = im; resolve(); }; im.onerror = reject; im.src = ASSETS[key];
+  })));
+  updateVisibleControls(); loadSample();
+}
+
+[els.awardType, els.finish, els.showGuides].forEach(el => el.addEventListener('change', () => { updateVisibleControls(); if (el===els.awardType || el===els.finish) loadSample(); else render(); }));
+[els.upperText,els.middleText,els.lowerText,els.cupPlaque,els.crystalTop,els.crystalBottom,
+ els.medalUpperSize,els.medalUpperY,els.medalMiddleSize,els.medalMiddleY,els.medalLowerSize,els.medalLowerY,
+ els.cupSize,els.cupY,els.crystalTopSize,els.crystalTopY,els.crystalBottomSize,els.crystalBottomY].forEach(el=>el.addEventListener('input', render));
+els.sampleBtn.addEventListener('click', loadSample);
+els.clearBtn.addEventListener('click', clearTexts);
+els.resetBtn.addEventListener('click', resetSliders);
+els.downloadBtn.addEventListener('click', downloadPNG);
+document.querySelectorAll('[data-bg]').forEach(btn => btn.addEventListener('click', () => setBg(btn.dataset.bg)));
+loadImages().catch(err => { els.infoLabel.textContent = 'Load failed'; els.infoSize.textContent = String(err); console.error(err); });
+</script>
+</body>
+</html>

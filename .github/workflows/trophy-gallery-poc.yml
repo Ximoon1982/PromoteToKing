@@ -1,4 +1,4 @@
-name: Trophy Gallery POC r4 qualification
+name: Trophy Gallery POC r5 qualification
 
 on:
   push:
@@ -27,12 +27,19 @@ jobs:
         run: |
           node --check assets/js/admin/tool-registry.js
           node --check assets/js/admin/trophy-gallery-poc.js
+          node --check assets/js/admin/admin-shell.js
+          node --check assets/js/pages/dashboard-v2.js
+      - name: PHP syntax
+        run: |
+          php -l server/trophy-gallery/src/TrophyGalleryStore.php
+          php -l server/trophy-gallery/public/api.php
+          php -l server/trophy-gallery/public/media.php
       - name: Installer shell syntax
         run: |
           bash -n tools/poc/PromoteToKing_TrophyGallery_POC_2.11x.run
           bash -n tools/poc/install-trophy-gallery-poc.sh
       - name: Trophy Gallery POC static contract
-        run: python -m pytest -q tests/test_trophy_gallery_poc.py
+        run: python -m pytest -q tests/test_trophy_gallery_poc.py tests/test_trophy_gallery_r5.py
       - name: Trophy Gallery POC browser runtime
         run: python tests/browser_gate_trophy_gallery_poc.py
       - name: Trophy Gallery installed-overlay browser runtime
@@ -59,6 +66,25 @@ jobs:
           allowed = {
               'assets/js/admin/tool-registry.js',
               'assets/js/admin/trophy-gallery-poc.js',
+              'assets/js/admin/admin-shell.js',
+              'assets/js/pages/dashboard-v2.js',
+              'assets/trophy-gallery/engraving/P2KFullSans.ttf',
+              'assets/trophy-gallery/engraving/medal_gold.png',
+              'assets/trophy-gallery/engraving/medal_silver.png',
+              'assets/trophy-gallery/engraving/medal_bronze.png',
+              'assets/trophy-gallery/engraving/cup_gold.png',
+              'assets/trophy-gallery/engraving/cup_silver.png',
+              'assets/trophy-gallery/engraving/cup_bronze.png',
+              'assets/trophy-gallery/engraving/crystal_gold.png',
+              'assets/trophy-gallery/engraving/crystal_silver.png',
+              'assets/trophy-gallery/engraving/crystal_bronze.png',
+              'assets/trophy-gallery/engraving/editor.html',
+              'server/trophy-gallery/src/TrophyGalleryStore.php',
+              'server/trophy-gallery/public/api.php',
+              'server/trophy-gallery/public/media.php',
+              'trophies/index.html',
+              'tools/poc/engraving/README.md',
+              'tests/test_trophy_gallery_r5.py',
               'tests/browser_gate_trophy_gallery_poc.py',
               'tests/browser_gate_trophy_gallery_overlay.py',
               'tests/test_trophy_gallery_poc.py',
