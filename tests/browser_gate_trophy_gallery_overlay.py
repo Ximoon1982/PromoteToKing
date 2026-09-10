@@ -185,7 +185,7 @@ def main() -> None:
                 assert page.locator("#adminShellNativeDetailHost [data-unlink='987']").count()==1
 
                 FixtureHandler.authenticated=False
-                public_context=browser.new_context();public_page=public_context.new_page();public_errors=[];public_page.on("pageerror",lambda error:public_errors.append(str(error)))
+                public_context=browser.new_context(bypass_csp=True);public_page=public_context.new_page();public_errors=[];public_page.on("pageerror",lambda error:public_errors.append(str(error)))
                 public_page.goto(f"{origin}/ui-v2.html?ui=v2&page=administration&adminCategory=team&trophy=1",wait_until="domcontentloaded")
                 public_page.wait_for_function("window.P2K_ADMIN_MODE === false",timeout=15000)
                 compatibility_denied=public_page.locator("#adminDashboardHost:not([hidden])").count()==0 and public_page.locator("#dashboardAdministrationTab:not([hidden])").count()==0
