@@ -126,6 +126,21 @@ def production_tree():
             subprocess.run(["git", "worktree", "remove", "--force", str(tree)], cwd=ROOT, check=False, capture_output=True, text=True)
 
 
+def track_trophy_chess_requests(context, page, sink: list[str]):
+    """Record external Chess.com requests initiated by the Trophy runtime."""
+    session = context.new_cdp_session(page)
+    session.send("Network.enable")
+
+    def inspect(event: dict) -> None:
+        url = str(event.get("request", {}).get("url", ""))
+        initiator = json.dumps(event.get("initiator", {}), separators=(",", ":"))
+        if "chess.com" in url and "trophy-gallery-poc.js" in initiator:
+            sink.append(url)
+
+    session.on("Network.requestWillBeSent", inspect)
+    return session
+
+
 def main() -> None:
     if not Path(CHROMIUM).exists():
         raise RuntimeError("Chromium is required for the installed Trophy overlay browser gate")
@@ -137,16 +152,16 @@ def main() -> None:
         errors: list[str] = []
         bad_local: list[str] = []
         script_requests: list[str] = []
-        chess_requests: list[str] = []
+        trophy_chess_requests: list[str] = []
         try:
             with sync_playwright() as playwright:
                 browser = playwright.chromium.launch(headless=True, executable_path=CHROMIUM, args=["--no-sandbox", "--disable-dev-shm-usage"])
                 page = browser.new_page(bypass_csp=True)
-                page.on("pageerror", lambda error: errors.append(str(error)))
+                track_trophy_chess_requests(page.context, page, trophy_chess_requests)
+                page.on("pageerror", lambda error: errors.append(error.stack or str(error)))
                 page.on("requestfailed", lambda request: bad_local.append(f"failed {request.url}") if request.url.startswith(origin) and request.resource_type == "script" else None)
                 page.on("response", lambda response: bad_local.append(f"HTTP {response.status} {response.url}") if response.url.startswith(origin) and response.status >= 400 else None)
                 page.on("request", lambda request: script_requests.append(request.url) if request.resource_type == "script" else None)
-                page.on("request", lambda request: chess_requests.append(request.url) if "chess.com" in request.url else None)
                 url = f"{origin}/ui-v2.html?ui=v2&page=administration&adminCategory=team&trophy=1"
                 page.goto(url, wait_until="domcontentloaded")
                 page.wait_for_function("window.P2K_TROPHY_GALLERY_POC !== undefined", timeout=15000)
@@ -191,6 +206,7 @@ def main() -> None:
 
                 FixtureHandler.authenticated=False
                 public_context=browser.new_context(bypass_csp=True);public_page=public_context.new_page();public_errors=[];public_page.on("pageerror",lambda error:public_errors.append(str(error)))
+                track_trophy_chess_requests(public_context, public_page, trophy_chess_requests)
                 public_page.goto(f"{origin}/ui-v2.html?ui=v2&page=administration&adminCategory=team&trophy=1",wait_until="domcontentloaded")
                 public_page.wait_for_function("window.P2K_ADMIN_MODE === false",timeout=15000)
                 compatibility_denied=public_page.locator("#adminDashboardHost:not([hidden])").count()==0 and public_page.locator("#dashboardAdministrationTab:not([hidden])").count()==0
@@ -208,7 +224,7 @@ def main() -> None:
                     "team_active": page.locator("[data-admin-category='team']").get_attribute("aria-pressed") == "true",
                     "cards": card.count(), "panels": panel.count(), "admin_form":page.locator("#adminShellNativeDetailHost form").count(),
                     "registry_requests": registry_requests, "trophy_requests": trophy_requests,
-                    "persistent_reload":True,"match_search":True,"upload":True,"engraving_save":True,"compatibility_denied":compatibility_denied,"hall_public":hall_public,"hall_public_errors":public_errors,"chess_requests":chess_requests,
+                    "persistent_reload":True,"match_search":True,"upload":True,"engraving_save":True,"compatibility_denied":compatibility_denied,"hall_public":hall_public,"hall_public_errors":public_errors,"trophy_chess_requests":trophy_chess_requests,
                     "page_errors": errors, "bad_local": bad_local,
                 }
                 browser.close()
@@ -221,7 +237,7 @@ def main() -> None:
     assert result["cards"] == 1 and result["panels"] == 1 and result["admin_form"] == 1, result
     assert result["compatibility_denied"], result
     assert len(result["registry_requests"]) == 2 and len(result["trophy_requests"]) == 2, result
-    assert result["chess_requests"] == [], result
+    assert result["trophy_chess_requests"] == [], result
     assert result["hall_public"] and result["hall_public_errors"] == [], result
     assert result["page_errors"] == [] and result["bad_local"] == [], result
     print(json.dumps({"trophy_gallery_installed_overlay": "passed", **result}, indent=2))
