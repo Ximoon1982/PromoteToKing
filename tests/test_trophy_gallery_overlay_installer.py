@@ -7,8 +7,8 @@ ROOT=Path(__file__).resolve().parents[1]
 INSTALLER=ROOT/"tools/poc/PromoteToKing_TrophyGallery_POC_2.11x.run"
 BASE="6706e619d310e2c74fe2734cfcef8dd2f83d70d1"
 R4="4938f5cc8ed111702f867eee9e941e4c896e6163"
-R5="2eb78908eea47276be705ea91b900f5bdad06ee3"
-KEY="poc-2eb78908eea4-20260909-r5"
+R5="b7d26acf5f6dd46d2feddfadeb21a13db8a0bbe9"
+KEY="poc-b7d26acf5f6d-20260910-r5"
 
 def git_bytes(ref,path): return subprocess.run(["git","show",f"{ref}:{path}"],cwd=ROOT,check=True,capture_output=True).stdout
 def tree(tmp):

@@ -8,7 +8,7 @@ def text(path: str) -> str:
 def test_trophy_gallery_is_loaded_through_normal_registry():
     registry = text("assets/js/admin/tool-registry.js")
     runtime = text("assets/js/admin/trophy-gallery-poc.js")
-    assert "trophy-gallery-poc.js?v=poc-2eb78908eea4-20260909-r5" in registry
+    assert "trophy-gallery-poc.js?v=poc-b7d26acf5f6d-20260910-r5" in registry
     assert "P2K_TROPHY_GALLERY_POC" in runtime
     assert "mountAdmin" in runtime and "mountPublic" in runtime
 
@@ -21,8 +21,10 @@ def test_trophy_gallery_uses_standard_team_native_detail():
 
 def test_deep_link_maps_to_existing_authorized_administration_route():
     navigation = text("assets/js/pages/dashboard-v2.js")
-    assert 'params.get("trophy") === "1" ? "trophies"' in navigation
-    assert 'params.get("trophy") === "1" ? "gallery"' in navigation
+    assert 'const trophyCompatibilityRoute = params.get("trophy") === "1";' in navigation
+    assert 'adminDetail: trophyCompatibilityRoute ? "trophies"' in navigation
+    assert 'const requestedView = trophyCompatibilityRoute ||' in navigation
+    assert 'adminDetailTab: trophyCompatibilityRoute ? "gallery"' in navigation
     assert "dashboardAdministrationTab" not in text("assets/js/admin/trophy-gallery-poc.js")
 
 def test_server_persistence_and_security_contracts_are_present():

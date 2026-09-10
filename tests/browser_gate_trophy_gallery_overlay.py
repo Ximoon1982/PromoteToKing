@@ -23,8 +23,8 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "6706e619d310e2c74fe2734cfcef8dd2f83d70d1"
 BUILD_ID = "trophy-installed-overlay-e2e"
-RUNTIME = "2eb78908eea47276be705ea91b900f5bdad06ee3"
-CACHE = "poc-2eb78908eea4-20260909-r5"
+RUNTIME = "b7d26acf5f6dd46d2feddfadeb21a13db8a0bbe9"
+CACHE = "poc-b7d26acf5f6d-20260910-r5"
 CHROMIUM = os.environ.get("P2K_CHROMIUM") or shutil.which("chromium") or "/usr/bin/chromium"
 
 
@@ -149,6 +149,7 @@ def main() -> None:
                 assert card.count() == 1 and panel.count() == 1
                 page.locator("#adminShellDetailBack").click()
                 page.wait_for_selector("[data-admin-shell-panel='team']:not([hidden]) [data-admin-shell-card='trophies']")
+                page.wait_for_function("!new URL(location.href).searchParams.has('trophy')")
                 card.locator("a").first.click()
                 page.wait_for_selector("#adminShellNativeDetailHost[data-native-detail='trophy-gallery']:not([hidden]) form")
                 assert card.count() == 1 and panel.count() == 1
@@ -180,6 +181,9 @@ def main() -> None:
 
                 FixtureHandler.authenticated=False
                 public_context=browser.new_context();public_page=public_context.new_page();public_errors=[];public_page.on("pageerror",lambda error:public_errors.append(str(error)))
+                public_page.goto(f"{origin}/ui-v2.html?ui=v2&page=administration&adminCategory=team&trophy=1",wait_until="domcontentloaded")
+                public_page.wait_for_function("window.P2K_ADMIN_MODE === false",timeout=15000)
+                compatibility_denied=public_page.locator("#adminDashboardHost:not([hidden])").count()==0 and public_page.locator("#dashboardAdministrationTab:not([hidden])").count()==0
                 public_page.goto(f"{origin}/ui-v2.html?ui=v2&page=hall&hall=trophies",wait_until="domcontentloaded")
                 public_page.wait_for_selector("#p2kTrophyHallTab",timeout=15000);public_page.click("#p2kTrophyHallTab")
                 public_page.wait_for_selector("#p2kTrophyHallPanel:not([hidden]) .p2k-trophy-card",timeout=15000)
@@ -194,7 +198,7 @@ def main() -> None:
                     "team_active": page.locator("[data-admin-category='team']").get_attribute("aria-pressed") == "true",
                     "cards": card.count(), "panels": panel.count(), "admin_form":page.locator("#adminShellNativeDetailHost form").count(),
                     "registry_requests": registry_requests, "trophy_requests": trophy_requests,
-                    "persistent_reload":True,"match_search":True,"upload":True,"engraving_save":True,"hall_public":hall_public,"hall_public_errors":public_errors,"chess_requests":chess_requests,
+                    "persistent_reload":True,"match_search":True,"upload":True,"engraving_save":True,"compatibility_denied":compatibility_denied,"hall_public":hall_public,"hall_public_errors":public_errors,"chess_requests":chess_requests,
                     "page_errors": errors, "bad_local": bad_local,
                 }
                 browser.close()
@@ -205,6 +209,7 @@ def main() -> None:
 
     assert result["runtime_defined"] and result["admin_active"] and result["team_active"], result
     assert result["cards"] == 1 and result["panels"] == 1 and result["admin_form"] == 1, result
+    assert result["compatibility_denied"], result
     assert len(result["registry_requests"]) == 2 and len(result["trophy_requests"]) == 2, result
     assert result["chess_requests"] == [], result
     assert result["hall_public"] and result["hall_public_errors"] == [], result

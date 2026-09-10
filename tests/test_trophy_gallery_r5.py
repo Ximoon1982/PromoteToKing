@@ -29,12 +29,16 @@ def test_runtime_contract_has_persistence_filters_safe_markdown_and_no_old_model
     assert "javascript:" not in js and "safeUrl" in js and "target=\"_blank\" rel=\"noopener noreferrer\"" in js
 
 def test_admin_shell_uses_canonical_team_card_and_deep_link():
-    shell=text("assets/js/admin/admin-shell.js");navigation=text("assets/js/pages/dashboard-v2.js")
+    shell=text("assets/js/admin/admin-shell.js");navigation=text("assets/js/pages/dashboard-v2.js");js=text("assets/js/admin/trophy-gallery-poc.js")
     assert 'trophies: { title:"Trophy Gallery"' in shell
     assert 'nativeKey:"trophy-gallery"' in shell
+    assert 'const trophyCompatibilityRoute = params.get("trophy") === "1";' in text("assets/js/pages/dashboard-v2.js")
+    assert 'const requestedView = trophyCompatibilityRoute ||' in text("assets/js/pages/dashboard-v2.js")
+    assert 'window.addEventListener("p2k-admin-shell-route"' in js
+    assert 'mountActiveAdmin()' in js
     assert 'adminShellCard({key:"trophies",category:"team"' in shell
     assert 'window.P2K_TROPHY_GALLERY_POC?.mountAdmin?.(nativeHost)' in shell
-    assert 'params.get("trophy") === "1" ? "trophies"' in navigation
+    assert 'adminDetail: trophyCompatibilityRoute ? "trophies"' in navigation
 
 def test_backend_contract_is_bounded_owned_atomic_and_parameterized():
     store=text("server/trophy-gallery/src/TrophyGalleryStore.php");api=text("server/trophy-gallery/public/api.php")
