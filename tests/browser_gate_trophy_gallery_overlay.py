@@ -6,6 +6,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from io import BytesIO
 import json
 import os
 from pathlib import Path
@@ -26,6 +27,10 @@ BUILD_ID = "trophy-installed-overlay-e2e"
 RUNTIME = "b7d26acf5f6dd46d2feddfadeb21a13db8a0bbe9"
 CACHE = "poc-b7d26acf5f6d-20260910-r5"
 CHROMIUM = os.environ.get("P2K_CHROMIUM") or shutil.which("chromium") or "/usr/bin/chromium"
+
+MEDIA_BUFFER = BytesIO()
+Image.new("RGB", (8, 8), (180, 100, 20)).save(MEDIA_BUFFER, format="PNG")
+MEDIA_PNG = MEDIA_BUFFER.getvalue()
 
 
 class FixtureHandler(SimpleHTTPRequestHandler):
@@ -64,7 +69,7 @@ class FixtureHandler(SimpleHTTPRequestHandler):
             body=json.dumps(payload).encode()
             self.send_response(200);self.send_header("Content-Type","application/json");self.send_header("Content-Length",str(len(body)));self.end_headers();self.wfile.write(body);return True
         if parsed.path.endswith("/server/trophy-gallery/public/media.php"):
-            body=(b"\x89PNG\r\n\x1a\n"+b"fixture")
+            body=MEDIA_PNG
             self.send_response(200);self.send_header("Content-Type","image/png");self.send_header("Content-Length",str(len(body)));self.end_headers();self.wfile.write(body);return True
         if parsed.path.endswith(".php") or "/api/" in parsed.path:
             body = b'{"ok":true,"rows":[],"items":[],"matches":[],"members":[]}'
