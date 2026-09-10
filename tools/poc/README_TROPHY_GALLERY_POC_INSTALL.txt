@@ -5,10 +5,10 @@ Purpose
 -------
 Installs the persistent Trophy Gallery r5 feature over an existing Promote to
 King 2.11.x tree. The immutable payload source is commit:
-b7d26acf5f6dd46d2feddfadeb21a13db8a0bbe9
+e883881c083e1490335fff373bdeb8081ecc72cb
 
 The unique r5 browser cache key is:
-poc-b7d26acf5f6d-20260910-r5
+poc-e883881c083e-20260910-r5
 
 Install or upgrade
 ------------------

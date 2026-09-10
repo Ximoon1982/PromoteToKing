@@ -24,8 +24,8 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "6706e619d310e2c74fe2734cfcef8dd2f83d70d1"
 BUILD_ID = "trophy-installed-overlay-e2e"
-RUNTIME = "b7d26acf5f6dd46d2feddfadeb21a13db8a0bbe9"
-CACHE = "poc-b7d26acf5f6d-20260910-r5"
+RUNTIME = "e883881c083e1490335fff373bdeb8081ecc72cb"
+CACHE = "poc-e883881c083e-20260910-r5"
 CHROMIUM = os.environ.get("P2K_CHROMIUM") or shutil.which("chromium") or "/usr/bin/chromium"
 
 MEDIA_BUFFER = BytesIO()
@@ -141,6 +141,12 @@ def track_trophy_chess_requests(context, page, sink: list[str]):
     return session
 
 
+def track_failed_local_script(request, origin: str, sink: list[str]) -> None:
+    """Reject real local script failures, excluding Chromium navigation cancellation."""
+    if request.url.startswith(origin) and request.resource_type == "script" and request.failure != "net::ERR_ABORTED":
+        sink.append(f"failed {request.url}: {request.failure}")
+
+
 def main() -> None:
     if not Path(CHROMIUM).exists():
         raise RuntimeError("Chromium is required for the installed Trophy overlay browser gate")
@@ -159,7 +165,7 @@ def main() -> None:
                 page = browser.new_page(bypass_csp=True)
                 track_trophy_chess_requests(page.context, page, trophy_chess_requests)
                 page.on("pageerror", lambda error: errors.append(error.stack or str(error)))
-                page.on("requestfailed", lambda request: bad_local.append(f"failed {request.url}") if request.url.startswith(origin) and request.resource_type == "script" else None)
+                page.on("requestfailed", lambda request: track_failed_local_script(request, origin, bad_local))
                 page.on("response", lambda response: bad_local.append(f"HTTP {response.status} {response.url}") if response.url.startswith(origin) and response.status >= 400 else None)
                 page.on("request", lambda request: script_requests.append(request.url) if request.resource_type == "script" else None)
                 url = f"{origin}/ui-v2.html?ui=v2&page=administration&adminCategory=team&trophy=1"

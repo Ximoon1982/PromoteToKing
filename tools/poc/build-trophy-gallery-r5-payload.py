@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
 INSTALLER=ROOT/"tools/poc/PromoteToKing_TrophyGallery_POC_2.11x.run"
-RUNTIME="b7d26acf5f6dd46d2feddfadeb21a13db8a0bbe9"
+RUNTIME="e883881c083e1490335fff373bdeb8081ecc72cb"
 BASE="6706e619d310e2c74fe2734cfcef8dd2f83d70d1"
 MARKER=b"__P2K_TROPHY_R5_PAYLOAD_BELOW__\n"
 PAYLOAD=['assets/js/admin/admin-shell.js','assets/js/admin/trophy-gallery-poc.js','assets/js/pages/dashboard-v2.js','assets/trophy-gallery/engraving/P2KFullSans.ttf','assets/trophy-gallery/engraving/editor.html',*[f'assets/trophy-gallery/engraving/{kind}_{finish}.png' for kind in ('medal','cup','crystal') for finish in ('gold','silver','bronze')],'server/trophy-gallery/src/TrophyGalleryStore.php','server/trophy-gallery/public/api.php','server/trophy-gallery/public/media.php','server/trophy-gallery/resources/catalog.seed.json','trophies/index.html','tools/poc/engraving/README.md']

@@ -70,7 +70,7 @@ if (window.P2K_TROPHY_GALLERY_POC) { window.P2K_TROPHY_GALLERY_POC.mount?.(conte
 if (document.getElementById("p2kTrophyGalleryPocScript")) return;
 const script = document.createElement("script");
 script.id = "p2kTrophyGalleryPocScript";
-script.src = "assets/js/admin/trophy-gallery-poc.js?v=poc-b7d26acf5f6d-20260910-r5";
+script.src = "assets/js/admin/trophy-gallery-poc.js?v=poc-e883881c083e-20260910-r5";
 script.defer = true;
 script.onload = () => window.P2K_TROPHY_GALLERY_POC?.mount?.(context);
 document.head.appendChild(script);
