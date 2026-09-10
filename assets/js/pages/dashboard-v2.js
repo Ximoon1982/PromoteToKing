@@ -19,7 +19,8 @@ page: Math.max(1, Number(params.get(`${prefix}Page`)) || defaults.page || 1)
 const navigationFromURL = () => {
 const params = new URLSearchParams(window.location.search);
 const requestedPage = String(params.get("page") || "").toLowerCase();
-const requestedView = String(params.get("view") || "").toLowerCase() === "admin" ? "admin" : "public";
+const trophyCompatibilityRoute = params.get("trophy") === "1";
+const requestedView = trophyCompatibilityRoute || String(params.get("view") || "").toLowerCase() === "admin" ? "admin" : "public";
 const requestedInsights = String(params.get("insights") || "").toLowerCase();
 const requestedHall = String(params.get("hall") || "").toLowerCase();
 let publicPage = ["dashboard", "insights", "hall", "administration"].includes(requestedPage) ? requestedPage : "dashboard";
@@ -35,8 +36,8 @@ adminContext: String(params.get("adminContext") || ""),
 insightsSubtab,
 hallSubtab,
 category: ["competitions", "members", "team", "opponents", "maintenance", "misc"].includes(String(params.get("adminCategory") || "")) ? String(params.get("adminCategory")) : "competitions",
-adminDetail: params.get("trophy") === "1" ? "trophies" : String(params.get("adminDetail") || "").toLowerCase(),
-adminDetailTab: params.get("trophy") === "1" ? "gallery" : String(params.get("adminDetailTab") || "").toLowerCase(),
+adminDetail: trophyCompatibilityRoute ? "trophies" : String(params.get("adminDetail") || "").toLowerCase(),
+adminDetailTab: trophyCompatibilityRoute ? "gallery" : String(params.get("adminDetailTab") || "").toLowerCase(),
 adminToolTab: String(params.get("adminToolTab") || "").toLowerCase(),
 hallSearch: String(params.get("hallSearch") || ""),
 hallRank: String(params.get("hallRank") || ""),
@@ -371,6 +372,7 @@ else url.searchParams.delete(key);
 }
 function writeNavigationState({ replace = false } = {}) {
 const url = new URL(window.location.href);
+url.searchParams.delete("trophy");
 if (state.view === "admin") url.searchParams.set("view", "admin");
 else url.searchParams.delete("view");
 url.searchParams.set("page", state.publicPage || "dashboard");
