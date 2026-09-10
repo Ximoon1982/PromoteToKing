@@ -59,8 +59,13 @@ class FixtureHandler(SimpleHTTPRequestHandler):
             self.wfile.write(body)
             return True
         if parsed.path.endswith("/server/team-points/public/session.php"):
-            body=b'{"ok":true,"username":"ximoon","csrf":"fixture-admin-csrf"}'
-            self.send_response(200);self.send_header("Content-Type","application/json");self.send_header("Content-Length",str(len(body)));self.end_headers();self.wfile.write(body);return True
+            if type(self).authenticated:
+                body=b'{"ok":true,"username":"ximoon","csrf":"fixture-admin-csrf"}'
+                status=200
+            else:
+                body=b'{"ok":false,"error":{"code":"OAUTH_SESSION_REQUIRED","message":"Authentication required"}}'
+                status=401
+            self.send_response(status);self.send_header("Content-Type","application/json");self.send_header("Content-Length",str(len(body)));self.end_headers();self.wfile.write(body);return True
         if parsed.path.endswith("/server/trophy-gallery/public/api.php"):
             action=parse_qs(parsed.query).get("action",["list"])[0]
             if action=="match-search": payload={"ok":True,"matches":[{"match_id":987,"match_name":"Promote to King vs Golden Phoenix","opponent_name":"Golden Phoenix","end_time":"2026-08-01"}]}
