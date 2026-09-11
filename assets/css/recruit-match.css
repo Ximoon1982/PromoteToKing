@@ -86,6 +86,14 @@
 }
 #p2kUpcomingAnalyzer .p2k-current-games-unchecked { color: #8f8880; }
 #p2kUpcomingAnalyzer .p2k-partial-note { margin-top: 10px; color: #ffd078; font-size: 12px; font-weight: 700; }
+#p2kUpcomingAnalyzer .p2k-progress-details { margin-top: 8px; color: #d7cec4; font-size: 12px; }
+#p2kUpcomingAnalyzer .p2k-funnel { display: flex; flex-wrap: wrap; gap: 5px 8px; align-items: center; margin-top: 9px; color: #aaa29a; font-size: 12px; }
+#p2kUpcomingAnalyzer .p2k-funnel strong { color: #ffd078; }
+#p2kUpcomingAnalyzer .p2k-results-tools { display: flex; justify-content: space-between; gap: 12px; align-items: end; margin-top: 12px; }
+#p2kUpcomingAnalyzer .p2k-results-tools label { display: grid; gap: 4px; color: #d7cec4; font-size: 12px; font-weight: 800; }
+#p2kUpcomingAnalyzer .p2k-results-tools input { min-width: 220px; padding: 9px 10px; border: 1px solid rgba(246,183,60,.36); border-radius: 7px; background: #11100f; color: #f2eee8; }
+#p2kUpcomingAnalyzer .p2k-recruit-table th[data-sort] { cursor: pointer; }
+#p2kUpcomingAnalyzer .p2k-recruit-table th[data-sort]:hover { color: #fff1c8; }
 body.p2k-recruit-embedded { padding: 0; }
 body.p2k-recruit-embedded #p2kUpcomingAnalyzer { width: 100%; max-width: none; border: 0; border-radius: 0; box-shadow: none; }
 body.p2k-recruit-embedded.p2k-recruit-parameterized #p2kMatchForm { display: none; }
@@ -99,6 +107,8 @@ body.p2k-recruit-embedded.p2k-recruit-parameterized #p2kMatchForm { display: non
   #p2kUpcomingAnalyzer .p2k-result-cards,
   #p2kUpcomingAnalyzer .p2k-rejection-grid { grid-template-columns: 1fr; }
   #p2kUpcomingAnalyzer .p2k-reference-row { flex-direction: column; }
+  #p2kUpcomingAnalyzer .p2k-results-tools { align-items: stretch; flex-direction: column; }
+  #p2kUpcomingAnalyzer .p2k-results-tools input { width: 100%; min-width: 0; }
   #p2kUpcomingAnalyzer .p2k-scan-actions .p2k-main-button,
   #p2kUpcomingAnalyzer .p2k-reference-row .p2k-main-button { width: 100%; }
 }

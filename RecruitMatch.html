@@ -24,7 +24,7 @@
 </div>
 </div>
 <form class="p2k-reference-form" id="p2kMatchForm">
-<label class="p2k-reference-label" for="p2kMatchReference">Chess.com team match ID or URL</label>
+<label class="p2k-reference-label" for="p2kMatchReference">Chess.com team match URL, slug or numeric ID</label>
 <div class="p2k-reference-row">
 <input autocomplete="off" class="p2k-reference-input" id="p2kMatchReference" inputmode="url" placeholder="Example: 1234567 or https://www.chess.com/club/matches/club-name/1234567" spellcheck="false" type="text"/>
 <button class="p2k-main-button" id="p2kLoadButton" type="submit">Load match</button>
@@ -39,12 +39,16 @@
 <div class="p2k-choices" id="p2kTeamChoices"></div>
 </fieldset>
 <form id="p2kRecruitmentForm">
-<div class="p2k-filter-title">Stored-rating recruitment analysis</div>
+<div class="p2k-filter-title">Eligibility filters</div>
 <div class="p2k-recruit-method">
-<strong>Top-player strategy.</strong> The assistant uses the match's Classical or Chess960 rating category automatically. It reads current P2K members from the stored rating snapshot, excludes already registered and unrated members, applies the match rating range and the opponent's lowest registered rating as a floor, excludes members of the opponent club, then tests the strongest remaining players first until a significant lineup advantage is reached.
+<strong>DB first, live verification second.</strong> The assistant selects the correct Daily rating category from the match, filters the current P2K roster using stored ratings, removes registered and opposing-club members, then verifies only the reduced population against Chess.com.
+</div>
+<div class="p2k-recruit-grid">
+<label class="p2k-recruit-field">Online within (days)<input class="p2k-number-input" id="p2kOnlineDays" min="0.04" max="365" step="0.04" type="number" value="1"/></label>
+<label class="p2k-recruit-field">Maximum timeout rate (%)<input class="p2k-number-input" id="p2kTimeoutRate" min="0" max="100" step="0.1" type="number" value="5"/></label>
 </div>
 <div class="p2k-scan-actions">
-<button class="p2k-main-button" id="p2kScanButton" type="submit">Analyze recruitment need</button>
+<button class="p2k-main-button" id="p2kScanButton" type="submit">Find eligible players</button>
 </div>
 </form>
 </section>
@@ -58,10 +62,12 @@
 <div aria-hidden="true" class="p2k-progress-track" id="p2kProgressTrack">
 <div class="p2k-progress-bar" id="p2kProgressBar"></div>
 </div>
+<div class="p2k-progress-details" id="p2kProgressDetails" hidden></div>
+<div class="p2k-funnel" id="p2kFunnel" hidden></div>
 </div>
 <div class="p2k-results" id="p2kResults">
 <div class="p2k-empty-prompt">Enter a Chess.com team match number or URL to prepare a recruitment scan.</div>
 </div>
 </div>
-<script src="assets/js/site-config.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/tab-activity.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/api-cache.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/match-priority.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/api-request-semantics.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/api-oauth-context.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/api-transport.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/api-request-coordinator.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/api-client.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/analysis-coordinator.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/pages/recruit-match.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/control-hints.js?v=2.11.5-bf6a828490f57"></script></body>
+<script src="assets/js/site-config.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/tab-activity.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/api-cache.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/match-priority.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/api-request-semantics.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/api-oauth-context.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/api-transport.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/api-request-coordinator.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/api-client.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/shared/analysis-coordinator.js?v=2.11.5-bf6a828490f57"></script><script src="assets/js/pages/recruit-match-v2-core.js?v=2.12.0-dev"></script><script src="assets/js/pages/recruit-match.js?v=2.12.0-dev"></script><script src="assets/js/shared/control-hints.js?v=2.11.5-bf6a828490f57"></script></body>
 </html>
