@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
 CHROMIUM = os.environ.get("P2K_CHROMIUM") or shutil.which("chromium") or shutil.which("google-chrome") or shutil.which("google-chrome-stable") or "/usr/bin/chromium"
-R5310_JS = "r5310-924e1cb5d9a8"
+R5310_JS = "r5310-fd6d89209aa6"
 R5310_PATH = ROOT / "assets/js/admin/trophy-gallery-r5fix3.10.js"
 
 

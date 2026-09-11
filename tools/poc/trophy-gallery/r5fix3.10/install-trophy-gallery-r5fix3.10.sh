@@ -9,7 +9,7 @@ BACKUP="$ROOT/.trophy-r5fix3.10-backup-$STAMP"
 UI="$ROOT/ui-v2.html"; STANDALONE="$ROOT/trophies/index.html"
 JS_DEST="$ROOT/assets/js/admin/trophy-gallery-r5fix3.10.js"
 R538_JS="$ROOT/assets/js/admin/trophy-gallery-r5fix3.8.js"; R538_CSS="$ROOT/assets/trophy-gallery/trophy-gallery-r5fix3.8.css"
-JS_KEY="r5310-924e1cb5d9a8"; JS_SHA="924e1cb5d9a8db8d05eece254fb4726bf77be57f96169d6ddb090cc44c63d306"
+JS_KEY="r5310-fd6d89209aa6"; JS_SHA="fd6d89209aa68e9e1cea3c47487fa8c4eb11fea275f8066ea5cb3075dcc0e8aa"
 R538_JS_SHA="d52193a717125f33359b12ac62dbdb77c35e71bb5c8632eae17e1ad3fff1ef9c"; R538_CSS_SHA="fdcea54d62ba4c16b35d8c8bc1b109f6491200a3ede65f32373aac07712a9e0e"
 cleanup(){ rm -rf "$STAGE"; }; trap cleanup EXIT
 fail(){ echo "ERROR: $*" >&2; exit 1; }; log(){ printf '\n[%s] %s\n' "$1" "$2"; }; need(){ [[ -f "$1" ]] || fail "required file missing: $1"; }

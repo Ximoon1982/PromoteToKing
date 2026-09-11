@@ -26,7 +26,7 @@ VERSION = "2.11.5"
 BUILD_KEY = "2.11.5-bf6a828490f57"
 R538_JS = "r538-d52193a71712"
 R538_CSS = "r538-fdcea54d62ba"
-R5310_JS = "r5310-924e1cb5d9a8"
+R5310_JS = "r5310-fd6d89209aa6"
 CHROMIUM = os.environ.get("P2K_CHROMIUM") or shutil.which("chromium") or "/usr/bin/chromium"
 
 MEDIA_BUFFER = BytesIO()

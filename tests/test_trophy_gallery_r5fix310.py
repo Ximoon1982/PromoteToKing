@@ -115,3 +115,9 @@ def test_r5fix310_incremental_installer_is_idempotent(tmp_path):
     assert second == first
     assert first["assets/js/admin/trophy-gallery-r5fix3.8.js"].startswith("d52193a71712")
     assert first["assets/trophy-gallery/trophy-gallery-r5fix3.8.css"].startswith("fdcea54d62ba")
+
+
+def test_r5fix310_does_not_compete_for_last_head_style():
+    js = PATCH.read_text(encoding="utf-8")
+    assert "head.lastElementChild" not in js
+    assert "style.parentNode !== head" in js

@@ -23,6 +23,8 @@ class Handler(SimpleHTTPRequestHandler):
  def log_message(self,*_):pass
  def do_GET(self):
   parsed=urlparse(self.path)
+  if parsed.path.endswith("/server/trophy-gallery/public/editor-meta.php"):
+   body=json.dumps({"ok":True,"version":1,"records":{}}).encode();self.send_response(200);self.send_header("Content-Type","application/json");self.send_header("Content-Length",str(len(body)));self.end_headers();self.wfile.write(body);return
   if parsed.path.endswith("/server/trophy-gallery/public/api.php"):
    body=json.dumps({"ok":True,"schema_version":2,"revision":4,"records":RECORDS}).encode();self.send_response(200);self.send_header("Content-Type","application/json");self.send_header("Content-Length",str(len(body)));self.end_headers();self.wfile.write(body);return
   if parsed.path.endswith("/server/trophy-gallery/public/media.php"):
@@ -56,11 +58,12 @@ def main():
    page.fill("[data-search]","");page.select_option("[data-league]","OWL");assert page.locator(".p2k-trophy-card").count()==2
    page.select_option("[data-league]","all");page.select_option("[data-year]","2025");assert page.locator(".p2k-trophy-card").count()==1
    page.select_option("[data-year]","all");page.select_option("[data-group]","league");assert page.locator("[data-group-name='OWL']").count()==1
-   page.locator("[data-trophy-id='new'] [data-open]").click();page.wait_for_selector("#p2kTrophyModal:not([hidden])")
-   assert page.locator("#p2kTrophyModal strong").count()==1 and page.locator("#p2kTrophyModal em").count()==1 and page.locator("#p2kTrophyModal li").count()==2
-   assert page.locator("#p2kTrophyModal script").count()==0 and "<script>" in page.locator("#p2kTrophyModal").inner_text()
-   assert page.locator("#p2kTrophyModal .p2k-links a").count()==1
-   page.click("#p2kTrophyModal [data-enlarge]");page.wait_for_selector("#p2kTrophyViewer:not([hidden]) img");page.keyboard.press("Escape");assert page.locator("#p2kTrophyViewer").is_hidden()
+   page.locator("[data-trophy-id='new'] [data-open]").click();page.wait_for_selector("#p2kR538Modal:not([hidden])")
+   modal_text=page.locator("#p2kR538Modal .p2k-r538-lead p").inner_text()
+   assert "**Bold** and *italic*" in modal_text and "- First" in modal_text and "<script>bad()</script>" in modal_text
+   assert page.locator("#p2kR538Modal script").count()==0
+   assert page.locator("#p2kR538Modal .p2k-r538-links a[href='https://example.test/award']").count()==1
+   page.click("#p2kR538Modal .p2k-r538-view-art");page.wait_for_selector("#p2kR538Viewer:not([hidden]) img");page.keyboard.press("Escape");assert page.locator("#p2kR538Viewer").is_hidden()
    assert page.locator("#dashboardAdministrationTab,#hallOfFamePage,[data-admin]").count()==0
    assert page.evaluate("document.cookie")=="" and errors==[] and bad==[] and failed==[]
    result={"http":response.status,"cards":3,"search":True,"league_filter":True,"year_filter":True,"groups":True,"markdown_safe":True,"enlargement":True,"no_chrome":True,"errors":errors,"failed_assets":bad};browser.close()

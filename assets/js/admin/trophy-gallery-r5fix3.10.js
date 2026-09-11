@@ -53,8 +53,10 @@ function ensureStyle() {
     style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = STYLE;
+    head.appendChild(style);
+    return;
   }
-  if (style.parentNode !== head || head.lastElementChild !== style) head.appendChild(style);
+  if (style.parentNode !== head) head.appendChild(style);
 }
 
 function importantStyle(node, values) {
