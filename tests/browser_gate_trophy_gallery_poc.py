@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Fresh unauthenticated standalone Trophy Gallery browser qualification."""
 from __future__ import annotations
-from contextlib import contextmanager
 from functools import partial
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
 import json,os,shutil
@@ -10,7 +9,7 @@ from pathlib import Path
 from threading import Thread
 from urllib.parse import urlparse
 from PIL import Image
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, sync_playwright
 
 ROOT=Path(__file__).resolve().parents[1]
 CHROMIUM=os.environ.get("P2K_CHROMIUM") or shutil.which("chromium") or "/usr/bin/chromium"
@@ -32,13 +31,25 @@ class Handler(SimpleHTTPRequestHandler):
 
 def main():
  if not Path(CHROMIUM).exists():raise RuntimeError("Chromium is required")
- server=ThreadingHTTPServer(("127.0.0.1",0),partial(Handler,directory=str(ROOT)));thread=Thread(target=server.serve_forever,daemon=True);thread.start();origin=f"http://127.0.0.1:{server.server_port}";errors=[];bad=[]
+ server=ThreadingHTTPServer(("127.0.0.1",0),partial(Handler,directory=str(ROOT)));thread=Thread(target=server.serve_forever,daemon=True);thread.start();origin=f"http://127.0.0.1:{server.server_port}";errors=[];bad=[];console=[];requests=[];failed=[]
  try:
   with sync_playwright() as p:
-   browser=p.chromium.launch(headless=True,executable_path=CHROMIUM,args=["--no-sandbox"]);context=browser.new_context();page=context.new_page();page.on("pageerror",lambda e:errors.append(str(e)));page.on("response",lambda r:bad.append((r.status,r.url)) if r.url.startswith(origin) and r.status>=400 else None)
+   browser=p.chromium.launch(headless=True,executable_path=CHROMIUM,args=["--no-sandbox"]);context=browser.new_context();page=context.new_page()
+   page.on("pageerror",lambda e:errors.append(str(e)))
+   page.on("console",lambda m:console.append(f"{m.type}: {m.text}"))
+   page.on("request",lambda r:requests.append(r.url) if r.url.startswith(origin) else None)
+   page.on("requestfailed",lambda r:failed.append((r.url,r.failure)) if r.url.startswith(origin) else None)
+   page.on("response",lambda r:bad.append((r.status,r.url)) if r.url.startswith(origin) and r.status>=400 else None)
    response=page.goto(origin+"/trophies/",wait_until="commit");assert response and response.status==200
-   page.wait_for_selector(".p2k-trophy-card")
-   assert page.locator(".p2k-trophy-card").count()==3
+   try:
+    page.wait_for_selector(".p2k-trophy-card",state="attached",timeout=5000)
+   except PlaywrightTimeoutError:
+    diagnostic=page.evaluate("""() => ({readyState:document.readyState, runtime:!!window.P2K_TROPHY_GALLERY_POC, r538:!!window.__P2K_TROPHY_R5FIX38, r5310:!!window.__P2K_TROPHY_R5FIX3_10, host:document.querySelector('#p2kTrophyStandalone')?.innerHTML||'', scripts:[...document.scripts].map(s=>({src:s.src,defer:s.defer})), styles:[...document.styleSheets].map(s=>s.href||'inline')})""")
+    print(json.dumps({"standalone_readiness":"failed","diagnostic":diagnostic,"page_errors":errors,"console":console,"failed_requests":failed,"bad_responses":bad,"requests":requests},indent=2))
+    raise
+   cards=page.locator(".p2k-trophy-card")
+   assert cards.count()==3
+   assert cards.first.is_visible()
    assert page.locator("[data-group-name='2026'] .p2k-trophy-card").first.get_attribute("data-trophy-id")=="new"
    assert page.locator("[data-group-name='Undated']").count()==1
    page.fill("[data-search]","Older");assert page.locator(".p2k-trophy-card").count()==1
@@ -51,7 +62,7 @@ def main():
    assert page.locator("#p2kTrophyModal .p2k-links a").count()==1
    page.click("#p2kTrophyModal [data-enlarge]");page.wait_for_selector("#p2kTrophyViewer:not([hidden]) img");page.keyboard.press("Escape");assert page.locator("#p2kTrophyViewer").is_hidden()
    assert page.locator("#dashboardAdministrationTab,#hallOfFamePage,[data-admin]").count()==0
-   assert page.evaluate("document.cookie")=="" and errors==[] and bad==[]
+   assert page.evaluate("document.cookie")=="" and errors==[] and bad==[] and failed==[]
    result={"http":response.status,"cards":3,"search":True,"league_filter":True,"year_filter":True,"groups":True,"markdown_safe":True,"enlargement":True,"no_chrome":True,"errors":errors,"failed_assets":bad};browser.close()
  finally:server.shutdown();server.server_close();thread.join(timeout=5)
  print(json.dumps({"trophy_gallery_standalone":"passed",**result},indent=2))
