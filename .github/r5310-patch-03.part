@@ -1,0 +1,149 @@
++"""Qualify the actual installed 2.11.5 + approved r5fix3.8 + r5fix3.10 Trophy runtime."""
+ 
+ from __future__ import annotations
+ 
+@@ -26,6 +26,7 @@
+ BUILD_KEY = "2.11.5-b9e1090f10b9d"
+ R538_JS = "r538-d52193a71712"
+ R538_CSS = "r538-fdcea54d62ba"
++R5310_JS = "r5310-924e1cb5d9a8"
+ CHROMIUM = os.environ.get("P2K_CHROMIUM") or shutil.which("chromium") or "/usr/bin/chromium"
+ 
+ MEDIA_BUFFER = BytesIO()
+@@ -245,8 +246,18 @@
+                 assert page.locator(f'script[src*="site-config.js?v={BUILD_KEY}"]').count() == 1
+                 assert page.locator(f'script[src*="trophy-gallery-r5fix3.8.js?v={R538_JS}"]').count() == 1
+                 assert page.locator(f'link[href*="trophy-gallery-r5fix3.8.css?v={R538_CSS}"]').count() == 1
++                assert page.locator(f'script[src*="trophy-gallery-r5fix3.10.js?v={R5310_JS}"]').count() == 1
+ 
+                 host = "#adminShellNativeDetailHost"
++                page.evaluate("""() => {
++                    const style = document.createElement('style');
++                    style.id = 'preview-escape-regression';
++                    style.textContent = `
++                      #adminShellNativeDetailHost .p2k-media-preview { height:100vh!important; overflow:visible!important; }
++                      #adminShellNativeDetailHost .p2k-media-preview img { position:fixed!important; inset:0!important; width:100vw!important; height:100vh!important; max-width:none!important; max-height:none!important; }
++                    `;
++                    document.head.appendChild(style);
++                }""")
+                 page.fill(f"{host} [name='description_md']", "Persistent after final overlay")
+                 page.select_option(f"{host} [name='status']", "published")
+                 page.click(f"{host} form button[type='submit']")
+@@ -284,6 +295,19 @@
+                     page.set_input_files(f"{host} [data-upload='vignette']", str(upload))
+                 assert FixtureHandler.upload_count == before_vignette + 1
+                 page.wait_for_selector(f"{host} [data-preview='vignette'] img", timeout=15000)
++                page.wait_for_function("""document.querySelector("#adminShellNativeDetailHost [data-preview='vignette']")?.dataset.r5310Contained === '1'""")
++                preview = page.locator(f"{host} [data-preview='vignette']")
++                preview_image = preview.locator("img")
++                preview_box = preview.bounding_box()
++                preview_image_box = preview_image.bounding_box()
++                assert preview_box is not None and preview_image_box is not None
++                assert 279 <= preview_box["height"] <= 281, preview_box
++                assert preview_image.evaluate("el => getComputedStyle(el).position") == "absolute"
++                assert preview.evaluate("el => getComputedStyle(el).overflow") == "hidden"
++                assert preview_image_box["x"] >= preview_box["x"] - 1
++                assert preview_image_box["y"] >= preview_box["y"] - 1
++                assert preview_image_box["x"] + preview_image_box["width"] <= preview_box["x"] + preview_box["width"] + 1
++                assert preview_image_box["y"] + preview_image_box["height"] <= preview_box["y"] + preview_box["height"] + 1
+ 
+                 page.click(f"{host} [data-engrave='modal']")
+                 page.wait_for_selector(f"{host} .p2k-engraver-modal:not([hidden]) iframe.p2k-engraver", timeout=15000)
+@@ -349,6 +373,8 @@
+         "asset_build_key": BUILD_KEY,
+         "r5fix3_8_js_key": R538_JS,
+         "r5fix3_8_css_key": R538_CSS,
++        "r5fix3_10_js_key": R5310_JS,
++        "admin_preview_contained": True,
+         "multi_match": True,
+         "multi_result_tables": True,
+         "modal_modes": True,
+--- /dev/null
++++ b/tests/browser_gate_trophy_gallery_preview_containment.py
+@@ -0,0 +1,112 @@
++#!/usr/bin/env python3
++"""Browser regression for Trophy Gallery admin image-preview containment."""
++from __future__ import annotations
++
++from functools import partial
++from http.server import ThreadingHTTPServer
++import json
++from pathlib import Path
++from threading import Thread
++
++from playwright.sync_api import sync_playwright
++
++from browser_gate_trophy_gallery_overlay import CHROMIUM, FixtureHandler
++
++ROOT = Path(__file__).resolve().parents[1]
++R5310_JS = "r5310-924e1cb5d9a8"
++
++
++def main() -> None:
++    if not Path(CHROMIUM).exists():
++        raise RuntimeError("Chromium is required for the Trophy preview containment gate")
++
++    FixtureHandler.authenticated = True
++    FixtureHandler.revision = 1
++    FixtureHandler.record = {
++        "id": "preview-containment", "status": "draft", "league": "OWL",
++        "competition": "Cup", "award": "Winner", "title": "Preview Containment",
++        "award_date": "2026-09-11", "description_md": "Containment regression",
++        "award_page": "", "competition_page": "", "result_table_url": "",
++        "vignette_media_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
++        "modal_media_id": "", "matches": [],
++    }
++    FixtureHandler.meta = {}
++    FixtureHandler.upload_count = 0
++
++    server = ThreadingHTTPServer(("127.0.0.1", 0), partial(FixtureHandler, directory=str(ROOT)))
++    thread = Thread(target=server.serve_forever, daemon=True)
++    thread.start()
++    origin = f"http://127.0.0.1:{server.server_port}"
++    errors: list[str] = []
++    try:
++        with sync_playwright() as playwright:
++            browser = playwright.chromium.launch(
++                headless=True,
++                executable_path=CHROMIUM,
++                args=["--no-sandbox", "--disable-dev-shm-usage"],
++            )
++            context = browser.new_context(bypass_csp=True)
++            page = context.new_page()
++            page.on("pageerror", lambda error: errors.append(error.stack or str(error)))
++            page.goto(
++                f"{origin}/ui-v2.html?ui=v2&page=administration&adminCategory=team&trophy=1",
++                wait_until="domcontentloaded",
++            )
++            page.wait_for_function("window.P2K_TROPHY_GALLERY_POC !== undefined", timeout=15000)
++            page.wait_for_function("window.__P2K_TROPHY_R5FIX3_8 === true", timeout=15000)
++            page.wait_for_function("window.__P2K_TROPHY_R5FIX3_10 === true", timeout=15000)
++            host = "#adminShellNativeDetailHost"
++            page.wait_for_selector(
++                f"{host}[data-native-detail='trophy-gallery']:not([hidden]) form[data-r538-enhanced='1']",
++                timeout=15000,
++            )
++            assert page.locator(f'script[src*="trophy-gallery-r5fix3.10.js?v={R5310_JS}"]').count() == 1
++
++            # Reproduce the reported failure class: a late host rule tries to make
++            # the preview image fixed/full-screen with !important declarations.
++            page.evaluate("""() => {
++                const style = document.createElement('style');
++                style.id = 'preview-escape-regression';
++                style.textContent = `
++                  #adminShellNativeDetailHost .p2k-media-preview { height:100vh!important; overflow:visible!important; }
++                  #adminShellNativeDetailHost .p2k-media-preview img { position:fixed!important; inset:0!important; width:100vw!important; height:100vh!important; max-width:none!important; max-height:none!important; }
++                `;
++                document.head.appendChild(style);
++            }""")
++
++            preview = page.locator(f"{host} [data-preview='vignette']")
++            image = preview.locator("img")
++            page.wait_for_function(
++                """document.querySelector("#adminShellNativeDetailHost [data-preview='vignette']")?.dataset.r5310Contained === '1'""",
++                timeout=15000,
++            )
++            preview_box = preview.bounding_box()
++            image_box = image.bounding_box()
++            assert preview_box is not None and image_box is not None
++            assert 279 <= preview_box["height"] <= 281, preview_box

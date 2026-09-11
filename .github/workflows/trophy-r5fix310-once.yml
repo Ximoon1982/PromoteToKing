@@ -1,0 +1,71 @@
+name: Stage Trophy r5fix3.10 preview repair once
+
+on:
+  push:
+    branches: [feature/trophy-gallery-poc]
+    paths: [.github/workflows/trophy-r5fix310-once.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  repair-test-commit:
+    if: github.event.head_commit.message == 'Stage Trophy r5fix3.10 preview repair'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/trophy-gallery-poc
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify exact recovery base
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "1a29d4aaa4ca5362e53e78b3149a04534ab92e86"
+          test "$(git branch --show-current)" = "feature/trophy-gallery-poc"
+          test -z "$(git status --porcelain)"
+      - name: Apply exact locally-qualified r5fix3.10 delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .github/r5310-patch-{01..06}.part > /tmp/r5310.patch
+          echo '9752ca0b85a151db70a43c94912e461d0dbded8c2dbabc77425acf72a8deb5a2  /tmp/r5310.patch' | sha256sum -c -
+          patch -p1 < /tmp/r5310.patch
+          chmod +x tools/poc/trophy-gallery/r5fix3.10/install-trophy-gallery-r5fix3.10.sh tools/poc/trophy-gallery/r5fix3.10/patch-loaders.py
+          rm -f .github/r5310-patch-{01..06}.part .github/workflows/p2k-source-recovery-once.yml
+      - name: Install regression dependencies and Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r tests/requirements.txt
+          python -m playwright install --with-deps chromium
+          sudo ln -sf "$(find "$HOME/.cache/ms-playwright" -type f -name chrome -path '*chrome-linux*' | head -1)" /usr/bin/chromium
+      - name: Validate r5fix3.10 contract and reported browser failure
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check assets/js/admin/trophy-gallery-r5fix3.10.js
+          bash -n tools/poc/trophy-gallery/r5fix3.10/install-trophy-gallery-r5fix3.10.sh
+          python -m py_compile tests/browser_gate_trophy_gallery_overlay.py tests/browser_gate_trophy_gallery_preview_containment.py tools/poc/trophy-gallery/r5fix3.10/patch-loaders.py
+          python -m pytest -q tests/test_trophy_gallery_poc.py tests/test_trophy_gallery_r5.py tests/test_trophy_gallery_media_lifecycle.py tests/test_trophy_gallery_r5fix310.py
+          python tests/browser_gate_trophy_gallery_preview_containment.py
+      - name: Commit verified r5fix3.10 repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/trophy-r5fix310-once.yml
+          git config user.name 'Ximoon1982'
+          git config user.email 'ximoon@gmail.com'
+          git add -A
+          git diff --cached --check
+          git status --short
+          git commit -m 'Fix Trophy admin preview containment (r5fix3.10)'
+          git push origin HEAD:feature/trophy-gallery-poc

@@ -1,0 +1,173 @@
+--- a/.github/workflows/trophy-gallery-poc.yml
++++ b/.github/workflows/trophy-gallery-poc.yml
+@@ -1,4 +1,4 @@
+-name: Trophy Gallery 2.11.5 + r5fix3.8 qualification
++name: Trophy Gallery 2.11.5 + r5fix3.10 qualification
+ 
+ on:
+   push:
+@@ -28,6 +28,7 @@
+           node --check assets/js/admin/tool-registry.js
+           node --check assets/js/admin/trophy-gallery-poc.js
+           node --check assets/js/admin/trophy-gallery-r5fix3.8.js
++          node --check assets/js/admin/trophy-gallery-r5fix3.10.js
+           node --check assets/js/admin/admin-shell.js
+           node --check assets/js/pages/dashboard-v2.js
+       - name: PHP syntax
+@@ -42,29 +43,35 @@
+           bash -n tools/poc/install-trophy-gallery-poc.sh
+           bash -n tools/poc/trophy-gallery/r5fix3.8/install-trophy-gallery-r5fix3.8.sh
+           bash -n tools/poc/trophy-gallery/r5fix3.9/install-p2k-version-2.11.5.sh
+-          python -m py_compile tools/poc/trophy-gallery/r5fix2.2/consolidate-trophy-runtime.py tools/poc/trophy-gallery/r5fix3.8/patch-loaders.py tools/poc/trophy-gallery/r5fix3.9/version-align.py
++          bash -n tools/poc/trophy-gallery/r5fix3.10/install-trophy-gallery-r5fix3.10.sh
++          python -m py_compile tools/poc/trophy-gallery/r5fix2.2/consolidate-trophy-runtime.py tools/poc/trophy-gallery/r5fix3.8/patch-loaders.py tools/poc/trophy-gallery/r5fix3.9/version-align.py tools/poc/trophy-gallery/r5fix3.10/patch-loaders.py
+       - name: Trophy Gallery POC static contract
+-        run: python -m pytest -q tests/test_trophy_gallery_poc.py tests/test_trophy_gallery_r5.py tests/test_trophy_gallery_media_lifecycle.py
++        run: python -m pytest -q tests/test_trophy_gallery_poc.py tests/test_trophy_gallery_r5.py tests/test_trophy_gallery_media_lifecycle.py tests/test_trophy_gallery_r5fix310.py
+       - name: Exact engraving POC 1.9.1 equivalence
+         run: python tests/browser_compare_trophy_engraving.py
+       - name: Trophy Gallery POC browser runtime
+         run: python tests/browser_gate_trophy_gallery_poc.py
+-      - name: Final 2.11.5 + r5fix3.8 installed-overlay browser runtime
++      - name: Trophy Gallery admin preview containment browser regression
++        run: python tests/browser_gate_trophy_gallery_preview_containment.py
++      - name: Final 2.11.5 + r5fix3.10 installed-overlay browser runtime
+         run: python tests/browser_gate_trophy_gallery_overlay.py
+       - name: Historical r5 overlay installer lifecycle
+         run: |
+           python tools/poc/build-trophy-gallery-r5-payload.py --check
+           python -m pytest -q tests/test_trophy_gallery_overlay_installer.py
+-      - name: Verify approved r5fix3.8 and 2.11.5 deployment identities
++      - name: Verify approved r5fix3.8, r5fix3.10 and 2.11.5 deployment identities
+         run: |
+           test "$(cat VERSION)" = "2.11.5"
+           grep -Fq 'version: "2.11.5"' assets/js/site-config.js
+           grep -Fq '2.11.5-b9e1090f10b9d' assets/js/site-config.js
+           grep -Fq 'r538-d52193a71712' ui-v2.html
+           grep -Fq 'r538-fdcea54d62ba' ui-v2.html
++          grep -Fq 'r5310-924e1cb5d9a8' ui-v2.html
+           test "$(sha256sum assets/js/admin/trophy-gallery-r5fix3.8.js | cut -c1-12)" = "d52193a71712"
+           test "$(sha256sum assets/trophy-gallery/trophy-gallery-r5fix3.8.css | cut -c1-12)" = "fdcea54d62ba"
++          test "$(sha256sum assets/js/admin/trophy-gallery-r5fix3.10.js | cut -c1-12)" = "924e1cb5d9a8"
+           bash tools/poc/trophy-gallery/r5fix3.8/install-trophy-gallery-r5fix3.8.sh "$GITHUB_WORKSPACE" verify
++          bash tools/poc/trophy-gallery/r5fix3.10/install-trophy-gallery-r5fix3.10.sh "$GITHUB_WORKSPACE" verify
+       - name: Verify inherited v2.11.4 structural baseline
+         run: |
+           git worktree add --detach /tmp/p2k-qualified-v2114 6706e619d310e2c74fe2734cfcef8dd2f83d70d1
+@@ -101,7 +108,8 @@
+               'tools/poc/build-trophy-gallery-r5-payload.py','tools/poc/install-trophy-gallery-poc.sh',
+               'tools/poc/README_TROPHY_GALLERY_POC_INSTALL.txt',
+               'tests/browser_compare_trophy_engraving.py','tests/browser_gate_trophy_gallery_poc.py',
+-              'tests/browser_gate_trophy_gallery_overlay.py','tests/test_trophy_gallery_media_lifecycle.py',
++              'tests/browser_gate_trophy_gallery_overlay.py','tests/browser_gate_trophy_gallery_preview_containment.py',
++              'tests/test_trophy_gallery_media_lifecycle.py','tests/test_trophy_gallery_r5fix310.py',
+               'tests/test_trophy_gallery_overlay_installer.py','tests/test_trophy_gallery_poc.py',
+               'tests/test_trophy_gallery_r5.py',
+           }
+@@ -116,6 +124,7 @@
+           required = {
+               'VERSION','assets/js/site-config.js','ui-v2.html','assets/js/admin/trophy-gallery-poc.js',
+               'assets/js/admin/trophy-gallery-r5fix3.8.js','assets/trophy-gallery/trophy-gallery-r5fix3.8.css',
++              'assets/js/admin/trophy-gallery-r5fix3.10.js',
+               'server/trophy-gallery/public/editor-meta.php','tests/browser_gate_trophy_gallery_overlay.py',
+           }
+           missing = sorted(required - changed)
+--- /dev/null
++++ b/assets/js/admin/trophy-gallery-r5fix3.10.js
+@@ -0,0 +1,123 @@
++(() => {
++"use strict";
++if (window.__P2K_TROPHY_R5FIX3_10) return;
++window.__P2K_TROPHY_R5FIX3_10 = true;
++
++const HOST_SELECTOR = '#adminShellNativeDetailHost[data-native-detail="trophy-gallery"]';
++const PREVIEW_SELECTOR = `${HOST_SELECTOR} .p2k-media-preview`;
++const STYLE_ID = 'p2kTrophyR5Fix310Style';
++const STYLE = `
++${PREVIEW_SELECTOR}{
++  all:unset!important;
++  box-sizing:border-box!important;
++  position:relative!important;
++  display:block!important;
++  width:100%!important;
++  max-width:100%!important;
++  height:280px!important;
++  min-height:280px!important;
++  max-height:280px!important;
++  overflow:hidden!important;
++  contain:layout paint!important;
++  isolation:isolate!important;
++  border:1px solid rgba(255,255,255,.08)!important;
++  border-radius:10px!important;
++  background:#0d0c0b!important;
++  cursor:zoom-in!important
++}
++${PREVIEW_SELECTOR} img{
++  box-sizing:border-box!important;
++  position:absolute!important;
++  inset:0!important;
++  display:block!important;
++  width:100%!important;
++  height:100%!important;
++  max-width:100%!important;
++  max-height:100%!important;
++  min-width:0!important;
++  min-height:0!important;
++  margin:0!important;
++  padding:0!important;
++  border:0!important;
++  object-fit:contain!important;
++  object-position:50% 50%!important;
++  background:transparent!important;
++  transform:none!important
++}
++`;
++
++function ensureStyle() {
++  const head = document.head || document.documentElement;
++  let style = document.getElementById(STYLE_ID);
++  if (!style) {
++    style = document.createElement('style');
++    style.id = STYLE_ID;
++    style.textContent = STYLE;
++  }
++  if (style.parentNode !== head || head.lastElementChild !== style) head.appendChild(style);
++}
++
++function importantStyle(node, values) {
++  if (!node) return;
++  for (const [property, value] of Object.entries(values)) {
++    node.style.setProperty(property, value, 'important');
++  }
++}
++
++function containPreview(preview) {
++  if (!(preview instanceof HTMLElement)) return;
++  importantStyle(preview, {
++    'box-sizing': 'border-box',
++    'position': 'relative',
++    'display': 'block',
++    'width': '100%',
++    'max-width': '100%',
++    'height': '280px',
++    'min-height': '280px',
++    'max-height': '280px',
++    'overflow': 'hidden',
++    'contain': 'layout paint',
++    'isolation': 'isolate'
++  });
++  preview.querySelectorAll('img').forEach((img) => importantStyle(img, {
++    'box-sizing': 'border-box',
++    'position': 'absolute',
++    'inset': '0',
++    'display': 'block',
++    'width': '100%',
++    'height': '100%',
++    'max-width': '100%',
++    'max-height': '100%',
++    'min-width': '0',
++    'min-height': '0',
++    'margin': '0',
++    'padding': '0',
++    'border': '0',
++    'object-fit': 'contain',
