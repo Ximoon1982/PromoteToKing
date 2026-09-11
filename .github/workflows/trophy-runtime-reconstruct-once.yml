@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   reconstruct:
-    if: github.event.head_commit.message == 'Run one-shot Trophy runtime reconstruction'
+    if: github.event.head_commit.message == 'Fix one-shot Trophy runtime reconstruction'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,15 +31,97 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "f43729f0b1d000fef129849b035d145872c896c6"
+          test "$(git rev-parse HEAD^)" = "f0a76fd834e1be7035b04a4229ca619acdad5844"
           test -z "$(git status --porcelain)"
 
-      - name: Reconstruct approved r5fix2.2 and r5fix3.8 runtime
+      - name: Reconstruct r5fix2.2 runtime on the corrected loader chain
         shell: bash
         run: |
           set -euo pipefail
-          bash tools/poc/trophy-gallery/r5fix2.2/install-trophy-gallery-r5fix2.2.sh "$GITHUB_WORKSPACE"
-          rm -rf .trophy-r5fix2.2-backup-*
+          JS="assets/js/admin/trophy-gallery-poc.js"
+          REG="assets/js/admin/tool-registry.js"
+          UI="ui-v2.html"
+          STANDALONE="trophies/index.html"
+          EDITOR="assets/trophy-gallery/engraving/editor.html"
+          R22="tools/poc/trophy-gallery/r5fix2.2"
+
+          python3 "$R22/consolidate-trophy-runtime.py" "$JS"
+
+          P2K_EDITOR="$EDITOR" python3 - <<'PY'
+          from pathlib import Path
+          import os,re
+          p=Path(os.environ['P2K_EDITOR']); s=p.read_text(encoding='utf-8')
+          s=re.sub(r'<title>.*?</title>','<title>Trophy engraving editor</title>',s,count=1,flags=re.S)
+          s=re.sub(r'\s*<h1>P2K 1WL Engraving POC v1\.9</h1>\s*<p class="sub">.*?</p>\s*','\n',s,count=1,flags=re.S)
+          if 'P2K_R5FIX2_DEFAULT_TEAM' not in s:
+              hook="""
+          /* P2K_R5FIX2_DEFAULT_TEAM */
+          function p2kDefaultTeam(){
+           const team='Promote to King';
+           if(els.middleText)els.middleText.value=team;
+           if(els.cupPlaque)els.cupPlaque.value=team;
+           if(els.crystalTop)els.crystalTop.value=team;
+          }
+          window.addEventListener('message',event=>{if(event.origin!==location.origin||event.data?.type!=='p2k-trophy-editor-open')return;p2kDefaultTeam();render();});
+          p2kDefaultTeam();
+          """
+              needle='loadImages().catch'
+              if needle not in s: raise SystemExit('Engraver initialization not found')
+              s=s.replace(needle,hook+'\n'+needle,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+
+          ET="engrave-$(sha256sum "$EDITOR" | awk '{print substr($1,1,12)}')"
+          P2K_JS="$JS" P2K_ET="$ET" P2K_ENH="$R22/r5fix2.2-enhancement.js" python3 - <<'PY'
+          from pathlib import Path
+          import os,re
+          p=Path(os.environ['P2K_JS']); s=p.read_text(encoding='utf-8'); et=os.environ['P2K_ET']
+          s,n=re.subn(r'assets/trophy-gallery/engraving/editor\.html(?:\?v=[^"]*)?',f'assets/trophy-gallery/engraving/editor.html?v={et}',s,count=1)
+          if n!=1: raise SystemExit('Engraver URL not found in Trophy runtime')
+          enhancement=Path(os.environ['P2K_ENH']).read_text(encoding='utf-8').lstrip()
+          if '__P2K_TROPHY_R5FIX2_2' not in s:
+              s=s.rstrip()+'\n\n'+enhancement.rstrip()+'\n'
+          p.write_text(s,encoding='utf-8')
+          PY
+
+          cp "$R22/r5fix2.2.css" assets/trophy-gallery/r5fix2.2.css
+          JSKEY="poc-$(sha256sum "$JS" | awk '{print substr($1,1,12)}')-20260910-r5fix2.2"
+          P2K_REG="$REG" P2K_STANDALONE="$STANDALONE" P2K_JSKEY="$JSKEY" python3 - <<'PY'
+          from pathlib import Path
+          import os,re
+          key=os.environ['P2K_JSKEY']
+          for env in ('P2K_REG','P2K_STANDALONE'):
+              p=Path(os.environ[env]); s=p.read_text(encoding='utf-8')
+              if re.search(r'trophy-gallery-poc\.js\?v[^"\']+',s):
+                  s,n=re.subn(r'trophy-gallery-poc\.js\?v[^"\']+',f'trophy-gallery-poc.js?v={key}',s)
+              else:
+                  if 'trophy-gallery-poc.js' not in s: raise SystemExit(f'Trophy loader missing in {p}')
+                  s=s.replace('trophy-gallery-poc.js',f'trophy-gallery-poc.js?v={key}',1); n=1
+              if n<1: raise SystemExit(f'Trophy loader missing in {p}')
+              p.write_text(s,encoding='utf-8')
+          PY
+
+          REGKEY="trophyreg-$(sha256sum "$REG" | awk '{print substr($1,1,12)}')-20260910-r5fix2.2"
+          P2K_UI="$UI" P2K_REGKEY="$REGKEY" python3 - <<'PY'
+          from pathlib import Path
+          import os,re
+          p=Path(os.environ['P2K_UI']); s=p.read_text(encoding='utf-8'); key=os.environ['P2K_REGKEY']
+          s,n=re.subn(r'assets/js/admin/tool-registry\.js\?v[^"\']+',f'assets/js/admin/tool-registry.js?v={key}',s,count=1)
+          if n!=1: raise SystemExit('tool-registry.js loader not found in ui-v2.html')
+          p.write_text(s,encoding='utf-8')
+          PY
+
+          grep -Fq "trophy-gallery-poc.js?v=$JSKEY" "$REG"
+          grep -Fq "trophy-gallery-poc.js?v=$JSKEY" "$STANDALONE"
+          grep -Fq "tool-registry.js?v=$REGKEY" "$UI"
+          grep -Fq '__P2K_TROPHY_R5FIX2_2' "$JS"
+          grep -Fq 'data-engraver title="Trophy engraving editor"' "$JS"
+          grep -Fq 'p2k-trophy-editor-open' "$EDITOR"
+
+      - name: Apply and verify approved r5fix3.8 containment layer
+        shell: bash
+        run: |
+          set -euo pipefail
           bash tools/poc/trophy-gallery/r5fix3.8/install-trophy-gallery-r5fix3.8.sh "$GITHUB_WORKSPACE"
           rm -rf .trophy-r5fix3.8-backup-*
           bash tools/poc/trophy-gallery/r5fix3.8/install-trophy-gallery-r5fix3.8.sh "$GITHUB_WORKSPACE" verify
@@ -53,6 +135,7 @@ jobs:
           node --check assets/js/admin/tool-registry.js
           node --check assets/js/admin/trophy-gallery-r5fix3.8.js
           python3 -m py_compile tools/poc/trophy-gallery/r5fix2.2/consolidate-trophy-runtime.py tools/poc/trophy-gallery/r5fix3.8/patch-loaders.py tools/poc/trophy-gallery/r5fix3.9/version-align.py
+          find tools/poc/trophy-gallery -type d -name __pycache__ -prune -exec rm -rf {} +
           python3 - <<'PY'
           import subprocess
           changed=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
@@ -60,7 +143,6 @@ jobs:
             'assets/js/admin/trophy-gallery-poc.js',
             'assets/js/admin/tool-registry.js',
             'assets/trophy-gallery/engraving/editor.html',
-            'index.html',
             'ui-v2.html',
             'trophies/index.html',
           }
@@ -72,14 +154,12 @@ jobs:
           missing=sorted(required-changed)
           unexpected=sorted(changed-allowed)
           if missing:
-            raise SystemExit('Required reconstructed runtime changes missing:\n'+'\n'.join(missing))
+              raise SystemExit('Required reconstructed runtime changes missing:\n'+'\n'.join(missing))
           if unexpected:
-            raise SystemExit('Unexpected runtime reconstruction changes:\n'+'\n'.join(unexpected))
+              raise SystemExit('Unexpected runtime reconstruction changes:\n'+'\n'.join(unexpected))
           print('Runtime reconstruction scope OK:')
           print('\n'.join(sorted(changed)))
           PY
-          grep -Fq 'data-engraver title="Trophy engraving editor"' assets/js/admin/trophy-gallery-poc.js
-          grep -Fq '__P2K_TROPHY_R5FIX2_2' assets/js/admin/trophy-gallery-poc.js
           grep -Fq '<!-- P2K_TROPHY_R5FIX38_BEGIN -->' ui-v2.html
           grep -Fq '<!-- P2K_TROPHY_R5FIX38_BEGIN -->' trophies/index.html
 
@@ -102,7 +182,6 @@ jobs:
           rm -f .p2k-version-2.11.5.json
           git diff --check
           test "$(cat VERSION)" = "2.11.5"
-          grep -Eq 'version[[:space:]]*:[[:space:]]*["'\'' ]*2\.11\.5["'\'' ]*' assets/js/site-config.js
           git diff --quiet HEAD -- assets/js/admin/trophy-gallery-r5fix3.8.js
           git diff --quiet HEAD -- assets/trophy-gallery/trophy-gallery-r5fix3.8.css
 
@@ -115,13 +194,13 @@ jobs:
           from pathlib import Path
           assert Path('VERSION').read_text().strip()=='2.11.5'
           site=Path('assets/js/site-config.js').read_text()
-          assert re.search(r'\bversion\s*:\s*["\'\']2\.11\.5["\'\']',site)
+          assert re.search(r'\bversion\s*:\s*["\']2\.11\.5["\']',site)
           changed=subprocess.check_output(['git','diff','--name-only'],text=True).splitlines()
           if not changed:
-            raise SystemExit('Version alignment produced no source changes')
+              raise SystemExit('Version alignment produced no source changes')
           forbidden=[p for p in changed if p.startswith(('data/','storage/','tools/','tests/','docs/'))]
           if forbidden:
-            raise SystemExit('Version alignment escaped active-runtime scope:\n'+'\n'.join(forbidden))
+              raise SystemExit('Version alignment escaped active-runtime scope:\n'+'\n'.join(forbidden))
           print(f'2.11.5 alignment changed {len(changed)} active source files')
           PY
           git add -A
