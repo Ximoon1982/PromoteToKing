@@ -1,0 +1,56 @@
+name: Diagnose Trophy engraving handoff
+
+on:
+  push:
+    branches: [feature/trophy-gallery-poc]
+    paths: [.github/workflows/trophy-handoff-diagnostic-once.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: github.event.head_commit.message == 'Diagnose Trophy engraving handoff'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/trophy-gallery-poc
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare exact repaired runtime and diagnostic E2E
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "8e83a9a5134ef732609541446a3b66d36352250e"
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          core=Path('assets/js/admin/trophy-gallery-poc.js')
+          s=core.read_text(encoding='utf-8')
+          old='window.addEventListener("message",e=>{if(e.origin!==ROOT.origin||e.data?.type!=="p2k-trophy-engraving"||!(e.data.blob instanceof Blob))return;const frame=$(\'[data-engraver]:not([hidden])\');if(!frame)return;uploadSlot(frame.closest("form"),frame.dataset.slot||"vignette",new File([e.data.blob],e.data.name||"engraving.png",{type:"image/png"}),"engraving",message=>alert(message));});'
+          new='window.addEventListener("message",async e=>{const blob=e.data?.blob;if(e.origin!==ROOT.origin||e.data?.type!=="p2k-trophy-engraving"||!blob||typeof blob.arrayBuffer!=="function")return;const frame=$(\'[data-engraver]:not([hidden])\');if(!frame)return;const form=frame.closest("form"),slot=frame.dataset.slot||"vignette",name=e.data.name||"engraving.png";try{const bytes=await blob.arrayBuffer();uploadSlot(form,slot,new File([bytes],name,{type:blob.type||"image/png"}),"engraving",message=>alert(message))}catch(error){alert(error?.message||"Unable to read engraved artwork.")}});'
+          if s.count(old)!=1: raise SystemExit('core listener target missing')
+          core.write_text(s.replace(old,new,1),encoding='utf-8')
+
+          src=Path('.github/workflows/trophy-final-qualify-once.yml').read_text(encoding='utf-8').splitlines()
+          out=[];active=False
+          for line in src:
+              if "cat > tests/browser_gate_trophy_gallery_overlay.py <<'PYTEST'" in line:
+                  active=True;continue
+              if active and line.strip()=='PYTEST': break
+              if active: out.append(line[10:] if line.startswith('          ') else line)
+          test='\n'.join(out)+'\n'
+          old='''                frame.locator("#p2kR538UsePrize").click()\n                page.wait_for_selector(f"{host} [data-preview='modal'] img", timeout=15000)\n                page.wait_for_function("!document.body.classList.contains('p2k-engraver-open')")\n                assert FixtureHandler.upload_count >= 2\n                assert FixtureHandler.meta["installed-trophy"]["modal_media_mode"] == "custom"'''
+          new='''                page.evaluate("""() => { window.__p2kHandoffDiag=[]; window.addEventListener('message', e => { if(e.data?.type==='p2k-trophy-engraving') window.__p2kHandoffDiag.push({origin:e.origin,hasBlob:!!e.data?.blob,ctor:e.data?.blob?.constructor?.name||'',arrayBufferType:typeof e.data?.blob?.arrayBuffer,blobType:e.data?.blob?.type||'',blobSize:e.data?.blob?.size??-1,visibleFrame:!!document.querySelector('[data-engraver]:not([hidden])')}); }); }""")\n                before_prize = FixtureHandler.upload_count\n                frame.locator("#p2kR538UsePrize").click()\n                page.wait_for_timeout(3000)\n                diagnostic={\n                    "messages":page.evaluate("window.__p2kHandoffDiag"),\n                    "upload_before":before_prize,\n                    "upload_after":FixtureHandler.upload_count,\n                    "meta":FixtureHandler.meta.get("installed-trophy",{}),\n                    "body_class":page.locator("body").get_attribute("class") or "",\n                    "status":page.locator(f"{host} [data-status]").text_content() or "",\n                    "page_errors":errors,\n                }\n                print("P2K_HANDOFF_DIAGNOSTIC="+json.dumps(diagnostic,sort_keys=True))\n                assert diagnostic["messages"], diagnostic\n                assert FixtureHandler.upload_count > before_prize, diagnostic\n                assert FixtureHandler.meta["installed-trophy"]["modal_media_mode"] == "custom"'''
+          if old not in test: raise SystemExit('diagnostic target missing')
+          Path('tests/browser_gate_trophy_gallery_overlay.py').write_text(test.replace(old,new,1),encoding='utf-8')
+          PY
+          python -m py_compile tests/browser_gate_trophy_gallery_overlay.py
+      - name: Run diagnostic browser gate
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check -r tests/requirements.txt
+          python tests/browser_gate_trophy_gallery_overlay.py
