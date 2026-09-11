@@ -29,7 +29,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "a4770a2638feb23012ac6239ebbbbc3709dc05eb"
+          test "$(git rev-parse HEAD^)" = "5dae305903bc822b83ed1af0a272f37671b82519"
           test "$(git branch --show-current)" = "feature/trophy-gallery-poc"
           test -z "$(git status --porcelain)"
       - name: Apply exact locally-qualified r5fix3.10 delta
@@ -50,6 +50,7 @@ jobs:
 
           old = b"2.11.5-b9e1090f10b9d"
           new = b"2.11.5-bf6a828490f57"
+          self_path = ".github/workflows/trophy-r5fix310-once.yml"
           expected = {
               ".github/workflows/trophy-gallery-poc.yml",
               "AnalyzeMatch.html",
@@ -90,12 +91,15 @@ jobs:
           for path in Path(".").rglob("*"):
               if not path.is_file() or ".git" in path.parts:
                   continue
+              rel = path.as_posix()
+              if rel == self_path:
+                  continue
               try:
                   data = path.read_bytes()
               except OSError:
                   continue
               if old in data:
-                  found.add(path.as_posix().lstrip("./"))
+                  found.add(rel)
           if found != expected:
               raise SystemExit(
                   "Unexpected b9e109 identity surface.\nMissing: " + str(sorted(expected - found)) +
@@ -113,9 +117,12 @@ jobs:
           for path in Path(".").rglob("*"):
               if not path.is_file() or ".git" in path.parts:
                   continue
+              rel = path.as_posix()
+              if rel == self_path:
+                  continue
               try:
                   if old in path.read_bytes():
-                      stale.append(path.as_posix())
+                      stale.append(rel)
               except OSError:
                   pass
           if stale:
@@ -245,7 +252,6 @@ jobs:
 
           python -m py_compile tests/browser_gate_trophy_gallery_preview_containment.py
           grep -Fq '2.11.5-bf6a828490f57' assets/js/site-config.js
-          ! grep -R -F -q --exclude-dir=.git '2.11.5-b9e1090f10b9d' .
       - name: Install regression dependencies and Chromium
         shell: bash
         run: |
