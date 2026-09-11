@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>P2K 1WL Engraving POC v1.9</title>
+<title>Trophy engraving editor</title>
 <style>
 @font-face{
   font-family:'P2KFullSans';
@@ -58,10 +58,7 @@ fieldset{margin:0;padding:0;border:0}
 <div class="wrap">
   <div class="grid">
     <div class="card">
-      <h1>P2K 1WL Engraving POC v1.9</h1>
-      <p class="sub">Unified POC for <b>medals</b>, <b>pre-2026 cups</b>, and <b>2026 crystal trophies</b>. Trophy lettering now uses the same full-SANS engraved italic engraving language as the approved medal lettering. Medal rendering now uses the approved long-ribbon transparent blanks, the approved inner-circle text zones, and the full-SANS engraved italic proportions derived from the 2025 1WL medal references. Crystal trophies now reuse the same embedded full-SANS engraving settings as the medals/cups, and the bronze/silver top safe zone is trimmed on the left to stay off the metal.</p>
-
-      <div class="row">
+<div class="row">
         <div>
           <label for="awardType">Award type</label>
           <select id="awardType">
@@ -569,6 +566,17 @@ els.clearBtn.addEventListener('click', clearTexts);
 els.resetBtn.addEventListener('click', resetSliders);
 els.downloadBtn.addEventListener('click', downloadPNG);
 document.querySelectorAll('[data-bg]').forEach(btn => btn.addEventListener('click', () => setBg(btn.dataset.bg)));
+
+/* P2K_R5FIX2_DEFAULT_TEAM */
+function p2kDefaultTeam(){
+ const team='Promote to King';
+ if(els.middleText)els.middleText.value=team;
+ if(els.cupPlaque)els.cupPlaque.value=team;
+ if(els.crystalTop)els.crystalTop.value=team;
+}
+window.addEventListener('message',event=>{if(event.origin!==location.origin||event.data?.type!=='p2k-trophy-editor-open')return;p2kDefaultTeam();render();});
+p2kDefaultTeam();
+
 loadImages().catch(err => { els.infoLabel.textContent = 'Load failed'; els.infoSize.textContent = String(err); console.error(err); });
 </script>
 </body>
