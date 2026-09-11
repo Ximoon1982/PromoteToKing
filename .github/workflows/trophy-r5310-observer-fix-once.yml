@@ -29,7 +29,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "fa70e6bac64bd9892683dc0fab9f8f2ea4674e68"
+          test "$(git rev-parse HEAD^)" = "154b3837dcef92b1295f4d90d7cefec4626bdc59"
           test "$(git branch --show-current)" = "feature/trophy-gallery-poc"
           test -z "$(git status --porcelain)"
       - name: Remove competing last-style behavior and rotate immutable r5fix3.10 identity
@@ -108,6 +108,21 @@ jobs:
               text += '''\n\ndef test_r5fix310_does_not_compete_for_last_head_style():\n    js = PATCH.read_text(encoding="utf-8")\n    assert "head.lastElementChild" not in js\n    assert "style.parentNode !== head" in js\n'''
               contract.write_text(text, encoding="utf-8")
 
+          standalone = Path("tests/browser_gate_trophy_gallery_poc.py")
+          text = standalone.read_text(encoding="utf-8")
+          api_anchor = '''  if parsed.path.endswith("/server/trophy-gallery/public/api.php"):\n   body=json.dumps({"ok":True,"schema_version":2,"revision":4,"records":RECORDS}).encode();self.send_response(200);self.send_header("Content-Type","application/json");self.send_header("Content-Length",str(len(body)));self.end_headers();self.wfile.write(body);return'''
+          meta_block = '''  if parsed.path.endswith("/server/trophy-gallery/public/editor-meta.php"):\n   body=json.dumps({"ok":True,"version":1,"records":{}}).encode();self.send_response(200);self.send_header("Content-Type","application/json");self.send_header("Content-Length",str(len(body)));self.end_headers();self.wfile.write(body);return\n'''
+          if text.count(api_anchor) != 1:
+              raise SystemExit("Standalone API fixture anchor not found exactly once")
+          text = text.replace(api_anchor, meta_block + api_anchor, 1)
+
+          old_modal = '''   page.locator("[data-trophy-id='new'] [data-open]").click();page.wait_for_selector("#p2kTrophyModal:not([hidden])")\n   assert page.locator("#p2kTrophyModal strong").count()==1 and page.locator("#p2kTrophyModal em").count()==1 and page.locator("#p2kTrophyModal li").count()==2\n   assert page.locator("#p2kTrophyModal script").count()==0 and "<script>" in page.locator("#p2kTrophyModal").inner_text()\n   assert page.locator("#p2kTrophyModal .p2k-links a").count()==1\n   page.click("#p2kTrophyModal [data-enlarge]");page.wait_for_selector("#p2kTrophyViewer:not([hidden]) img");page.keyboard.press("Escape");assert page.locator("#p2kTrophyViewer").is_hidden()'''
+          new_modal = '''   page.locator("[data-trophy-id='new'] [data-open]").click();page.wait_for_selector("#p2kR538Modal:not([hidden])")\n   modal_text=page.locator("#p2kR538Modal .p2k-r538-lead p").inner_text()\n   assert "**Bold** and *italic*" in modal_text and "- First" in modal_text and "<script>bad()</script>" in modal_text\n   assert page.locator("#p2kR538Modal script").count()==0\n   assert page.locator("#p2kR538Modal .p2k-r538-links a[href='https://example.test/award']").count()==1\n   page.click("#p2kR538Modal .p2k-r538-view-art");page.wait_for_selector("#p2kR538Viewer:not([hidden]) img");page.keyboard.press("Escape");assert page.locator("#p2kR538Viewer").is_hidden()'''
+          if text.count(old_modal) != 1:
+              raise SystemExit("Standalone pre-r5fix3.8 modal assertion block not found exactly once")
+          text = text.replace(old_modal, new_modal, 1)
+          standalone.write_text(text, encoding="utf-8")
+
           manifest = package / "MANIFEST.sha256"
           names = ["README.txt", "install-trophy-gallery-r5fix3.10.sh", "patch-loaders.py", "trophy-gallery-r5fix3.10.js"]
           manifest.write_text("".join(f"{hashlib.sha256((package/name).read_bytes()).hexdigest()}  {name}\n" for name in names), encoding="utf-8")
@@ -130,6 +145,7 @@ jobs:
           set -euo pipefail
           node --check assets/js/admin/trophy-gallery-r5fix3.10.js
           bash -n tools/poc/trophy-gallery/r5fix3.10/install-trophy-gallery-r5fix3.10.sh
+          python -m py_compile tests/browser_gate_trophy_gallery_poc.py tests/browser_gate_trophy_gallery_preview_containment.py tests/browser_gate_trophy_gallery_overlay.py
           python -m pytest -q tests/test_trophy_gallery_poc.py tests/test_trophy_gallery_r5.py tests/test_trophy_gallery_media_lifecycle.py tests/test_trophy_gallery_r5fix310.py
           python tests/browser_gate_trophy_gallery_poc.py
           python tests/browser_gate_trophy_gallery_preview_containment.py
