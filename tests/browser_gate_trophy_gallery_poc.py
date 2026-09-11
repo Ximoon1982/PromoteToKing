@@ -36,7 +36,7 @@ def main():
  try:
   with sync_playwright() as p:
    browser=p.chromium.launch(headless=True,executable_path=CHROMIUM,args=["--no-sandbox"]);context=browser.new_context();page=context.new_page();page.on("pageerror",lambda e:errors.append(str(e)));page.on("response",lambda r:bad.append((r.status,r.url)) if r.url.startswith(origin) and r.status>=400 else None)
-   response=page.goto(origin+"/trophies/",wait_until="domcontentloaded");assert response and response.status==200
+   response=page.goto(origin+"/trophies/",wait_until="commit");assert response and response.status==200
    page.wait_for_selector(".p2k-trophy-card")
    assert page.locator(".p2k-trophy-card").count()==3
    assert page.locator("[data-group-name='2026'] .p2k-trophy-card").first.get_attribute("data-trophy-id")=="new"
