@@ -1,0 +1,35 @@
+name: P2K source recovery once
+
+on:
+  push:
+    branches: [feature/trophy-gallery-poc]
+    paths: [.github/workflows/p2k-source-recovery-once.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  recover-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/trophy-gallery-poc
+          fetch-depth: 1
+      - name: Verify branch and package exact source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git branch --show-current)" = "feature/trophy-gallery-poc"
+          printf 'HEAD=%s\n' "$(git rev-parse HEAD)"
+          printf 'parent=%s\n' "$(git rev-parse HEAD^)"
+          tar --exclude=.git -czf /tmp/p2k-source.tar.gz .
+          sha256sum /tmp/p2k-source.tar.gz
+          find . -type f -not -path './.git/*' | wc -l
+      - name: Upload exact source
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2k-trophy-source-${{ github.sha }}
+          path: /tmp/p2k-source.tar.gz
+          if-no-files-found: error
+          retention-days: 1
