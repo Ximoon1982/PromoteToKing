@@ -1,0 +1,160 @@
+name: Stage final Trophy qualified source
+
+on:
+  push:
+    branches: [feature/trophy-gallery-poc]
+    paths: [.github/workflows/trophy-source-finalize-once.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  stage-source:
+    if: github.event.head_commit.message == 'Stage final Trophy qualified source'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/trophy-gallery-poc
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify exact source base
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "54ab4f007c43d4285ea2db1beb82c5afcee40e37"
+          test "$(cat VERSION)" = "2.11.5"
+          test -z "$(git status --porcelain)"
+
+      - name: Repair engraving handoff independent of listener order and JS realm
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib,re
+          core=Path('assets/js/admin/trophy-gallery-poc.js')
+          s=core.read_text(encoding='utf-8')
+          old='window.addEventListener("message",e=>{if(e.origin!==ROOT.origin||e.data?.type!=="p2k-trophy-engraving"||!(e.data.blob instanceof Blob))return;const frame=$(\'[data-engraver]:not([hidden])\');if(!frame)return;uploadSlot(frame.closest("form"),frame.dataset.slot||"vignette",new File([e.data.blob],e.data.name||"engraving.png",{type:"image/png"}),"engraving",message=>alert(message));});'
+          new='window.addEventListener("message",e=>{const blob=e.data?.blob;if(e.origin!==ROOT.origin||e.data?.type!=="p2k-trophy-engraving"||!blob||typeof blob.size!=="number")return;const frame=$(\'[data-engraver]:not([hidden])\')||$(\'[data-engraver][data-slot]\');if(!frame)return;uploadSlot(frame.closest("form"),frame.dataset.slot||"vignette",new File([blob],e.data.name||"engraving.png",{type:blob.type||"image/png"}),"engraving",message=>alert(message));});'
+          if s.count(old)!=1: raise SystemExit('Canonical engraving listener target not found exactly once')
+          core.write_text(s.replace(old,new,1),encoding='utf-8')
+          def h12(path): return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:12]
+          core_key=f'poc-{h12(core)}-20260911-engraving-handoff'
+          registry=Path('assets/js/admin/tool-registry.js')
+          rs=registry.read_text(encoding='utf-8')
+          rs,n=re.subn(r'trophy-gallery-poc\.js\?v=[^"\']+',f'trophy-gallery-poc.js?v={core_key}',rs)
+          if n<1: raise SystemExit('Registry Trophy loader not found')
+          registry.write_text(rs,encoding='utf-8')
+          standalone=Path('trophies/index.html')
+          ts=standalone.read_text(encoding='utf-8')
+          ts,n=re.subn(r'trophy-gallery-poc\.js\?v=[^"\']+',f'trophy-gallery-poc.js?v={core_key}',ts)
+          if n<1: raise SystemExit('Standalone Trophy loader not found')
+          standalone.write_text(ts,encoding='utf-8')
+          reg_key=f'trophyreg-{h12(registry)}-20260911-engraving-handoff'
+          ui=Path('ui-v2.html')
+          us=ui.read_text(encoding='utf-8')
+          us,n=re.subn(r'assets/js/admin/tool-registry\.js\?v=[^"\']+',f'assets/js/admin/tool-registry.js?v={reg_key}',us,count=1)
+          if n!=1: raise SystemExit('ui-v2 registry loader not found exactly once')
+          ui.write_text(us,encoding='utf-8')
+          print('Core key:',core_key)
+          print('Registry key:',reg_key)
+          PY
+          node --check assets/js/admin/trophy-gallery-poc.js
+
+      - name: Rotate immutable 2.11.5 build identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGE="$(mktemp -d)"
+          BACKUP="$GITHUB_WORKSPACE/.p2k-version-refresh-backup"
+          rm -rf "$BACKUP" .p2k-version-2.11.5.json
+          python tools/poc/trophy-gallery/r5fix3.9/version-align.py plan --root "$GITHUB_WORKSPACE" --stage "$STAGE"
+          python tools/poc/trophy-gallery/r5fix3.9/version-align.py apply --root "$GITHUB_WORKSPACE" --stage "$STAGE" --backup "$BACKUP"
+          python tools/poc/trophy-gallery/r5fix3.9/version-align.py verify --root "$GITHUB_WORKSPACE"
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+          key=json.loads(Path('.p2k-version-2.11.5.json').read_text())['asset_cache_key']
+          assert re.fullmatch(r'2\.11\.5-b[0-9a-f]{12}',key), key
+          Path('/tmp/p2k-final-build-key').write_text(key)
+          print('Final build key:',key)
+          PY
+          rm -rf "$STAGE" "$BACKUP" .p2k-version-2.11.5.json
+
+      - name: Build final installed-overlay E2E and workflow payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          src=Path('.github/workflows/trophy-final-qualify-once.yml').read_text(encoding='utf-8').splitlines()
+          def extract(start,end):
+              out=[];active=False
+              for line in src:
+                  if start in line: active=True;continue
+                  if active and line.strip()==end: break
+                  if active: out.append(line[10:] if line.startswith('          ') else line)
+              if not out: raise SystemExit(f'Could not extract {start}')
+              return '\n'.join(out)+'\n'
+          key=Path('/tmp/p2k-final-build-key').read_text().strip()
+          test=extract("cat > tests/browser_gate_trophy_gallery_overlay.py <<'PYTEST'",'PYTEST')
+          test=test.replace('BUILD_KEY = "2.11.5-bf6a828490f57"',f'BUILD_KEY = "{key}"',1)
+          old='''                upload = tree / "test-upload.png"\n                Image.new("RGB", (16, 16), (180, 100, 20)).save(upload)\n                page.set_input_files(f"{host} [data-upload='vignette']", str(upload))\n                page.wait_for_selector(f"{host} [data-preview='vignette'] img", timeout=15000)\n\n                page.click(f"{host} [data-engrave='modal']")'''
+          new='''                upload = tree / "test-upload.png"\n                Image.new("RGB", (16, 16), (180, 100, 20)).save(upload)\n                before_vignette = FixtureHandler.upload_count\n                with page.expect_response(lambda r: "server/trophy-gallery/public/api.php?action=upload" in r.url and r.request.method == "POST", timeout=15000):\n                    page.set_input_files(f"{host} [data-upload='vignette']", str(upload))\n                assert FixtureHandler.upload_count == before_vignette + 1\n                page.wait_for_selector(f"{host} [data-preview='vignette'] img", timeout=15000)\n\n                page.click(f"{host} [data-engrave='modal']")'''
+          if old not in test: raise SystemExit('Vignette synchronization target not found')
+          test=test.replace(old,new,1)
+          old='''                frame.locator("#p2kR538UsePrize").click()\n                page.wait_for_selector(f"{host} [data-preview='modal'] img", timeout=15000)\n                page.wait_for_function("!document.body.classList.contains('p2k-engraver-open')")\n                assert FixtureHandler.upload_count >= 2\n                assert FixtureHandler.meta["installed-trophy"]["modal_media_mode"] == "custom"'''
+          new='''                before_prize = FixtureHandler.upload_count\n                with page.expect_response(lambda r: "server/trophy-gallery/public/api.php?action=upload" in r.url and r.request.method == "POST", timeout=15000):\n                    frame.locator("#p2kR538UsePrize").click()\n                assert FixtureHandler.upload_count == before_prize + 1\n                page.wait_for_function("!document.body.classList.contains('p2k-engraver-open')")\n                page.wait_for_selector(f"{host} form[data-r538-enhanced='1']", timeout=15000)\n                page.wait_for_function("document.querySelector('[data-r538-mode-note]')?.textContent === 'Custom modal image'")\n                page.wait_for_selector(f"{host} [data-preview='modal'] img", timeout=15000)\n                assert FixtureHandler.meta["installed-trophy"]["modal_media_mode"] == "custom"'''
+          if old not in test: raise SystemExit('Use-prize synchronization target not found')
+          test=test.replace(old,new,1)
+          Path('tests/browser_gate_trophy_gallery_overlay.py').write_text(test,encoding='utf-8')
+
+          workflow=extract("cat > .github/workflows/trophy-gallery-poc.yml <<'YAML'",'YAML')
+          workflow=workflow.replace('2.11.5-bf6a828490f57',key)
+          workflow=workflow.replace('          bash tools/poc/trophy-gallery/r5fix3.9/install-p2k-version-2.11.5.sh "$GITHUB_WORKSPACE" verify\n','')
+          Path('tools/poc/trophy-gallery/final-trophy-gallery-poc.yml').write_text(workflow,encoding='utf-8')
+          PY
+          python -m py_compile tests/browser_gate_trophy_gallery_overlay.py
+          grep -Fq "$(cat /tmp/p2k-final-build-key)" tools/poc/trophy-gallery/final-trophy-gallery-poc.yml
+
+      - name: Pre-push exact final-state qualification
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r tests/requirements.txt
+          git diff --check
+          node --check assets/js/admin/trophy-gallery-poc.js
+          node --check assets/js/admin/trophy-gallery-r5fix3.8.js
+          php -l server/trophy-gallery/public/editor-meta.php
+          test "$(cat VERSION)" = "2.11.5"
+          grep -Fq 'version: "2.11.5"' assets/js/site-config.js
+          grep -Fq "$(cat /tmp/p2k-final-build-key)" assets/js/site-config.js
+          test "$(sha256sum assets/js/admin/trophy-gallery-r5fix3.8.js | cut -c1-12)" = "d52193a71712"
+          test "$(sha256sum assets/trophy-gallery/trophy-gallery-r5fix3.8.css | cut -c1-12)" = "fdcea54d62ba"
+          bash tools/poc/trophy-gallery/r5fix3.8/install-trophy-gallery-r5fix3.8.sh "$GITHUB_WORKSPACE" verify
+          python tests/browser_gate_trophy_gallery_overlay.py
+
+      - name: Commit and push non-workflow final source with ordinary Git
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Ximoon1982'
+          git config user.email 'ximoon@gmail.com'
+          git add -A
+          git reset -- .github/workflows
+          test -n "$(git diff --cached --name-only)"
+          if git diff --cached --name-only | grep -q '^\.github/workflows/'; then
+            echo 'Workflow path unexpectedly staged' >&2
+            exit 1
+          fi
+          git diff --cached --check
+          git commit -m 'Stage final Trophy 2.11.5 qualified source'
+          git push origin HEAD:feature/trophy-gallery-poc
