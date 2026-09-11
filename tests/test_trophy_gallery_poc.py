@@ -1,4 +1,5 @@
 from pathlib import Path
+import hashlib
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -7,8 +8,10 @@ def text(path: str) -> str:
 
 def test_trophy_gallery_is_loaded_through_normal_registry():
     registry = text("assets/js/admin/tool-registry.js")
-    runtime = text("assets/js/admin/trophy-gallery-poc.js")
-    assert "trophy-gallery-poc.js?v=poc-e883881c083e-20260910-r5" in registry
+    runtime_path = ROOT / "assets/js/admin/trophy-gallery-poc.js"
+    runtime = runtime_path.read_text(encoding="utf-8")
+    runtime_key = hashlib.sha256(runtime_path.read_bytes()).hexdigest()[:12]
+    assert f"trophy-gallery-poc.js?v=poc-{runtime_key}-20260911-engraving-handoff" in registry
     assert "P2K_TROPHY_GALLERY_POC" in runtime
     assert "mountAdmin" in runtime and "mountPublic" in runtime
 

@@ -50,7 +50,7 @@ function membersTableColumns() {
       };
       if (window.P2K_CREATE_INSIGHTS_CHARTS) return finish();
       const script = document.createElement("script");
-      script.src = "assets/js/pages/dashboard-insights-charts.js?v=2.11.5-b9e1090f10b9d";
+      script.src = "assets/js/pages/dashboard-insights-charts.js?v=2.11.5-bf6a828490f57";
       script.defer = true; script.onload = finish; script.onerror = () => reject(new Error("Unable to load Insights chart module."));
       document.head.appendChild(script);
     });

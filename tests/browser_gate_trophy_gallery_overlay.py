@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Qualify the actual installed 2.11.5 + approved r5fix3.8 Trophy runtime."""
+"""Qualify the actual installed 2.11.5 + approved r5fix3.8 + r5fix3.10 Trophy runtime."""
 
 from __future__ import annotations
 
@@ -23,9 +23,10 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "6706e619d310e2c74fe2734cfcef8dd2f83d70d1"
 VERSION = "2.11.5"
-BUILD_KEY = "2.11.5-b9e1090f10b9d"
+BUILD_KEY = "2.11.5-bf6a828490f57"
 R538_JS = "r538-d52193a71712"
 R538_CSS = "r538-fdcea54d62ba"
+R5310_JS = "r5310-924e1cb5d9a8"
 CHROMIUM = os.environ.get("P2K_CHROMIUM") or shutil.which("chromium") or "/usr/bin/chromium"
 
 MEDIA_BUFFER = BytesIO()
@@ -245,8 +246,18 @@ def main() -> None:
                 assert page.locator(f'script[src*="site-config.js?v={BUILD_KEY}"]').count() == 1
                 assert page.locator(f'script[src*="trophy-gallery-r5fix3.8.js?v={R538_JS}"]').count() == 1
                 assert page.locator(f'link[href*="trophy-gallery-r5fix3.8.css?v={R538_CSS}"]').count() == 1
+                assert page.locator(f'script[src*="trophy-gallery-r5fix3.10.js?v={R5310_JS}"]').count() == 1
 
                 host = "#adminShellNativeDetailHost"
+                page.evaluate("""() => {
+                    const style = document.createElement('style');
+                    style.id = 'preview-escape-regression';
+                    style.textContent = `
+                      #adminShellNativeDetailHost .p2k-media-preview { height:100vh!important; overflow:visible!important; }
+                      #adminShellNativeDetailHost .p2k-media-preview img { position:fixed!important; inset:0!important; width:100vw!important; height:100vh!important; max-width:none!important; max-height:none!important; }
+                    `;
+                    document.head.appendChild(style);
+                }""")
                 page.fill(f"{host} [name='description_md']", "Persistent after final overlay")
                 page.select_option(f"{host} [name='status']", "published")
                 page.click(f"{host} form button[type='submit']")
@@ -284,6 +295,19 @@ def main() -> None:
                     page.set_input_files(f"{host} [data-upload='vignette']", str(upload))
                 assert FixtureHandler.upload_count == before_vignette + 1
                 page.wait_for_selector(f"{host} [data-preview='vignette'] img", timeout=15000)
+                page.wait_for_function("""document.querySelector("#adminShellNativeDetailHost [data-preview='vignette']")?.dataset.r5310Contained === '1'""")
+                preview = page.locator(f"{host} [data-preview='vignette']")
+                preview_image = preview.locator("img")
+                preview_box = preview.bounding_box()
+                preview_image_box = preview_image.bounding_box()
+                assert preview_box is not None and preview_image_box is not None
+                assert 279 <= preview_box["height"] <= 281, preview_box
+                assert preview_image.evaluate("el => getComputedStyle(el).position") == "absolute"
+                assert preview.evaluate("el => getComputedStyle(el).overflow") == "hidden"
+                assert preview_image_box["x"] >= preview_box["x"] - 1
+                assert preview_image_box["y"] >= preview_box["y"] - 1
+                assert preview_image_box["x"] + preview_image_box["width"] <= preview_box["x"] + preview_box["width"] + 1
+                assert preview_image_box["y"] + preview_image_box["height"] <= preview_box["y"] + preview_box["height"] + 1
 
                 page.click(f"{host} [data-engrave='modal']")
                 page.wait_for_selector(f"{host} .p2k-engraver-modal:not([hidden]) iframe.p2k-engraver", timeout=15000)
@@ -349,6 +373,8 @@ def main() -> None:
         "asset_build_key": BUILD_KEY,
         "r5fix3_8_js_key": R538_JS,
         "r5fix3_8_css_key": R538_CSS,
+        "r5fix3_10_js_key": R5310_JS,
+        "admin_preview_contained": True,
         "multi_match": True,
         "multi_result_tables": True,
         "modal_modes": True,
