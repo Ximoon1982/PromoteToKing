@@ -194,7 +194,7 @@ const { state, byId, escapeHTML, number, setText, nativeLink, cellWithSub, statu
     if (window.P2K_DASHBOARD_INSIGHTS) return Promise.resolve(window.P2K_DASHBOARD_INSIGHTS);
     if (dashboardInsightsModulePromise) return dashboardInsightsModulePromise;
     dashboardInsightsModulePromise = loadFeatureScriptWithRetry(
-      "assets/js/pages/dashboard-insights.js?v=2.10.6.24",
+      "assets/js/pages/dashboard-insights.js?v=2.11.5-bf6a828490f57",
       () => typeof window.P2K_CREATE_DASHBOARD_INSIGHTS === "function",
       "Dashboard Insights module"
     ).then(() => {

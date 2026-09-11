@@ -10,7 +10,7 @@
     if (document.querySelector('link[data-p2k-members-insights-css]')) return;
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "assets/css/members-insights-enhancement.css?v=2.10.9.6-members-ranking-2";
+    link.href = "assets/css/members-insights-enhancement.css?v=2.11.5-bf6a828490f57";
     link.dataset.p2kMembersInsightsCss = "1";
     document.head.appendChild(link);
   }
