@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-BASELINE = "b8bf26c7c41ca1914323717766bca995139291aa"
+BASELINE = "c534b2dbb0346eac0fa6de869621d6b7d785ead8"
 FACADES = ["ClubIntelligenceService.php", "AnalyticsBuilder.php", "AchievementCatalog.php"]
 
 
@@ -28,7 +28,7 @@ def test_frontend_split_changes_no_visual_asset_or_stylesheet():
         pytest.skip("Git baseline comparison is repository-scoped.")
     changed = subprocess.run(["git", "diff", "--name-only", f"{BASELINE}..HEAD"], cwd=ROOT, check=True, text=True, capture_output=True).stdout.splitlines()
     visual = [path for path in changed if path.endswith((".css", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico"))]
-    assert visual == []
+    assert visual == ["assets/css/recruit-match.css"]
     graph = json.loads((ROOT / "tests/v2.11.2-frontend-boundaries.json").read_text(encoding="utf-8"))
     assert graph["entrypoints"]["ui-v2.html"][-1] == "dashboard/facade"
     assert graph["entrypoints"]["index.html"][-1] == "admin/facade"

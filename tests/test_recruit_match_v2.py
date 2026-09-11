@@ -34,7 +34,7 @@ def test_recruitment_pool_remains_current_member_db_source():
 
 def test_recruitment_v2_immutable_cache_identity():
     html = text("RecruitMatch.html")
-    key = "2.12.0-ee41bf0bad9ec"
+    key = "2.12.0-e60ee174a000"
     assert f"recruit-match.css?v={key}" in html
     assert f"recruit-match-v2-core.js?v={key}" in html
     assert f"recruit-match.js?v={key}" in html
