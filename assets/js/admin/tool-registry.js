@@ -70,7 +70,7 @@ if (window.P2K_TROPHY_GALLERY_POC) { window.P2K_TROPHY_GALLERY_POC.mount?.(conte
 if (document.getElementById("p2kTrophyGalleryPocScript")) return;
 const script = document.createElement("script");
 script.id = "p2kTrophyGalleryPocScript";
-script.src = "assets/js/admin/trophy-gallery-poc.js?v=poc-62798e52162b-20260910-r5fix2.2";
+script.src = "assets/js/admin/trophy-gallery-poc.js?v=poc-efaa08caaf59-20260911-engraving-handoff";
 script.defer = true;
 script.onload = () => window.P2K_TROPHY_GALLERY_POC?.mount?.(context);
 document.head.appendChild(script);

@@ -155,36 +155,36 @@
 (() => {
   if (window.P2K_SITE_CONFIG?.features?.trafficAnalytics === false) return;
   if (document.querySelector('script[data-p2k-traffic-analytics]')) return;
-  const script=document.createElement('script');script.src='assets/js/shared/traffic-analytics.js?v=2.11.5-bf6a828490f57';script.defer=true;script.dataset.p2kTrafficAnalytics='1';const mount=()=>document.head.appendChild(script);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+  const script=document.createElement('script');script.src='assets/js/shared/traffic-analytics.js?v=2.11.5-b9e1090f10b9d';script.defer=true;script.dataset.p2kTrafficAnalytics='1';const mount=()=>document.head.appendChild(script);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
 
 // Shared live-chart maximize/restore controller.
 (() => {
   if (document.querySelector('script[data-p2k-chart-maximize]')) return;
-  const script=document.createElement('script');script.src='assets/js/shared/chart-maximize.js?v=2.11.5-bf6a828490f57';script.defer=true;script.dataset.p2kChartMaximize='1';const mount=()=>document.head.appendChild(script);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+  const script=document.createElement('script');script.src='assets/js/shared/chart-maximize.js?v=2.11.5-b9e1090f10b9d';script.defer=true;script.dataset.p2kChartMaximize='1';const mount=()=>document.head.appendChild(script);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
 
 // Members Insights period/ranking enhancement.
 (() => {
   if (document.querySelector('script[data-p2k-members-insights-enhancement]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/members-insights-enhancement.js?v=2.11.5-bf6a828490f57';script.async=false;script.dataset.p2kMembersInsightsEnhancement='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  const script=document.createElement('script');script.src='assets/js/pages/members-insights-enhancement.js?v=2.11.5-b9e1090f10b9d';script.async=false;script.dataset.p2kMembersInsightsEnhancement='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
 
 // v2.11.0 canonical toggle Administration + Recruitment native detail.
 (() => {
   if (document.querySelector('script[data-p2k-v2110]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0.js?v=2.11.5-bf6a828490f57';script.async=false;script.dataset.p2kV2110='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0.js?v=2.11.5-b9e1090f10b9d';script.async=false;script.dataset.p2kV2110='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
 
 // Green-primary/retired migration cleanup.
 (() => {
   if (document.querySelector('script[data-p2k-v2110-green-primary]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-green-primary.js?v=2.11.5-bf6a828490f57';script.async=false;script.dataset.p2kV2110GreenPrimary='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-green-primary.js?v=2.11.5-b9e1090f10b9d';script.async=false;script.dataset.p2kV2110GreenPrimary='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
 
 // Admin SPA/frame stability. Recruitment is a native detail and is explicitly
 // excluded from iframe stabilization; actual iframe tools retain dynamic height support.
 (() => {
   if (document.querySelector('script[data-p2k-v2110-r2-admin-stability]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r2-admin-stability.js?v=2.11.5-bf6a828490f57';script.async=false;script.dataset.p2kV2110R2AdminStability='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0-r2-admin-stability.js?v=2.11.5-b9e1090f10b9d';script.async=false;script.dataset.p2kV2110R2AdminStability='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();

@@ -588,7 +588,7 @@ const { integratedFrames, setIntegratedFrameActivity, ensureIntegratedFrame } = 
     if (window.P2K_DASHBOARD_HALL) return Promise.resolve(window.P2K_DASHBOARD_HALL);
     if (dashboardHallModulePromise) return dashboardHallModulePromise;
     dashboardHallModulePromise = loadFeatureScriptWithRetry(
-      "assets/js/pages/dashboard-hall.js?v=2.11.5-bf6a828490f57",
+      "assets/js/pages/dashboard-hall.js?v=2.11.5-b9e1090f10b9d",
       () => typeof window.P2K_CREATE_DASHBOARD_HALL === "function",
       "Dashboard Hall module"
     ).then(() => {
