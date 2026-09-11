@@ -47,7 +47,7 @@ def main():
         page.goto(f"http://127.0.0.1:{server.server_port}/RecruitMatch.html?match=777",wait_until="networkidle")
         page.wait_for_selector("#p2kSettingsPanel:not([hidden])")
         page.click("#p2kScanButton")
-        page.wait_for_function("document.querySelector('#p2kStatusText').textContent.includes('Scan complete')")
+        page.locator("#p2kStatusText", has_text="Scan complete").wait_for()
         assert page.locator(".p2k-result-card.p2k-good .p2k-result-card-value").inner_text()=="1"
         assert page.locator("#p2kResultBody tr").count()==1
         assert "Eligible" in page.locator("#p2kResultBody").inner_text()
