@@ -70,10 +70,11 @@ jobs:
           ! grep -R -F -q --exclude-dir=.git '2.11.5-b9e1090f10b9d' .
           grep -Fq 'r538-d52193a71712' ui-v2.html
           grep -Fq 'r538-fdcea54d62ba' ui-v2.html
-          grep -Fq 'r5310-924e1cb5d9a8' ui-v2.html
+          grep -Fq 'r5310-fd6d89209aa6' ui-v2.html
+          ! grep -R -F -q --exclude-dir=.git 'r5310-924e1cb5d9a8' assets tests tools ui-v2.html trophies/index.html
           test "$(sha256sum assets/js/admin/trophy-gallery-r5fix3.8.js | cut -c1-12)" = "d52193a71712"
           test "$(sha256sum assets/trophy-gallery/trophy-gallery-r5fix3.8.css | cut -c1-12)" = "fdcea54d62ba"
-          test "$(sha256sum assets/js/admin/trophy-gallery-r5fix3.10.js | cut -c1-12)" = "924e1cb5d9a8"
+          test "$(sha256sum assets/js/admin/trophy-gallery-r5fix3.10.js | cut -d' ' -f1)" = "fd6d89209aa68e9e1cea3c47487fa8c4eb11fea275f8066ea5cb3075dcc0e8aa"
           bash tools/poc/trophy-gallery/r5fix3.8/install-trophy-gallery-r5fix3.8.sh "$GITHUB_WORKSPACE" verify
           bash tools/poc/trophy-gallery/r5fix3.10/install-trophy-gallery-r5fix3.10.sh "$GITHUB_WORKSPACE" verify
       - name: Verify inherited v2.11.4 structural baseline
