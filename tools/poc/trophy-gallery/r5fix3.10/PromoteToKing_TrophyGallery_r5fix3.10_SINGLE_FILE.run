@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ROOT="${1:-/kunden/homepages/43/d141198007/htdocs/PromoteToKing}"
+MODE="${2:-install}"
+PINNED_COMMIT="b17ecc3a035697fce27c8a7489a06c65140bf2f6"
+BASE="https://raw.githubusercontent.com/Ximoon1982/PromoteToKing/${PINNED_COMMIT}/tools/poc/trophy-gallery/r5fix3.10"
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/p2k-r5310-single.XXXXXX")"
+cleanup(){ rm -rf "$TMP"; }
+trap cleanup EXIT
+
+command -v python3 >/dev/null 2>&1 || { echo "ERROR: python3 is required" >&2; exit 1; }
+
+python3 - "$BASE" "$TMP" <<'PY'
+from pathlib import Path
+from urllib.request import Request, urlopen
+import hashlib, sys
+
+base = sys.argv[1]
+out = Path(sys.argv[2])
+expected = {
+    "README.txt": "a031e462a740b25683b9c9cb6e2e3cce108939c02da22bac5f959d3ceab9cd19",
+    "MANIFEST.sha256": "309ff5a2122354972168fb6e3505d4edaf3f5fef",
+    "install-trophy-gallery-r5fix3.10.sh": "85d674ad09e1aa3799e447ced36260a69c4b56b06340e72ea1d60ab52e9866bf",
+    "patch-loaders.py": "63c37990fda437a31faac54c038faef1a2e3ceee9da51cc34bf2557c427ee506",
+    "trophy-gallery-r5fix3.10.js": "fd6d89209aa68e9e1cea3c47487fa8c4eb11fea275f8066ea5cb3075dcc0e8aa",
+}
+for name, sha in expected.items():
+    req = Request(f"{base}/{name}", headers={"User-Agent":"P2K-r5fix3.10-single-installer"})
+    with urlopen(req, timeout=30) as response:
+        data = response.read()
+    got = hashlib.sha256(data).hexdigest()
+    if got != sha:
+        raise SystemExit(f"Checksum mismatch for {name}: {got} != {sha}")
+    (out / name).write_bytes(data)
+print("Pinned r5fix3.10 package downloaded and checksum-verified.")
+PY
+
+chmod +x "$TMP/install-trophy-gallery-r5fix3.10.sh"
+exec "$TMP/install-trophy-gallery-r5fix3.10.sh" "$ROOT" "$MODE"
