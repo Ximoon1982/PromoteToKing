@@ -29,7 +29,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "5dae305903bc822b83ed1af0a272f37671b82519"
+          test "$(git rev-parse HEAD^)" = "d2a5f342aa634e407e9bf79075aa2b506acc5282"
           test "$(git branch --show-current)" = "feature/trophy-gallery-poc"
           test -z "$(git status --porcelain)"
       - name: Apply exact locally-qualified r5fix3.10 delta
@@ -273,11 +273,12 @@ jobs:
           grep -Fq 'r538-d52193a71712' ui-v2.html
           grep -Fq 'r538-fdcea54d62ba' ui-v2.html
           grep -Fq 'r5310-924e1cb5d9a8' ui-v2.html
-      - name: Commit verified r5fix3.10 repair
+      - name: Commit verified r5fix3.10 repair source
         shell: bash
         run: |
           set -euo pipefail
-          rm -f .github/workflows/trophy-r5fix310-once.yml
+          git restore --source=HEAD -- .github/workflows/trophy-gallery-poc.yml .github/workflows/p2k-source-recovery-once.yml .github/workflows/trophy-r5fix310-once.yml
+          test -z "$(git diff --name-only -- .github/workflows)"
           git config user.name 'Ximoon1982'
           git config user.email 'ximoon@gmail.com'
           git add -A
