@@ -14,12 +14,10 @@ Current follow-up increment retained here:
   r5fix3.9 version-alignment tooling targeting 2.11.5
 
 Important:
-  The exact r5fix3.9 installer ZIP is retained under releases/. It contains the complete
-  r5fix3.9 payload, including version-align.py, README, manifest and installer.
-  This reconstruction commit does not claim that every active runtime version/cache-key
-  surface has already been rewritten in the GitHub branch; that requires a separate
-  full-tree version-normalization commit/audit.
+  r5fix3.9 tooling is preserved as source + installer artifact. This reconstruction commit does
+  not claim that every active runtime version/cache-key surface has already been rewritten in
+  the GitHub branch; that requires a separate full-tree version-normalization commit/audit.
 
-The approved r5fix2.2/r5fix3.8 production state is recorded here as the continuation baseline;
-this commit does not fabricate or claim repository copies of artifacts that were not present in
-the remote base tree. Externally hosted artwork bytes are likewise not fabricated.
+The exact installer ZIPs for r5fix2.2, r5fix3.8 and r5fix3.9 are retained under releases/.
+The exact legacy-r4 artwork URL manifest is retained, but the externally hosted artwork bytes
+are not fabricated or claimed to be present here.
