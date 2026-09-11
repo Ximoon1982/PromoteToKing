@@ -32,7 +32,7 @@ The tab shell never parses or replays another page's scripts, never calls `docum
 | `MatchCreationAnalyzer.htm` | `match-creation-analyzer.js`, `match-creation-charts.js`, explicit client/cache, analysis coordinator |
 | `AnalyzeMatch.html` | `analyze-match.js`, explicit client/cache |
 | `AnalyzeMatchModal.html` | lightweight modal mode wrapper plus `upcoming-analysis-core.js`, explicit client/cache |
-| `RecruitMatch.html` | `recruit-match.js`, explicit client/cache |
+| `RecruitMatch.html` | `recruit-match-v2-core.js` + `recruit-match.js`, DB-first eligibility and explicit client/cache |
 | `ChallengeListAssistant.html` | URL validation, activity classification, ordered challenge recommendation, explicit client/cache |
 | `index.html` | `site-tabs.js`, `admin-features.js`, explicit client/cache, analysis coordinator, simulated login |
 
