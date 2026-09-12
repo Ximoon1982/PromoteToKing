@@ -64,6 +64,15 @@ jobs:
         run: git worktree add --detach /tmp/p2k-qualified-v2114 6706e619d310e2c74fe2734cfcef8dd2f83d70d1
       - name: Full inherited canonical P2K regression
         run: (cd /tmp/p2k-qualified-v2114 && python tools/test-suite/p2k_test_suite.py regression)
+      - name: Retain exact qualified v2.12.0 installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: PromoteToKing-v2.12.0-qualified-installer-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/v2120-build/PromoteToKing_v2.12.0_INCREMENTAL.zip
+            ${{ runner.temp }}/v2120-build/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
 
   canonical-browser:
     runs-on: ubuntu-latest
