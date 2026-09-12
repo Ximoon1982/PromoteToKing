@@ -55,7 +55,8 @@ assert(siteConfig.includes('branding.logoPath') && siteConfig.includes('branding
 assert(siteTabs.includes('MAIN_CLUB_URL') && siteTabs.includes('logoLink.href = MAIN_CLUB_URL'), "Configured logo destination is not applied");
 assert(siteTabs.includes('key === "recruit"') && siteTabs.includes('url.searchParams.set("lockTeam", "1")'), "Embedded recruitment club lock is missing");
 assert(recruitJs.includes('state.locked') && recruitJs.includes('requested P2K side is not in this match'), "Recruitment assistant does not enforce the configured club");
-assert(recruitJs.includes('recruitment-pool.php') && recruitJs.includes('C.preselect') && recruitJs.indexOf('C.preselect') < recruitJs.indexOf('processPriority'), "DB-first recruitment eligibility pipeline is incomplete");
+const recruitmentScan = recruitJs.slice(recruitJs.indexOf('async function scan'));
+assert(recruitmentScan.includes('recruitment-pool.php') && recruitmentScan.includes('localPre=C.preselect') && recruitmentScan.indexOf('recruitment-pool.php') < recruitmentScan.indexOf('localPre=C.preselect') && recruitmentScan.indexOf('localPre=C.preselect') < recruitmentScan.indexOf('/members`') && recruitmentScan.indexOf('/members`') < recruitmentScan.indexOf('processPriority'), "DB-first recruitment eligibility pipeline is incomplete");
 assert(recruitJs.includes('timeout_percent') && recruitJs.includes('last_online') && recruitJs.includes('partialValues'), "Live recruitment verification is incomplete");
 assert(recruitCss.includes('.p2k-team-selector[hidden]'), "Locked recruitment team selector is not hidden");
 assert(upcomingHtml.includes('>Matches</button>') && upcomingHtml.includes('>Players</button>'), "Upcoming Matches subtabs are missing");
