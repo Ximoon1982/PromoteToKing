@@ -37,6 +37,15 @@
     }
     return { candidates, counts };
   }
+  function excludeOpponent(preselection, opponent) {
+    const members = opponent || new Set(), candidates = [];
+    let excluded = 0;
+    for (const row of preselection.candidates) {
+      if (members.has(row.username_key)) excluded++;
+      else candidates.push(row);
+    }
+    return { candidates, counts: { ...preselection.counts, opponent: excluded } };
+  }
   function verify(row, live, criteria, nowSeconds = Date.now() / 1000) {
     if (live?.error) return { ...row, decision: "unverified", reason: live.error, live };
     const lastOnline = number(live?.last_online), timeout = number(live?.timeout_percent);
@@ -69,5 +78,5 @@
     ].map(quote).join(",")));
     return `\uFEFF${lines.join("\r\n")}\r\n`;
   }
-  return { parseMatchReference, ratingCategory, preselect, verify, eta, csv };
+  return { parseMatchReference, ratingCategory, preselect, excludeOpponent, verify, eta, csv };
 });

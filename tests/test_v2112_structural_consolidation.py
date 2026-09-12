@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-BASELINE = "c534b2dbb0346eac0fa6de869621d6b7d785ead8"
+BASELINE = "b8bf26c7c41ca1914323717766bca995139291aa"
 FACADES = ["ClubIntelligenceService.php", "AnalyticsBuilder.php", "AchievementCatalog.php"]
 
 
@@ -28,7 +28,7 @@ def test_frontend_split_changes_no_visual_asset_or_stylesheet():
         pytest.skip("Git baseline comparison is repository-scoped.")
     changed = subprocess.run(["git", "diff", "--name-only", f"{BASELINE}..HEAD"], cwd=ROOT, check=True, text=True, capture_output=True).stdout.splitlines()
     visual = [path for path in changed if path.endswith((".css", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico"))]
-    assert visual == ["assets/css/recruit-match.css"]
+    assert visual == []
     graph = json.loads((ROOT / "tests/v2.11.2-frontend-boundaries.json").read_text(encoding="utf-8"))
     assert graph["entrypoints"]["ui-v2.html"][-1] == "dashboard/facade"
     assert graph["entrypoints"]["index.html"][-1] == "admin/facade"
@@ -49,7 +49,7 @@ def test_no_api_schema_scheduler_or_authentication_contract_files_changed():
         pytest.skip("Git changed-path comparison is repository-scoped.")
     changed = subprocess.run(["git", "diff", "--name-only", f"{BASELINE}..HEAD"], cwd=ROOT, check=True, text=True, capture_output=True).stdout.splitlines()
     forbidden = ("api/", "server/team-points/public/", "server/team-points/sql/", "ClubIntelligence.html", "site-manifest.json", "reset-install-", "install-oauth-")
-    approved_v2113_adapters = {"server/team-points/public/recruitment-admin.php", "server/team-points/public/recruitment-pool.php"} if (ROOT / "tests/v2.11.3-frontend-boundaries.json").is_file() else set()
+    approved_v2113_adapters = {"server/team-points/public/recruitment-admin.php"} if (ROOT / "tests/v2.11.3-frontend-boundaries.json").is_file() else set()
     assert not [path for path in changed if path.startswith(forbidden) and path not in approved_v2113_adapters]
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, os, threading
+import json, os, threading, time
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
@@ -20,12 +20,12 @@ def main():
       window.P2K_SITE_CONFIG={clubSlug:"promote-to-king",api:{defaultAttempts:1}};
       const match={id:777,name:"P2K eligibility test",status:"registration",settings:{rules:"chess",min_rating:1200,max_rating:1600},teams:{team1:{name:"Promote to King","@id":"https://api.chess.com/pub/club/promote-to-king",players:[{username:"Already",rating:1400}]},team2:{name:"Rivals","@id":"https://api.chess.com/pub/club/rivals",players:[]}}};
       const live={eligible:{last_online:Math.floor(Date.now()/1000)-3600,timeout:2,games:3},eligible2:{last_online:Math.floor(Date.now()/1000)-1800,timeout:1,gamesError:true},offline:{last_online:Math.floor(Date.now()/1000)-172800,timeout:1,games:1},timeout:{last_online:Math.floor(Date.now()/1000)-60,timeout:8,games:2},broken:{error:"fixture unavailable"}};
-      window.__p2kCalls=[];
+      window.__p2kCalls=[];window.__gamesCompleted=0;
       window.__profileOpens=[];
       window.open=url=>{window.__profileOpens.push(url);return null};
       window.P2K_API_CLIENT={
         userMessage:e=>e.message,
-        json:async(url,options={})=>{window.__p2kCalls.push({url,cacheMode:options.cacheMode||'default'});if(url.includes('/pub/match/777'))return match;if(url.includes('/pub/club/rivals/members')){if(window.__failRoster)throw Error('roster unavailable');return {weekly:[{username:"Opponent"}],monthly:[],all_time:[]}}const m=url.match(/player\/([^/]+)/),key=m&&decodeURIComponent(m[1]).toLowerCase(),x=live[key];if(!x)throw Error('unexpected '+url);await new Promise(resolve=>setTimeout(resolve,60));if(x.error)throw Error(x.error);if(url.endsWith('/stats'))return {chess_daily:{record:{timeout_percent:x.timeout}}};if(url.endsWith('/games')){if(x.gamesError)throw Error('optional games unavailable');return {games:Array(x.games).fill({})}}return {username:key,last_online:x.last_online};},
+        json:async(url,options={})=>{window.__p2kCalls.push({url,cacheMode:options.cacheMode||'default'});if(url.includes('/pub/match/777'))return match;if(url.includes('/pub/club/rivals/members')){if(window.__failRoster)throw Error('roster unavailable');return {weekly:[{username:"Opponent"}],monthly:[],all_time:[]}}const m=url.match(/player\/([^/]+)/),key=m&&decodeURIComponent(m[1]).toLowerCase(),x=live[key];if(!x)throw Error('unexpected '+url);if(url.endsWith('/games')){await new Promise(resolve=>setTimeout(resolve,900));window.__gamesCompleted++;if(x.gamesError)throw Error('optional games unavailable');return {games:Array(x.games).fill({})}}await new Promise(resolve=>setTimeout(resolve,60));if(x.error)throw Error(x.error);if(key==='eligible'&&window.__staleProfile&&!url.endsWith('/stats')){if(options.cacheMode==='no-store')throw Error('current profile unavailable')}if(key==='eligible'&&window.__staleStats&&url.endsWith('/stats')){if(options.cacheMode==='no-store')throw Error('current stats unavailable')}if(url.endsWith('/stats'))return {chess_daily:{record:{timeout_percent:x.timeout}}};return {username:key,last_online:x.last_online};},
         processPriority:async(items,worker)=>{const settled=await Promise.all(items.map(async(item,index)=>{try{return {ok:true,item,index,value:await worker(item)}}catch(error){return {ok:false,item,index,error}}})),succeeded=settled.filter(x=>x.ok),failures=settled.filter(x=>!x.ok);return {succeeded,failures,pending:[],cancelled:false,get partialValues(){return succeeded.map(x=>x.value)}};}
       };
     '''
@@ -46,11 +46,14 @@ def main():
         page.route("**/assets/js/shared/**",lambda route: route.fulfill(status=200,content_type="application/javascript",body=""))
         page.route("**/config/site-branding.js*",lambda route: route.fulfill(status=200,content_type="application/javascript",body=""))
         page.route("**/assets/js/site-config.js*",lambda route: route.fulfill(status=200,content_type="application/javascript",body=""))
-        page.route("**/server/team-points/public/recruitment-pool.php*",lambda route: route.fulfill(status=200,content_type="application/json",body=json.dumps(pool)))
+        pool_state={"rows":pool}
+        page.route("**/server/team-points/public/recruitment-pool.php*",lambda route: route.fulfill(status=200,content_type="application/json",body=json.dumps(pool_state["rows"])))
         page.goto(f"http://127.0.0.1:{server.server_port}/RecruitMatch.html?match=777",wait_until="networkidle")
         page.wait_for_selector("#p2kSettingsPanel:not([hidden])")
-        page.click("#p2kScanButton")
+        started=time.monotonic();page.click("#p2kScanButton")
         page.locator("#p2kStatusText", has_text="Scan complete").wait_for()
+        assert time.monotonic()-started < .7
+        assert page.evaluate("window.__gamesCompleted")==0
         assert page.locator(".p2k-result-card.p2k-good .p2k-result-card-value").inner_text()=="2"
         assert page.locator("#p2kResultBody tr").count()==2
         assert "Eligible" in page.locator("#p2kResultBody").inner_text()
@@ -66,9 +69,11 @@ def main():
         page.locator('th[data-sort="rating"]').click()
         page.locator('[data-profile="Eligible"]').click()
         assert page.evaluate("window.__profileOpens.at(-1)").endswith("/Eligible")
+        page.locator('tr:has([data-profile="Eligible"]) td').nth(5).get_by_text("3",exact=True).wait_for(timeout=3000)
         api_calls=page.evaluate("window.__p2kCalls")
         assert sum("/pub/club/rivals/members" in x["url"] for x in api_calls)==1
         assert next(x for x in api_calls if "/pub/club/rivals/members" in x["url"])["cacheMode"]=="no-store"
+        assert all(x["cacheMode"]=="no-store" for x in api_calls if "/player/" in x["url"] and not x["url"].endswith("/games"))
         assert not any("/player/low" in x["url"] or "/player/already" in x["url"] or "/player/opponent" in x["url"] for x in api_calls)
         assert all("api.chess.com/pub/player/" in x["url"] for x in api_calls if "/player/" in x["url"])
         with page.expect_download() as download:
@@ -76,6 +81,11 @@ def main():
         assert download.value.suggested_filename=="p2k-match-777-eligible.csv"
         csv=Path(download.value.path()).read_text(encoding="utf-8-sig")
         assert '"3"' in csv and '"Eligible"' in csv
+        pool_state["rows"]={"ok":True,"summary":{"rated":1},"rows":[{"username":"Low","username_key":"low","rating":900}]}
+        page.reload(wait_until="networkidle");page.wait_for_selector("#p2kSettingsPanel:not([hidden])");page.evaluate("window.__p2kCalls=[]");page.click("#p2kScanButton")
+        page.locator("#p2kStatusText",has_text="Scan complete").wait_for()
+        assert not any("/pub/club/rivals/members" in x["url"] for x in page.evaluate("window.__p2kCalls"))
+        pool_state["rows"]=pool
         page.reload(wait_until="networkidle")
         page.wait_for_selector("#p2kSettingsPanel:not([hidden])")
         page.evaluate("window.__failRoster=true;window.__p2kCalls=[]")

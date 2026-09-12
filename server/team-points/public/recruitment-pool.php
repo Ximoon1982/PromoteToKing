@@ -6,6 +6,8 @@ use P2K\TeamPoints\PublicReadDatabase;
 use P2K\TeamPoints\Http;
 use P2K\TeamPoints\Repository;
 try {
+    // Lightweight Core rating query only. PublicReadDatabase::core() still validates
+    // the Green Core/Analytics pair; this path does not run population-wide Analytics.
     Http::method('GET');
     $config=p2k_tp_config();
     $club=strtolower((string)($config['app']['club_slug']??'promote-to-king'));

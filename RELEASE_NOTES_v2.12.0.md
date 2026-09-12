@@ -14,7 +14,9 @@ No database migration or new CRON task is introduced.
 ## Corrective qualification
 
 - ETA derives from observed wall-clock completion throughput and a recent rolling window; it never assumes scheduler concurrency.
-- Opponent membership is fetched once per scan through the shared API client with `no-store`. Failure stops classification instead of accepting stale or unknown membership.
+- Local Core rating/registration reduction runs before the opponent request. When candidates remain, opponent membership is fetched once through the shared API client with `no-store`; failure stops classification instead of accepting stale or unknown membership.
 - Timeout eligibility uses Chess.com Daily `record.timeout_percent`, the same canonical metric as the existing P2K recruitment implementation. Missing values remain unverified.
-- Current match load remains optional `/games` enrichment. An isolated load failure displays an unavailable value without rejecting an otherwise verified candidate.
+- Profile, stats and opponent membership are hard checks using `no-store`, so stale-if-error data cannot produce eligibility. Current match load runs afterward as optional `/games` enrichment on the shared scheduler; its latency and failure do not delay or reject hard eligibility.
+- The recruitment pool performs a lightweight Core rating query. Green Core/Analytics structural validation remains intact, but this request path does not execute population-wide Analytics recruitment/activity computation.
+- Cache provenance procedure: commit the exact runtime assets first, then derive and stamp the loader key from that resolvable runtime commit plus a stable build ID in a qualification-only follow-up commit.
 - The Core-only recruitment pool no longer invokes population-wide Analytics member-activity computation.

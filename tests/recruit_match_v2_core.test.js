@@ -21,6 +21,10 @@ const pre = C.preselect(rows,{min:1000,max:1600,registered:new Set(["registered"
 assert.deepEqual(pre.candidates.map(x=>x.username_key),["alpha","beta","csv"]);
 assert.deepEqual(pre.counts,{total:7,unrated:1,outsideRating:1,registered:1,opponent:1});
 assert.equal(C.preselect(rows,{min:0,max:Infinity,registered:new Set(),opponent:new Set()}).candidates.length,6);
+const localPre = C.preselect(rows,{min:1000,max:1600,registered:new Set(["registered"]),opponent:new Set()});
+const opponentPre = C.excludeOpponent(localPre,new Set(["opponent"]));
+assert.deepEqual(opponentPre.candidates.map(x=>x.username_key),["alpha","beta","csv"]);
+assert.equal(opponentPre.counts.opponent,1);
 
 const now = 2_000_000;
 assert.equal(C.verify(rows[0],{last_online:now-3600,timeout_percent:5},{onlineDays:1,maxTimeout:5},now).decision,"eligible");
