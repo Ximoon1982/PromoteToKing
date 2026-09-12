@@ -27,11 +27,15 @@ assert.equal(C.verify(rows[0],{last_online:now-3600,timeout_percent:5},{onlineDa
 assert.equal(C.verify(rows[0],{last_online:now-90000,timeout_percent:0},{onlineDays:1,maxTimeout:5},now).decision,"excluded");
 assert.equal(C.verify(rows[0],{last_online:now-3600,timeout_percent:5.1},{onlineDays:2,maxTimeout:5},now).decision,"excluded");
 assert.equal(C.verify(rows[0],{error:"offline"},{onlineDays:1,maxTimeout:5},now).decision,"unverified");
-assert.equal(C.eta([1000,2000,3000],3),6);
-assert.equal(C.eta([],3),null);
-assert.equal(C.eta([1000],0),0);
-const csv=C.csv([C.verify(rows[2],{last_online:now-10,timeout_percent:1},{onlineDays:1,maxTimeout:5},now)],{id:"42",name:"A, \"B\"",ratingCategory:"daily_standard",min:0,max:Infinity});
+// Five candidates completing concurrently at one second represent 5/s wall-clock
+// throughput: five remaining candidates take ~1s, not 5s of summed request time.
+assert.equal(C.eta([1000,1000,1000,1000,1000],5,1000),1);
+assert.equal(C.eta([],3,1000),null);
+assert.equal(C.eta([500],3,1000),null);
+assert.equal(C.eta([1000],0,1000),0);
+const csv=C.csv([C.verify(rows[2],{last_online:now-10,timeout_percent:1,current_match_load:7},{onlineDays:1,maxTimeout:5},now)],{id:"42",name:"A, \"B\"",ratingCategory:"daily_standard",min:0,max:Infinity});
 assert(csv.startsWith("\uFEFF"));
 assert(csv.includes('"Comma, Quote """'));
 assert(csv.includes('"A, ""B"""'));
+assert(csv.includes('"7"'));
 console.log("Recruit Match v2 core tests passed.");
