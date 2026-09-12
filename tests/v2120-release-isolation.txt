@@ -29,6 +29,7 @@ docs/ARCHITECTURE.md
 index.html
 server/team-points/public/recruitment-pool.php
 tests/browser_gate_recruit_match_v2.py
+tests/browser_gate_trophy_gallery_overlay.py
 tests/recruit_match_v2_core.test.js
 tests/run-tests.js
 tests/test_recruit_match_v2.py

@@ -94,7 +94,7 @@ def main():
         assert all("api.chess.com/pub/player/" in x["url"] for x in api_calls if "/player/" in x["url"])
         with page.expect_download() as download:
             page.click("#p2kCsv")
-        assert download.value.suggested_filename=="p2k-match-777-eligible.csv"
+        assert download.value.suggested_filename=="p2k-match-888-eligible.csv"
         csv=Path(download.value.path()).read_text(encoding="utf-8-sig")
         assert '"3"' in csv and '"Eligible"' in csv
         pool_state["rows"]={"ok":True,"summary":{"rated":1},"rows":[{"username":"Low","username_key":"low","rating":900}]}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Qualify the actual installed 2.11.5 + approved r5fix3.8 + r5fix3.10 Trophy runtime."""
+"""Qualify the approved Trophy runtime over the current application release."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "6706e619d310e2c74fe2734cfcef8dd2f83d70d1"
-VERSION = "2.11.5"
+VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 BUILD_KEY = "2.11.5-bf6a828490f57"
 R538_JS = "r538-d52193a71712"
 R538_CSS = "r538-fdcea54d62ba"
@@ -81,7 +81,7 @@ def production_tree():
             assert (tree / "VERSION").read_text().strip() == VERSION
             site = (tree / "assets/js/site-config.js").read_text(encoding="utf-8")
             ui = (tree / "ui-v2.html").read_text(encoding="utf-8")
-            assert 'version: "2.11.5"' in site
+            assert f'version: "{VERSION}"' in site
             assert BUILD_KEY in site and BUILD_KEY in ui
             assert R538_JS in ui and R538_CSS in ui
             js_hash = hashlib.sha256((tree / "assets/js/admin/trophy-gallery-r5fix3.8.js").read_bytes()).hexdigest()
