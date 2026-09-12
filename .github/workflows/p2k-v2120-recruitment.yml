@@ -26,10 +26,10 @@ jobs:
           node tests/recruit_match_v2_core.test.js
           python -m pytest -q tests/test_recruit_match_v2.py
           python tests/browser_gate_recruit_match_v2.py
-      - name: Prepare inherited canonical baseline
-        run: git worktree add --detach /tmp/p2k-qualified-main c534b2dbb0346eac0fa6de869621d6b7d785ead8
+      - name: Prepare inherited qualified v2.11.4 baseline
+        run: git worktree add --detach /tmp/p2k-qualified-v2114 6706e619d310e2c74fe2734cfcef8dd2f83d70d1
       - name: Full inherited canonical P2K regression
-        run: (cd /tmp/p2k-qualified-main && python tools/test-suite/p2k_test_suite.py regression)
+        run: (cd /tmp/p2k-qualified-v2114 && python tools/test-suite/p2k_test_suite.py regression)
 
   canonical-browser:
     runs-on: ubuntu-latest
