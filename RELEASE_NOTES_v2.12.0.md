@@ -1,5 +1,16 @@
 # Promote to King v2.12.0 — Match Recruitment Assistant
 
+## Final release identity and universal upgrade
+
+`VERSION` and `P2K_SITE_CONFIG.version` now identify 2.12.0. Unchanged 2.11.5
+assets retain their identities; changed recruitment and site configuration bytes
+use independently generated keys from the real release-runtime provenance commit.
+
+The readable, network-independent `tools/release/v2120/` installer upgrades
+supported canonical 2.11.x trees transactionally while preserving configuration,
+OAuth/secrets, databases, data, storage, caches, uploads, logs and system CRON.
+No database migration or CRON change is included.
+
 The Match Recruitment Assistant now answers the operational question “Who is eligible to recruit?” using a DB-first, API-second pipeline.
 
 - Resolves a Chess.com team-match URL, slug containing its numeric ID, or numeric ID.

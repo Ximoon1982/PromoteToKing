@@ -55,6 +55,12 @@ def test_hard_roster_freshness_timeout_and_optional_load_contracts():
     assert "token!==state.scanToken" in js
     assert "row.live?.current_match_load" in core and "row.current_load" not in core
 
+def test_match_load_invalidates_optional_enrichment_generation():
+    js = text("assets/js/pages/recruit-match.js")
+    load = js[js.index("async function load"):js.index("function flatten")]
+    assert load.index("state.enrichmentController?.abort()") < load.index("api(`https://api.chess.com/pub/match/")
+    assert load.index("++state.scanToken") < load.index("api(`https://api.chess.com/pub/match/")
+
 def test_profile_actions_are_delegated_across_redraws():
     js = text("assets/js/pages/recruit-match.js")
     assert 'n.results.addEventListener("click"' in js
@@ -64,7 +70,7 @@ def test_profile_actions_are_delegated_across_redraws():
 
 def test_recruitment_v2_immutable_cache_identity():
     html = text("RecruitMatch.html")
-    key = "p2k-2.12.0-71d3da9b1ba6-c168bd00d65ee5ee"
+    key = "p2k-2.12.0-d025d8c46103-8e4b12768d33959c"
     assert f"recruit-match.css?v={key}" in html
     assert f"recruit-match-v2-core.js?v={key}" in html
     assert f"recruit-match.js?v={key}" in html
@@ -77,6 +83,6 @@ def test_recruitment_v2_cache_identity_is_canonically_derived():
     spec = importlib.util.spec_from_file_location("p2k_cache_key", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    source = "71d3da9b1ba63801a421ac8d56180a8af5158ba5"
+    source = "d025d8c4610390e54058bca069785e9916af5483"
     assert subprocess.run(["git", "cat-file", "-e", f"{source}^{{commit}}"], cwd=ROOT).returncode == 0
-    assert module.make_key("2.12.0", source, "match-recruitment-final-corrective-1") == "p2k-2.12.0-71d3da9b1ba6-c168bd00d65ee5ee"
+    assert module.make_key("2.12.0", source, "match-recruitment-release-identity-2") == "p2k-2.12.0-d025d8c46103-8e4b12768d33959c"

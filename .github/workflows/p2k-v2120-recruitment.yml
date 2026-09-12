@@ -24,8 +24,12 @@ jobs:
       - name: Recruitment v2 focused qualification
         run: |
           node tests/recruit_match_v2_core.test.js
-          python -m pytest -q tests/test_recruit_match_v2.py
+          python -m pytest -q tests/test_recruit_match_v2.py tests/test_v2120_release_installer.py
           python tests/browser_gate_recruit_match_v2.py
+      - name: v2.12.0 universal installer qualification
+        run: |
+          tools/release/v2120/build-package.sh "$RUNNER_TEMP/v2120-build"
+          tools/release/v2120/qualify-installer.sh "$RUNNER_TEMP/v2120-build"
       - name: Current-head architecture and canonical audit
         run: |
           python tools/test-suite/architecture_gate.py
@@ -39,20 +43,7 @@ jobs:
           import subprocess
 
           base = os.environ["P2K_V2120_BASE"]
-          expected = {
-              ".github/workflows/p2k-v2120-recruitment.yml",
-              "RELEASE_NOTES_v2.12.0.md",
-              "RecruitMatch.html",
-              "assets/css/recruit-match.css",
-              "assets/js/pages/recruit-match-v2-core.js",
-              "assets/js/pages/recruit-match.js",
-              "docs/ARCHITECTURE.md",
-              "server/team-points/public/recruitment-pool.php",
-              "tests/browser_gate_recruit_match_v2.py",
-              "tests/recruit_match_v2_core.test.js",
-              "tests/run-tests.js",
-              "tests/test_recruit_match_v2.py",
-          }
+          expected = set(open("tests/v2120-release-isolation.txt", encoding="utf-8").read().splitlines())
           changed = set(subprocess.check_output(
               ["git", "diff", "--name-only", f"{base}..HEAD"], text=True
           ).splitlines())

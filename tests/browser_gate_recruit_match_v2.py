@@ -19,13 +19,14 @@ def main():
       window.P2K_ADMIN_ACCESS_READY=Promise.resolve(true);
       window.P2K_SITE_CONFIG={clubSlug:"promote-to-king",api:{defaultAttempts:1}};
       const match={id:777,name:"P2K eligibility test",status:"registration",settings:{rules:"chess",min_rating:1200,max_rating:1600},teams:{team1:{name:"Promote to King","@id":"https://api.chess.com/pub/club/promote-to-king",players:[{username:"Already",rating:1400}]},team2:{name:"Rivals","@id":"https://api.chess.com/pub/club/rivals",players:[]}}};
+      const replacementMatch={...match,id:888,name:"Replacement match"};
       const live={eligible:{last_online:Math.floor(Date.now()/1000)-3600,timeout:2,games:3},eligible2:{last_online:Math.floor(Date.now()/1000)-1800,timeout:1,gamesError:true},offline:{last_online:Math.floor(Date.now()/1000)-172800,timeout:1,games:1},timeout:{last_online:Math.floor(Date.now()/1000)-60,timeout:8,games:2},broken:{error:"fixture unavailable"}};
       window.__p2kCalls=[];window.__gamesCompleted=0;window.__gamesAborted=0;
       window.__profileOpens=[];
       window.open=url=>{window.__profileOpens.push(url);return null};
       window.P2K_API_CLIENT={
         userMessage:e=>e.message,
-        json:async(url,options={})=>{window.__p2kCalls.push({url,cacheMode:options.cacheMode||'default'});if(url.includes('/pub/match/777'))return match;if(url.includes('/pub/club/rivals/members')){if(window.__failRoster)throw Error('roster unavailable');return {weekly:[{username:"Opponent"}],monthly:[],all_time:[]}}const m=url.match(/player\/([^/]+)/),key=m&&decodeURIComponent(m[1]).toLowerCase(),x=live[key];if(!x)throw Error('unexpected '+url);if(url.endsWith('/games')){await new Promise((resolve,reject)=>{const timer=setTimeout(resolve,900);options.signal?.addEventListener('abort',()=>{clearTimeout(timer);window.__gamesAborted++;reject(new DOMException('Aborted','AbortError'))},{once:true})});window.__gamesCompleted++;if(x.gamesError)throw Error('optional games unavailable');return {games:Array(x.games).fill({})}}await new Promise(resolve=>setTimeout(resolve,60));if(x.error)throw Error(x.error);if(key==='eligible'&&window.__staleProfile&&!url.endsWith('/stats')){if(options.cacheMode==='no-store')throw Error('current profile unavailable')}if(key==='eligible'&&window.__staleStats&&url.endsWith('/stats')){if(options.cacheMode==='no-store')throw Error('current stats unavailable')}if(url.endsWith('/stats'))return {chess_daily:{record:{timeout_percent:x.timeout}}};return {username:key,last_online:x.last_online};},
+        json:async(url,options={})=>{window.__p2kCalls.push({url,cacheMode:options.cacheMode||'default'});if(url.includes('/pub/match/777'))return match;if(url.includes('/pub/match/888'))return replacementMatch;if(url.includes('/pub/club/rivals/members')){if(window.__failRoster)throw Error('roster unavailable');return {weekly:[{username:"Opponent"}],monthly:[],all_time:[]}}const m=url.match(/player\/([^/]+)/),key=m&&decodeURIComponent(m[1]).toLowerCase(),x=live[key];if(!x)throw Error('unexpected '+url);if(url.endsWith('/games')){await new Promise((resolve,reject)=>{const timer=setTimeout(resolve,900);options.signal?.addEventListener('abort',()=>{clearTimeout(timer);window.__gamesAborted++;reject(new DOMException('Aborted','AbortError'))},{once:true})});window.__gamesCompleted++;if(x.gamesError)throw Error('optional games unavailable');return {games:Array(x.games).fill({})}}await new Promise(resolve=>setTimeout(resolve,60));if(x.error)throw Error(x.error);if(key==='eligible'&&window.__staleProfile&&!url.endsWith('/stats')){if(options.cacheMode==='no-store')throw Error('current profile unavailable')}if(key==='eligible'&&window.__staleStats&&url.endsWith('/stats')){if(options.cacheMode==='no-store')throw Error('current stats unavailable')}if(url.endsWith('/stats'))return {chess_daily:{record:{timeout_percent:x.timeout}}};return {username:key,last_online:x.last_online};},
         processPriority:async(items,worker)=>{const settled=await Promise.all(items.map(async(item,index)=>{try{return {ok:true,item,index,value:await worker(item)}}catch(error){return {ok:false,item,index,error}}})),succeeded=settled.filter(x=>x.ok),failures=settled.filter(x=>!x.ok);return {succeeded,failures,pending:[],cancelled:false,get partialValues(){return succeeded.map(x=>x.value)}};}
       };
     '''
@@ -60,19 +61,21 @@ def main():
         assert "—" in page.locator("#p2kResultBody").inner_text()  # optional /games failure did not block eligibility
         assert "1 candidate(s) could not be verified" in page.locator(".p2k-partial-note").inner_text()
         assert "eligible" in page.locator("#p2kFunnel").inner_text().lower()
-        # Replacing the result with a new scan aborts the previous optional
-        # enrichment; its stale completion cannot mutate the new result.
+        # Loading a different match aborts optional enrichment and prevents stale mutation.
         deadline=time.monotonic()+3
         while not page.locator("#p2kScanButton").is_enabled() and time.monotonic()<deadline:
             time.sleep(.02)
         assert page.locator("#p2kScanButton").is_enabled()
-        page.click("#p2kScanButton")
-        deadline=time.monotonic()+3
-        while sum("/pub/club/rivals/members" in x["url"] for x in page.evaluate("window.__p2kCalls"))<2 and time.monotonic()<deadline:
-            time.sleep(.02)
-        page.locator("#p2kStatusText",has_text="Scan complete").wait_for()
+        page.fill("#p2kMatchReference", "888"); page.click("#p2kLoadButton")
+        page.locator("#p2kStatusText",has_text="Match resolved").wait_for()
+        assert "Replacement match" in page.locator("#p2kResults").inner_text()
         assert page.evaluate("window.__gamesAborted") >= 2
         assert page.evaluate("window.__gamesCompleted") == 0
+        time.sleep(1)
+        assert "Replacement match" in page.locator("#p2kResults").inner_text()
+        assert page.evaluate("window.__gamesCompleted") == 0
+        page.click("#p2kScanButton")
+        page.locator("#p2kStatusText",has_text="Scan complete").wait_for()
         page.locator('[data-profile="Eligible"]').click()
         assert page.evaluate("window.__profileOpens.at(-1)").endswith("/Eligible")
         page.fill("#p2kResultSearch","Eligible2")

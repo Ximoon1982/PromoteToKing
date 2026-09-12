@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+TARGET=${1:-/kunden/homepages/43/d141198007/htdocs/PromoteToKing}; MODE=${2:-install}; HERE=$(cd "$(dirname "$0")"&&pwd)
+PAYLOAD=$HERE/payload; MANIFEST=$HERE/MANIFEST.sha256; FILES=$HERE/FILES.list; MODES=$HERE/MODES.list; BASELINES=$HERE/SUPPORTED_BASELINES.sha256
+RECRUIT_KEY=p2k-2.12.0-d025d8c46103-8e4b12768d33959c; SITE_KEY=p2k-2.12.0-d025d8c46103-ae73ae796f09667d
+STAGE= BACKUP= TRANSACTION=0
+rollback(){ ((TRANSACTION))||return 0; echo 'Installation failed; restoring pre-install state.' >&2; while IFS= read -r f;do [[ -z $f ]]||rm -f -- "$TARGET/$f";done<"$BACKUP/absent.list"; [[ ! -s $BACKUP/existing.tar ]]||tar -C "$TARGET" -xf "$BACKUP/existing.tar"; }
+die(){ echo "ERROR: $*" >&2;if ((TRANSACTION));then rollback||true;TRANSACTION=0;fi;exit 2;}
+safe_clean(){ local p=$1;[[ -z $p||! -e $p ]]||{ [[ $p == "$TARGET"/.p2k-v2120-* ]]||return 1;rm -rf -- "$p";};}
+cleanup(){ safe_clean "$STAGE";safe_clean "$BACKUP";}; fail(){ c=$?;trap - ERR INT TERM;rollback||true;cleanup||true;exit "$c";};trap fail ERR INT TERM;trap cleanup EXIT
+verify_package(){ [[ -d $PAYLOAD&&-f $MANIFEST&&-f $FILES&&-f $MODES&&-f $BASELINES ]]||die 'package incomplete';(cd "$HERE"&&sha256sum -c --quiet MANIFEST.sha256);diff -u <(sed -E 's/^[0-9a-f]{64}  payload\///' "$MANIFEST"|sort) <(sort "$FILES")>/dev/null||die 'manifest inventory mismatch';}
+verify_installed(){ [[ $(tr -d '\r\n[:space:]'<"$TARGET/VERSION") == 2.12.0 ]]||die 'semantic version is not 2.12.0';while read -r h r;do r=${r#payload/};[[ $(sha256sum "$TARGET/$r"|awk '{print $1}') == "$h" ]]||die "installed mismatch: $r";done<"$MANIFEST";grep -Fq 'version: "2.12.0"' "$TARGET/assets/js/site-config.js"||die 'runtime version mismatch';grep -Fq "$RECRUIT_KEY" "$TARGET/RecruitMatch.html"||die 'recruitment key missing';grep -Fq "$SITE_KEY" "$TARGET/RecruitMatch.html"||die 'site-config key missing';echo "v2.12.0 verification passed ($(wc -l<"$FILES") immutable files).";}
+[[ $MODE == install||$MODE == verify||$MODE == check ]]||die 'usage: installer [root] [install|verify|check]';[[ -d $TARGET ]]||die "target missing: $TARGET";verify_package
+if [[ $MODE != install ]];then verify_installed;exit;fi
+[[ -f $TARGET/VERSION ]]||die 'unrecognized installation';OLD=$(tr -d '\r\n[:space:]'<"$TARGET/VERSION");if [[ $OLD == 2.12.0 ]];then verify_installed;echo 'Already installed; no change.';exit;fi;[[ $OLD == 2.11.* ]]||die "unsupported version: $OLD";[[ -w $TARGET ]]||die 'target not writable'
+while IFS= read -r f;do [[ ! -e $TARGET/$f ]]&&continue;[[ -f $TARGET/$f ]]||die "not regular: $f";h=$(sha256sum "$TARGET/$f"|awk '{print $1}');t=$(sha256sum "$PAYLOAD/$f"|awk '{print $1}');[[ $h == "$t" ]]&&continue;awk -F '\t' -v p="$f" -v h="$h" '$1==p&&$2==h{x=1}END{exit !x}' "$BASELINES"||die "unsupported/custom immutable file: $f";done<"$FILES"
+STAGE=$(mktemp -d "$TARGET/.p2k-v2120-stage.XXXXXX");BACKUP=$(mktemp -d "$TARGET/.p2k-v2120-backup.XXXXXX");cp -a "$PAYLOAD/." "$STAGE/";:>"$BACKUP/absent.list";existing=();while IFS= read -r f;do if [[ -e $TARGET/$f ]];then existing+=("$f");else echo "$f">>"$BACKUP/absent.list";fi;done<"$FILES";if ((${#existing[@]}));then tar -C "$TARGET" -cf "$BACKUP/existing.tar" "${existing[@]}";else :>"$BACKUP/existing.tar";fi
+CRON=$(command -v crontab||true);if [[ -n $CRON ]];then "$CRON" -l>"$BACKUP/cron.before" 2>/dev/null||:>"$BACKUP/cron.before";fi;TRANSACTION=1;n=0
+while IFS= read -r f;do mkdir -p "$TARGET/$(dirname "$f")";m=$(awk -F '\t' -v p="$f" '$1==p{print $2}' "$MODES");[[ $m =~ ^[0-7]{3}$ ]]||die "invalid mode: $f";tmp="$TARGET/$(dirname "$f")/.p2k-v2120.$(basename "$f").tmp";install -m "$m" "$STAGE/$f" "$tmp";mv -f "$tmp" "$TARGET/$f";n=$((n+1));[[ ${P2K_FORCE_INSTALL_FAILURE_AFTER:-0} != "$n" ]]||false;done<"$FILES"
+verify_installed;if [[ -n $CRON ]];then "$CRON" -l>"$BACKUP/cron.after" 2>/dev/null||:>"$BACKUP/cron.after";cmp -s "$BACKUP/cron.before" "$BACKUP/cron.after"||die 'CRON changed';fi;TRANSACTION=0;echo "Upgraded transactionally from $OLD to 2.12.0; mutable state and CRON preserved."
