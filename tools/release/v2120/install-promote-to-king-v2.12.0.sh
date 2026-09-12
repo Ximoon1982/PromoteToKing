@@ -20,12 +20,16 @@ readonly RECRUITMENT_KEY="p2k-2.12.0-d025d8c46103-8e4b12768d33959c"
 readonly SITE_CONFIG_KEY="p2k-2.12.0-d025d8c46103-ae73ae796f09667d"
 
 WORK=""; STAGE=""; BACKUP=""; TRANSACTION_ACTIVE=0
+ROLLBACK_SUCCEEDED=0
+PRESERVE_BACKUP=0
 
 log() { printf '%s\n' "$*"; }
 
 fatal() {
   printf 'ERROR: %s\n' "$*" >&2
-  if ((TRANSACTION_ACTIVE)); then rollback || true; TRANSACTION_ACTIVE=0; fi
+  if ((TRANSACTION_ACTIVE)) && ! attempt_automatic_rollback; then
+    exit 3
+  fi
   exit 2
 }
 
@@ -41,7 +45,10 @@ safe_remove_temp_tree() {
 cleanup() {
   safe_remove_temp_tree "$WORK" || true
   safe_remove_temp_tree "$STAGE" || true
-  safe_remove_temp_tree "$BACKUP" || true
+  # A failed automatic rollback must never destroy the only recovery backup.
+  if ((PRESERVE_BACKUP == 0 && (TRANSACTION_ACTIVE == 0 || ROLLBACK_SUCCEEDED == 1))); then
+    safe_remove_temp_tree "$BACKUP" || true
+  fi
 }
 
 rollback() {
@@ -49,16 +56,38 @@ rollback() {
   log "Installation failed; restoring the complete pre-install immutable state." >&2
   if [[ -f "$BACKUP/absent-targets.list" ]]; then
     while IFS= read -r path; do
-      [[ -n "$path" ]] && rm -f -- "$TARGET/$path"
+      [[ -z "$path" ]] || rm -f -- "$TARGET/$path" || return 1
     done <"$BACKUP/absent-targets.list"
   fi
-  [[ ! -s "$BACKUP/existing.tar" ]] || tar -C "$TARGET" -xf "$BACKUP/existing.tar"
+  # Qualification-only hook: simulate restoration failure after rollback began.
+  [[ ${P2K_FORCE_ROLLBACK_FAILURE:-0} != 1 ]] || return 1
+  if [[ -s "$BACKUP/existing.tar" ]]; then
+    tar -C "$TARGET" -xf "$BACKUP/existing.tar" || return 1
+  fi
+  ROLLBACK_SUCCEEDED=1
+  return 0
+}
+
+attempt_automatic_rollback() {
+  if rollback; then
+    TRANSACTION_ACTIVE=0
+    return 0
+  fi
+
+  PRESERVE_BACKUP=1
+  printf '\nFATAL: AUTOMATIC ROLLBACK FAILED. MANUAL RECOVERY IS REQUIRED.\n' >&2
+  printf 'Recovery backup preserved at: %s\n' "$BACKUP" >&2
+  printf 'Do not delete this directory. It contains existing.tar and the original-state records.\n' >&2
+  printf 'Inspect and restore existing.tar from the target root before retrying the installer.\n\n' >&2
+  return 1
 }
 
 handle_failure() {
   local status=$?
   trap - ERR INT TERM
-  rollback || true
+  if ((TRANSACTION_ACTIVE)) && ! attempt_automatic_rollback; then
+    status=3
+  fi
   cleanup
   exit "$status"
 }
@@ -154,7 +183,7 @@ check_destination_parents() {
 }
 
 check_disk_space() {
-  local payload_kb existing_kb required_kb available_kb
+  local payload_kb existing_kb largest_file_kb required_kb available_kb
   payload_kb=$(du -sk "$PAYLOAD" | awk '{print $1}')
   existing_kb=$(python3 - "$TARGET" "$WORK/source.files" <<'PY'
 from pathlib import Path
@@ -164,7 +193,16 @@ total = sum((root / p).stat().st_size for p in Path(sys.argv[2]).read_text().spl
 print((total + 1023) // 1024)
 PY
 )
-  required_kb=$(( (payload_kb + existing_kb) * 110 / 100 + 16384 ))
+  largest_file_kb=$(python3 - "$PAYLOAD" <<'PY'
+from pathlib import Path
+import sys
+largest = max((path.stat().st_size for path in Path(sys.argv[1]).rglob("*") if path.is_file()), default=0)
+print((largest + 1023) // 1024)
+PY
+)
+  # Peak estimate: staged payload + original backup + largest atomic activation
+  # temporary, then a 10% safety allowance and 16 MiB fixed headroom.
+  required_kb=$(( (payload_kb + existing_kb + largest_file_kb) * 110 / 100 + 16384 ))
   available_kb=$(df -Pk "$TARGET" | awk 'NR == 2 {print $4}')
   ((available_kb >= required_kb)) || fatal \
     "insufficient disk space: need ${required_kb} KiB, have ${available_kb} KiB"

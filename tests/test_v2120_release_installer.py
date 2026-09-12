@@ -13,9 +13,9 @@ def test_real_cache_provenance():
  assert m.make_key("2.12.0",S,"v2.12.0-release-identity-1")==SK
 def test_installer_contract():
  i=read("tools/release/v2120/install-promote-to-king-v2.12.0.sh");q=read("tools/release/v2120/qualify-installer.sh")
- for x in ("set -Eeuo pipefail","SUPPORTED_BASELINES.sha256","SUPPORTED_TREES.sha256","PACKAGE-MANIFEST.sha256","REMOVALS.list","verify_package","verify_supported_baseline","verify_installed","remove_obsolete_files","rollback","check_disk_space","cron.before","P2K_FORCE_INSTALL_FAILURE_AFTER","P2K_FORCE_INSTALL_FAILURE_PHASE"):assert x in i
+ for x in ("set -Eeuo pipefail","SUPPORTED_BASELINES.sha256","SUPPORTED_TREES.sha256","PACKAGE-MANIFEST.sha256","REMOVALS.list","verify_package","verify_supported_baseline","verify_installed","remove_obsolete_files","rollback","attempt_automatic_rollback","PRESERVE_BACKUP","ROLLBACK_SUCCEEDED","check_disk_space","largest_file_kb","cron.before","P2K_FORCE_INSTALL_FAILURE_AFTER","P2K_FORCE_INSTALL_FAILURE_PHASE","P2K_FORCE_ROLLBACK_FAILURE"):assert x in i
  for x in ("2ca1fc191aeef444b4886b53e25a54a83820c25c","b8bf26c7c41ca1914323717766bca995139291aa","4ececcc230ca07099b346cb47396ad00bedd5c21","6706e619d310e2c74fe2734cfcef8dd2f83d70d1","c534b2dbb0346eac0fa6de869621d6b7d785ead8"):assert x in q
- for x in ("package control-metadata and payload tamper rejection passed","cmp -s \"$PACKAGE/FILES.list\" \"$WORK/managed.files\"","removal rollback restored removed path"):assert x in q
+ for x in ("package control-metadata and payload tamper rejection passed","portable relocated SHA256SUMS verification passed","sha256sum -c SHA256SUMS.txt","cmp -s \"$PACKAGE/FILES.list\" \"$WORK/managed.files\"","removal rollback restored removed path","rollback-failure diagnostic and recovery-backup preservation passed"):assert x in q
 
 def test_production_path_policy_is_shared_and_preserves_mutable_state():
  p=read("tools/release/v2120/production_paths.py")
@@ -28,6 +28,8 @@ def test_complete_package_integrity_contract():
  for name in ("FILES.list","REMOVALS.list","MODES.list","SUPPORTED_BASELINES.sha256","SUPPORTED_TREES.sha256","RELEASE-IDENTITY.txt","PACKAGE-MANIFEST.sha256"):
   assert name in b
  assert "! -name PACKAGE-MANIFEST.sha256" in b
+ assert 'cd "$OUTPUT"' in b
+ assert '"$OUTPUT/PromoteToKing_v2.12.0_INCREMENTAL.zip"' not in b
 def test_inherited_files_unchanged():
  for p in ("tests/test_v2112_structural_consolidation.py","tests/test_v288_release.py","tests/v2.11.3-structural-metrics.json"):
   assert subprocess.run(["git","diff","--exit-code","c534b2dbb0346eac0fa6de869621d6b7d785ead8","HEAD","--",p],cwd=R).returncode==0

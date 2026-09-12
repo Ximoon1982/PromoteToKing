@@ -9,6 +9,11 @@ tree, backs up every affected file, activates the payload, removes only known
 obsolete managed immutable paths, and verifies exact target-tree convergence.
 Any failure during mutation restores the original files.
 
+If automatic rollback itself fails, the installer exits non-zero and preserves
+the recovery backup inside the target directory. Its prominent diagnostic gives
+the exact backup path and identifies the `existing.tar` archive needed for
+manual restoration. That backup is deliberately not removed by cleanup.
+
 Local configuration, credentials, OAuth state, `.env` files, databases, data,
 storage, caches, uploads, logs, runtime state, backups, user-generated material,
 and system CRON are not managed or replaced. This release has no database

@@ -82,7 +82,10 @@ EOF
 ) >"$PACKAGE/PACKAGE-MANIFEST.sha256"
 
 (cd "$OUTPUT" && zip -qr PromoteToKing_v2.12.0_INCREMENTAL.zip PromoteToKing_v2.12.0_INCREMENTAL)
-sha256sum \
-  "$OUTPUT/PromoteToKing_v2.12.0_INCREMENTAL.zip" \
-  "$PACKAGE/install-promote-to-king-v2.12.0.sh" \
-  >"$OUTPUT/SHA256SUMS.txt"
+(
+  cd "$OUTPUT"
+  sha256sum \
+    PromoteToKing_v2.12.0_INCREMENTAL.zip \
+    PromoteToKing_v2.12.0_INCREMENTAL/install-promote-to-king-v2.12.0.sh \
+    >SHA256SUMS.txt
+)

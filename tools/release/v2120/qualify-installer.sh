@@ -27,6 +27,17 @@ chmod +x "$WORK/bin/crontab"
 printf '17 3 * * * /srv/p2k/cron.sh --unchanged\n' >"$WORK/cron"
 CRON_HASH=$(sha256sum "$WORK/cron")
 
+# SHA256SUMS must remain usable after the download directory is relocated.
+relocated="$WORK/relocated"
+mkdir "$relocated"
+cp -al \
+  "$BUILD/PromoteToKing_v2.12.0_INCREMENTAL.zip" \
+  "$BUILD/PromoteToKing_v2.12.0_INCREMENTAL" \
+  "$BUILD/SHA256SUMS.txt" \
+  "$relocated/"
+(cd "$relocated" && sha256sum -c SHA256SUMS.txt)
+echo "portable relocated SHA256SUMS verification passed"
+
 add_mutable_fixture() {
   local target=$1
   mkdir -p \
@@ -118,6 +129,7 @@ for entry in "${BASELINES[@]}"; do
 
   run_installer "$INSTALLER" "$target"
   "$INSTALLER" "$target" verify
+  "$INSTALLER" "$target" check
   [[ $(tr -d '\r\n[:space:]' <"$target/VERSION") == "2.12.0" ]]
   mutable_hashes "$target" >"$WORK/$label.mutable.after"
   diff -u "$WORK/$label.mutable.before" "$WORK/$label.mutable.after"
@@ -150,6 +162,33 @@ complete_file_snapshot "$rollback_target" "$WORK/rollback.after"
 diff -u "$WORK/rollback.before" "$WORK/rollback.after"
 [[ "$CRON_HASH" == "$(sha256sum "$WORK/cron")" ]]
 echo "activation rollback restored the exact pre-install tree"
+
+# Force automatic recovery itself to fail after rollback has begun. The
+# installer must retain the backup and print its exact location for an admin.
+failed_rollback_target="$WORK/failed-rollback"
+mkdir "$failed_rollback_target"
+git -C "$ROOT" archive c534b2dbb0346eac0fa6de869621d6b7d785ead8 \
+  | tar -x -C "$failed_rollback_target"
+add_mutable_fixture "$failed_rollback_target"
+original_version_hash=$(sha256sum "$failed_rollback_target/VERSION" | awk '{print $1}')
+rollback_log="$WORK/failed-rollback.log"
+if run_installer env \
+  P2K_FORCE_INSTALL_FAILURE_AFTER=5 \
+  P2K_FORCE_ROLLBACK_FAILURE=1 \
+  "$INSTALLER" "$failed_rollback_target" >"$rollback_log" 2>&1; then
+  echo "forced rollback failure unexpectedly succeeded" >&2; exit 1
+fi
+grep -Fq "FATAL: AUTOMATIC ROLLBACK FAILED. MANUAL RECOVERY IS REQUIRED." "$rollback_log"
+preserved_backup=$(sed -n 's/^Recovery backup preserved at: //p' "$rollback_log" | tail -n 1)
+[[ -n "$preserved_backup" && -d "$preserved_backup" ]]
+[[ -s "$preserved_backup/existing.tar" ]]
+tar -tf "$preserved_backup/existing.tar" >"$WORK/preserved-backup.files"
+grep -Fxq VERSION "$WORK/preserved-backup.files"
+backed_version_hash=$(tar -xOf "$preserved_backup/existing.tar" VERSION | sha256sum | awk '{print $1}')
+[[ "$backed_version_hash" == "$original_version_hash" ]]
+grep -Fq "$preserved_backup" "$rollback_log"
+grep -Fq "Do not delete this directory." "$rollback_log"
+echo "rollback-failure diagnostic and recovery-backup preservation passed"
 
 # Canonical baselines currently produce an empty REMOVALS.list. Exercise removal
 # transactionality with a qualification-only supported immutable tree containing
