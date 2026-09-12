@@ -47,11 +47,16 @@
     if (timeout > criteria.maxTimeout) return { ...row, decision: "excluded", reason: "Timeout rate exceeds the configured threshold.", last_online_age_hours: ageHours, live };
     return { ...row, decision: "eligible", reason: "All hard eligibility filters passed.", last_online_age_hours: ageHours, live };
   }
-  function eta(samples, remaining) {
-    const recent = samples.slice(-20).filter(n => Number.isFinite(n) && n > 0);
-    if (!recent.length || remaining <= 0) return remaining <= 0 ? 0 : null;
-    const average = recent.reduce((sum, n) => sum + n, 0) / recent.length;
-    return Math.max(0, Math.round(average * remaining / 1000));
+  function eta(completionTimes, remaining, elapsedMilliseconds) {
+    if (remaining <= 0) return 0;
+    const elapsed = Number(elapsedMilliseconds);
+    const completed = completionTimes.filter(n => Number.isFinite(n) && n >= 0).sort((a, b) => a - b);
+    if (completed.length < 2 || !Number.isFinite(elapsed) || elapsed <= 0) return null;
+    const windowSize = Math.min(20, completed.length);
+    const first = completed.length - windowSize;
+    const anchor = first > 0 ? completed[first - 1] : 0;
+    const throughput = windowSize / Math.max(1, elapsed - anchor);
+    return Math.max(0, Math.ceil(remaining / throughput / 1000));
   }
   function csv(rows, match) {
     const fields = ["username","profile_url","rating","rating_category","rating_updated_at","last_online","last_online_age_hours","timeout_rate","current_match_load","match_id","match_name","rating_min","rating_max"];
@@ -60,7 +65,7 @@
     rows.forEach(row => lines.push([
       row.username, `https://www.chess.com/member/${encodeURIComponent(row.username)}`, row.rating, match.ratingCategory,
       row.rating_updated_at, row.live?.last_online ? new Date(row.live.last_online * 1000).toISOString() : "", row.last_online_age_hours,
-      row.live?.timeout_percent, row.current_load ?? "", match.id, match.name, match.min, Number.isFinite(match.max) ? match.max : ""
+      row.live?.timeout_percent, row.live?.current_match_load ?? "", match.id, match.name, match.min, Number.isFinite(match.max) ? match.max : ""
     ].map(quote).join(",")));
     return `\uFEFF${lines.join("\r\n")}\r\n`;
   }
