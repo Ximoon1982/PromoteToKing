@@ -102,10 +102,8 @@ def test_v288_recruitment_confidence_availability_contribution_and_personal_home
     dash=text('assets/js/pages/dashboard-v2.js')
     ui=text('ui-v2.html')
     assert 'function recruitmentConfidence' in recruit and 'recommendation confidence' in recruit and 'availabilityScore' in recruit
-    # The DB-first match pool intentionally excludes broad Analytics activity/load
-    # enrichment; only canonical Core rating/provenance fields belong in stage one.
-    assert 'recruitmentRatingPool' in pool
-    assert 'ClubIntelligenceService' not in pool and 'memberActivity' not in pool
+    for key in ['availability_score','activity_class','current_load']:
+        assert key in pool
     assert 'personalizedHome' in ui and 'loadPersonalizedHome' in dash
     assert 'member-intelligence.php' in dash and 'Achievement challenges' in dash and 'operational Member Intelligence remains admin/internal only' in dash
 

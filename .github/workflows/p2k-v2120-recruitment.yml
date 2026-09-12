@@ -26,6 +26,49 @@ jobs:
           node tests/recruit_match_v2_core.test.js
           python -m pytest -q tests/test_recruit_match_v2.py
           python tests/browser_gate_recruit_match_v2.py
+      - name: Current-head architecture and canonical audit
+        run: |
+          python tools/test-suite/architecture_gate.py
+          python tools/test-suite/p2k_test_suite.py audit --json
+      - name: Strict v2.12.0 recruitment release isolation
+        env:
+          P2K_V2120_BASE: c534b2dbb0346eac0fa6de869621d6b7d785ead8
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+
+          base = os.environ["P2K_V2120_BASE"]
+          expected = {
+              ".github/workflows/p2k-v2120-recruitment.yml",
+              "RELEASE_NOTES_v2.12.0.md",
+              "RecruitMatch.html",
+              "assets/css/recruit-match.css",
+              "assets/js/pages/recruit-match-v2-core.js",
+              "assets/js/pages/recruit-match.js",
+              "docs/ARCHITECTURE.md",
+              "server/team-points/public/recruitment-pool.php",
+              "tests/browser_gate_recruit_match_v2.py",
+              "tests/recruit_match_v2_core.test.js",
+              "tests/run-tests.js",
+              "tests/test_recruit_match_v2.py",
+          }
+          changed = set(subprocess.check_output(
+              ["git", "diff", "--name-only", f"{base}..HEAD"], text=True
+          ).splitlines())
+          unexpected = sorted(changed - expected)
+          missing = sorted(expected - changed)
+          if unexpected or missing:
+              raise SystemExit(f"v2.12.0 isolation mismatch; unexpected={unexpected}, missing={missing}")
+          for inherited in (
+              "tests/test_v2112_structural_consolidation.py",
+              "tests/test_v288_release.py",
+              "tests/v2.11.3-structural-metrics.json",
+              "tests/known-regression-debt-v2.11.1.json",
+          ):
+              subprocess.run(["git", "diff", "--exit-code", base, "HEAD", "--", inherited], check=True)
+          print("v2.12.0 recruitment release isolation passed.")
+          PY
       - name: Prepare inherited qualified v2.11.4 baseline
         run: git worktree add --detach /tmp/p2k-qualified-v2114 6706e619d310e2c74fe2734cfcef8dd2f83d70d1
       - name: Full inherited canonical P2K regression

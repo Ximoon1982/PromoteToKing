@@ -35,6 +35,9 @@ def test_recruitment_pool_remains_current_member_db_source():
     assert "ClubIntelligenceService" not in endpoint and "memberActivity" not in endpoint
     assert "PublicReadDatabase::analytics" not in endpoint
     assert all(field in repo for field in ["rating_updated_at", "rating_source", "rating_verified", "current_member=1"])
+    assert "availability_score" not in endpoint
+    assert "activity_class" not in endpoint
+    assert "current_load" not in endpoint
 
 def test_hard_roster_freshness_timeout_and_optional_load_contracts():
     js = text("assets/js/pages/recruit-match.js")
@@ -46,6 +49,10 @@ def test_hard_roster_freshness_timeout_and_optional_load_contracts():
     assert "stats?.chess_daily?.record" in js and "timeout_percent" in js
     assert "current_match_load_error" in js
     assert "async function enrichLoads" in js and "void enrichLoads(" in js
+    scan = js[js.index("async function scan") :]
+    assert scan.index("Scan complete:") < scan.index("void enrichLoads(")
+    assert "state.enrichmentController?.abort()" in scan
+    assert "token!==state.scanToken" in js
     assert "row.live?.current_match_load" in core and "row.current_load" not in core
 
 def test_profile_actions_are_delegated_across_redraws():

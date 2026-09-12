@@ -19,4 +19,4 @@ No database migration or new CRON task is introduced.
 - Profile, stats and opponent membership are hard checks using `no-store`, so stale-if-error data cannot produce eligibility. Current match load runs afterward as optional `/games` enrichment on the shared scheduler; its latency and failure do not delay or reject hard eligibility.
 - The recruitment pool performs a lightweight Core rating query. Green Core/Analytics structural validation remains intact, but this request path does not execute population-wide Analytics recruitment/activity computation.
 - Cache provenance procedure: commit the exact runtime assets first, then derive and stamp the loader key from that resolvable runtime commit plus a stable build ID in a qualification-only follow-up commit.
-- The Core-only recruitment pool no longer invokes population-wide Analytics member-activity computation.
+- The lightweight recruitment request does not invoke population-wide Analytics member-activity computation; the established Green Core/Analytics structural validation still applies.
