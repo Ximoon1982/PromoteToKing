@@ -1,4 +1,5 @@
 from pathlib import Path
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -12,7 +13,8 @@ def test_recruitment_v2_surface_and_db_first_pipeline():
     assert 'id="p2kOnlineDays"' in html and 'value="1"' in html
     assert 'id="p2kTimeoutRate"' in html and 'value="5"' in html
     assert "recruitment-pool.php" in js
-    assert js.index("recruitment-pool.php") < js.index("/members`") < js.index("processPriority")
+    scan = js[js.index("async function scan"):]
+    assert scan.index("recruitment-pool.php") < scan.index("C.preselect") < scan.index("/members`") < scan.index("processPriority")
     assert "partialValues" in js and "unverified" in core
     assert "P2K_API_CLIENT.processPriority" in js
     assert "p2kProgressDetails" in html and "p2kFunnel" in html
@@ -38,11 +40,12 @@ def test_hard_roster_freshness_timeout_and_optional_load_contracts():
     js = text("assets/js/pages/recruit-match.js")
     core = text("assets/js/pages/recruit-match-v2-core.js")
     assert 'members`,ctl.signal,"no-store"' in js
+    assert 'api(base,signal,"no-store")' in js and 'api(`${base}/stats`,signal,"no-store")' in js
     assert "Opponent membership could not be verified from a current roster" in js
     assert "Chess.com Daily record timeout_percent" in js
     assert "stats?.chess_daily?.record" in js and "timeout_percent" in js
     assert "current_match_load_error" in js
-    assert js.index("const[profile,stats]=await Promise.all") < js.index("try{games=await api")
+    assert "async function enrichLoads" in js and "void enrichLoads(" in js
     assert "row.live?.current_match_load" in core and "row.current_load" not in core
 
 def test_profile_actions_are_delegated_across_redraws():
@@ -54,11 +57,12 @@ def test_profile_actions_are_delegated_across_redraws():
 
 def test_recruitment_v2_immutable_cache_identity():
     html = text("RecruitMatch.html")
-    key = "p2k-2.12.0-edef0aa06996-c9834356f27757e6"
+    key = "p2k-2.12.0-71d3da9b1ba6-c168bd00d65ee5ee"
     assert f"recruit-match.css?v={key}" in html
     assert f"recruit-match-v2-core.js?v={key}" in html
     assert f"recruit-match.js?v={key}" in html
     assert "2.12.0-dev" not in html
+    assert "p2k-2.12.0-edef0aa06996-c9834356f27757e6" not in html
 
 def test_recruitment_v2_cache_identity_is_canonically_derived():
     import importlib.util
@@ -66,4 +70,6 @@ def test_recruitment_v2_cache_identity_is_canonically_derived():
     spec = importlib.util.spec_from_file_location("p2k_cache_key", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    assert module.make_key("2.12.0", "edef0aa0699674d742ea6fd4da3ef323569f9d32", "match-recruitment-corrective-1") == "p2k-2.12.0-edef0aa06996-c9834356f27757e6"
+    source = "71d3da9b1ba63801a421ac8d56180a8af5158ba5"
+    assert subprocess.run(["git", "cat-file", "-e", f"{source}^{{commit}}"], cwd=ROOT).returncode == 0
+    assert module.make_key("2.12.0", source, "match-recruitment-final-corrective-1") == "p2k-2.12.0-71d3da9b1ba6-c168bd00d65ee5ee"
