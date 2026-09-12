@@ -62,10 +62,15 @@ def main():
         assert "eligible" in page.locator("#p2kFunnel").inner_text().lower()
         # Replacing the result with a new scan aborts the previous optional
         # enrichment; its stale completion cannot mutate the new result.
-        page.wait_for_function("!document.getElementById('p2kScanButton').disabled")
+        deadline=time.monotonic()+3
+        while not page.locator("#p2kScanButton").is_enabled() and time.monotonic()<deadline:
+            time.sleep(.02)
+        assert page.locator("#p2kScanButton").is_enabled()
         page.click("#p2kScanButton")
-        page.wait_for_function("window.__p2kCalls.filter(x=>x.url.includes('/pub/club/rivals/members')).length===2")
-        page.wait_for_function("document.getElementById('p2kStatusText').textContent.startsWith('Scan complete:')")
+        deadline=time.monotonic()+3
+        while sum("/pub/club/rivals/members" in x["url"] for x in page.evaluate("window.__p2kCalls"))<2 and time.monotonic()<deadline:
+            time.sleep(.02)
+        page.locator("#p2kStatusText",has_text="Scan complete").wait_for()
         assert page.evaluate("window.__gamesAborted") >= 2
         assert page.evaluate("window.__gamesCompleted") == 0
         page.locator('[data-profile="Eligible"]').click()
