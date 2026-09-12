@@ -23,7 +23,8 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "6706e619d310e2c74fe2734cfcef8dd2f83d70d1"
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-BUILD_KEY = "p2k-2.12.0-d025d8c46103-ae73ae796f09667d"
+BUILD_KEY = "2.11.5-bf6a828490f57"
+SITE_CONFIG_KEY = "p2k-2.12.0-d025d8c46103-ae73ae796f09667d"
 R538_JS = "r538-d52193a71712"
 R538_CSS = "r538-fdcea54d62ba"
 R5310_JS = "r5310-fd6d89209aa6"
@@ -243,7 +244,7 @@ def main() -> None:
                 page.wait_for_function("window.__P2K_TROPHY_R5FIX3_8 === true", timeout=15000)
                 page.wait_for_selector("#adminShellNativeDetailHost[data-native-detail='trophy-gallery']:not([hidden]) form[data-r538-enhanced='1']", timeout=15000)
                 assert page.evaluate("window.P2K_SITE_CONFIG?.version") == VERSION
-                assert page.locator(f'script[src*="site-config.js?v={BUILD_KEY}"]').count() == 1
+                assert page.locator(f'script[src*="site-config.js?v={SITE_CONFIG_KEY}"]').count() == 1
                 assert page.locator(f'script[src*="trophy-gallery-r5fix3.8.js?v={R538_JS}"]').count() == 1
                 assert page.locator(f'link[href*="trophy-gallery-r5fix3.8.css?v={R538_CSS}"]').count() == 1
                 assert page.locator(f'script[src*="trophy-gallery-r5fix3.10.js?v={R5310_JS}"]').count() == 1
