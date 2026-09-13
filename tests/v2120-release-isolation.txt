@@ -22,6 +22,7 @@ TournamentAchievementBadgesDemo.html
 TournamentManagement.html
 VERSION
 assets/css/recruit-match.css
+assets/js/admin/trophy-gallery-v2120-mobile-fix.js
 assets/js/pages/recruit-match-v2-core.js
 assets/js/pages/recruit-match.js
 assets/js/site-config.js
@@ -30,6 +31,7 @@ index.html
 server/team-points/public/recruitment-pool.php
 tests/browser_gate_recruit_match_v2.py
 tests/browser_gate_trophy_gallery_overlay.py
+tests/browser_gate_v2120_trophy_mobile_engraver.py
 tests/recruit_match_v2_core.test.js
 tests/run-tests.js
 tests/test_recruit_match_v2.py
