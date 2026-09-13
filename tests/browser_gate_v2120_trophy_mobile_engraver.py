@@ -120,18 +120,30 @@ def main() -> None:
                 assert set(master_requests).issubset(set(MASTER_NAMES)), master_requests
                 assert master_requests, "Engraver did not request its external master image assets"
 
-                page.goto(f"{origin}/ui-v2.html?ui=v2&page=hall&hall=trophies", wait_until="domcontentloaded")
-                page.wait_for_selector(".p2k-trophy-group [data-r538-title]", timeout=15000)
-                title_border = page.locator(".p2k-trophy-group [data-r538-title]").first.evaluate(
-                    "el => getComputedStyle(el).borderBottomWidth"
+                base.FixtureHandler.authenticated = False
+                public_context = browser.new_context(bypass_csp=True, viewport={"width": 390, "height": 844})
+                public_page = public_context.new_page()
+                public_errors: list[str] = []
+                public_page.on("pageerror", lambda error: public_errors.append(str(error)))
+                public_page.goto(f"{origin}/ui-v2.html?ui=v2&page=hall&hall=trophies", wait_until="domcontentloaded")
+                public_page.wait_for_selector("#p2kTrophyHallTab", timeout=15000)
+                public_page.click("#p2kTrophyHallTab")
+                public_page.wait_for_selector(
+                    "#p2kTrophyHallPanel:not([hidden]) .p2k-trophy-card[data-r538-card]",
+                    timeout=15000,
                 )
-                group_border = page.locator(".p2k-trophy-group > h3").first.evaluate(
-                    "el => getComputedStyle(el).borderBottomWidth"
-                )
+                title_border = public_page.locator(
+                    "#p2kTrophyHallPanel .p2k-trophy-group [data-r538-title]"
+                ).first.evaluate("el => getComputedStyle(el).borderBottomWidth")
+                group_border = public_page.locator(
+                    "#p2kTrophyHallPanel .p2k-trophy-group > h3"
+                ).first.evaluate("el => getComputedStyle(el).borderBottomWidth")
                 assert title_border == "0px", title_border
                 assert group_border != "0px", group_border
+                assert not public_errors, public_errors
                 assert not errors, errors
 
+                public_context.close()
                 context.close()
                 browser.close()
         finally:
