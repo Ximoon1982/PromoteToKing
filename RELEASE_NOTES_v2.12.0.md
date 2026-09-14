@@ -38,3 +38,10 @@ No database migration or new CRON task is introduced.
 - The v2.12 production-path selector now manages and verifies `site-manifest.json`, preventing future package/site-config/manifest version drift from passing installer verification.
 - The exact captured cumulative v2.11.5 production fingerprint was re-derived with the historical manifest included; no fuzzy baseline acceptance was introduced.
 - Existing pre-correction v2.12.0 production installs can apply the standalone transactional `install-site-manifest-correction-v2.12.0.sh`; it accepts only the exact stale manifest hash, preserves the file mode, is idempotent, and rejects unknown manifest content.
+
+## Post-release runtime diagnostics correction
+
+- Runtime Diagnostics now recognizes a valid build-specific site-config marker (`p2k-<version>-<source>-<build>`) as belonging to the same semantic site-config version instead of incorrectly comparing the complete immutable cache key with bare `2.12.0`.
+- Stale-version and malformed site-config cache markers still raise the existing warning.
+- The changed `runtime-diagnostics.js` asset has its own immutable key derived from source commit `f193ec4847968ac25eaf881cdbff86cbb852c309` and build identity `runtime-diagnostics-cache-marker-correction-1`.
+- Existing v2.12.0 production installs can apply `install-runtime-diagnostics-correction-v2.12.0.sh`; it accepts only the exact two pre-correction files, preserves their modes, verifies corrected hashes, is idempotent and rejects unknown drift.
