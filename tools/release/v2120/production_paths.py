@@ -7,7 +7,7 @@ import argparse
 from pathlib import Path, PurePosixPath
 import subprocess
 
-ROOT_FILES = {".htaccess", "VERSION"}
+ROOT_FILES = {".htaccess", "VERSION", "site-manifest.json"}
 ROOT_PAGES = set(
     "AnalyzeMatch.html AnalyzeMatchModal.html AnalyzeMatches.htm "
     "ChallengeListAssistant.html ClubIntelligence.html DataReconciliation.html "
