@@ -31,3 +31,10 @@ No database migration or new CRON task is introduced.
 - The recruitment pool performs a lightweight Core rating query. Green Core/Analytics structural validation remains intact, but this request path does not execute population-wide Analytics recruitment/activity computation.
 - Cache provenance procedure: commit the exact runtime assets first, then derive and stamp the loader key from that resolvable runtime commit plus a stable build ID in a qualification-only follow-up commit.
 - The lightweight recruitment request does not invoke population-wide Analytics member-activity computation; the established Green Core/Analytics structural validation still applies.
+
+## Post-release manifest correction
+
+- `site-manifest.json` is now aligned with the v2.12.0 release identity and Match Recruitment Assistant scope instead of retaining the stale v2.11.0 manifest.
+- The v2.12 production-path selector now manages and verifies `site-manifest.json`, preventing future package/site-config/manifest version drift from passing installer verification.
+- The exact captured cumulative v2.11.5 production fingerprint was re-derived with the historical manifest included; no fuzzy baseline acceptance was introduced.
+- Existing pre-correction v2.12.0 production installs can apply the standalone transactional `install-site-manifest-correction-v2.12.0.sh`; it accepts only the exact stale manifest hash, preserves the file mode, is idempotent, and rejects unknown manifest content.
