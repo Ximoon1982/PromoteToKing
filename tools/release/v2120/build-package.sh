@@ -76,6 +76,7 @@ comm -12 "$PACKAGE/FILES.list" "$PACKAGE/REMOVALS.list" >"$work/removal-overlap"
 sort -o "$PACKAGE/SUPPORTED_BASELINES.sha256" "$PACKAGE/SUPPORTED_BASELINES.sha256"
 
 install -m 755 "$ROOT/tools/release/v2120/install-promote-to-king-v2.12.0.sh" "$PACKAGE/"
+install -m 755 "$ROOT/tools/release/v2120/install-site-manifest-correction-v2.12.0.sh" "$PACKAGE/"
 install -m 755 "$SELECTOR" "$PACKAGE/production_paths.py"
 install -m 644 "$ROOT/tools/release/v2120/README.md" "$PACKAGE/README.md"
 
