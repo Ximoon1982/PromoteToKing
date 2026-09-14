@@ -1,9 +1,11 @@
 from pathlib import Path
-import importlib.util,subprocess
+import importlib.util,json,subprocess
 R=Path(__file__).resolve().parents[1];S="d025d8c4610390e54058bca069785e9916af5483";RK="p2k-2.12.0-d025d8c46103-8e4b12768d33959c";SK="p2k-2.12.0-d025d8c46103-ae73ae796f09667d"
 def read(p):return (R/p).read_text()
 def test_version_surfaces_and_loaders():
  assert read("VERSION").strip()=="2.12.0" and 'version: "2.12.0"' in read("assets/js/site-config.js")
+ manifest=json.loads(read("site-manifest.json"));assert manifest["schemaVersion"]==8 and manifest["version"]=="2.12.0"
+ assert manifest["release"]["sourceBaseline"]=="v2.11.5" and manifest["releaseNotes"][0]=="RELEASE_NOTES_v2.12.0.md"
  pages=[*R.glob("*.html"),*R.glob("*.htm")];loaders=[p for p in pages if "assets/js/site-config.js?v=" in p.read_text()]
  assert loaders and all(f"assets/js/site-config.js?v={SK}" in p.read_text() for p in loaders)
 def test_real_cache_provenance():
@@ -26,7 +28,7 @@ def test_production_path_policy_is_shared_and_preserves_mutable_state():
 def test_lived_production_upgrade_contract():
  b=read("tools/release/v2120/build-package.sh")
  meta=read("tools/release/v2120/lived-production-baseline.meta").strip().split("\t")
- assert meta==["a78f09bcc1086587f0469be3bd862ad2ee4aac4b25a4417734a82c3abc17e5e4","2.11.5-lived-production-20260913","production-capture-20260913"]
+ assert meta==["538ee589d58360c411d6769fbe752f64867c053d167f50a3669f355e6cf2f57d","2.11.5-lived-production-20260913","production-capture-20260913-plus-site-manifest"]
  removals=[x for x in read("tools/release/v2120/lived-production-removals.txt").splitlines() if x]
  assert len(removals)==18 and len(removals)==len(set(removals))
  assert "lived-production-baseline.meta" in b and "lived-production-removals.txt" in b
@@ -45,7 +47,20 @@ def test_lived_production_upgrade_contract():
   "server/team-points/public/config.local.php",
  )
  assert all(not m.included(path) for path in preserved)
- assert m.included("assets/js/site-config.js") and m.included("ui-v2.html")
+ assert m.included("assets/js/site-config.js") and m.included("ui-v2.html") and m.included("site-manifest.json")
+
+def test_site_manifest_correction_installer(tmp_path):
+ target=tmp_path/"site";target.mkdir();(target/"VERSION").write_text("2.12.0\n")
+ (target/"assets/js").mkdir(parents=True);(target/"assets/js/site-config.js").write_text('window.P2K_SITE_CONFIG = { version: "2.12.0" };\n')
+ old=subprocess.check_output(["git","show","6de1192cf455c6ef137f54b8262bcb16dc837ec5:site-manifest.json"],cwd=R,text=True)
+ manifest=target/"site-manifest.json";manifest.write_text(old);manifest.chmod(0o640)
+ script=R/"tools/release/v2120/install-site-manifest-correction-v2.12.0.sh"
+ first=subprocess.run([str(script),str(target)],cwd=R,capture_output=True,text=True);assert first.returncode==0
+ assert manifest.read_text()==read("site-manifest.json") and (manifest.stat().st_mode&0o777)==0o640
+ second=subprocess.run([str(script),str(target)],cwd=R,capture_output=True,text=True);assert second.returncode==0 and "already installed" in second.stdout
+ manifest.write_text("unknown\n")
+ rejected=subprocess.run([str(script),str(target)],cwd=R,capture_output=True,text=True);assert rejected.returncode==2
+ assert "not the exact qualified pre-correction file" in rejected.stderr and manifest.read_text()=="unknown\n"
 
 def test_complete_package_integrity_contract():
  b=read("tools/release/v2120/build-package.sh")
@@ -54,6 +69,7 @@ def test_complete_package_integrity_contract():
  assert "! -name PACKAGE-MANIFEST.sha256" in b
  assert 'cd "$OUTPUT"' in b
  assert '"$OUTPUT/PromoteToKing_v2.12.0_INCREMENTAL.zip"' not in b
+ assert "install-site-manifest-correction-v2.12.0.sh" in b
 def test_inherited_files_unchanged():
  for p in ("tests/test_v2112_structural_consolidation.py","tests/test_v288_release.py","tests/v2.11.3-structural-metrics.json"):
   assert subprocess.run(["git","diff","--exit-code","c534b2dbb0346eac0fa6de869621d6b7d785ead8","HEAD","--",p],cwd=R).returncode==0
