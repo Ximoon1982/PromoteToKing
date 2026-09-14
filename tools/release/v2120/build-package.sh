@@ -77,6 +77,7 @@ sort -o "$PACKAGE/SUPPORTED_BASELINES.sha256" "$PACKAGE/SUPPORTED_BASELINES.sha2
 
 install -m 755 "$ROOT/tools/release/v2120/install-promote-to-king-v2.12.0.sh" "$PACKAGE/"
 install -m 755 "$ROOT/tools/release/v2120/install-site-manifest-correction-v2.12.0.sh" "$PACKAGE/"
+install -m 755 "$ROOT/tools/release/v2120/install-runtime-diagnostics-correction-v2.12.0.sh" "$PACKAGE/"
 install -m 755 "$SELECTOR" "$PACKAGE/production_paths.py"
 install -m 644 "$ROOT/tools/release/v2120/README.md" "$PACKAGE/README.md"
 
@@ -87,6 +88,9 @@ recruitment_key=p2k-2.12.0-d025d8c46103-8e4b12768d33959c
 provenance=d025d8c4610390e54058bca069785e9916af5483
 build_id=match-recruitment-release-identity-2
 site_config_key=p2k-2.12.0-d025d8c46103-ae73ae796f09667d
+runtime_diagnostics_key=p2k-2.12.0-f193ec484796-365aac4e1e4ef57f
+runtime_diagnostics_source=f193ec4847968ac25eaf881cdbff86cbb852c309
+runtime_diagnostics_build_id=runtime-diagnostics-cache-marker-correction-1
 EOF_ID
 
 # Authenticate everything except this manifest itself. SHA256SUMS authenticates
