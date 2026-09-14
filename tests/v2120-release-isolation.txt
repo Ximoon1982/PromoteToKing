@@ -29,6 +29,7 @@ assets/js/site-config.js
 docs/ARCHITECTURE.md
 index.html
 server/team-points/public/recruitment-pool.php
+site-manifest.json
 tests/browser_gate_recruit_match_v2.py
 tests/browser_gate_trophy_gallery_overlay.py
 tests/browser_gate_v2120_trophy_mobile_engraver.py
@@ -40,6 +41,7 @@ tests/v2120-release-isolation.txt
 tools/release/v2120/README.md
 tools/release/v2120/build-package.sh
 tools/release/v2120/install-promote-to-king-v2.12.0.sh
+tools/release/v2120/install-site-manifest-correction-v2.12.0.sh
 tools/release/v2120/lived-production-baseline.meta
 tools/release/v2120/lived-production-removals.txt
 tools/release/v2120/production_paths.py
