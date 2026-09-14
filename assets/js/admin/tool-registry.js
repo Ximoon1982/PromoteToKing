@@ -70,12 +70,22 @@ if (window.P2K_TROPHY_GALLERY_POC) { window.P2K_TROPHY_GALLERY_POC.mount?.(conte
 if (document.getElementById("p2kTrophyGalleryPocScript")) return;
 const script = document.createElement("script");
 script.id = "p2kTrophyGalleryPocScript";
-script.src = "assets/js/admin/trophy-gallery-poc.js?v=poc-efaa08caaf59-20260911-engraving-handoff";
+script.src = "assets/js/admin/trophy-gallery-poc.js?v=p2k-2.12.1-trophy-b27883eb38cd";
 script.defer = true;
 script.onload = () => window.P2K_TROPHY_GALLERY_POC?.mount?.(context);
 document.head.appendChild(script);
 }
 loadTrophyGalleryPoc();
+
+function loadMatchRecruitmentAccessV2121() {
+if (document.getElementById("p2kMatchRecruitmentAccessV2121")) return;
+const script = document.createElement("script");
+script.id = "p2kMatchRecruitmentAccessV2121";
+script.src = "assets/js/admin/match-recruitment-access-v2121.js?v=p2k-2.12.1-bec7276d2a5b";
+script.defer = true;
+document.head.appendChild(script);
+}
+loadMatchRecruitmentAccessV2121();
 
 return Object.freeze({ tools, renderTools, routeFallback });
 }});
