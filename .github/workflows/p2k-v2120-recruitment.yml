@@ -24,7 +24,7 @@ jobs:
       - name: Recruitment v2 focused qualification
         run: |
           node tests/recruit_match_v2_core.test.js
-          python -m pytest -q tests/test_recruit_match_v2.py tests/test_v2120_release_installer.py
+          python -m pytest -q tests/test_recruit_match_v2.py tests/test_v2120_release_installer.py tests/test_v2120_runtime_diagnostics.py
           python tests/browser_gate_recruit_match_v2.py
       - name: v2.12.0 universal installer qualification
         run: |
