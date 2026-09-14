@@ -55,11 +55,11 @@ def test_site_manifest_correction_installer(tmp_path):
  old=subprocess.check_output(["git","show","6de1192cf455c6ef137f54b8262bcb16dc837ec5:site-manifest.json"],cwd=R,text=True)
  manifest=target/"site-manifest.json";manifest.write_text(old);manifest.chmod(0o640)
  script=R/"tools/release/v2120/install-site-manifest-correction-v2.12.0.sh"
- first=subprocess.run([str(script),str(target)],cwd=R,capture_output=True,text=True);assert first.returncode==0
+ first=subprocess.run(["bash",str(script),str(target)],cwd=R,capture_output=True,text=True);assert first.returncode==0
  assert manifest.read_text()==read("site-manifest.json") and (manifest.stat().st_mode&0o777)==0o640
- second=subprocess.run([str(script),str(target)],cwd=R,capture_output=True,text=True);assert second.returncode==0 and "already installed" in second.stdout
+ second=subprocess.run(["bash",str(script),str(target)],cwd=R,capture_output=True,text=True);assert second.returncode==0 and "already installed" in second.stdout
  manifest.write_text("unknown\n")
- rejected=subprocess.run([str(script),str(target)],cwd=R,capture_output=True,text=True);assert rejected.returncode==2
+ rejected=subprocess.run(["bash",str(script),str(target)],cwd=R,capture_output=True,text=True);assert rejected.returncode==2
  assert "not the exact qualified pre-correction file" in rejected.stderr and manifest.read_text()=="unknown\n"
 
 def test_complete_package_integrity_contract():
