@@ -25,6 +25,7 @@ assets/css/recruit-match.css
 assets/js/admin/trophy-gallery-v2120-mobile-fix.js
 assets/js/pages/recruit-match-v2-core.js
 assets/js/pages/recruit-match.js
+assets/js/pages/runtime-diagnostics.js
 assets/js/site-config.js
 docs/ARCHITECTURE.md
 index.html
@@ -37,10 +38,12 @@ tests/recruit_match_v2_core.test.js
 tests/run-tests.js
 tests/test_recruit_match_v2.py
 tests/test_v2120_release_installer.py
+tests/test_v2120_runtime_diagnostics.py
 tests/v2120-release-isolation.txt
 tools/release/v2120/README.md
 tools/release/v2120/build-package.sh
 tools/release/v2120/install-promote-to-king-v2.12.0.sh
+tools/release/v2120/install-runtime-diagnostics-correction-v2.12.0.sh
 tools/release/v2120/install-site-manifest-correction-v2.12.0.sh
 tools/release/v2120/lived-production-baseline.meta
 tools/release/v2120/lived-production-removals.txt
