@@ -23,6 +23,17 @@ IMMUTABLE_ROOTS = {
     "api", "artwork", "artwork-masters", "assets", "auth", "resources",
     "server", "trophies",
 }
+PRESERVED_EXACT_PATHS = {
+    'assets/trophy-gallery/legacy-r4/club-wars-galactic-conflict.png',
+    'assets/trophy-gallery/legacy-r4/owl-2024-classic-u1700.png',
+    'assets/trophy-gallery/legacy-r4/owl-2024-grand-prix-candidates.png',
+    'assets/trophy-gallery/legacy-r4/owl-2024-swiss4all.jpg',
+    'assets/trophy-gallery/legacy-r4/owl-2024-vote-g1.png',
+    'assets/trophy-gallery/legacy-r4/pcl-super-bingo-2025.png',
+    'assets/trophy-gallery/legacy-r4/tcmac-centurion-s4.png',
+    'resources/miac/seed.zip',
+}
+
 MUTABLE_SEGMENTS = {
     "backup", "backups", "cache", "caches", "data", "log", "logs",
     "processed", "quarantine", "runtime", "sessions", "storage", "tmp",
@@ -35,6 +46,8 @@ def included(relative_path: str) -> bool:
     path = PurePosixPath(relative_path)
     if relative_path in ROOT_FILES | ROOT_PAGES:
         return True
+    if relative_path in PRESERVED_EXACT_PATHS:
+        return False
     if not path.parts or path.parts[0] not in IMMUTABLE_ROOTS:
         return False
     if any(part.lower() in MUTABLE_SEGMENTS for part in path.parts[1:]):
@@ -42,6 +55,8 @@ def included(relative_path: str) -> bool:
     if "config" in (part.lower() for part in path.parts):
         return path.name == ".htaccess" or ".example." in path.name
     lowered = path.name.lower()
+    if ".local." in lowered and ".example." not in lowered:
+        return False
     if lowered in {".gitkeep", ".env"} or lowered.startswith(".env."):
         return False
     return True

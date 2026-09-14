@@ -40,6 +40,8 @@ tests/v2120-release-isolation.txt
 tools/release/v2120/README.md
 tools/release/v2120/build-package.sh
 tools/release/v2120/install-promote-to-king-v2.12.0.sh
+tools/release/v2120/lived-production-baseline.meta
+tools/release/v2120/lived-production-removals.txt
 tools/release/v2120/production_paths.py
 tools/release/v2120/qualify-installer.sh
 ui-v2.html

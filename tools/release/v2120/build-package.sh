@@ -5,6 +5,8 @@ ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 OUTPUT=${1:-"$ROOT/build-v2120"}
 PACKAGE="$OUTPUT/PromoteToKing_v2.12.0_INCREMENTAL"
 SELECTOR="$ROOT/tools/release/v2120/production_paths.py"
+LIVED_BASELINE="$ROOT/tools/release/v2120/lived-production-baseline.meta"
+LIVED_REMOVALS="$ROOT/tools/release/v2120/lived-production-removals.txt"
 
 BASELINES=(
   "2.11.0:2ca1fc191aeef444b4886b53e25a54a83820c25c"
@@ -55,23 +57,36 @@ for entry in "${BASELINES[@]}"; do
     >>"$PACKAGE/SUPPORTED_TREES.sha256"
 done
 
+# The production site accumulated qualified 2.11.5 hotfixes that were installed
+# transactionally but are not represented by one pristine semantic-release tree.
+# Accept only the exact captured immutable-tree fingerprint; never a partial or
+# fuzzy match. The compact metadata line has the same format as SUPPORTED_TREES.
+cat "$LIVED_BASELINE" >>"$PACKAGE/SUPPORTED_TREES.sha256"
+
 sort -u "$work/all-baseline-paths" >"$work/all-baseline-paths.sorted"
 comm -23 "$work/all-baseline-paths.sorted" "$PACKAGE/FILES.list" \
-  >"$PACKAGE/REMOVALS.list"
+  >"$work/canonical-removals"
+cat "$work/canonical-removals" "$LIVED_REMOVALS" | sort -u >"$PACKAGE/REMOVALS.list"
+comm -12 "$PACKAGE/FILES.list" "$PACKAGE/REMOVALS.list" >"$work/removal-overlap"
+[[ ! -s "$work/removal-overlap" ]] || {
+  echo "lived-production removal list overlaps v2.12.0 payload" >&2
+  cat "$work/removal-overlap" >&2
+  exit 1
+}
 sort -o "$PACKAGE/SUPPORTED_BASELINES.sha256" "$PACKAGE/SUPPORTED_BASELINES.sha256"
 
 install -m 755 "$ROOT/tools/release/v2120/install-promote-to-king-v2.12.0.sh" "$PACKAGE/"
 install -m 755 "$SELECTOR" "$PACKAGE/production_paths.py"
 install -m 644 "$ROOT/tools/release/v2120/README.md" "$PACKAGE/README.md"
 
-cat >"$PACKAGE/RELEASE-IDENTITY.txt" <<EOF
+cat >"$PACKAGE/RELEASE-IDENTITY.txt" <<EOF_ID
 release=2.12.0
 source_head=$(git -C "$ROOT" rev-parse HEAD)
 recruitment_key=p2k-2.12.0-d025d8c46103-8e4b12768d33959c
 provenance=d025d8c4610390e54058bca069785e9916af5483
 build_id=match-recruitment-release-identity-2
 site_config_key=p2k-2.12.0-d025d8c46103-ae73ae796f09667d
-EOF
+EOF_ID
 
 # Authenticate everything except this manifest itself. SHA256SUMS authenticates
 # the finished ZIP, so no circular self-hash is needed.

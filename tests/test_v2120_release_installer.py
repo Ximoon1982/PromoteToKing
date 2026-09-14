@@ -23,6 +23,30 @@ def test_production_path_policy_is_shared_and_preserves_mutable_state():
  for name in ("data","storage","cache","uploads","logs","runtime","backups","sessions"):
   assert f'\"{name}\"' in p
 
+def test_lived_production_upgrade_contract():
+ b=read("tools/release/v2120/build-package.sh")
+ meta=read("tools/release/v2120/lived-production-baseline.meta").strip().split("\t")
+ assert meta==["a78f09bcc1086587f0469be3bd862ad2ee4aac4b25a4417734a82c3abc17e5e4","2.11.5-lived-production-20260913","production-capture-20260913"]
+ removals=[x for x in read("tools/release/v2120/lived-production-removals.txt").splitlines() if x]
+ assert len(removals)==18 and len(removals)==len(set(removals))
+ assert "lived-production-baseline.meta" in b and "lived-production-removals.txt" in b
+ assert 'cat "$LIVED_BASELINE" >>"$PACKAGE/SUPPORTED_TREES.sha256"' in b
+ assert 'cat "$work/canonical-removals" "$LIVED_REMOVALS" | sort -u >"$PACKAGE/REMOVALS.list"' in b
+ q=R/"tools/release/v2120/production_paths.py";sp=importlib.util.spec_from_file_location("v2120_paths",q);m=importlib.util.module_from_spec(sp);sp.loader.exec_module(m)
+ preserved=(
+  "assets/trophy-gallery/legacy-r4/club-wars-galactic-conflict.png",
+  "assets/trophy-gallery/legacy-r4/owl-2024-classic-u1700.png",
+  "assets/trophy-gallery/legacy-r4/owl-2024-grand-prix-candidates.png",
+  "assets/trophy-gallery/legacy-r4/owl-2024-swiss4all.jpg",
+  "assets/trophy-gallery/legacy-r4/owl-2024-vote-g1.png",
+  "assets/trophy-gallery/legacy-r4/pcl-super-bingo-2025.png",
+  "assets/trophy-gallery/legacy-r4/tcmac-centurion-s4.png",
+  "resources/miac/seed.zip",
+  "server/team-points/public/config.local.php",
+ )
+ assert all(not m.included(path) for path in preserved)
+ assert m.included("assets/js/site-config.js") and m.included("ui-v2.html")
+
 def test_complete_package_integrity_contract():
  b=read("tools/release/v2120/build-package.sh")
  for name in ("FILES.list","REMOVALS.list","MODES.list","SUPPORTED_BASELINES.sha256","SUPPORTED_TREES.sha256","RELEASE-IDENTITY.txt","PACKAGE-MANIFEST.sha256"):
