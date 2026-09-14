@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><title>P2K Trophy Engraver</title></head><body><p id="status">Loading engraver…</p><script>
+(async()=>{
+ const status=document.getElementById('status');
+ try{
+  const source=new URL('editor.html',location.href);
+  const response=await fetch(source,{cache:'no-store',credentials:'same-origin'});
+  if(!response.ok)throw new Error(`HTTP ${response.status}`);
+  let html=await response.text();
+  const oldLoad=`async function loadImages() {\n  const keys = Object.keys(ASSETS);\n  await Promise.all(keys.map(key => new Promise((resolve, reject) => {\n    const im = new Image(); im.onload = () => { images[key] = im; resolve(); }; im.onerror = reject; im.src = ASSETS[key];\n  })));\n  updateVisibleControls(); loadSample();\n}`;
+  const newLoad=`function currentAssetKey(){ return els.awardType.value+'_'+els.finish.value; }\nasync function ensureCurrentImage(){\n  const key=currentAssetKey(); if(images[key])return images[key];\n  if(!ASSETS[key])throw new Error('Unknown trophy artwork '+key);\n  const im=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=reject;image.src=ASSETS[key];});\n  images[key]=im; return im;\n}\nasync function loadImages(){ await ensureCurrentImage(); updateVisibleControls(); loadSample(); }`;
+  const oldChange=`[els.awardType, els.finish, els.showGuides].forEach(el => el.addEventListener('change', () => { updateVisibleControls(); if (el===els.awardType || el===els.finish) loadSample(); else render(); }));`;
+  const newChange=`[els.awardType, els.finish, els.showGuides].forEach(el => el.addEventListener('change', () => { updateVisibleControls(); if (el===els.awardType || el===els.finish) ensureCurrentImage().then(loadSample).catch(err=>{els.infoLabel.textContent='Load failed';els.infoSize.textContent=String(err);console.error(err);}); else render(); }));`;
+  if(!html.includes(oldLoad)||!html.includes(oldChange))throw new Error('Qualified engraver source signature changed; lazy patch refused.');
+  html=html.replace(oldLoad,newLoad).replace(oldChange,newChange);
+  document.open(); document.write(html); document.close();
+ }catch(error){status.textContent='Engraver unavailable: '+error.message;console.error(error);}
+})();
+</script></body></html>

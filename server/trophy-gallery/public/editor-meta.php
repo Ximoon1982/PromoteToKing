@@ -127,6 +127,12 @@ try {
         $payload['ok'] = true;
         Http::json($payload);
     }
+    if ($action === 'get') {
+        Http::method('GET');
+        $id = p2k_trophy_r534_id(p2k_trophy_r534_value($_GET, 'id', ''));
+        $payload = p2k_trophy_r534_read();
+        Http::json(array('ok'=>true, 'id'=>$id, 'meta'=>p2k_trophy_r534_value($payload['records'], $id, array())));
+    }
 
     Auth::requireAdmin();
 

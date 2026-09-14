@@ -12,6 +12,8 @@ try{
  $action=strtolower(trim((string)($_GET['action']??'list')));$store=new TrophyGalleryStore();
  if($action==='list'){Http::method('GET');Http::jsonCacheable(['ok'=>true]+$store->catalogue(true),200,30,120);}
  Auth::requireAdmin();
+ if($action==='admin-index'){Http::method('GET');Http::json(['ok'=>true]+$store->catalogueIndex());}
+ if($action==='get'){Http::method('GET');Http::json(['ok'=>true]+$store->record((string)($_GET['id']??'')));}
  if($action==='admin-list'){Http::method('GET');Http::json(['ok'=>true]+$store->catalogue(false));}
  if($action==='save'){Http::method('POST');$body=Http::body();Http::json(trophy_mutation($store->save($body,trophy_expected_revision($body)),'record'));}
  if($action==='duplicate'){Http::method('POST');$body=Http::body();Http::json(trophy_mutation($store->duplicate((string)($body['id']??''),trophy_expected_revision($body)),'record'));}
