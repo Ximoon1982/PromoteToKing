@@ -257,7 +257,9 @@ def main() -> None:
             hall.locator("#p2kTrophyHallPanel [data-open]").first.click()
             hall.wait_for_selector("#p2kTrophyModal:not([hidden])")
             assert hall.locator("#p2kTrophyModal [data-enlarge]").count() == 0
-            assert hall.locator("#p2kTrophyModal dt", has_text="Award", exact=True).count() == 0
+            award_labels = hall.locator("#p2kTrophyModal dt").evaluate_all(
+                "els => els.filter(el => el.textContent.trim() === 'Award').length")
+            assert award_labels == 0
             hall.go_back(wait_until="domcontentloaded")
             assert "hall=members" in hall.url
             hall.go_forward(wait_until="domcontentloaded")
