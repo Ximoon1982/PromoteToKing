@@ -41,17 +41,15 @@ jobs:
           bash -n tools/release/v2121/build-package.sh
           bash -n tools/release/v2121/qualify-installer.sh
           bash -n tools/release/v2121/install-promote-to-king-v2.12.1.sh
-          python -m py_compile tools/release/v2121/production_paths.py tools/release/v2121/stamp_asset_cache_key.py
+          python -m py_compile tools/release/v2121/production_paths.py tools/release/v2121/stamp_asset_cache_key.py tests/browser_gate_trophy_gallery_v2121.py
       - name: Build qualified v2.12.1 incremental package
         run: bash tools/release/v2121/build-package.sh "$RUNNER_TEMP/build-v2121"
       - name: Exact 2.11.5 and 2.12.0 installer qualification
         run: bash tools/release/v2121/qualify-installer.sh "$RUNNER_TEMP/build-v2121"
       - name: Match Recruitment focused browser gate
         run: python tests/browser_gate_recruit_match_v2.py
-      - name: Trophy Hall and admin browser gate
-        run: python tests/browser_gate_trophy_gallery_overlay.py
-      - name: Trophy portrait and engraver browser gate
-        run: python tests/browser_gate_v2120_trophy_mobile_engraver.py
+      - name: Trophy v2.12.1 browser gate
+        run: python tests/browser_gate_trophy_gallery_v2121.py
       - name: Inherited architecture and canonical audit
         run: |
           python tools/test-suite/architecture_gate.py
