@@ -237,7 +237,7 @@ def main() -> None:
             hall = public.new_page()
             public_errors: list[str] = []
             hall.on("pageerror", lambda e: public_errors.append(e.stack or str(e)))
-            hall.goto(f"{origin}/ui-v2.html?ui=v2&page=hall&hall=members", wait_until="domcontentloaded")
+            hall.goto(f"{origin}/ui-v2.html?ui=v2&page=hall&hall=achievements", wait_until="domcontentloaded")
             hall.wait_for_selector("[data-hall-subtab='trophies']", timeout=15000)
             hall.click("[data-hall-subtab='trophies']")
             hall.wait_for_selector("#p2kTrophyHallPanel:not([hidden]) .p2k-v2121-trophy-stats", timeout=15000)
@@ -261,7 +261,7 @@ def main() -> None:
                 "els => els.filter(el => el.textContent.trim() === 'Award').length")
             assert award_labels == 0
             hall.go_back(wait_until="domcontentloaded")
-            assert "hall=members" in hall.url
+            assert "hall=achievements" in hall.url
             hall.go_forward(wait_until="domcontentloaded")
             hall.wait_for_selector("#p2kTrophyHallPanel:not([hidden])", timeout=15000)
             assert "hall=trophies" in hall.url
