@@ -1,13 +1,17 @@
 from pathlib import Path
 import importlib.util,json,subprocess
-R=Path(__file__).resolve().parents[1];S="d025d8c4610390e54058bca069785e9916af5483";RK="p2k-2.12.0-d025d8c46103-8e4b12768d33959c";SK="p2k-2.12.0-d025d8c46103-ae73ae796f09667d"
+R=Path(__file__).resolve().parents[1];S="d025d8c4610390e54058bca069785e9916af5483";V2120="c52fd68dbcd8fdb7cca8a1ab63ee6dd6da1e0303";RK="p2k-2.12.0-d025d8c46103-8e4b12768d33959c";SK="p2k-2.12.0-d025d8c46103-ae73ae796f09667d"
 def read(p):return (R/p).read_text()
+def git_read(p,ref=V2120):return subprocess.check_output(["git","show",f"{ref}:{p}"],cwd=R,text=True)
+def git_root_pages(ref=V2120):
+ names=subprocess.check_output(["git","ls-tree","--name-only",ref],cwd=R,text=True).splitlines()
+ return [p for p in names if Path(p).suffix in (".html",".htm")]
 def test_version_surfaces_and_loaders():
- assert read("VERSION").strip()=="2.12.0" and 'version: "2.12.0"' in read("assets/js/site-config.js")
- manifest=json.loads(read("site-manifest.json"));assert manifest["schemaVersion"]==8 and manifest["version"]=="2.12.0"
+ assert git_read("VERSION").strip()=="2.12.0" and 'version: "2.12.0"' in git_read("assets/js/site-config.js")
+ manifest=json.loads(git_read("site-manifest.json"));assert manifest["schemaVersion"]==8 and manifest["version"]=="2.12.0"
  assert manifest["release"]["sourceBaseline"]=="v2.11.5" and manifest["releaseNotes"][0]=="RELEASE_NOTES_v2.12.0.md"
- pages=[*R.glob("*.html"),*R.glob("*.htm")];loaders=[p for p in pages if "assets/js/site-config.js?v=" in p.read_text()]
- assert loaders and all(f"assets/js/site-config.js?v={SK}" in p.read_text() for p in loaders)
+ pages=git_root_pages();loaders=[p for p in pages if "assets/js/site-config.js?v=" in git_read(p)]
+ assert loaders and all(f"assets/js/site-config.js?v={SK}" in git_read(p) for p in loaders)
 def test_real_cache_provenance():
  assert subprocess.run(["git","cat-file","-e",S+"^{commit}"],cwd=R).returncode==0
  q=R/"tools/release/static_asset_cache_key.py";sp=importlib.util.spec_from_file_location("q",q);m=importlib.util.module_from_spec(sp);sp.loader.exec_module(m)
@@ -32,20 +36,9 @@ def test_lived_production_upgrade_contract():
  removals=[x for x in read("tools/release/v2120/lived-production-removals.txt").splitlines() if x]
  assert len(removals)==18 and len(removals)==len(set(removals))
  assert "lived-production-baseline.meta" in b and "lived-production-removals.txt" in b
- assert 'cat "$LIVED_BASELINE" >>"$PACKAGE/SUPPORTED_TREES.sha256"' in b
- assert 'cat "$work/canonical-removals" "$LIVED_REMOVALS" | sort -u >"$PACKAGE/REMOVALS.list"' in b
+ assert 'cat "$LIVED_BASELINE" >>"$PACKAGE/SUPPORTED_TREES.sha256"' in b and 'cat "$work/canonical-removals" "$LIVED_REMOVALS" | sort -u >"$PACKAGE/REMOVALS.list"' in b
  q=R/"tools/release/v2120/production_paths.py";sp=importlib.util.spec_from_file_location("v2120_paths",q);m=importlib.util.module_from_spec(sp);sp.loader.exec_module(m)
- preserved=(
-  "assets/trophy-gallery/legacy-r4/club-wars-galactic-conflict.png",
-  "assets/trophy-gallery/legacy-r4/owl-2024-classic-u1700.png",
-  "assets/trophy-gallery/legacy-r4/owl-2024-grand-prix-candidates.png",
-  "assets/trophy-gallery/legacy-r4/owl-2024-swiss4all.jpg",
-  "assets/trophy-gallery/legacy-r4/owl-2024-vote-g1.png",
-  "assets/trophy-gallery/legacy-r4/pcl-super-bingo-2025.png",
-  "assets/trophy-gallery/legacy-r4/tcmac-centurion-s4.png",
-  "resources/miac/seed.zip",
-  "server/team-points/public/config.local.php",
- )
+ preserved=("assets/trophy-gallery/legacy-r4/club-wars-galactic-conflict.png","assets/trophy-gallery/legacy-r4/owl-2024-classic-u1700.png","assets/trophy-gallery/legacy-r4/owl-2024-grand-prix-candidates.png","assets/trophy-gallery/legacy-r4/owl-2024-swiss4all.jpg","assets/trophy-gallery/legacy-r4/owl-2024-vote-g1.png","assets/trophy-gallery/legacy-r4/pcl-super-bingo-2025.png","assets/trophy-gallery/legacy-r4/tcmac-centurion-s4.png","resources/miac/seed.zip","server/team-points/public/config.local.php")
  assert all(not m.included(path) for path in preserved)
  assert m.included("assets/js/site-config.js") and m.included("ui-v2.html") and m.included("site-manifest.json")
 
@@ -56,7 +49,7 @@ def test_site_manifest_correction_installer(tmp_path):
  manifest=target/"site-manifest.json";manifest.write_text(old);manifest.chmod(0o640)
  script=R/"tools/release/v2120/install-site-manifest-correction-v2.12.0.sh"
  first=subprocess.run(["bash",str(script),str(target)],cwd=R,capture_output=True,text=True);assert first.returncode==0
- assert manifest.read_text()==read("site-manifest.json") and (manifest.stat().st_mode&0o777)==0o640
+ assert manifest.read_text()==git_read("site-manifest.json") and (manifest.stat().st_mode&0o777)==0o640
  second=subprocess.run(["bash",str(script),str(target)],cwd=R,capture_output=True,text=True);assert second.returncode==0 and "already installed" in second.stdout
  manifest.write_text("unknown\n")
  rejected=subprocess.run(["bash",str(script),str(target)],cwd=R,capture_output=True,text=True);assert rejected.returncode==2

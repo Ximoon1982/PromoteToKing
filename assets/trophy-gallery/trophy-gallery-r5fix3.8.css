@@ -329,7 +329,7 @@ body.p2k-engraver-open{overflow:hidden!important}
   .p2k-r538-result-row{grid-template-columns:1fr!important}
 }
 @media(max-width:500px){
-  .p2k-trophy-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+  .p2k-trophy-grid{grid-template-columns:1fr!important}
 }
 
 /* r5fix3.8 mobile viewport safety: mirrors the proven P2K profile modal shell. */
