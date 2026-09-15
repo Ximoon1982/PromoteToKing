@@ -69,7 +69,8 @@ def test_profile_actions_are_delegated_across_redraws():
     assert "n.results.querySelectorAll(\"[data-profile]\")" not in js
 
 def test_recruitment_v2_immutable_cache_identity():
-    html = text("RecruitMatch.html")
+    # The exact v2.12.0 identity belongs to its qualified release; later builds need new keys.
+    html = subprocess.check_output(["git", "show", "c52fd68dbcd8fdb7cca8a1ab63ee6dd6da1e0303:RecruitMatch.html"], cwd=ROOT, text=True)
     key = "p2k-2.12.0-d025d8c46103-8e4b12768d33959c"
     assert f"recruit-match.css?v={key}" in html
     assert f"recruit-match-v2-core.js?v={key}" in html

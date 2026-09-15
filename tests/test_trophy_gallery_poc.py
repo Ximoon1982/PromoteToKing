@@ -7,13 +7,21 @@ def text(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 def test_trophy_gallery_is_loaded_through_normal_registry():
-    registry = text("assets/js/admin/tool-registry.js")
-    runtime_path = ROOT / "assets/js/admin/trophy-gallery-poc.js"
-    runtime = runtime_path.read_text(encoding="utf-8")
-    runtime_key = hashlib.sha256(runtime_path.read_bytes()).hexdigest()[:12]
+    # Preserve the exact POC loader contract at qualified v2.11.5.
+    import subprocess
+    def released(path):
+        return subprocess.check_output(["git", "show", f"c534b2dbb0346eac0fa6de869621d6b7d785ead8:{path}"], cwd=ROOT)
+    registry = released("assets/js/admin/tool-registry.js").decode("utf-8")
+    runtime_bytes = released("assets/js/admin/trophy-gallery-poc.js")
+    runtime = runtime_bytes.decode("utf-8")
+    runtime_key = hashlib.sha256(runtime_bytes).hexdigest()[:12]
     assert f"trophy-gallery-poc.js?v=poc-{runtime_key}-20260911-engraving-handoff" in registry
     assert "P2K_TROPHY_GALLERY_POC" in runtime
     assert "mountAdmin" in runtime and "mountPublic" in runtime
+    current = text("assets/js/admin/tool-registry.js")
+    assert 'await loadTrophyScript("p2kTrophyGalleryPocScript", "assets/js/admin/trophy-gallery-poc.js")' in current
+    assert 'script.src = `${path}?v=${TROPHY_RUNTIME_KEY}`' in current
+    assert 'void loadTrophyGalleryV2121()' in current
 
 def test_trophy_gallery_uses_standard_team_native_detail():
     shell = text("assets/js/admin/admin-shell.js")

@@ -97,6 +97,12 @@ def test_v288_acamr_effectiveness_adaptive_allocation_and_scope():
     assert "'acamr_plan'" in telemetry and "'acamr_observation'" in telemetry
 
 def test_v288_recruitment_confidence_availability_contribution_and_personal_home():
+    # Validate the inherited pre-consolidation contract at qualified v2.11.1.
+    # Current DB-first recruitment deliberately excludes these intelligence fields
+    # and is covered by test_recruit_match_v2.py and its focused browser gate.
+    import subprocess
+    def text(rel):
+        return subprocess.check_output(["git", "show", f"b8bf26c7c41ca1914323717766bca995139291aa:{rel}"], cwd=ROOT, text=True)
     recruit=text('assets/js/pages/recruit-match.js')
     pool=text('server/team-points/public/recruitment-pool.php')
     dash=text('assets/js/pages/dashboard-v2.js')

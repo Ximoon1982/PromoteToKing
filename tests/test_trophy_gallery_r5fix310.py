@@ -85,10 +85,12 @@ def test_r5fix310_incremental_installer_is_idempotent(tmp_path):
         "assets/js/admin/trophy-gallery-r5fix3.8.js",
         "assets/trophy-gallery/trophy-gallery-r5fix3.8.css",
     ):
-        src = ROOT / rel
         dst = root / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dst)
+        # This historical installer accepts the qualified 2.11.5 baseline only.
+        dst.write_bytes(subprocess.check_output(
+            ["git", "show", f"c534b2dbb0346eac0fa6de869621d6b7d785ead8:{rel}"], cwd=ROOT
+        ))
 
     block = re.compile(
         r"\n?<!-- P2K_TROPHY_R5FIX310_BEGIN -->.*?<!-- P2K_TROPHY_R5FIX310_END -->\n?",

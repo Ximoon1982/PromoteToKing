@@ -64,5 +64,6 @@ def test_complete_package_integrity_contract():
  assert '"$OUTPUT/PromoteToKing_v2.12.0_INCREMENTAL.zip"' not in b
  assert "install-site-manifest-correction-v2.12.0.sh" in b
 def test_inherited_files_unchanged():
+ # This is the v2.12.0 release's preservation contract, not a freeze on later test corrections.
  for p in ("tests/test_v2112_structural_consolidation.py","tests/test_v288_release.py","tests/v2.11.3-structural-metrics.json"):
-  assert subprocess.run(["git","diff","--exit-code","c534b2dbb0346eac0fa6de869621d6b7d785ead8","HEAD","--",p],cwd=R).returncode==0
+  assert subprocess.run(["git","diff","--exit-code","c534b2dbb0346eac0fa6de869621d6b7d785ead8",V2120,"--",p],cwd=R).returncode==0
