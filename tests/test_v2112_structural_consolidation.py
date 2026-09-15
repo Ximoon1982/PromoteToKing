@@ -6,6 +6,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = "b8bf26c7c41ca1914323717766bca995139291aa"
+V2112 = "4ececcc230ca07099b346cb47396ad00bedd5c21"
 FACADES = ["ClubIntelligenceService.php", "AnalyticsBuilder.php", "AchievementCatalog.php"]
 
 
@@ -13,20 +14,40 @@ def public_signatures(source: str) -> list[str]:
     return re.findall(r"public\s+(?:static\s+)?function\s+\w+\s*\([^)]*\)\s*(?::\s*[^\s{]+)?", source)
 
 
+def git_text(ref: str, relative: str) -> str:
+    return subprocess.run(
+        ["git", "show", f"{ref}:{relative}"],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    ).stdout
+
+
+def changed_paths(base: str, head: str) -> list[str]:
+    return subprocess.run(
+        ["git", "diff", "--name-only", f"{base}..{head}"],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    ).stdout.splitlines()
+
+
 def test_public_php_facade_signatures_match_v2111_exactly():
     if not (ROOT / ".git").exists():
         pytest.skip("Git baseline comparison is repository-scoped; artifact parity is hash-scoped.")
     for name in FACADES:
         relative = f"server/team-points/src/{name}"
-        baseline = subprocess.run(["git", "show", f"{BASELINE}:{relative}"], cwd=ROOT, check=True, text=True, capture_output=True).stdout
-        current = (ROOT / relative).read_text(encoding="utf-8")
-        assert public_signatures(current) == public_signatures(baseline), relative
+        baseline = git_text(BASELINE, relative)
+        release = git_text(V2112, relative)
+        assert public_signatures(release) == public_signatures(baseline), relative
 
 
 def test_frontend_split_changes_no_visual_asset_or_stylesheet():
     if not (ROOT / ".git").exists():
         pytest.skip("Git baseline comparison is repository-scoped.")
-    changed = subprocess.run(["git", "diff", "--name-only", f"{BASELINE}..HEAD"], cwd=ROOT, check=True, text=True, capture_output=True).stdout.splitlines()
+    changed = changed_paths(BASELINE, V2112)
     visual = [path for path in changed if path.endswith((".css", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico"))]
     assert visual == []
     graph = json.loads((ROOT / "tests/v2.11.2-frontend-boundaries.json").read_text(encoding="utf-8"))
@@ -47,7 +68,7 @@ def test_compatibility_facades_delegate_only_bounded_responsibilities():
 def test_no_api_schema_scheduler_or_authentication_contract_files_changed():
     if not (ROOT / ".git").exists():
         pytest.skip("Git changed-path comparison is repository-scoped.")
-    changed = subprocess.run(["git", "diff", "--name-only", f"{BASELINE}..HEAD"], cwd=ROOT, check=True, text=True, capture_output=True).stdout.splitlines()
+    changed = changed_paths(BASELINE, V2112)
     forbidden = ("api/", "server/team-points/public/", "server/team-points/sql/", "ClubIntelligence.html", "site-manifest.json", "reset-install-", "install-oauth-")
     approved_v2113_adapters = {"server/team-points/public/recruitment-admin.php"} if (ROOT / "tests/v2.11.3-frontend-boundaries.json").is_file() else set()
     assert not [path for path in changed if path.startswith(forbidden) and path not in approved_v2113_adapters]

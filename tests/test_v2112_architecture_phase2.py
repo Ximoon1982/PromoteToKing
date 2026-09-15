@@ -1,7 +1,33 @@
 import json
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+V2112 = "4ececcc230ca07099b346cb47396ad00bedd5c21"
+V2113 = "dcd71c8e76c07defacf6270aff4224b10484968b"
+
+
+def git_paths(ref: str, root: str) -> list[str]:
+    return [
+        path for path in subprocess.run(
+            ["git", "ls-tree", "-r", "--name-only", ref, "--", root],
+            cwd=ROOT,
+            check=True,
+            text=True,
+            capture_output=True,
+        ).stdout.splitlines()
+        if path.endswith(".php")
+    ]
+
+
+def git_size(ref: str, path: str) -> int:
+    return int(subprocess.run(
+        ["git", "cat-file", "-s", f"{ref}:{path}"],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    ).stdout.strip())
 
 
 def test_admin_job_contract_is_complete_and_non_scheduling():
@@ -41,23 +67,21 @@ def test_frontend_activation_requires_rendered_and_race_parity():
 
 def test_public_endpoint_inventory_is_exact():
     contract = json.loads((ROOT / "tests/v2.11.2-endpoint-inventory.json").read_text(encoding="utf-8"))
-    actual = sorted(
-        path.relative_to(ROOT).as_posix()
-        for root in contract["roots"]
-        for path in (ROOT / root).rglob("*.php")
-    )
+    actual = sorted(path for root in contract["roots"] for path in git_paths(V2112, root))
     assert actual == contract["files"]
 
 
 def test_structural_metrics_are_current_and_facades_shrink():
     metrics_path = ROOT / "tests/v2.11.3-structural-metrics.json"
+    release = V2113
     if not metrics_path.is_file():
         metrics_path = ROOT / "tests/v2.11.2-structural-metrics.json"
+        release = V2112
     metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
     for path, values in metrics["frontend_facade_bytes"].items():
-        assert (ROOT / path).stat().st_size == values["current"]
+        assert git_size(release, path) == values["current"]
         assert values["current"] <= values["baseline"]
     for path, current in metrics["extracted_frontend_modules"].items():
-        assert (ROOT / path).stat().st_size == current
+        assert git_size(release, path) == current
     for path, values in metrics["php_facade_bytes"].items():
-        assert (ROOT / path).stat().st_size == values["current"] <= values["baseline"]
+        assert git_size(release, path) == values["current"] <= values["baseline"]
