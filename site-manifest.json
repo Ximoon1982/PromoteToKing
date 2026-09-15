@@ -1,21 +1,18 @@
 {
   "schemaVersion": 8,
-  "version": "2.12.0",
-  "builtAt": "2026-09-14T13:55:55Z",
-  "baseline": "Promote to King cumulative v2.11.5 qualified production family.",
+  "version": "2.12.1",
+  "builtAt": "2026-09-15T05:16:06Z",
+  "baseline": "Promote to King qualified v2.12.0 production release.",
   "release": {
-    "corrective": false,
+    "corrective": true,
     "scope": [
-      "Match Recruitment Assistant",
-      "DB-first rating and registration reduction",
-      "Chess.com opponent-membership and hard eligibility verification",
-      "shared OAuth/API scheduler for live player checks",
-      "configurable online-window and timeout thresholds with funnel, ETA, partial failures and CSV export",
-      "universal transactional upgrade from supported v2.11.x trees",
-      "exact cumulative v2.11.5 lived-production baseline support",
-      "site-manifest release identity convergence"
+      "Trophy Hall of Fame routing, metrics, ordering, group headings and portrait-phone two-column layout",
+      "Trophy administration lazy index/detail loading, search, pre-save artwork, image URLs and in-place persistence",
+      "Trophy match association write/read/UI persistence and lazy engraver artwork loading",
+      "Match Recruitment first-class Competitions access and deterministic Load match bootstrap",
+      "universal transactional upgrade from exact supported v2.11.5 and v2.12.0 trees"
     ],
-    "sourceBaseline": "v2.11.5",
+    "sourceBaseline": "v2.12.0",
     "databaseSchemaChange": false,
     "runtimeDataReset": false,
     "productionDatabase": "green",
@@ -26,6 +23,7 @@
     "version": "2.11.0"
   },
   "releaseNotes": [
+    "RELEASE_NOTES_v2.12.1.md",
     "RELEASE_NOTES_v2.12.0.md",
     "RELEASE_NOTES_v2.11.0.md",
     "RELEASE_NOTES_v2.10.9.8.md",
