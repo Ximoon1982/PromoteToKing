@@ -29,11 +29,11 @@ jobs:
       - name: v2.12.1 runtime syntax
         run: |
           node --check assets/js/admin/tool-registry.js
-          node --check assets/js/admin/trophy-gallery-v2121-admin.js
-          node --check assets/js/admin/trophy-gallery-v2121-view.js
-          node --check assets/js/admin/trophy-gallery-v2121-matches.js
-          node --check assets/js/admin/trophy-gallery-v2121-engraver.js
-          node --check assets/js/admin/trophy-gallery-v2121-public.js
+          node --check assets/js/admin/trophy-gallery-admin-v2121.js
+          node --check assets/js/admin/trophy-gallery-admin-view-v2121.js
+          node --check assets/js/admin/trophy-gallery-matches-v2121.js
+          node --check assets/js/admin/trophy-gallery-engraver-v2121.js
+          node --check assets/js/admin/trophy-gallery-public-v2121.js
           node --check assets/js/pages/recruit-match-v2121-bootstrap.js
           php -l server/trophy-gallery/src/TrophyGalleryStore.php
           php -l server/trophy-gallery/public/api.php
