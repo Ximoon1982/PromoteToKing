@@ -105,7 +105,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        range: [abc, def, ghi, jkl, mno, pqr, stu, vwxyz]
+        range: [p, q, r, s, t, u]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
