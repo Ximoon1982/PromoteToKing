@@ -67,7 +67,7 @@ return ({ find: "FindMatch.htm", upcoming: "AnalyzeMatches.htm", creation: "Matc
 }
 /* v2.12.1 Trophy runtime owns public/admin state; suppress the obsolete r5fix3.8 enhancer synchronously. */
 window.__P2K_TROPHY_R5FIX3_8 = true;
-const TROPHY_RUNTIME_KEY = "p2k-2.12.1-325bae01fa7d-4273295631bdd483";
+const TROPHY_RUNTIME_KEY = "p2k-2.12.2-src-79c27cc76eb1f256";
 function loadTrophyScript(id, path) {
 if (document.getElementById(id)) return Promise.resolve();
 return new Promise((resolve, reject) => {
@@ -84,6 +84,7 @@ try {
  if (!window.P2K_TROPHY_GALLERY_POC) await loadTrophyScript("p2kTrophyGalleryPocScript", "assets/js/admin/trophy-gallery-poc.js");
  window.P2K_TROPHY_GALLERY_POC?.mount?.(context);
  await loadTrophyScript("p2kTrophyPublicV2121", "assets/js/admin/trophy-gallery-public-v2121.js");
+ await loadTrophyScript("p2kTrophyCardPresentationV2122", "assets/js/admin/trophy-card-presentation-v2122.js");
 } catch (error) { console.error("P2K Trophy v2.12.1 failed to initialize", error); }
 }
 void loadTrophyGalleryV2121();
@@ -92,11 +93,21 @@ function loadMatchRecruitmentAccessV2121() {
 if (document.getElementById("p2kMatchRecruitmentAccessV2121")) return;
 const script = document.createElement("script");
 script.id = "p2kMatchRecruitmentAccessV2121";
-script.src = "assets/js/admin/match-recruitment-access-v2121.js?v=p2k-2.12.1-325bae01fa7d-e29a5f2b13933d65";
+script.src = "assets/js/admin/match-recruitment-access-v2121.js?v=p2k-2.12.2-src-79c27cc76eb1f256";
 script.defer = true;
 document.head.appendChild(script);
 }
 loadMatchRecruitmentAccessV2121();
+
+function loadEventsShowcaseV2122() {
+if (document.getElementById("p2kEventsShowcaseV2122")) return;
+const script = document.createElement("script");
+script.id = "p2kEventsShowcaseV2122";
+script.src = "assets/js/admin/events-showcase-v2122.js?v=p2k-2.12.2-src-79c27cc76eb1f256";
+script.defer = true;
+document.head.appendChild(script);
+}
+loadEventsShowcaseV2122();
 
 return Object.freeze({ tools, renderTools, routeFallback });
 }});

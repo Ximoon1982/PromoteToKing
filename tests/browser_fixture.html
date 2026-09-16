@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body>
+<div data-admin-shell-panel="competitions"><div class="dashboard-admin-shell-grid"><article data-admin-shell-card="daily"></article></div></div>
+<section class="p2k-trophy-root"><div data-groups><section class="p2k-trophy-group"><div class="p2k-trophy-grid"><article class="p2k-trophy-card" data-trophy-id="t1"><button type="button" data-open="t1"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="><div><small>League</small><h4>Historic title</h4><p>Old detail</p></div></button></article></div></section></div></section>
+<script>
+window.P2K_SITE_CONFIG={clubSlug:'promote-to-king',leagueAcronyms:['1WL','TCMAC','PCL'],api:{defaultAttempts:1}};
+window.__saveCalls=[];
+window.__state={ok:true,schemaVersion:4,revision:2,items:[{matchId:'1001',enabled:true,urgent:false}],arenas:[{active:false,name:'Test Arena',link:'https://www.chess.com/play/arena/test',date:'2099-01-01',time:'18:00',timeControl:'3+2',duration:'2h',durationMinutes:120,startAt:'2099-01-01T18:00:00+01:00'}]};
+const registered=[];for(let i=0;i<45;i++)registered.push({'@id':`https://api.chess.com/pub/match/${2000+i}`,name:(i%2?'Friendly':'1WL')+` Match ${i}`,start_time:4070908800+i*3600,url:`https://www.chess.com/club/matches/promote-to-king/${2000+i}`,settings:{min_rating:0,max_rating:0,time_control:'1/259200'}});
+window.P2K_API_CLIENT={json:async(url)=>{if(String(url).includes('/club/promote-to-king/matches'))return{registered};const id=String(url).match(/(\d+)$/)?.[1]||'0';return{'@id':String(url),name:`Detail ${id}`,start_time:4070908800,settings:{min_rating:0,max_rating:0,min_team_players:2,max_team_players:10,time_control:'1/259200'},teams:{a:{'@id':'https://api.chess.com/pub/club/promote-to-king',name:'Promote to King',players:[{rating:1400},{rating:1300}]},b:{'@id':'https://api.chess.com/pub/club/opponent',name:'Opponent',players:[{rating:1350},{rating:1250}]}}};}};
+window.P2K_TEAM_POINTS_CLIENT={connect:async()=>({username:'Admin'}),endpointRequest:async(url,opt)=>{window.__saveCalls.push({url:String(url),body:structuredClone(opt.body)});window.__state={...window.__state,...opt.body,revision:Number(opt.body.revision)+1,ok:true};return structuredClone(window.__state);}};
+window.fetch=async(url,opt)=>{if(String(url).includes('server/events-showcase/public/api.php'))return new Response(JSON.stringify(window.__state),{status:200,headers:{'Content-Type':'application/json'}});return new Response('',{status:404});};
+</script>
+<script src="../assets/js/shared/recruitment-lineup-core.js"></script>
+<script src="../assets/js/shared/events-showcase-core.js"></script>
+<script src="../assets/js/admin/trophy-card-presentation-v2122.js"></script>
+<script src="../assets/js/admin/events-showcase-v2122.js"></script>
+</body></html>

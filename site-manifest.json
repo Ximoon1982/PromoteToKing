@@ -1,40 +1,23 @@
 {
   "schemaVersion": 8,
-  "version": "2.12.1",
-  "builtAt": "2026-09-15T05:16:06Z",
-  "baseline": "Promote to King qualified v2.12.0 production release.",
+  "version": "2.12.2",
+  "builtAt": "2026-09-16T12:42:40Z",
+  "baseline": "Promote to King qualified v2.12.1 production release.",
   "release": {
     "corrective": true,
     "scope": [
-      "Trophy Hall of Fame routing, metrics, ordering, group headings and portrait-phone two-column layout",
-      "Trophy administration lazy index/detail loading, search, pre-save artwork, image URLs and in-place persistence",
-      "Trophy match association write/read/UI persistence and lazy engraver artwork loading",
-      "Match Recruitment first-class Competitions access and deterministic Load match bootstrap",
-      "universal transactional upgrade from exact supported v2.11.5 and v2.12.0 trees"
+      "Native Administration Competitions Events Showcase with arena and curated Daily match management",
+      "Unauthenticated fixed-height Events Showcase iframe with at most two arenas and four Daily matches",
+      "Schema-4 showcase state, legacy priority-matches preservation/migration and protected revisioned writes",
+      "Historical fe163d85 Trophy card presentation restored while retaining current v2.12.1 Trophy functionality; title border suppressed",
+      "scope-limited 11-file transactional overlay from exact qualified v2.12.1 with unrelated files, mutable showcase state and CRON preservation"
     ],
-    "sourceBaseline": "v2.12.0",
+    "sourceBaseline": "v2.12.1",
     "databaseSchemaChange": false,
     "runtimeDataReset": false,
     "productionDatabase": "green",
     "blueDatabaseMode": "recovery-only"
   },
-  "preservedPriorManifest": {
-    "path": "site-manifest.json@v2.11.0",
-    "version": "2.11.0"
-  },
-  "releaseNotes": [
-    "RELEASE_NOTES_v2.12.1.md",
-    "RELEASE_NOTES_v2.12.0.md",
-    "RELEASE_NOTES_v2.11.0.md",
-    "RELEASE_NOTES_v2.10.9.8.md",
-    "RELEASE_NOTES_v2.10.9.7.md",
-    "RELEASE_NOTES_v2.10.9.6.md",
-    "RELEASE_NOTES_v2.10.9.5.md",
-    "RELEASE_NOTES_v2.10.9.4.md",
-    "RELEASE_NOTES_v2.10.9.3.md",
-    "RELEASE_NOTES_v2.10.9.2.md",
-    "RELEASE_NOTES_v2.10.9.1.md",
-    "RELEASE_NOTES_v2.10.9.md",
-    "RELEASE_NOTES_v2.10.8.md"
-  ]
+  "preservedPriorManifest": {"path":"site-manifest.json@v2.12.1","version":"2.12.1"},
+  "releaseNotes": ["RELEASE_NOTES_v2.12.2.md","RELEASE_NOTES_v2.12.1.md","RELEASE_NOTES_v2.12.0.md","RELEASE_NOTES_v2.11.0.md"]
 }
