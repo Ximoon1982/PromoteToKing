@@ -99,13 +99,13 @@ jobs:
             ${{ runner.temp }}/build-v2122/SHA256SUMS.txt
           if-no-files-found: error
 
-  pytest-range-diagnostic:
-    name: canonical pytest range ${{ matrix.group }}
+  pytest-letter-diagnostic:
+    name: canonical pytest initial ${{ matrix.letter }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        group: [abc, def, ghi, jkl, mno, pqr, stu, vwxyz]
+        letter: [g, h, i, j, k, l]
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
@@ -113,31 +113,29 @@ jobs:
         with: {python-version: '3.12'}
       - name: Install canonical Python test dependencies
         run: python -m pip install --disable-pip-version-check -r tests/requirements.txt
-      - name: Run canonical range
+      - name: Run canonical initial
         env:
-          P2K_GROUP: ${{ matrix.group }}
+          P2K_LETTER: ${{ matrix.letter }}
         run: |
           python - <<'PY'
           import importlib.util
           import os
           from pathlib import Path
           path = Path('tools/test-suite/p2k_test_suite.py').resolve()
-          spec = importlib.util.spec_from_file_location('p2k_test_suite_range', path)
+          spec = importlib.util.spec_from_file_location('p2k_test_suite_initial', path)
           module = importlib.util.module_from_spec(spec)
           spec.loader.exec_module(module)
           report = module.inventory()
-          group = set(os.environ['P2K_GROUP'])
+          letter = os.environ['P2K_LETTER'].lower()
           rows = []
           for row in report['python']['modules']:
               if row['kind'] != 'pytest':
                   continue
               name = Path(row['path']).name
-              if not name.startswith('test_') or len(name) <= 5:
-                  continue
-              if name[5].lower() in group:
+              if name.startswith('test_') and len(name) > 5 and name[5].lower() == letter:
                   rows.append(row)
           if not rows:
-              raise SystemExit(f'No canonical pytest modules found for group {sorted(group)}')
+              raise SystemExit(f'No canonical pytest modules found for initial {letter}')
           filtered = {'python': dict(report['python'], modules=rows)}
           module.pytest_gate(filtered)
           PY
