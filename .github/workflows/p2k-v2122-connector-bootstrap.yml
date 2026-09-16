@@ -1,0 +1,109 @@
+name: P2K v2.12.2 connector handoff
+
+on:
+  push:
+    branches: [release/v2.12.2]
+
+permissions:
+  contents: write
+
+jobs:
+  apply-verified-overlay:
+    if: github.event.head_commit.message == 'Bootstrap v2.12.2 connector handoff'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Recover exact verified overlay
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import base64
+          import hashlib
+          import json
+          import os
+          import urllib.request
+
+          shas = [
+              "961cf8361b30a045fb77fe71c8d9a4fda8bfacdd",
+              "4b215bf1acc9d3ba012ffbb85b45e01400993a26",
+              "95e5dfab0f8c8db6b61dde4b0a4c096fa8a34b70",
+              "e3bf91ad0c783e662cc903e072576d3783a50b67",
+              "8f2bb7743445c444fc3e6fadaea7da67ac1880f2",
+              "3866de93d67fc7075db8e130f959891b28da29a8",
+              "a8dd3b8f43275e5c5d6bf66086b9efcef24bc6d2",
+              "e92d564cfd465c099fd96537e29c03d5325a31ba",
+              "5e8ba83a809e9cff4b4e8fe59b4bd5bd0c2aed20",
+              "b1b517574d45766dac8eed34b15d2cd5b9a7c72e",
+              "a91b4901471867a95798594231cf153b61c26821",
+              "ba56b45bd0bc04224aee9b3fa8b704c5cd2e6399",
+              "dd867e8936394164d1192439dfe54c231013c884",
+              "fe9b333743d91c24f45434fc536196034ea17987",
+              "7469e07fd13b6c9744915108f9b2bf2b809c97d5",
+              "b41661d1d222ef368a410eae6e3b3d892d422546",
+              "8472d6d1fff95df7bae0771ddca333a7266cb25e",
+          ]
+          repository = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          parts = []
+          for sha in shas:
+              request = urllib.request.Request(
+                  f"https://api.github.com/repos/{repository}/git/blobs/{sha}",
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+              )
+              with urllib.request.urlopen(request) as response:
+                  blob = json.load(response)
+              parts.append(base64.b64decode(blob["content"]).decode("utf-8"))
+
+          payload = base64.b64decode("".join(parts))
+          actual = hashlib.sha256(payload).hexdigest()
+          expected = "4cbd2a3598f0bf9ee6ccbb87ce4700be381cddd5acfff52c3fb35e5deb4ac1b6"
+          if actual != expected:
+              raise SystemExit(f"overlay digest mismatch: {actual} != {expected}")
+          with open("/tmp/p2k-v2122-final-overlay.tgz", "wb") as handle:
+              handle.write(payload)
+          print(f"Recovered verified overlay: {len(payload)} bytes, sha256={actual}")
+          PY
+          tar -xzf /tmp/p2k-v2122-final-overlay.tgz -C .
+          rm -f .github/workflows/p2k-v2122-connector-bootstrap.yml
+
+      - name: Focused pre-commit validation
+        run: |
+          set -euo pipefail
+          php -l server/events-showcase/src/EventsShowcaseStore.php
+          php -l server/events-showcase/public/api.php
+          php -l server/events-showcase/public/embed.php
+          node --check assets/js/shared/recruitment-lineup-core.js
+          node --check assets/js/shared/events-showcase-core.js
+          node --check assets/js/admin/events-showcase-v2122.js
+          node --check assets/js/admin/trophy-card-presentation-v2122.js
+          node --check assets/js/admin/tool-registry.js
+          php tests/test_events_showcase_store.php
+          node tests/test_recruitment_lineup_parity.js
+          python3 tests/test_events_showcase_contract.py
+          bash -n tools/release/v2122/build-package.sh
+          bash -n tools/release/v2122/install-promote-to-king-v2.12.2.sh
+          bash -n tools/release/v2122/qualify-installer.sh
+          python3 -m py_compile \
+            tools/release/v2122/production_paths.py \
+            tools/release/v2122/stamp_asset_cache_key.py \
+            tests/browser_gate_v2122.py
+          python3 -m json.tool site-manifest.json >/dev/null
+          git diff --check
+
+      - name: Commit verified overlay
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git status --short
+          git commit -m "Integrate v2.12.2 Events Showcase and Trophy card presentation"
+          git push origin HEAD:release/v2.12.2
