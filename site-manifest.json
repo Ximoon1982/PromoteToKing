@@ -18,6 +18,24 @@
     "productionDatabase": "green",
     "blueDatabaseMode": "recovery-only"
   },
-  "preservedPriorManifest": {"path":"site-manifest.json@v2.12.1","version":"2.12.1"},
-  "releaseNotes": ["RELEASE_NOTES_v2.12.2.md","RELEASE_NOTES_v2.12.1.md","RELEASE_NOTES_v2.12.0.md","RELEASE_NOTES_v2.11.0.md"]
+  "preservedPriorManifest": {
+    "path": "site-manifest.json@v2.12.1",
+    "version": "2.12.1"
+  },
+  "releaseNotes": [
+    "RELEASE_NOTES_v2.12.2.md",
+    "RELEASE_NOTES_v2.12.1.md",
+    "RELEASE_NOTES_v2.12.0.md",
+    "RELEASE_NOTES_v2.11.0.md",
+    "RELEASE_NOTES_v2.10.9.8.md",
+    "RELEASE_NOTES_v2.10.9.7.md",
+    "RELEASE_NOTES_v2.10.9.6.md",
+    "RELEASE_NOTES_v2.10.9.5.md",
+    "RELEASE_NOTES_v2.10.9.4.md",
+    "RELEASE_NOTES_v2.10.9.3.md",
+    "RELEASE_NOTES_v2.10.9.2.md",
+    "RELEASE_NOTES_v2.10.9.1.md",
+    "RELEASE_NOTES_v2.10.9.md",
+    "RELEASE_NOTES_v2.10.8.md"
+  ]
 }
