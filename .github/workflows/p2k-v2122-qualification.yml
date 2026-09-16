@@ -99,34 +99,13 @@ jobs:
             ${{ runner.temp }}/build-v2122/SHA256SUMS.txt
           if-no-files-found: error
 
-  pytest-rt-discovery:
-    name: Discover canonical r/t pytest modules
-    runs-on: ubuntu-latest
-    outputs:
-      modules: ${{ steps.collect.outputs.modules }}
-    steps:
-      - uses: actions/checkout@v4
-        with: {fetch-depth: 0}
-      - id: collect
-        name: Collect r/t modules
-        shell: bash
-        run: |
-          python - <<'PY' >> "$GITHUB_OUTPUT"
-          import glob, json
-          modules = sorted(glob.glob('tests/test_r*.py') + glob.glob('tests/test_t*.py'))
-          if not modules:
-              raise SystemExit('No r/t pytest modules found')
-          print('modules=' + json.dumps(modules, separators=(',', ':')))
-          PY
-
-  pytest-module-diagnostic:
-    name: pytest module ${{ matrix.module }}
-    needs: pytest-rt-discovery
+  pytest-range-diagnostic:
+    name: canonical pytest range ${{ matrix.group }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        module: ${{ fromJSON(needs.pytest-rt-discovery.outputs.modules) }}
+        group: [abc, def, ghi, jkl, mno, pqr, stu, vwxyz]
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
@@ -134,23 +113,31 @@ jobs:
         with: {python-version: '3.12'}
       - name: Install canonical Python test dependencies
         run: python -m pip install --disable-pip-version-check -r tests/requirements.txt
-      - name: Run canonical module
+      - name: Run canonical range
         env:
-          P2K_MODULE: ${{ matrix.module }}
+          P2K_GROUP: ${{ matrix.group }}
         run: |
           python - <<'PY'
           import importlib.util
           import os
           from pathlib import Path
           path = Path('tools/test-suite/p2k_test_suite.py').resolve()
-          spec = importlib.util.spec_from_file_location('p2k_test_suite_module', path)
+          spec = importlib.util.spec_from_file_location('p2k_test_suite_range', path)
           module = importlib.util.module_from_spec(spec)
           spec.loader.exec_module(module)
           report = module.inventory()
-          wanted = os.environ['P2K_MODULE']
-          rows = [row for row in report['python']['modules'] if row['kind'] == 'pytest' and row['path'] == wanted]
-          if len(rows) != 1:
-              raise SystemExit(f'Expected one canonical pytest row for {wanted}, found {len(rows)}')
+          group = set(os.environ['P2K_GROUP'])
+          rows = []
+          for row in report['python']['modules']:
+              if row['kind'] != 'pytest':
+                  continue
+              name = Path(row['path']).name
+              if not name.startswith('test_') or len(name) <= 5:
+                  continue
+              if name[5].lower() in group:
+                  rows.append(row)
+          if not rows:
+              raise SystemExit(f'No canonical pytest modules found for group {sorted(group)}')
           filtered = {'python': dict(report['python'], modules=rows)}
           module.pytest_gate(filtered)
           PY
