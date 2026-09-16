@@ -22,6 +22,26 @@
     console.error(`P2K Match Recruitment: ${message}`);
   }
 
+  function ensureControllerReadyContract() {
+    if (window.P2K_RECRUIT_MATCH_CONTROLLER_READY?.then) return window.P2K_RECRUIT_MATCH_CONTROLLER_READY;
+    let resolveReady;
+    let rejectReady;
+    let settled = false;
+    const ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
+    window.P2K_RECRUIT_MATCH_CONTROLLER_READY = ready;
+    window.P2K_RECRUIT_MATCH_CONTROLLER_SIGNAL_READY = () => {
+      if (settled) return;
+      settled = true;
+      resolveReady(true);
+    };
+    window.P2K_RECRUIT_MATCH_CONTROLLER_SIGNAL_ERROR = (error) => {
+      if (settled) return;
+      settled = true;
+      rejectReady(error instanceof Error ? error : new Error(String(error || "Recruitment controller failed to initialize.")));
+    };
+    return ready;
+  }
+
   function loadScript(id, src) {
     const existing = document.getElementById(id);
     if (existing) {
@@ -48,8 +68,9 @@
         await loadScript("p2kRecruitmentV2Core", CORE);
       }
       if (!window.P2K_RECRUITMENT_V2) throw new Error("Recruitment core did not initialize.");
+      const controllerReady = ensureControllerReadyContract();
       await loadScript("p2kRecruitmentV2121Controller", CONTROLLER);
-      await Promise.resolve();
+      await controllerReady;
       const form = document.getElementById("p2kMatchForm");
       const load = document.getElementById("p2kLoadButton");
       if (!form || !load || typeof form.onsubmit !== "function") {
