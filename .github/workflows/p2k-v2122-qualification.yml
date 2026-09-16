@@ -1,0 +1,68 @@
+name: P2K v2.12.2 Events Showcase qualification
+
+on:
+  push:
+    branches: [release/v2.12.2]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Install browser regression dependencies
+        run: |
+          python -m pip install --disable-pip-version-check -r tests/requirements.txt
+          python -m playwright install --with-deps chromium
+          sudo ln -sf "$(find "$HOME/.cache/ms-playwright" -type f -name chrome -path '*chrome-linux*' | head -1)" /usr/bin/chromium
+      - name: v2.12.2 syntax and focused contracts
+        run: |
+          node --check assets/js/shared/recruitment-lineup-core.js
+          node --check assets/js/shared/events-showcase-core.js
+          node --check assets/js/admin/events-showcase-v2122.js
+          node --check assets/js/admin/trophy-card-presentation-v2122.js
+          node --check assets/js/admin/tool-registry.js
+          php -l server/events-showcase/src/EventsShowcaseStore.php
+          php -l server/events-showcase/public/api.php
+          php -l server/events-showcase/public/embed.php
+          php tests/test_events_showcase_store.php
+          node tests/test_recruitment_lineup_parity.js
+          python tests/test_events_showcase_contract.py
+          bash -n tools/release/v2122/build-package.sh
+          bash -n tools/release/v2122/qualify-installer.sh
+          bash -n tools/release/v2122/install-promote-to-king-v2.12.2.sh
+          python -m py_compile tools/release/v2122/production_paths.py tools/release/v2122/stamp_asset_cache_key.py tests/browser_gate_v2122.py
+      - name: Events Showcase and Trophy browser gate
+        run: python tests/browser_gate_v2122.py
+      - name: Build qualified v2.12.2 incremental package
+        run: bash tools/release/v2122/build-package.sh "$RUNNER_TEMP/build-v2122"
+      - name: Scope-limited v2.12.1 incremental installer qualification
+        run: bash tools/release/v2122/qualify-installer.sh "$RUNNER_TEMP/build-v2122"
+      - name: Existing Match Recruitment browser gate
+        run: python tests/browser_gate_recruit_match_v2.py
+      - name: Existing Trophy v2.12.1 browser gate
+        run: python tests/browser_gate_trophy_gallery_v2121.py
+      - name: Inherited architecture and canonical audit
+        run: |
+          python tools/test-suite/architecture_gate.py
+          python tools/test-suite/p2k_test_suite.py audit --json
+      - name: Full canonical P2K regression
+        run: python tools/test-suite/p2k_test_suite.py regression
+      - name: Full canonical P2K browser regression
+        run: python tools/test-suite/p2k_test_suite.py browser
+      - name: Upload qualified incremental installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: PromoteToKing-v2.12.2-qualified-installer-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/build-v2122/PromoteToKing_v2.12.2_INCREMENTAL_FROM_2.12.1.zip
+            ${{ runner.temp }}/build-v2122/SHA256SUMS.txt
+          if-no-files-found: error
