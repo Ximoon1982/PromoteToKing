@@ -7,6 +7,13 @@ trophy=(ROOT/'assets/js/admin/trophy-card-presentation-v2122.js').read_text()
 admin=(ROOT/'assets/js/admin/events-showcase-v2122.js').read_text().replace('const ROOT=new URL("../../../",document.currentScript?.src||location.href);','const ROOT=new URL("https://p2k.test/");')
 html='''<!doctype html><html><head></head><body>
 <div data-admin-shell-panel="competitions"><div class="dashboard-admin-shell-grid"><article data-admin-shell-card="daily"></article></div></div>
+<section id="adminShellDetail" hidden>
+  <button id="adminShellDetailBack" type="button">Back</button>
+  <span id="adminShellDetailBreadcrumb"></span><h2 id="adminShellDetailTitle"></h2>
+  <div id="adminShellDetailTabs"></div>
+  <div id="adminShellDetailFrameWrap"><iframe id="adminShellDetailFrame"></iframe></div>
+  <div id="adminShellNativeDetailHost" hidden></div>
+</section>
 <section class="p2k-trophy-root"><div data-groups><section class="p2k-trophy-group"><div class="p2k-trophy-grid"><article class="p2k-trophy-card" data-trophy-id="t1"><button type="button" data-open="t1"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="><div><small>League</small><h4>Historic title</h4><p>Old detail</p></div></button></article></div></section></div></section>
 </body></html>'''
 with sync_playwright() as p:
@@ -33,10 +40,29 @@ with sync_playwright() as p:
     assert page.locator('[data-es-arena-metric]').inner_text()=='1 · 0 enabled'
     assert page.locator('[data-es-match-metric]').inner_text()=='1 · 1 enabled'
     page.click('[data-es-open]')
-    page.wait_for_selector('#p2kEventsShowcaseEditor[open]')
+    page.wait_for_selector('#p2kEventsShowcaseEditor:not([hidden])')
+    assert page.locator('#adminShellDetail').is_visible()
+    assert page.locator('#adminShellNativeDetailHost #p2kEventsShowcaseEditor').count()==1
+    assert page.locator('#adminShellDetailFrameWrap').is_hidden()
+    assert page.locator('#p2kEventsShowcaseEditor').evaluate('e=>e.tagName')=='DIV'
     page.wait_for_function("document.querySelectorAll('[data-es-search-results] [data-es-add]').length===20")
     assert 'page 1/3' in page.locator('[data-es-search-count]').inner_text()
+
+    line_url=page.locator('[data-es-widget-url]').input_value()
+    line_html=page.locator('[data-es-iframe-html]').input_value()
+    card_url=page.locator('[data-es-card-widget-url]').input_value()
+    card_html=page.locator('[data-es-card-iframe-html]').input_value()
+    assert line_url.endswith('/server/events-showcase/public/embed.php')
+    assert card_url.endswith('/server/events-showcase/public/embed-card.php')
+    assert 'height="280"' in line_html and 'scrolling="no"' in line_html and '<script' not in line_html
+    assert 'height="480"' in card_html and 'scrolling="no"' in card_html and '<script' not in card_html
+    assert page.locator('[data-es-preview]').evaluate('e=>e.style.height')=='280px'
+    assert page.locator('[data-es-card-preview]').evaluate('e=>e.style.height')=='480px'
+    assert page.locator('[data-es-preview]').get_attribute('src').endswith('/server/events-showcase/public/embed.php')
+    assert page.locator('[data-es-card-preview]').get_attribute('src').endswith('/server/events-showcase/public/embed-card.php')
+
     page.click('[data-es-add-arena]')
+    assert page.locator('[data-es-arena-modal]').evaluate('e=>e.tagName')=='DIALOG'
     page.fill('[data-es-arena-name]','Keyboard Arena')
     page.fill('[data-es-arena-link]','https://www.chess.com/play/arena/keyboard')
     page.fill('[data-es-arena-date]','2099-01-02')
@@ -58,12 +84,11 @@ with sync_playwright() as p:
     page.click('[data-es-arena-form] button[type=submit]')
     assert 'already configured' in page.locator('[data-es-arena-error]').inner_text()
     assert page.evaluate('window.__saveCalls.length')==2
-    html_value=page.locator('[data-es-iframe-html]').input_value()
-    assert html_value.startswith('<iframe ') and '<script' not in html_value and 'scrolling="no"' in html_value
+
     title=page.locator('[data-r538-title]')
     assert title.inner_text()=='Historic title'
     assert page.locator('[data-r538-card]').evaluate("e=>getComputedStyle(e).borderTopLeftRadius")=='11px'
     assert title.evaluate("e=>getComputedStyle(e).borderBottomWidth")=='0px'
     assert page.locator('[data-r538-art]').evaluate("e=>getComputedStyle(e).aspectRatio") in ('1 / 1','1')
-    print('PASS browser Events Showcase + trophy presentation gate')
+    print('PASS browser Events Showcase inline/detail + dual preview + trophy presentation gate')
     browser.close()
