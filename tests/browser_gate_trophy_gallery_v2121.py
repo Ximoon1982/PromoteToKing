@@ -13,7 +13,7 @@ from threading import Thread
 from urllib.parse import parse_qs, urlparse
 
 from PIL import Image
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import expect, sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
 CHROMIUM = os.environ.get("P2K_CHROMIUM") or shutil.which("chromium") or "/usr/bin/chromium"
@@ -265,6 +265,19 @@ def main() -> None:
             hall.go_forward(wait_until="domcontentloaded")
             hall.wait_for_selector("#p2kTrophyHallPanel:not([hidden])", timeout=15000)
             assert "hall=trophies" in hall.url
+            assert not public_errors, public_errors
+            standalone = public.new_page()
+            standalone.on("pageerror", lambda e: public_errors.append(e.stack or str(e)))
+            standalone.goto(f"{origin}/trophies/", wait_until="domcontentloaded")
+            standalone.wait_for_selector("#p2kTrophyStandalone .p2k-v2121-trophy-stats")
+            expect(standalone.locator(".p2k-trophy-card")).to_have_count(3)
+            standalone.fill("[data-search]", "Alpha 2025")
+            expect(standalone.locator(".p2k-trophy-card")).to_have_count(1)
+            standalone.locator("[data-open]").first.click()
+            standalone.wait_for_selector("#p2kTrophyModal:not([hidden])")
+            assert standalone.locator("#p2kTrophyModal [data-enlarge]").count() == 0
+            assert standalone.locator("#dashboardAdministrationTab,[data-admin]").count() == 0
+            assert standalone.evaluate("document.cookie") == ""
             assert not public_errors, public_errors
             public.close()
             context.close()

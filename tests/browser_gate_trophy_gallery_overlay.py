@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Qualify the approved Trophy runtime over the current application release."""
+"""Qualify the legacy Trophy overlay at its exact qualified v2.12.0 release."""
 
 from __future__ import annotations
 
@@ -22,7 +22,8 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "6706e619d310e2c74fe2734cfcef8dd2f83d70d1"
-VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+RELEASE = "c52fd68dbcd8fdb7cca8a1ab63ee6dd6da1e0303"
+VERSION = subprocess.check_output(["git", "show", f"{RELEASE}:VERSION"], cwd=ROOT, text=True).strip()
 BUILD_KEY = "2.11.5-bf6a828490f57"
 SITE_CONFIG_KEY = "p2k-2.12.0-d025d8c46103-ae73ae796f09667d"
 R538_JS = "r538-d52193a71712"
@@ -44,7 +45,7 @@ def active_runtime_path(path: str) -> bool:
 def overlay_active_runtime(tree: Path) -> list[str]:
     changed: list[str] = []
     status = subprocess.check_output(
-        ["git", "diff", "--name-status", f"{BASE}..HEAD"], cwd=ROOT, text=True
+        ["git", "diff", "--name-status", f"{BASE}..{RELEASE}"], cwd=ROOT, text=True
     )
     for line in status.splitlines():
         if not line.strip():
@@ -60,11 +61,8 @@ def overlay_active_runtime(tree: Path) -> list[str]:
                 dst.unlink()
             changed.append(path)
             continue
-        src = ROOT / path
-        if not src.is_file():
-            raise AssertionError(f"Runtime overlay source missing: {path}")
         dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dst)
+        dst.write_bytes(subprocess.check_output(["git", "show", f"{RELEASE}:{path}"], cwd=ROOT))
         changed.append(path)
     return changed
 
@@ -219,6 +217,14 @@ def track_trophy_chess_requests(context, page, sink: list[str]):
     session.on("Network.requestWillBeSent", inspect)
     return session
 
+def save_form(page, host: str) -> None:
+    # Legacy save remounts the form asynchronously; do not type into the outgoing form.
+    previous = page.locator(f"{host} form").element_handle()
+    page.click(f"{host} form button[type='submit']")
+    page.wait_for_function("form => !form.isConnected", arg=previous, timeout=15000)
+    page.wait_for_selector(f"{host} form[data-r538-enhanced='1']", timeout=15000)
+
+
 def main() -> None:
     if not Path(CHROMIUM).exists():
         raise RuntimeError("Chromium is required for the installed Trophy overlay browser gate")
@@ -261,8 +267,7 @@ def main() -> None:
                 }""")
                 page.fill(f"{host} [name='description_md']", "Persistent after final overlay")
                 page.select_option(f"{host} [name='status']", "published")
-                page.click(f"{host} form button[type='submit']")
-                page.wait_for_selector(f"{host} form[data-r538-enhanced='1']")
+                save_form(page, host)
                 page.wait_for_function("document.querySelector(\"#adminShellNativeDetailHost [name='description_md']\")?.value === 'Persistent after final overlay'")
 
                 page.fill(f"{host} [data-match-search]", "Golden")
@@ -280,8 +285,7 @@ def main() -> None:
                 assert rows.count() == 2
                 rows.nth(1).locator("[data-r538-result-label]").fill("Secondary table")
                 rows.nth(1).locator("[data-r538-result-url]").fill("https://example.test/secondary")
-                page.click(f"{host} form button[type='submit']")
-                page.wait_for_selector(f"{host} form[data-r538-enhanced='1']")
+                save_form(page, host)
                 page.wait_for_function("document.querySelectorAll(\"#adminShellNativeDetailHost [data-r538-result-row]\").length === 2")
 
                 page.click(f"{host} [data-r538-mode='none']")

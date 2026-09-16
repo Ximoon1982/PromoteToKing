@@ -70,4 +70,9 @@ def main():
  finally:server.shutdown();server.server_close();thread.join(timeout=5)
  print(json.dumps({"trophy_gallery_standalone":"passed",**result},indent=2))
 
-if __name__=="__main__":main()
+if __name__=="__main__":
+ # The r5fix3.8 modal/enlargement assertions qualify the legacy installed overlay.
+ # The replacement v2.12.1 public/admin runtime has its own current browser gate.
+ from browser_gate_trophy_gallery_overlay import production_tree
+ with production_tree() as ROOT:
+  main()
