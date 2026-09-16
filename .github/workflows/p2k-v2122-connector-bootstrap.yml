@@ -23,7 +23,9 @@ jobs:
           printf '%s  %s\n' '4cbd2a3598f0bf9ee6ccbb87ce4700be381cddd5acfff52c3fb35e5deb4ac1b6' /tmp/p2k-v2122-final-overlay.tgz | sha256sum -c -
           tar -xzf /tmp/p2k-v2122-final-overlay.tgz -C .
           rm -rf .p2k-handoff
-          rm -f .github/workflows/p2k-v2122-connector-bootstrap.yml
+          # Workflow files are finalized by the connected GitHub transport after
+          # this source commit, because GITHUB_TOKEN cannot modify workflow files.
+          rm -f .github/workflows/p2k-v2122-qualification.yml
 
       - name: Focused pre-commit validation
         run: |
@@ -49,7 +51,7 @@ jobs:
           python3 -m json.tool site-manifest.json >/dev/null
           git diff --check
 
-      - name: Commit verified overlay
+      - name: Commit verified source overlay
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
