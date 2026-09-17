@@ -172,7 +172,13 @@ if (hydratedFilters.has(category)) return;
 hydratedFilters.add(category);
 const targets = matches.filter(match => match.category === category).slice(0, 4);
 if (!targets.length) return;
-const enriched = await api.enrichMatches(targets);
+const applyUpdate = updated => {
+const id=String(updated?.matchId||"");
+if(!id)return;
+matches=matches.map(match=>String(match.matchId)===id?updated:match);
+render();
+};
+const enriched = await api.enrichMatches(targets,{onUpdate:applyUpdate});
 const byId = new Map(enriched.map(match => [String(match.matchId), match]));
 matches = matches.map(match => byId.get(String(match.matchId)) || match);
 }
@@ -199,6 +205,7 @@ return match ? { ...match, urgent:item.urgent === true } : null;
 })
 .filter(Boolean);
 filter = chooseDefault();
+render();
 await hydrateFilter(filter);
 render();
 }

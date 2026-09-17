@@ -12,8 +12,8 @@ if (!in_array($theme, ['auto','light','dark'], true)) $theme='auto';
 <link rel="stylesheet" href="../../../assets/css/dashboard-v2.css">
 <script src="../../../config/site-branding.js"></script><script src="../../../assets/js/site-config.js"></script>
 <script src="../../../assets/js/shared/api-cache.js"></script><script src="../../../assets/js/shared/match-priority.js"></script><script src="../../../assets/js/shared/api-request-semantics.js"></script><script src="../../../assets/js/shared/api-oauth-context.js"></script><script src="../../../assets/js/shared/api-transport.js"></script><script src="../../../assets/js/shared/api-request-coordinator.js"></script><script src="../../../assets/js/shared/api-client.js"></script>
-<script src="../../../assets/js/shared/recruitment-lineup-core.js?v=p2k-2.12.2-466b9201fc6a-6d9ec55951a1d3f9"></script><script src="../../../assets/js/shared/events-showcase-core.js?v=p2k-2.12.2-466b9201fc6a-esopt-9bb9a7732ae0cb75"></script>
-<link rel="stylesheet" href="../../../assets/css/events-showcase-line-v2122.css?v=p2k-2.12.2-466b9201fc6a-esopt-9bb9a7732ae0cb75"></head><body class="pm-widget-body">
+<script src="../../../assets/js/shared/recruitment-lineup-core.js?v=p2k-2.12.2-466b9201fc6a-6d9ec55951a1d3f9"></script><script src="../../../assets/js/shared/events-showcase-core.js?v=p2k-2.12.2-95b63403c1da-showcase-7502c4c0333ce8af"></script>
+<link rel="stylesheet" href="../../../assets/css/events-showcase-line-v2122.css?v=p2k-2.12.2-95b63403c1da-showcase-7502c4c0333ce8af"></head><body class="pm-widget-body">
 <section class="pm-widget" aria-label="Promote to King recruitment opportunities">
   <header class="pm-widget-head">
     <div class="pm-widget-title">⚔️ Join multi-club arenas ⚔️</div>
@@ -35,4 +35,4 @@ if (!in_array($theme, ['auto','light','dark'], true)) $theme='auto';
   <div id="pmWidgetRows" class="pm-widget-rows" aria-live="polite"><div class="pm-widget-empty">Loading priority matches…</div></div>
   <div class="pm-widget-footer"><a href="https://www.promotetoking.org/" target="_blank" rel="noopener noreferrer">Open P2K match selection assistant</a></div>
 </section>
-<script src="../../../assets/js/events-showcase-line-v2122.js?v=p2k-2.12.2-466b9201fc6a-esopt-9bb9a7732ae0cb75"></script></body></html>
+<script src="../../../assets/js/events-showcase-line-v2122.js?v=p2k-2.12.2-95b63403c1da-showcase-7502c4c0333ce8af"></script></body></html>
