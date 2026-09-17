@@ -44,7 +44,7 @@ checks={
 'loader trophy fix': 'trophy-card-presentation-v2122.js' in loader,
 'incremental cumulative base': 'BASE=c52fd68dbcd8fdb7cca8a1ab63ee6dd6da1e0303' in build and '2.12.0 or 2.12.1' in installer,
 'incremental cumulative scope': 'comm -12 "$work/changed.all" "$work/production.all" >"$PACKAGE/FILES.list"' in build and '[[ $(wc -l <"$PACKAGE/FILES.list") -gt 11 ]]' in qualify,
-'incremental supports both 2.12.x': 'qualify_source "$BASE_2120" from-2120 1' in qualify and 'qualify_source "$BASE_2121" from-2121 0' in qualify and '2.12.0 or `2.12.1`' in readme,
+'incremental supports both 2.12.x': 'qualify_source "$BASE_2120" from-2120 1' in qualify and 'qualify_source "$BASE_2121" from-2121 0' in qualify and 'v2.12.0 or v2.12.1' in readme,
 'incremental degraded repair': ': >"$t/assets/js/admin/tool-registry.js"' in qualify and 'does **not** require byte-identical source files' in readme,
 'incremental no full convergence': 'SUPPORTED_TREES' not in build and 'enumerate_installed_tree' not in installer,
 'embed immutable key': '?v=p2k-2.12.2-src-79c27cc76eb1f256' in embed,
