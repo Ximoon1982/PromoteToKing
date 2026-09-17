@@ -22,8 +22,8 @@ if (!in_array($theme, ['auto', 'light', 'dark'], true)) $theme = 'auto';
 <script src="../../../assets/js/shared/api-transport.js"></script>
 <script src="../../../assets/js/shared/api-request-coordinator.js"></script>
 <script src="../../../assets/js/shared/api-client.js"></script>
-<script src="../../../assets/js/shared/recruitment-lineup-core.js"></script>
-<script src="../../../assets/js/shared/events-showcase-core.js"></script>
+<script src="../../../assets/js/shared/recruitment-lineup-core.js?v=p2k-2.12.2-src-79c27cc76eb1f256"></script>
+<script src="../../../assets/js/shared/events-showcase-core.js?v=p2k-2.12.2-src-79c27cc76eb1f256"></script>
 <style>
 :root{color-scheme:dark;--pc-card:rgba(29,27,24,.72);--pc-visual:rgba(13,12,11,.58);--pc-border:rgba(255,255,255,.12);--pc-text:#eee8df;--pc-muted:#aaa198;--pc-gold:#f6b73c;--pc-green:#91e09a;--pc-red:#ffaaa4;--pc-chip:rgba(255,255,255,.045);--pc-shadow:rgba(0,0,0,.22);--pc-selector:rgba(12,10,9,.58);--pc-selector-active:linear-gradient(135deg,#d98d18,#f6b73c)}
 html.pc-theme-light{color-scheme:light;--pc-card:rgba(255,255,255,.72);--pc-visual:rgba(236,232,225,.62);--pc-border:rgba(24,28,32,.16);--pc-text:#1e252c;--pc-muted:#616a73;--pc-gold:#915700;--pc-green:#246f35;--pc-red:#a33232;--pc-chip:rgba(20,25,30,.045);--pc-shadow:rgba(0,0,0,.07);--pc-selector:rgba(255,255,255,.72)}
