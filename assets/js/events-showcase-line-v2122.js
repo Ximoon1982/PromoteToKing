@@ -70,13 +70,13 @@ return {start,end,phase};
 function formatArenaStart(start) {
 const date=new Date(start);
 if (!Number.isFinite(date.getTime())) return "—";
-const now=new Date();
-const tomorrow=new Date(now); tomorrow.setDate(now.getDate()+1);
-const sameDay=(a,b)=>a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
-const time=new Intl.DateTimeFormat("en-GB",{hour:"2-digit",minute:"2-digit",hour12:false}).format(date);
+const now=new Date(Date.now());
+const tomorrow=new Date(now.getTime()+86400000);
+const sameDay=(a,b)=>a.getUTCFullYear()===b.getUTCFullYear()&&a.getUTCMonth()===b.getUTCMonth()&&a.getUTCDate()===b.getUTCDate();
+const time=new Intl.DateTimeFormat("en-GB",{hour:"2-digit",minute:"2-digit",hour12:false,timeZone:"UTC"}).format(date);
 if (sameDay(date,now)) return `Today ${time}`;
 if (sameDay(date,tomorrow)) return `Tomorrow ${time}`;
-return new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(date).replace(",","");
+return new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false,timeZone:"UTC"}).format(date).replace(",","");
 }
 function renderArenas(arenas=arenaConfig) {
 arenaConfig=Array.isArray(arenas)?arenas:[];
