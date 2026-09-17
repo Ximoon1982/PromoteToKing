@@ -42,11 +42,13 @@ checks={
 'loader immutable key': 'p2k-2.12.2-src-79c27cc76eb1f256' in loader,
 'loader showcase': 'events-showcase-v2122.js' in loader,
 'loader trophy fix': 'trophy-card-presentation-v2122.js' in loader,
-'incremental exact base': 'BASE=3568e8c36d900fab341c3ded43b97adee3fb6263' in build and 'requires qualified v2.12.1' in installer,
-'incremental 11 file scope': 'payload_scope=11 production files' in build and '[[ $(wc -l <"$PACKAGE/FILES.list") -eq 11 ]]' in qualify,
-'incremental rejects older': 'scope-limited installer unexpectedly accepted v2.12.0' in qualify and 'intentionally rejects v2.11.x and v2.12.0' in readme,
+'incremental cumulative base': 'BASE=c52fd68dbcd8fdb7cca8a1ab63ee6dd6da1e0303' in build and '2.12.0 or 2.12.1' in installer,
+'incremental cumulative scope': 'comm -12 "$work/changed.all" "$work/production.all" >"$PACKAGE/FILES.list"' in build and '[[ $(wc -l <"$PACKAGE/FILES.list") -gt 11 ]]' in qualify,
+'incremental supports both 2.12.x': 'qualify_source "$BASE_2120" from-2120 1' in qualify and 'qualify_source "$BASE_2121" from-2121 0' in qualify and '2.12.0 or `2.12.1`' in readme,
+'incremental degraded repair': ': >"$t/assets/js/admin/tool-registry.js"' in qualify and 'does **not** require byte-identical source files' in readme,
 'incremental no full convergence': 'SUPPORTED_TREES' not in build and 'enumerate_installed_tree' not in installer,
 'embed immutable key': '?v=p2k-2.12.2-src-79c27cc76eb1f256' in embed,
+'card embed immutable key': '?v=p2k-2.12.2-src-79c27cc76eb1f256' in card_embed,
 }
 failed=[k for k,v in checks.items() if not v]
 for k,v in checks.items(): print(('PASS' if v else 'FAIL'),k)
