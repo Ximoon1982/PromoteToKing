@@ -45,7 +45,10 @@ print('unrelated immutable/application files unchanged')
 PY
 }
 qualify_source(){
-  local ref=$1 label=$2 degrade=${3:-0} t="$WORK/$label"
+  local ref=$1
+  local label=$2
+  local degrade=${3:-0}
+  local t="$WORK/$label"
   mkdir "$t"
   git -C "$ROOT" archive "$ref" | tar -x -C "$t"
   mutable "$t"
