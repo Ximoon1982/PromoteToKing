@@ -1,18 +1,20 @@
 {
   "schemaVersion": 8,
   "version": "2.12.2",
-  "builtAt": "2026-09-16T12:42:40Z",
-  "baseline": "Promote to King qualified v2.12.1 production release.",
+  "builtAt": "2026-09-17T05:03:00Z",
+  "baseline": "Promote to King qualified/reconstructed v2.12.x production line (2.12.0 or 2.12.1).",
   "release": {
     "corrective": true,
     "scope": [
       "Native Administration Competitions Events Showcase with arena and curated Daily match management",
-      "Unauthenticated fixed-height Events Showcase iframe with at most two arenas and four Daily matches",
+      "Events Showcase line presentation with fixed 280px iframe plus POC v18 r4 card presentation with fixed 480px iframe and live previews for both",
+      "Events Showcase and Match Recruitment open in the normal Administration detail area while child arena editing remains modal",
+      "Match Recruitment bootstrap waits for explicit controller readiness so delayed administrator access cannot trigger a false load-match binding failure",
       "Schema-4 showcase state, legacy priority-matches preservation/migration and protected revisioned writes",
       "Historical fe163d85 Trophy card presentation restored while retaining current v2.12.1 Trophy functionality; title border suppressed",
-      "scope-limited 11-file transactional overlay from exact qualified v2.12.1 with unrelated files, mutable showcase state and CRON preservation"
+      "cumulative transactional v2.12.x to v2.12.2 production overlay supporting 2.12.0 and 2.12.1 while preserving unrelated files, mutable state and CRON"
     ],
-    "sourceBaseline": "v2.12.1",
+    "sourceBaseline": "v2.12.x (2.12.0 or 2.12.1)",
     "databaseSchemaChange": false,
     "runtimeDataReset": false,
     "productionDatabase": "green",
