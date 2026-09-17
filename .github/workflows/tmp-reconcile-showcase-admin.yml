@@ -1,0 +1,75 @@
+name: One-shot Showcase admin reconciliation
+
+on:
+  push:
+    branches:
+      - release/v2.12.2
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    if: github.event.head_commit.message == 'Add one-shot Showcase admin reconciliation workflow'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/v2.12.2
+          fetch-depth: 0
+      - name: Reconcile admin source to validated production bytes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, re
+          p = Path('assets/js/admin/events-showcase-v2122.js')
+          s = p.read_text()
+
+          def replace_once(old, new, label):
+              global s
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 occurrence, found {count}')
+              s = s.replace(old, new, 1)
+
+          replace_once(
+              'const CORE_SCRIPTS=["assets/js/shared/recruitment-lineup-core.js","assets/js/shared/events-showcase-core.js"];',
+              'const CORE_SCRIPTS=["assets/js/shared/recruitment-lineup-core.js","assets/js/shared/events-showcase-core.js?v=p2k-2.12.2-466b9201fc6a-esopt-9bb9a7732ae0cb75"];',
+              'core cache key'
+          )
+          replace_once(
+              '<span><b>Source</b><em>Events Showcase state + Chess.com</em></span>',
+              '<span><b>Source</b><em>P2K match data + 4 live registrations</em></span>',
+              'source label'
+          )
+          lazy = ' loading="lazy"'
+          if s.count(lazy) != 3:
+              raise SystemExit(f'lazy attributes: expected 3, found {s.count(lazy)}')
+          s = s.replace(lazy, '')
+          replace_once(
+              'else cardFrame.contentWindow?.location?.reload?.();',
+              'else cardFrame.contentWindow?.postMessage({type:"p2k-events-showcase-refresh"},"*");',
+              'card preview refresh'
+          )
+          s, n = re.subn(r'^async function hydrateConfigured\(\)\{.*\}\n', '', s, count=1, flags=re.M)
+          if n != 1:
+              raise SystemExit(f'hydrateConfigured removal: expected 1, found {n}')
+          replace_once('await hydrateConfigured();', '', 'hydrateConfigured call')
+
+          digest = hashlib.sha256(s.encode()).hexdigest()
+          expected = 'fdd945173e396e008e2d85c4ed7249bf70bedc3cab7548fa0e98b09f51bcbb44'
+          if digest != expected:
+              raise SystemExit(f'production checksum mismatch: {digest} != {expected}')
+          p.write_text(s)
+          print('validated production SHA256:', digest)
+          PY
+          node --check assets/js/admin/events-showcase-v2122.js
+      - name: Commit reconciled source
+        shell: bash
+        run: |
+          git config user.name "P2K qualification bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add assets/js/admin/events-showcase-v2122.js
+          git commit -m "Reconcile Showcase admin with production"
+          git push origin HEAD:release/v2.12.2
