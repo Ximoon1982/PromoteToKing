@@ -195,8 +195,10 @@ def main():
             after = ongoing.locator("[data-arena-live]").inner_text()
             assert before != after, "ongoing arena countdown did not tick"
 
-            # Cross registration boundary; the 1-second clock must re-render phase automatically.
+            # One monotonic clock jump proves both registration transition and expiry cleanup.
+            old_end = ongoing.evaluate("e=>Number(e.dataset.arenaEnd)")
             registration_start = registration.evaluate("e=>Number(e.dataset.arenaStart)")
+            assert registration_start + 1000 > old_end
             page.evaluate("value=>window.__P2K_TEST_NOW=value", registration_start + 1000)
             page.wait_for_function(
                 "document.querySelector('[href=\"https://example.test/arena/registration\"] .pc-badge')?.textContent === 'On-going'",
@@ -204,10 +206,6 @@ def main():
             )
             registration = page.locator('[href="https://example.test/arena/registration"]')
             assert "ongoing" in (registration.locator("[data-arena-live]").get_attribute("class") or "")
-
-            # Cross expiry boundary; expired arena disappears and the next Upcoming arena becomes visible.
-            old_end = ongoing.evaluate("e=>Number(e.dataset.arenaEnd)")
-            page.evaluate("value=>window.__P2K_TEST_NOW=value", old_end + 1000)
             page.wait_for_function("!document.querySelector('[href=\"https://example.test/arena/ongoing\"]')", timeout=2500)
             upcoming = page.locator('[href="https://example.test/arena/upcoming"]')
             assert upcoming.count() == 1
