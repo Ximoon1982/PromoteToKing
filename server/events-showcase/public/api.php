@@ -6,13 +6,73 @@ require_once dirname(__DIR__) . '/src/EventsShowcaseStore.php';
 
 use P2K\EventsShowcase\EventsShowcaseStore;
 use P2K\EventsShowcase\RevisionConflict;
+use P2K\TeamPoints\PublicReadDatabase;
+
+function p2k_events_showcase_catalog(?array $matchIds = null): array {
+    $config = p2k_tp_config();
+    $club = strtolower(trim((string)($config['app']['club_slug'] ?? DEFAULT_CLUB_SLUG)));
+    $pdo = PublicReadDatabase::core();
+    $where = ["m.club_slug=?", "m.status='registered'", "m.is_void=0"];
+    $params = [$club];
+    if (is_array($matchIds)) {
+        $ids = array_values(array_unique(array_filter(array_map(static function(mixed $value): int {
+            $id = filter_var($value, FILTER_VALIDATE_INT);
+            return $id === false || $id <= 0 ? 0 : (int)$id;
+        }, $matchIds))));
+        if ($ids === []) return [];
+        $where[] = 'm.match_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
+        array_push($params, ...$ids);
+    }
+    $sql = "SELECT m.match_id,m.match_name,m.match_url,m.is_league,m.start_time,m.time_control,m.opponent_slug,m.opponent_name,o.icon_url
+            FROM p2k_tp_match_metadata m
+            LEFT JOIN p2k_tp_opponents o ON o.club_slug=m.club_slug AND o.opponent_slug=m.opponent_slug
+            WHERE " . implode(' AND ', $where) . "
+            ORDER BY m.is_league DESC,CASE WHEN m.start_time IS NULL THEN 1 ELSE 0 END,m.start_time ASC,m.match_id ASC";
+    $query = $pdo->prepare($sql);
+    $query->execute($params);
+    $rows = [];
+    foreach ($query->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+        $id = (string)($row['match_id'] ?? '');
+        if ($id === '') continue;
+        $name = trim((string)($row['match_name'] ?? ''));
+        if ($name === '') $name = 'Match #' . $id;
+        $start = trim((string)($row['start_time'] ?? ''));
+        $startEpoch = $start === '' ? null : strtotime($start . ' UTC');
+        $rows[] = [
+            'matchId' => $id,
+            'name' => $name,
+            'url' => trim((string)($row['match_url'] ?? '')) ?: 'https://www.chess.com/club/matches/' . rawurlencode($club) . '/' . $id,
+            'apiUrl' => chess_match_url($id),
+            'category' => !empty($row['is_league']) ? 'league' : 'friendly',
+            'isLeague' => !empty($row['is_league']),
+            'leagueAcronyms' => league_codes($name),
+            'startTime' => $startEpoch === false ? null : $startEpoch,
+            'timeControl' => $row['time_control'] ?? null,
+            'opponentSlug' => trim((string)($row['opponent_slug'] ?? '')),
+            'opponentName' => trim((string)($row['opponent_name'] ?? '')) ?: 'Opponent',
+            'opponentLogo' => trim((string)($row['icon_url'] ?? '')),
+            'joinable' => true,
+            'source' => 'p2k-core',
+        ];
+    }
+    return $rows;
+}
 
 $store = new EventsShowcaseStore(root_dir());
 $action = trim((string)($_GET['action'] ?? 'state'));
 $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
 
 try {
-    if ($action === 'state' && $method === 'GET') json_response(200, array_merge(['ok'=>true], $store->read()));
+    if ($action === 'state' && $method === 'GET') {
+        $state = $store->read();
+        $ids = array_map(static fn(array $item): string => (string)($item['matchId'] ?? ''), array_values(array_filter($state['items'] ?? [], 'is_array')));
+        $state['catalog'] = p2k_events_showcase_catalog($ids);
+        $state['catalogLoadedAt'] = (int)round(microtime(true) * 1000);
+        json_response(200, array_merge(['ok'=>true], $state));
+    }
+    if ($action === 'catalog' && $method === 'GET') {
+        json_response(200, ['ok'=>true,'source'=>'p2k-core','loadedAt'=>(int)round(microtime(true) * 1000),'matches'=>p2k_events_showcase_catalog(null)]);
+    }
     if ($action === 'metrics' && $method === 'GET') json_response(200, ['ok'=>true,'metrics'=>$store->metrics()]);
     if ($action === 'save' && in_array($method, ['PUT','POST'], true)) {
         require_admin_write('events-showcase');
