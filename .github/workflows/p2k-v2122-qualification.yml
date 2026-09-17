@@ -28,23 +28,39 @@ jobs:
           node --check assets/js/shared/recruitment-lineup-core.js
           node --check assets/js/shared/events-showcase-core.js
           node --check assets/js/admin/events-showcase-v2122.js
+          node --check assets/js/admin/match-recruitment-access-v2121.js
           node --check assets/js/admin/trophy-card-presentation-v2122.js
           node --check assets/js/admin/tool-registry.js
+          node --check assets/js/pages/recruit-match-v2121-bootstrap.js
+          node --check assets/js/pages/recruit-match.js
           php -l server/events-showcase/src/EventsShowcaseStore.php
           php -l server/events-showcase/public/api.php
           php -l server/events-showcase/public/embed.php
+          php -l server/events-showcase/public/embed-card.php
           php tests/test_events_showcase_store.php
           node tests/test_recruitment_lineup_parity.js
           python tests/test_events_showcase_contract.py
           bash -n tools/release/v2122/build-package.sh
           bash -n tools/release/v2122/qualify-installer.sh
           bash -n tools/release/v2122/install-promote-to-king-v2.12.2.sh
-          python -m py_compile tools/release/v2122/production_paths.py tools/release/v2122/stamp_asset_cache_key.py tests/browser_gate_v2122.py
+          python -m py_compile \
+            tools/release/v2122/production_paths.py \
+            tools/release/v2122/stamp_asset_cache_key.py \
+            tests/browser_gate_v2122.py \
+            tests/browser_gate_events_showcase_card_v2122.py \
+            tests/browser_gate_recruit_match_ready_v2122.py \
+            tests/browser_gate_match_recruitment_admin_v2122.py
       - name: Events Showcase and Trophy browser gate
         run: python tests/browser_gate_v2122.py
-      - name: Build qualified v2.12.2 incremental package
+      - name: Events Showcase card renderer browser gate
+        run: python tests/browser_gate_events_showcase_card_v2122.py
+      - name: Match Recruitment controller readiness browser gate
+        run: python tests/browser_gate_recruit_match_ready_v2122.py
+      - name: Match Recruitment native admin detail browser gate
+        run: python tests/browser_gate_match_recruitment_admin_v2122.py
+      - name: Build qualified v2.12.2 cumulative package
         run: bash tools/release/v2122/build-package.sh "$RUNNER_TEMP/build-v2122"
-      - name: Scope-limited v2.12.1 incremental installer qualification
+      - name: Cumulative v2.12.x incremental installer qualification
         run: bash tools/release/v2122/qualify-installer.sh "$RUNNER_TEMP/build-v2122"
       - name: Existing Match Recruitment browser gate
         run: python tests/browser_gate_recruit_match_v2.py
@@ -58,11 +74,11 @@ jobs:
         run: python tools/test-suite/p2k_test_suite.py regression
       - name: Full canonical P2K browser regression
         run: python tools/test-suite/p2k_test_suite.py browser
-      - name: Upload qualified incremental installer
+      - name: Upload qualified cumulative installer
         uses: actions/upload-artifact@v4
         with:
           name: PromoteToKing-v2.12.2-qualified-installer-${{ github.sha }}
           path: |
-            ${{ runner.temp }}/build-v2122/PromoteToKing_v2.12.2_INCREMENTAL_FROM_2.12.1.zip
+            ${{ runner.temp }}/build-v2122/PromoteToKing_v2.12.2_INCREMENTAL_FROM_2.12.x.zip
             ${{ runner.temp }}/build-v2122/SHA256SUMS.txt
           if-no-files-found: error
