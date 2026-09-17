@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import threading
+import time
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
@@ -33,19 +34,17 @@ def main():
             # fires while its async IIFE is still waiting for admin readiness.
             page = browser.new_page()
             page.add_init_script("""
-              window.__p2kAdminDelayStarted = performance.now();
-              window.P2K_ADMIN_ACCESS_READY = new Promise(resolve => setTimeout(() => {
-                window.__p2kAdminDelayResolved = performance.now();
-                resolve(true);
-              }, 300));
+              window.P2K_ADMIN_ACCESS_READY = new Promise(resolve => setTimeout(() => resolve(true), 300));
               window.P2K_RECRUITMENT_V2 = {};
               window.P2K_SITE_CONFIG = {clubSlug: 'promote-to-king'};
             """)
             neutralize_support_scripts(page)
+            started = time.monotonic()
             page.goto(base, wait_until="domcontentloaded")
-            page.wait_for_function("document.documentElement.dataset.p2kRecruitmentReady === '1'", timeout=4000)
-            assert page.evaluate("typeof document.getElementById('p2kMatchForm').onsubmit") == "function"
-            assert page.evaluate("performance.now() - window.__p2kAdminDelayStarted") >= 250
+            page.locator("html[data-p2k-recruitment-ready='1']").wait_for(state="attached", timeout=4000)
+            elapsed = time.monotonic() - started
+            assert elapsed >= 0.25, f"controller became ready before delayed admin access resolved: {elapsed:.3f}s"
+            assert not page.locator("#p2kLoadButton").is_disabled()
             assert "did not bind" not in page.locator("#p2kStatusText").inner_text()
             page.close()
 
