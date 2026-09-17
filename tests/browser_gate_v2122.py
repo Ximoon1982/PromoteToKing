@@ -24,11 +24,13 @@ with sync_playwright() as p:
     page.evaluate('''() => {
       window.P2K_SITE_CONFIG={clubSlug:'promote-to-king',leagueAcronyms:['1WL','TCMAC','PCL'],api:{defaultAttempts:1}};
       window.__saveCalls=[];
+      window.__clubIndexCalls=0;
       window.__state={ok:true,schemaVersion:4,revision:2,items:[{matchId:'1001',enabled:true,urgent:false}],arenas:[{active:false,name:'Test Arena',link:'https://www.chess.com/play/arena/test',date:'2099-01-01',time:'18:00',timeControl:'3+2',duration:'2h',durationMinutes:120,startAt:'2099-01-01T18:00:00+01:00'}]};
-      const registered=[];for(let i=0;i<45;i++)registered.push({'@id':`https://api.chess.com/pub/match/${2000+i}`,name:(i%2?'Friendly':'1WL')+` Match ${i}`,start_time:4070908800+i*3600,url:`https://www.chess.com/club/matches/promote-to-king/${2000+i}`,settings:{min_rating:0,max_rating:0,time_control:'1/259200'}});
-      window.P2K_API_CLIENT={json:async(url)=>{if(String(url).includes('/club/promote-to-king/matches'))return{registered};const id=String(url).match(/(\\d+)$/)?.[1]||'0';return{'@id':String(url),name:`Detail ${id}`,start_time:4070908800,settings:{min_rating:0,max_rating:0,min_team_players:2,max_team_players:10,time_control:'1/259200'},teams:{a:{'@id':'https://api.chess.com/pub/club/promote-to-king',name:'Promote to King',players:[{rating:1400},{rating:1300}]},b:{'@id':'https://api.chess.com/pub/club/opponent',name:'Opponent',players:[{rating:1350},{rating:1250}]}}};}};
+      const registered=[],catalog=[];for(let i=0;i<45;i++){const id=2000+i,league=i%2===0,name=(league?'1WL':'Friendly')+` Match ${i}`;registered.push({'@id':`https://api.chess.com/pub/match/${id}`,name,start_time:4070908800+i*3600,url:`https://www.chess.com/club/matches/promote-to-king/${id}`,settings:{min_rating:0,max_rating:0,time_control:'1/259200'}});catalog.push({matchId:String(id),name,url:`https://www.chess.com/club/matches/promote-to-king/${id}`,apiUrl:`https://api.chess.com/pub/match/${id}`,startTime:4070908800+i*3600,timeControl:'1/259200',category:league?'league':'friendly',isLeague:league,leagueAcronyms:league?['1WL']:[],opponentName:`Opponent ${i}`,opponentSlug:`opponent-${i}`});}
+      window.__catalog=catalog;
+      window.P2K_API_CLIENT={json:async(url)=>{if(String(url).includes('/club/promote-to-king/matches')){window.__clubIndexCalls++;throw new Error('DB-first admin must not request club match index');}const id=String(url).match(/(\\d+)$/)?.[1]||'0';return{'@id':String(url),name:`Detail ${id}`,start_time:4070908800,settings:{min_rating:0,max_rating:0,min_team_players:2,max_team_players:10,time_control:'1/259200'},teams:{a:{'@id':'https://api.chess.com/pub/club/promote-to-king',name:'Promote to King',players:[{rating:1400},{rating:1300}]},b:{'@id':'https://api.chess.com/pub/club/opponent',name:'Opponent',players:[{rating:1350},{rating:1250}]}}};}};
       window.P2K_TEAM_POINTS_CLIENT={connect:async()=>({username:'Admin'}),endpointRequest:async(url,opt)=>{window.__saveCalls.push({url:String(url),body:structuredClone(opt.body)});window.__state={...window.__state,...opt.body,revision:Number(opt.body.revision)+1,ok:true};return structuredClone(window.__state);}};
-      window.fetch=async(url,opt)=>{if(String(url).includes('server/events-showcase/public/api.php'))return new Response(JSON.stringify(window.__state),{status:200,headers:{'Content-Type':'application/json'}});return new Response('',{status:404});};
+      window.fetch=async(url,opt)=>{const u=String(url);if(u.includes('server/events-showcase/public/api.php')){const payload=u.includes('action=catalog')?{ok:true,matches:window.__catalog,loadedAt:Date.now()}:window.__state;return new Response(JSON.stringify(payload),{status:200,headers:{'Content-Type':'application/json'}});}return new Response('',{status:404});};
     }''')
     page.add_script_tag(content=rec)
     page.add_script_tag(content=core)
@@ -46,6 +48,7 @@ with sync_playwright() as p:
     assert page.locator('#adminShellDetailFrameWrap').is_hidden()
     assert page.locator('#p2kEventsShowcaseEditor').evaluate('e=>e.tagName')=='DIV'
     page.wait_for_function("document.querySelectorAll('[data-es-search-results] [data-es-add]').length===20")
+    assert page.evaluate('window.__clubIndexCalls')==0
     assert 'page 1/3' in page.locator('[data-es-search-count]').inner_text()
 
     line_url=page.locator('[data-es-widget-url]').input_value()
@@ -90,5 +93,5 @@ with sync_playwright() as p:
     assert page.locator('[data-r538-card]').evaluate("e=>getComputedStyle(e).borderTopLeftRadius")=='11px'
     assert title.evaluate("e=>getComputedStyle(e).borderBottomWidth")=='0px'
     assert page.locator('[data-r538-art]').evaluate("e=>getComputedStyle(e).aspectRatio") in ('1 / 1','1')
-    print('PASS browser Events Showcase inline/detail + dual preview + trophy presentation gate')
+    print('PASS browser Events Showcase DB-first inline/detail + dual preview + trophy presentation gate')
     browser.close()
