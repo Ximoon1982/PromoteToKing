@@ -54,8 +54,8 @@ preflight(){
   WORK=$(mktemp -d "$TARGET/.p2k-v2122-preflight.XXXXXX")
   verify_package
   OLD_VERSION=$(tr -d '\r\n[:space:]' <"$TARGET/VERSION")
-  if [[ "$MODE" == install && "$OLD_VERSION" != 2.12.2 ]]; then
-    [[ "$OLD_VERSION" == 2.12.0 || "$OLD_VERSION" == 2.12.1 ]] || fail "scope-limited installer requires P2K 2.12.0 or 2.12.1; found $OLD_VERSION"
+  if [[ "$MODE" == install ]]; then
+    [[ "$OLD_VERSION" == 2.12.0 || "$OLD_VERSION" == 2.12.1 || "$OLD_VERSION" == 2.12.2 ]] || fail "scope-limited installer requires P2K 2.12.0, 2.12.1 or 2.12.2; found $OLD_VERSION"
   fi
 }
 
@@ -107,13 +107,12 @@ verify_cron(){ [[ -n "$CRONTAB_COMMAND" ]] || return 0; "$CRONTAB_COMMAND" -l >"
 main(){
   preflight
   if [[ "$MODE" != install ]]; then verify_installed; return; fi
-  if [[ "$OLD_VERSION" == 2.12.2 ]]; then verify_installed; log 'v2.12.2 overlay already installed; no change required.'; return; fi
   stage_and_backup
   TRANSACTION_ACTIVE=1
   activate
   verify_installed
   verify_cron
   TRANSACTION_ACTIVE=0
-  log "Upgraded P2K $OLD_VERSION to v2.12.2 using the cumulative 2.12.x incremental overlay; mutable state, unrelated files and CRON were preserved."
+  log "Applied the v2.12.2 cumulative overlay to P2K $OLD_VERSION; mutable state, unrelated files and CRON were preserved."
 }
 main
