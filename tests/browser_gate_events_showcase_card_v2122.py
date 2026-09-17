@@ -49,20 +49,27 @@ def main():
                 {"matchId": str(i), "enabled": True, "urgent": i == 5001}
                 for i in range(5001, 5007)
             ],
+            "catalog": [],
         }
-        registered = []
         details = {}
         start_epoch = 4070970000
         for i in range(5001, 5007):
             league = i < 5006
             name = f"PCL Fixture {i}" if league else f"Friendly Fixture {i}"
-            registered.append({
-                "id": i,
+            state["catalog"].append({
+                "matchId": str(i),
                 "name": name,
                 "url": f"https://www.chess.com/club/matches/promote-to-king/{i}",
-                "@id": f"https://api.chess.com/pub/match/{i}",
-                "start_time": start_epoch + (i - 5001) * 3600,
-                "settings": {"time_control": 86400, "min_rating": 1200, "max_rating": 1600},
+                "apiUrl": f"https://api.chess.com/pub/match/{i}",
+                "startTime": start_epoch + (i - 5001) * 3600,
+                "timeControl": 86400,
+                "maxRating": 1600,
+                "category": "league" if league else "friendly",
+                "isLeague": league,
+                "leagueAcronyms": ["PCL"] if league else [],
+                "opponentName": f"Opponent {i}",
+                "opponentSlug": f"opponent-{i}",
+                "opponentLogo": "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==",
             })
             details[str(i)] = {
                 "id": i,
@@ -89,11 +96,11 @@ def main():
                 },
             }
 
-        fixture = json.dumps({"index": {"registered": registered}, "details": details})
+        fixture = json.dumps({"details": details})
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page(viewport={"width": 320, "height": 480})
-            page.add_init_script(f"window.__CARD_FIXTURE={fixture};")
+            page.add_init_script(f"window.__CARD_FIXTURE={fixture}; window.__CLUB_INDEX_CALLS=0;")
             page.route("**/config/site-branding.js*", lambda route: route.fulfill(status=200, content_type="application/javascript", body=""))
             page.route("**/assets/js/site-config.js*", lambda route: route.fulfill(
                 status=200,
@@ -106,7 +113,7 @@ def main():
                 body=r'''
                   window.P2K_API_CLIENT={json:async url=>{
                     const f=window.__CARD_FIXTURE;
-                    if(String(url).includes('/pub/club/promote-to-king/matches')) return f.index;
+                    if(String(url).includes('/pub/club/promote-to-king/matches')) { window.__CLUB_INDEX_CALLS++; throw new Error('DB-first card must not request club match index'); }
                     const m=String(url).match(/\/pub\/match\/(\d+)/);
                     if(m && f.details[m[1]]) return f.details[m[1]];
                     throw new Error('Unexpected fixture API request: '+url);
@@ -124,6 +131,7 @@ def main():
                 wait_until="domcontentloaded",
             )
             page.wait_for_function("document.querySelectorAll('[data-daily] .pc-card').length === 4")
+            assert page.evaluate("window.__CLUB_INDEX_CALLS") == 0
             assert page.locator(".pc-title").nth(0).inner_text() == "⚔️ Arenas ⚔️"
             assert page.locator(".pc-title").nth(1).inner_text() == "⚔️ Daily Matches ⚔️"
             assert page.locator("[data-arenas] .pc-card").count() == 2
@@ -148,7 +156,7 @@ def main():
             server.kill()
             server.wait(timeout=3)
 
-    print("Events Showcase v18 r4 card browser gate passed.")
+    print("Events Showcase v18 r4 DB-first card browser gate passed.")
 
 
 if __name__ == "__main__":
