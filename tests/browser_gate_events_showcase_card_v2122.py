@@ -87,7 +87,7 @@ def main():
         }
         details = {}
         for i in range(5001, 5007):
-            league = i < 5006
+            league = i < 5005
             name = f"PCL Fixture {i}" if league else f"Friendly Fixture {i}"
             state["catalog"].append({
                 "matchId": str(i),
@@ -151,7 +151,13 @@ def main():
                     const f=window.__CARD_FIXTURE;
                     if(String(url).includes('/pub/club/promote-to-king/matches')) { window.__CLUB_INDEX_CALLS++; throw new Error('DB-first card must not request club match index'); }
                     const m=String(url).match(/\/pub\/match\/(\d+)/);
-                    if(m && f.details[m[1]]) return f.details[m[1]];
+                    if(m && f.details[m[1]]) {
+                      const detail=f.details[m[1]];
+                      if(new URL(location.href).searchParams.get('case')==='fallback' && Number(m[1])<5005) {
+                        return {...detail,teams:{...detail.teams,p2k:{...detail.teams.p2k,locked:true}}};
+                      }
+                      return detail;
+                    }
                     throw new Error('Unexpected fixture API request: '+url);
                   }};
                 ''',
@@ -168,6 +174,8 @@ def main():
             assert page.evaluate("window.__CLUB_INDEX_CALLS") == 0
             assert page.locator(".pc-title").nth(0).inner_text() == "⚔️ Arenas ⚔️"
             assert page.locator(".pc-title").nth(1).inner_text() == "⚔️ Daily Matches ⚔️"
+            assert page.locator(".pc-title").nth(0).evaluate("e=>getComputedStyle(e).fontSize") == "13px"
+            assert page.locator(".pc-links a").nth(0).evaluate("e=>getComputedStyle(e).fontSize") == "8px"
             assert page.locator("[data-arenas] .pc-card").count() == 2
             assert page.locator("[data-daily] .pc-card").count() == 4
             width = page.locator(".pc-page").evaluate("e=>e.getBoundingClientRect().width")
@@ -188,6 +196,8 @@ def main():
             assert registration.locator("[data-arena-live]").inner_text().startswith("Starts in ")
             assert ongoing.locator('svg[role="img"][aria-label="Blitz"]').count() == 1
             assert registration.locator('svg[role="img"][aria-label="Bullet"]').count() == 1
+            assert ongoing.locator(".pc-arena-meta-line strong").count() == 1
+            assert ongoing.locator(".pc-arena-meta-line strong").evaluate("e=>getComputedStyle(e).fontWeight") == "900"
 
             before = ongoing.locator("[data-arena-live]").inner_text()
             page.evaluate("window.__P2K_TEST_NOW += 1000")
@@ -213,12 +223,17 @@ def main():
             assert "upcoming" in (upcoming.locator("[data-arena-live]").get_attribute("class") or "")
             assert upcoming.locator('svg[role="img"][aria-label="Rapid"]').count() == 1
 
-            # v18 r4 special <=48h League treatment.
+            # v18 r4 match emphasis: <=48h League red, 3d gold, >3d muted, rating bright/bold.
             first = page.locator("[data-daily] .pc-card").nth(0)
             second = page.locator("[data-daily] .pc-card").nth(1)
+            third = page.locator("[data-daily] .pc-card").nth(2)
             assert "pc-league-48h" in (first.get_attribute("class") or "")
             assert "pc-league-48h" not in (second.get_attribute("class") or "")
             assert "pc-red" in (first.locator(".pc-primary > span").nth(0).get_attribute("class") or "")
+            assert "pc-gold" in (second.locator(".pc-primary > span").nth(0).get_attribute("class") or "")
+            assert "pc-muted" in (third.locator(".pc-primary > span").nth(0).get_attribute("class") or "")
+            assert first.locator(".pc-match-rating").count() == 1
+            assert first.locator(".pc-match-rating").evaluate("e=>getComputedStyle(e).fontWeight") == "900"
             logo = first.locator("img.pc-club-logo")
             assert logo.get_attribute("loading") == "lazy"
             assert logo.get_attribute("referrerpolicy") == "no-referrer"
@@ -228,8 +243,8 @@ def main():
             assert page.locator('[data-filter="league"]').get_attribute("aria-selected") == "true"
             assert page.locator('[data-filter="friendly"]').get_attribute("aria-selected") == "false"
             page.click('[data-filter="friendly"]')
-            page.wait_for_function("document.querySelectorAll('[data-daily] .pc-card').length === 1")
-            assert "Friendly" in page.locator("[data-daily] .pc-badge").inner_text()
+            page.wait_for_function("document.querySelectorAll('[data-daily] .pc-card').length === 2")
+            assert "Friendly" in page.locator("[data-daily] .pc-badge").first.inner_text()
             assert page.locator('[data-filter="league"]').get_attribute("aria-selected") == "false"
             assert page.locator('[data-filter="friendly"]').get_attribute("aria-selected") == "true"
 
@@ -246,6 +261,17 @@ def main():
             page.goto(base_url + "&section=arenas", wait_until="domcontentloaded")
             assert page.locator("section.pc-section").nth(0).get_attribute("hidden") is None
             assert page.locator("section.pc-section").nth(1).get_attribute("hidden") is not None
+
+            # Default filter is chosen after live eligibility: empty League falls back to Friendly.
+            page.goto(base_url + "&case=fallback", wait_until="domcontentloaded")
+            page.wait_for_function(
+                "document.querySelector('[data-filter=\"friendly\"]')?.getAttribute('aria-selected') === 'true'",
+                timeout=5000,
+            )
+            page.wait_for_function("document.querySelectorAll('[data-daily] .pc-card').length === 2")
+            assert page.locator('[data-filter="league"]').get_attribute("aria-selected") == "false"
+            assert page.locator('[data-filter="friendly"]').get_attribute("aria-selected") == "true"
+            assert page.locator("[data-daily] .pc-badge").first.inner_text() == "Friendly"
 
             browser.close()
     finally:
