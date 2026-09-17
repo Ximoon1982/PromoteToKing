@@ -8,7 +8,7 @@ use P2K\EventsShowcase\EventsShowcaseStore;
 use P2K\EventsShowcase\RevisionConflict;
 use P2K\TeamPoints\PublicReadDatabase;
 
-function p2k_events_showcase_catalog(?array $matchIds = null): array {
+function p2k_events_showcase_catalog(?array $matchIds = null, bool $includeStarted = false): array {
     $config = p2k_tp_config();
     $club = strtolower(trim((string)($config['app']['club_slug'] ?? DEFAULT_CLUB_SLUG)));
     $pdo = PublicReadDatabase::core();
@@ -31,6 +31,7 @@ function p2k_events_showcase_catalog(?array $matchIds = null): array {
     $query = $pdo->prepare($sql);
     $query->execute($params);
     $rows = [];
+    $now = time();
     foreach ($query->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
         $id = (string)($row['match_id'] ?? '');
         if ($id === '') continue;
@@ -38,15 +39,20 @@ function p2k_events_showcase_catalog(?array $matchIds = null): array {
         if ($name === '') $name = 'Match #' . $id;
         $start = trim((string)($row['start_time'] ?? ''));
         $startEpoch = $start === '' ? null : strtotime($start . ' UTC');
+        $started = $startEpoch !== null && $startEpoch !== false && $startEpoch <= $now;
+        if ($started && !$includeStarted) continue;
+        $leagueAcronyms = league_codes($name);
+        $isLeague = !empty($row['is_league']) || $leagueAcronyms !== [];
         $rows[] = [
             'matchId' => $id,
             'name' => $name,
             'url' => trim((string)($row['match_url'] ?? '')) ?: 'https://www.chess.com/club/matches/' . rawurlencode($club) . '/' . $id,
             'apiUrl' => chess_match_url($id),
-            'category' => !empty($row['is_league']) ? 'league' : 'friendly',
-            'isLeague' => !empty($row['is_league']),
-            'leagueAcronyms' => league_codes($name),
+            'category' => $isLeague ? 'league' : 'friendly',
+            'isLeague' => $isLeague,
+            'leagueAcronyms' => $leagueAcronyms,
             'startTime' => $startEpoch === false ? null : $startEpoch,
+            'started' => $started,
             'timeControl' => $row['time_control'] ?? null,
             'opponentSlug' => trim((string)($row['opponent_slug'] ?? '')),
             'opponentName' => trim((string)($row['opponent_name'] ?? '')) ?: 'Opponent',
@@ -66,7 +72,23 @@ try {
     if ($action === 'state' && $method === 'GET') {
         $state = $store->read();
         $ids = array_map(static fn(array $item): string => (string)($item['matchId'] ?? ''), array_values(array_filter($state['items'] ?? [], 'is_array')));
-        $state['catalog'] = p2k_events_showcase_catalog($ids);
+        $catalog = p2k_events_showcase_catalog($ids, true);
+        $startedIds = [];
+        foreach ($catalog as $match) {
+            if (($match['started'] ?? false) === true) {
+                $startedIds[(string)($match['matchId'] ?? '')] = true;
+            }
+        }
+        if ($startedIds !== []) {
+            $state['items'] = array_values(array_filter(
+                array_values(array_filter($state['items'] ?? [], 'is_array')),
+                static fn(array $item): bool => !isset($startedIds[(string)($item['matchId'] ?? '')])
+            ));
+        }
+        $state['catalog'] = array_values(array_filter(
+            $catalog,
+            static fn(array $match): bool => ($match['started'] ?? false) !== true
+        ));
         $state['catalogLoadedAt'] = (int)round(microtime(true) * 1000);
         json_response(200, array_merge(['ok'=>true], $state));
     }
