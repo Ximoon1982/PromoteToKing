@@ -67,6 +67,19 @@ qualify_source(){
   run "$INSTALLER" "$t" install
   full_snapshot "$t" >"$WORK/$label.installed.twice"
   diff -u "$WORK/$label.installed.once" "$WORK/$label.installed.twice"
+
+  # A target already marked 2.12.2 but with a stale scoped file must self-heal.
+  if [[ "$label" == from-2120 ]]; then
+    printf 'stale partial-overlay file\n' >"$t/InsightsHealth.html"
+    [[ $(tr -d '\r\n[:space:]' <"$t/VERSION") == 2.12.2 ]]
+    run "$INSTALLER" "$t" install
+    "$INSTALLER" "$t" verify
+    full_snapshot "$t" >"$WORK/$label.repaired"
+    diff -u "$WORK/$label.installed.once" "$WORK/$label.repaired"
+    mutable_hash "$t" >"$WORK/$label.mutable.repaired"
+    diff -u "$WORK/$label.mutable.after" "$WORK/$label.mutable.repaired"
+    [[ "$CRON_HASH" == "$(sha256sum "$WORK/cron")" ]]
+  fi
 }
 
 (cd "$BUILD" && sha256sum -c SHA256SUMS.txt)
@@ -106,4 +119,4 @@ if run "$INSTALLER" "$o" install; then echo 'cumulative installer unexpectedly a
 full_snapshot "$o" >"$WORK/unsupported.after"
 diff -u "$WORK/unsupported.before" "$WORK/unsupported.after"
 
-echo "v2.12.2 cumulative incremental installer qualification passed: 2.12.0 + 2.12.1, degraded scoped-file repair, state/CRON preservation, unrelated-file preservation, idempotency, rollback, non-2.12.x rejection ($(wc -l <"$PACKAGE/FILES.list") payload files)"
+echo "v2.12.2 cumulative incremental installer qualification passed: 2.12.0 + 2.12.1, degraded scoped-file repair, partial-2.12.2 self-heal, state/CRON preservation, unrelated-file preservation, idempotency, rollback, non-2.12.x rejection ($(wc -l <"$PACKAGE/FILES.list") payload files)"
