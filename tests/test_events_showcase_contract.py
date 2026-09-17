@@ -4,6 +4,7 @@ admin=(root/'assets/js/admin/events-showcase-v2122.js').read_text()
 embed=(root/'server/events-showcase/public/embed.php').read_text()
 line_runtime=(root/'assets/js/events-showcase-line-v2122.js').read_text()
 card_embed=(root/'server/events-showcase/public/embed-card.php').read_text()
+showcase_core=(root/'assets/js/shared/events-showcase-core.js').read_text()
 trophy=(root/'assets/js/admin/trophy-card-presentation-v2122.js').read_text()
 loader=(root/'assets/js/admin/tool-registry.js').read_text()
 
@@ -35,6 +36,15 @@ checks={
 'card max 4 daily': '.slice(0,4)' in card_embed,
 'card canonical state': 'api.php?action=state' in card_embed and 'events-showcase-core.js' in card_embed,
 'card selector no all': 'data-filter="league"' in card_embed and 'data-filter="friendly"' in card_embed and 'data-filter="all"' not in card_embed,
+'card section modes': "$_GET['section']" in card_embed and "['all', 'daily', 'arenas']" in card_embed and '.pc-section[hidden]{display:none}' in card_embed,
+'card arena live clock': 'formatCountdown' in card_embed and 'formatStartsIn' in card_embed and 'setInterval(tickArenaClock,1000)' in card_embed,
+'card arena phase styles': '.pc-badge.registration' in card_embed and '.pc-badge.ongoing' in card_embed and '.pc-arena-start-line.registration' in card_embed and '.pc-arena-start-line.ongoing' in card_embed,
+'card league 48h parity': 'pc-league-48h' in card_embed and '48*3600000' in card_embed,
+'card accessible tabs': 'role="tab"' in card_embed and 'setAttribute("aria-selected"' in card_embed,
+'card accessible speed icons': 'aria-label="Bullet"' in card_embed and 'aria-label="Blitz"' in card_embed and 'aria-label="Rapid"' in card_embed,
+'card safe lazy logos': 'loading="lazy"' in card_embed and 'referrerpolicy="no-referrer"' in card_embed and 'club logo' in card_embed,
+'card hover focus': '.pc-card:hover,.pc-card:focus-visible' in card_embed,
+'showcase single-frame live reuse': 'LIVE_MEMORY_TTL_MS=15000' in showcase_core and 'liveMemory=new Map()' in showcase_core and 'BroadcastChannel' not in showcase_core and 'sessionStorage' not in showcase_core and 'navigator.locks' not in showcase_core,
 'trophy exact card border': 'border:1px solid rgba(255,255,255,.09)!important' in trophy,
 'trophy exact radius': 'border-radius:11px!important' in trophy,
 'trophy exact background': 'background:rgba(0,0,0,.18)!important' in trophy,
