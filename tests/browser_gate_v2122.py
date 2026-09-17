@@ -20,6 +20,7 @@ with sync_playwright() as p:
     browser=p.chromium.launch(headless=True, executable_path='/usr/bin/chromium')
     page=browser.new_page()
     page.route('https://p2k.test/**', lambda route: route.fulfill(status=200, content_type='text/html', body='<html></html>'))
+    page.goto('https://p2k.test/tests/browser_fixture.html')
     page.set_content(html)
     page.evaluate('''() => {
       window.P2K_SITE_CONFIG={clubSlug:'promote-to-king',leagueAcronyms:['1WL','TCMAC','PCL'],api:{defaultAttempts:1}};
