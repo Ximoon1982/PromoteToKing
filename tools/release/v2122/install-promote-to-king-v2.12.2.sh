@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Scope-limited, network-independent P2K 2.12.1 -> 2.12.2 overlay installer.
+# Scope-limited, network-independent P2K 2.12.x -> 2.12.2 cumulative overlay installer.
 # Only FILES.list is touched. Mutable state, unrelated application files and
 # system CRON are outside the transaction and must remain byte-for-byte intact.
 readonly DEFAULT_ROOT="/kunden/homepages/43/d141198007/htdocs/PromoteToKing"
@@ -11,8 +11,6 @@ readonly PACKAGE_ROOT=$(cd "$(dirname "$0")" && pwd)
 readonly PAYLOAD="$PACKAGE_ROOT/payload"
 readonly FILES="$PACKAGE_ROOT/FILES.list"
 readonly MODES="$PACKAGE_ROOT/MODES.list"
-readonly BASELINE_HASHES="$PACKAGE_ROOT/BASELINE-FILES.sha256"
-readonly ABSENT_FILES="$PACKAGE_ROOT/ABSENT-FILES.list"
 readonly PACKAGE_MANIFEST="$PACKAGE_ROOT/PACKAGE-MANIFEST.sha256"
 readonly RELEASE_IDENTITY="$PACKAGE_ROOT/RELEASE-IDENTITY.txt"
 WORK=""; STAGE=""; BACKUP=""; TRANSACTION_ACTIVE=0; ROLLBACK_SUCCEEDED=0; PRESERVE_BACKUP=0; CRONTAB_COMMAND=""
@@ -39,44 +37,25 @@ require(){ command -v "$1" >/dev/null 2>&1 || fail "required utility unavailable
 validate_list(){ local f=$1 p; while IFS= read -r p; do [[ -n "$p" ]] || continue; [[ "$p" != /* && "$p" != . && "$p" != .. && "/$p/" != *'/../'* && "/$p/" != *'/./'* ]] || fail "unsafe path in $(basename "$f"): $p"; done <"$f"; }
 
 verify_package(){
-  local req=("$PAYLOAD" "$FILES" "$MODES" "$BASELINE_HASHES" "$ABSENT_FILES" "$PACKAGE_MANIFEST" "$RELEASE_IDENTITY" "$PACKAGE_ROOT/README.md") item
+  local req=("$PAYLOAD" "$FILES" "$MODES" "$PACKAGE_MANIFEST" "$RELEASE_IDENTITY" "$PACKAGE_ROOT/README.md") item
   for item in "${req[@]}"; do [[ -e "$item" ]] || fail "installer package incomplete: $(basename "$item")"; done
-  validate_list "$FILES"; validate_list "$ABSENT_FILES"
+  validate_list "$FILES"
   (cd "$PACKAGE_ROOT" && sha256sum -c --quiet PACKAGE-MANIFEST.sha256) || fail 'package integrity check failed'
   find "$PAYLOAD" -type f -print | sed "s#^$PAYLOAD/##" | sort >"$WORK/payload.actual"
   cmp -s "$FILES" "$WORK/payload.actual" || fail 'payload inventory mismatch'
   awk -F '\t' 'NF!=2 || $2!~/^[0-7][0-7][0-7]$/ {exit 1} {print $1}' "$MODES" >"$WORK/modes.actual" || fail 'MODES.list malformed'
   cmp -s "$FILES" "$WORK/modes.actual" || fail 'mode inventory mismatch'
-  awk '{print $2}' "$BASELINE_HASHES" | sort >"$WORK/baseline.paths"
-  comm -12 "$WORK/baseline.paths" "$ABSENT_FILES" >"$WORK/overlap"
-  [[ ! -s "$WORK/overlap" ]] || fail 'baseline and absent inventories overlap'
-  cat "$WORK/baseline.paths" "$ABSENT_FILES" | sort >"$WORK/scope.paths"
-  cmp -s "$FILES" "$WORK/scope.paths" || fail 'baseline/absent inventories do not exactly cover FILES.list'
-}
-
-verify_source_baseline(){
-  local expected path actual
-  while read -r expected path; do
-    [[ -n "${path:-}" ]] || continue
-    [[ -f "$TARGET/$path" && ! -L "$TARGET/$path" ]] || fail "qualified v2.12.1 baseline file missing: $path"
-    actual=$(sha256sum "$TARGET/$path" | awk '{print $1}')
-    [[ "$actual" == "$expected" ]] || fail "qualified v2.12.1 baseline mismatch: $path"
-  done <"$BASELINE_HASHES"
-  while IFS= read -r path; do
-    [[ -z "$path" || ! -e "$TARGET/$path" ]] || fail "v2.12.2 new path already exists on v2.12.1 target: $path"
-  done <"$ABSENT_FILES"
 }
 
 preflight(){
   [[ "$MODE" == install || "$MODE" == verify || "$MODE" == check ]] || fail 'usage: installer [root] [install|verify|check]'
   [[ -d "$TARGET" && -f "$TARGET/VERSION" ]] || fail 'target or VERSION missing'
-  local u; for u in awk cmp comm cp find grep install mkdir mktemp mv rm sed sha256sum sort tar tr wc; do require "$u"; done
+  local u; for u in awk cmp cp find grep install mkdir mktemp mv rm sed sha256sum sort tar tr wc; do require "$u"; done
   WORK=$(mktemp -d "$TARGET/.p2k-v2122-preflight.XXXXXX")
   verify_package
   OLD_VERSION=$(tr -d '\r\n[:space:]' <"$TARGET/VERSION")
   if [[ "$MODE" == install && "$OLD_VERSION" != 2.12.2 ]]; then
-    [[ "$OLD_VERSION" == 2.12.1 ]] || fail "scope-limited installer requires qualified v2.12.1; found $OLD_VERSION"
-    verify_source_baseline
+    [[ "$OLD_VERSION" == 2.12.0 || "$OLD_VERSION" == 2.12.1 ]] || fail "scope-limited installer requires P2K 2.12.0 or 2.12.1; found $OLD_VERSION"
   fi
 }
 
@@ -94,8 +73,9 @@ verify_installed(){
   key=$(awk -F= '$1=="asset_cache_key" {print substr($0,index($0,"=")+1)}' "$RELEASE_IDENTITY")
   [[ -n "$key" ]] || fail 'asset cache key missing'
   grep -Fq "$key" "$TARGET/assets/js/admin/tool-registry.js" || fail 'admin loader asset key missing'
-  grep -Fq "$key" "$TARGET/server/events-showcase/public/embed.php" || fail 'showcase embed asset key missing'
-  log "v2.12.2 incremental overlay verification passed ($(wc -l <"$FILES") files)."
+  grep -Fq "$key" "$TARGET/server/events-showcase/public/embed.php" || fail 'showcase line embed asset key missing'
+  grep -Fq "$key" "$TARGET/server/events-showcase/public/embed-card.php" || fail 'showcase card embed asset key missing'
+  log "v2.12.2 cumulative overlay verification passed ($(wc -l <"$FILES") files)."
 }
 
 capture_cron(){ CRONTAB_COMMAND=$(command -v crontab || true); if [[ -n "$CRONTAB_COMMAND" ]]; then "$CRONTAB_COMMAND" -l >"$BACKUP/cron.before" 2>/dev/null || : >"$BACKUP/cron.before"; fi; }
@@ -134,6 +114,6 @@ main(){
   verify_installed
   verify_cron
   TRANSACTION_ACTIVE=0
-  log 'Upgraded qualified v2.12.1 to v2.12.2 using the scope-limited incremental overlay; mutable state, unrelated files and CRON were preserved.'
+  log "Upgraded P2K $OLD_VERSION to v2.12.2 using the cumulative 2.12.x incremental overlay; mutable state, unrelated files and CRON were preserved."
 }
 main
