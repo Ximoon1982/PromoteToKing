@@ -2,11 +2,13 @@ from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 admin=(root/'assets/js/admin/events-showcase-v2122.js').read_text()
 embed=(root/'server/events-showcase/public/embed.php').read_text()
+line_runtime=(root/'assets/js/events-showcase-line-v2122.js').read_text()
 card_embed=(root/'server/events-showcase/public/embed-card.php').read_text()
 trophy=(root/'assets/js/admin/trophy-card-presentation-v2122.js').read_text()
 loader=(root/'assets/js/admin/tool-registry.js').read_text()
 
 build=(root/'tools/release/v2122/build-package.sh').read_text()
+stamper=(root/'tools/release/v2122/stamp_asset_cache_key.py').read_text()
 installer=(root/'tools/release/v2122/install-promote-to-king-v2.12.2.sh').read_text()
 qualify=(root/'tools/release/v2122/qualify-installer.sh').read_text()
 readme=(root/'tools/release/v2122/README.md').read_text()
@@ -24,9 +26,9 @@ checks={
 'dual live previews': 'data-es-preview' in admin and 'data-es-card-preview' in admin,
 'public titles': '⚔️ Join multi-club arenas ⚔️' in embed and '⚔️ Join daily matches ⚔️' in embed,
 'public selector no all': 'data-filter="league"' in embed and 'data-filter="friendly"' in embed and 'data-filter="all"' not in embed,
-'line max 4 daily': 'slice(0, 4)' in embed,
-'48h league red': 'pm-league-48h' in embed and '48 * 3600000' in embed,
-'no recruitment tooltip': 'recruitment-need' not in embed.lower(),
+'line max 4 daily': 'slice(0, 4)' in line_runtime,
+'48h league red': 'pm-league-48h' in line_runtime and '48 * 3600000' in line_runtime,
+'no recruitment tooltip': 'recruitment-need' not in line_runtime.lower(),
 'card v18 r4 titles': '⚔️ Arenas ⚔️' in card_embed and '⚔️ Daily Matches ⚔️' in card_embed,
 'card width 260': 'width:260px' in card_embed and 'grid-template-columns:repeat(2,minmax(0,1fr))' in card_embed,
 'card max 2 arenas': '.slice(0,2)' in card_embed,
@@ -39,7 +41,7 @@ checks={
 'trophy exact square art': 'aspect-ratio:1/1!important' in trophy,
 'trophy exact title': 'color:#f6b73c!important' in trophy and 'font-size:1.08rem!important' in trophy,
 'trophy title border suppressed': '[data-r538-title]' in trophy and 'border-bottom:0!important' in trophy,
-'loader immutable key': 'p2k-2.12.2-src-79c27cc76eb1f256' in loader,
+'loader cache-versioned assets': 'match-recruitment-access-v2121.js?v=' in loader and 'events-showcase-v2122.js?v=' in loader and 'trophy-card-presentation-v2122.js' in loader,
 'loader showcase': 'events-showcase-v2122.js' in loader,
 'loader trophy fix': 'trophy-card-presentation-v2122.js' in loader,
 'incremental cumulative base': 'BASE=c52fd68dbcd8fdb7cca8a1ab63ee6dd6da1e0303' in build and '2.12.0, 2.12.1 or 2.12.2' in installer,
@@ -48,8 +50,10 @@ checks={
 'incremental degraded repair': ': >"$t/assets/js/admin/tool-registry.js"' in qualify and 'does **not** require byte-identical source files' in readme,
 'incremental partial 2.12.2 self-heal': 'stale partial-overlay file' in qualify and 'partial-2.12.2 self-heal' in qualify,
 'incremental no full convergence': 'SUPPORTED_TREES' not in build and 'enumerate_installed_tree' not in installer,
-'embed immutable key': '?v=p2k-2.12.2-src-79c27cc76eb1f256' in embed,
-'card embed immutable key': '?v=p2k-2.12.2-src-79c27cc76eb1f256' in card_embed,
+'embed cache-versioned assets': 'recruitment-lineup-core.js?v=' in embed and 'events-showcase-core.js?v=' in embed and 'events-showcase-line-v2122.js?v=' in embed and 'events-showcase-line-v2122.css?v=' in embed,
+'card embed cache-versioned assets': 'recruitment-lineup-core.js?v=' in card_embed and 'events-showcase-core.js?v=' in card_embed,
+'release immutable asset derivation': 'HEAD=$(git -C "$ROOT" rev-parse HEAD)' in build and 'BUILD_ID=' in build and "sys.argv[1]+'\\0'+sys.argv[2]" in build and 'ASSET_KEY="p2k-2.12.2-${HEAD:0:12}-$DIGEST"' in build and 'python3 "$STAMPER" "$PACKAGE/payload" "$ASSET_KEY"' in build,
+'release stamper covers source keys': 'attr=re.compile' in stamper and 'standard=re.compile' in stamper and 'source=re.compile' in stamper and "{'.html','.htm','.js','.php'}" in stamper,
 }
 failed=[k for k,v in checks.items() if not v]
 for k,v in checks.items(): print(('PASS' if v else 'FAIL'),k)
