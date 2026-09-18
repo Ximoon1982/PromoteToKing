@@ -48,12 +48,15 @@ jobs:
             tools/release/v2122/stamp_asset_cache_key.py \
             tests/browser_gate_v2122.py \
             tests/browser_gate_events_showcase_card_v2122.py \
+            tests/browser_gate_events_showcase_admin_v2122.py \
             tests/browser_gate_recruit_match_ready_v2122.py \
             tests/browser_gate_match_recruitment_admin_v2122.py
       - name: Events Showcase and Trophy browser gate
         run: python tests/browser_gate_v2122.py
       - name: Events Showcase card renderer browser gate
         run: python tests/browser_gate_events_showcase_card_v2122.py
+      - name: Events Showcase admin editor browser gate
+        run: python tests/browser_gate_events_showcase_admin_v2122.py
       - name: Match Recruitment controller readiness browser gate
         run: python tests/browser_gate_recruit_match_ready_v2122.py
       - name: Match Recruitment native admin detail browser gate
