@@ -74,5 +74,34 @@ session_write_close();
 
 if (!is_file($isolated . '/sess_' . $legacyId)) fail_test('Short-lived application session interfered with isolated P2KOAUTH storage.');
 
+// Simulate subsequent requests from each existing bridge consumer. Age a
+// control file beyond eight hours and prove that real GC removes only that file.
+foreach (['DMAADMIN', 'PCLSBAUTH', 'OAAUTH', 'P2KTPSESSID'] as $appName) {
+    session_id($legacyId);
+    \P2K\TeamPoints\OAuthSession::start();
+    $params = session_get_cookie_params();
+    if ($params['lifetime'] !== 604800 || !$params['secure'] || !$params['httponly'] || $params['samesite'] !== 'Lax') fail_test('OAuth cookie protections changed.');
+    if (($_SESSION['oauth_csrf'] ?? '') !== 'legacy-csrf') fail_test('Bridge lost the existing CSRF identity.');
+    $_SESSION['oauth_access'] = ['access_token'=>'test-only-token', 'expires_at'=>time()+3600];
+    $_SESSION['oauth_user'] = ['username'=>'BridgeUser'];
+    if (\P2K\TeamPoints\OAuthSession::authenticatedUsername(true) !== 'bridgeuser') fail_test('OAuth bridge lost authenticated identity.');
+    if (session_save_path() !== $legacy || (int)ini_get('session.gc_maxlifetime') !== 28800) fail_test('Bridge failed to restore short-app session settings.');
+    $oauthFile = $isolated . '/sess_' . $legacyId;
+    $control = $legacy . '/sess_gccontrol';
+    file_put_contents($control, '');
+    touch($control, time()-32400);
+    touch($oauthFile, time()-32400);
+    session_name($appName);
+    session_id('app' . bin2hex(random_bytes(12)));
+    if (!session_start()) fail_test('Unable to open bridge consumer session.');
+    if (session_gc() === false) fail_test('Unable to run short-app garbage collection.');
+    session_write_close();
+    clearstatcache();
+    if (is_file($control)) fail_test('Short-app GC did not remove the expired control session.');
+    if (!is_file($oauthFile)) fail_test('Short-app GC removed isolated OAuth identity.');
+    session_id($legacyId);
+    if (\P2K\TeamPoints\OAuthSession::authenticatedUsername(true) !== 'bridgeuser') fail_test('OAuth identity did not survive short-app GC.');
+}
+
 remove_tree($base);
 echo "Validated P2KOAUTH isolated storage, legacy migration and caller runtime restoration.\n";

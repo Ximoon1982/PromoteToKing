@@ -275,6 +275,7 @@ state.adminRecentMatchesLoading = true;
 renderAdminPriorityCard();
 try {
 const recent = await loadJSON("server/team-points/public/recent-matches.php?hours=24", { credentials: "same-origin" });
+if (recent?.ok === false || !Array.isArray(recent?.matches)) throw new Error("Invalid recent-match response");
 state.adminRecentMatches = Array.isArray(recent?.matches) ? recent.matches : [];
 } catch (_) { state.adminRecentMatches = null; }
 finally {

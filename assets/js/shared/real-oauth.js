@@ -88,6 +88,7 @@
       const response = await fetch(`${ENDPOINT}?action=session`, { credentials: "same-origin", cache: "no-store", headers: { Accept: "application/json" } });
       const payload = await response.json();
       if (!response.ok || payload?.ok === false) throw new Error(payload?.error?.message || `HTTP ${response.status}`);
+      if (typeof payload?.authenticated !== "boolean" || (payload.authenticated && !normalizeSession(payload.profile))) throw new Error("Invalid OAuth session response");
       sessionStatusUnavailable = false;
       enabled = payload.enabled !== false; csrf = String(payload.csrf || "");
       session = payload.authenticated && payload.profile ? normalizeSession(payload.profile) : null;
@@ -104,10 +105,12 @@
         return refreshSession(attempt + 1);
       }
       sessionStatusUnavailable = true;
-      enabled = false; session = null; adminBootstrap = ""; adminBootstrapReceivedAt = 0; syncApiMode();
+      // A failed status check is not an authoritative logout. Retain the last
+      // verified identity; protected requests still authenticate on the server.
+      enabled = false; syncApiMode();
       activateSurface();
       if (apiInstalled) { notify(); queueRender(); }
-      console.warn("Real OAuth session unavailable.", error); return null;
+      console.warn("Real OAuth session unavailable.", error); return session;
     } finally {
       if (terminalAttempt && !readySettled) { readySettled = true; readyResolve?.(session ? { ...session } : null); }
     }
