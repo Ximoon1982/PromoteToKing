@@ -276,12 +276,9 @@ renderAdminPriorityCard();
 try {
 const recent = await loadJSON("server/team-points/public/recent-matches.php?hours=24", { credentials: "same-origin" });
 state.adminRecentMatches = Array.isArray(recent?.matches) ? recent.matches : [];
+} catch (_) { state.adminRecentMatches = null; }
+finally {
 state.adminRecentMatchesLoadedAt = Date.now();
-} catch (error) {
-console.warn("Unable to load recently discovered matches.", error);
-state.adminRecentMatches = null;
-state.adminRecentMatchesLoadedAt = Date.now();
-} finally {
 state.adminRecentMatchesLoading = false;
 renderAdminPriorityCard();
 }
