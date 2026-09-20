@@ -26,6 +26,7 @@
   let adminBootstrap = "";
   let adminBootstrapReceivedAt = 0;
   let enabled = true;
+  let sessionStatusUnavailable = false;
   let modal = null;
   let lastFocused = null;
   let renderQueued = false;
@@ -81,11 +82,13 @@
     window.addEventListener("pagehide", () => observer?.disconnect(), { once: true });
   }
 
-  async function refreshSession() {
+  async function refreshSession(attempt = 0) {
+    let terminalAttempt = true;
     try {
       const response = await fetch(`${ENDPOINT}?action=session`, { credentials: "same-origin", cache: "no-store", headers: { Accept: "application/json" } });
       const payload = await response.json();
       if (!response.ok || payload?.ok === false) throw new Error(payload?.error?.message || `HTTP ${response.status}`);
+      sessionStatusUnavailable = false;
       enabled = payload.enabled !== false; csrf = String(payload.csrf || "");
       session = payload.authenticated && payload.profile ? normalizeSession(payload.profile) : null;
       adminBootstrap = session ? String(payload.admin_bootstrap || "") : "";
@@ -95,12 +98,18 @@
       if (apiInstalled) { notify(); queueRender(); }
       return session;
     } catch (error) {
+      if (attempt < 1) {
+        terminalAttempt = false;
+        await new Promise(resolve => window.setTimeout(resolve, 250));
+        return refreshSession(attempt + 1);
+      }
+      sessionStatusUnavailable = true;
       enabled = false; session = null; adminBootstrap = ""; adminBootstrapReceivedAt = 0; syncApiMode();
       activateSurface();
       if (apiInstalled) { notify(); queueRender(); }
       console.warn("Real OAuth session unavailable.", error); return null;
     } finally {
-      if (!readySettled) { readySettled = true; readyResolve?.(session ? { ...session } : null); }
+      if (terminalAttempt && !readySettled) { readySettled = true; readyResolve?.(session ? { ...session } : null); }
     }
   }
 
@@ -131,6 +140,7 @@
     return `${u.pathname}${u.search}`;
   }
   function startLogin() {
+    if (sessionStatusUnavailable) { window.alert("Chess.com OAuth is temporarily unavailable. Please retry shortly."); return; }
     if (!enabled) { window.alert("Chess.com OAuth is not configured on this host."); return; }
     const url = new URL(ENDPOINT); url.searchParams.set("action", "login"); url.searchParams.set("return", returnPath()); window.location.assign(url.href);
   }
@@ -149,9 +159,9 @@
   function queueRender() { if (!apiInstalled || renderQueued) return; renderQueued = true; requestAnimationFrame(() => { renderQueued = false; ensureHeaderControl(); renderHeader(); bindAssistant(); }); }
   function renderHeader() {
     const host = document.getElementById("p2kAuthHost"); if (!host) return;
-    const sig = session ? `in:${session.username}:${session.avatar}:view:${requestedDisplayName}` : `out:${enabled}`; if (host.dataset.p2kAuthSignature === sig) return;
+    const sig = session ? `in:${session.username}:${session.avatar}:view:${requestedDisplayName}` : `out:${enabled}:unavailable:${sessionStatusUnavailable}`; if (host.dataset.p2kAuthSignature === sig) return;
     host.dataset.p2kAuthSignature = sig; host.replaceChildren();
-    if (!session) { const b = document.createElement("button"); b.type = "button"; b.className = "p2k-auth-login-button"; b.textContent = "Log in with Chess.com"; b.title = "Log in securely with Chess.com OAuth."; b.disabled = !enabled; b.addEventListener("click", startLogin); host.appendChild(b); return; }
+    if (!session) { const b = document.createElement("button"); b.type = "button"; b.className = "p2k-auth-login-button"; b.textContent = sessionStatusUnavailable ? "Authentication temporarily unavailable" : "Log in with Chess.com"; b.title = sessionStatusUnavailable ? "The P2K OAuth session endpoint could not be reached. Reload or retry shortly." : "Log in securely with Chess.com OAuth."; b.disabled = !enabled || sessionStatusUnavailable; b.addEventListener("click", startLogin); host.appendChild(b); return; }
     const b = document.createElement("button"); b.type = "button"; b.className = "p2k-auth-avatar-button"; b.title = `${session.username} — open account details`; b.setAttribute("aria-label", `${session.username} account details`); b.addEventListener("click", openModal); b.appendChild(createAvatar(session, "p2k-auth-avatar")); host.appendChild(b);
     if (requestedDisplayName && requestedDisplayName.toLowerCase() !== session.username.toLowerCase()) { const badge=document.createElement("span"); badge.className="p2k-auth-viewing-as"; badge.textContent=`Viewing as ${requestedDisplayName}`; badge.title=`Display-only preview. Authenticated as ${session.username}.`; host.appendChild(badge); }
   }

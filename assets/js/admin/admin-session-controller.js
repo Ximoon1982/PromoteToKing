@@ -197,7 +197,7 @@ status.textContent = !hasData
 ? `${number(attentionCount)} item${attentionCount === 1 ? "" : "s"} need attention`
 : "No urgent action";
 card.classList.toggle("is-critical", hasBad);
-const newest = [payload?.generatedAt, state.adminPriorityHealthLoadedAt ? new Date(state.adminPriorityHealthLoadedAt).toISOString() : ""].filter(Boolean).sort().at(-1);
+const newest = [payload?.generatedAt, state.adminPriorityHealthLoadedAt ? new Date(state.adminPriorityHealthLoadedAt).toISOString() : "", state.adminRecentMatchesLoadedAt ? new Date(state.adminRecentMatchesLoadedAt).toISOString() : ""].filter(Boolean).sort().at(-1);
 setText("dashboardAdminPriorityUpdated", newest ? `Updated ${formatRelative(newest)}` : "OAuth/local admin");
 const queueHost = byId("dashboardAdminPriorityQueue");
 queueHost.replaceChildren();
@@ -265,8 +265,31 @@ healthHost.appendChild(empty);
 health.forEach(item => healthHost.appendChild(adminPriorityHealthRow(item)));
 }
 }
+async function loadAdminRecentMatches({ force = false } = {}) {
+if (!state.admin || state.adminRecentMatchesLoading) return;
+if (!force && state.adminRecentMatchesLoadedAt && Date.now() - state.adminRecentMatchesLoadedAt < 60 * 1000) {
+renderAdminPriorityCard();
+return;
+}
+state.adminRecentMatchesLoading = true;
+renderAdminPriorityCard();
+try {
+const recent = await loadJSON("server/team-points/public/recent-matches.php?hours=24", { credentials: "same-origin" });
+state.adminRecentMatches = Array.isArray(recent?.matches) ? recent.matches : [];
+state.adminRecentMatchesLoadedAt = Date.now();
+} catch (error) {
+console.warn("Unable to load recently discovered matches.", error);
+state.adminRecentMatches = null;
+state.adminRecentMatchesLoadedAt = Date.now();
+} finally {
+state.adminRecentMatchesLoading = false;
+renderAdminPriorityCard();
+}
+}
 async function loadAdminPriorityHealth({ force = false } = {}) {
-if (!state.admin || state.adminPriorityHealthLoading) return;
+if (!state.admin) return;
+void loadAdminRecentMatches({ force });
+if (state.adminPriorityHealthLoading) return;
 if (!force && state.adminPriorityHealthLoadedAt && Date.now() - state.adminPriorityHealthLoadedAt < 60 * 1000) {
 renderAdminPriorityCard();
 return;
@@ -275,14 +298,13 @@ state.adminPriorityHealthLoading = true;
 renderAdminPriorityCard();
 try {
 if (!window.P2K_TEAM_POINTS_CLIENT?.endpointRequest) throw new Error("Unified task control is unavailable.");
-const payload = await window.P2K_TEAM_POINTS_CLIENT.endpointRequest("server/control/public/api.php", {
+const [payload, greenRuntime] = await Promise.all([
+window.P2K_TEAM_POINTS_CLIENT.endpointRequest("server/control/public/api.php", {
 action: "status",
 username: state.session?.username || window.P2K_AUTH?.getSession?.()?.username || ""
-});
-let greenRuntime = null;
-try {
-greenRuntime = await window.P2K_TEAM_POINTS_CLIENT.endpointRequest("server/team-points-green/public/api.php", { action: "runtime-health" });
-} catch (_) { greenRuntime = null; }
+}),
+window.P2K_TEAM_POINTS_CLIENT.endpointRequest("server/team-points-green/public/api.php", { action: "runtime-health" }).catch(() => null)
+]);
 const effectiveTeamPointsSource = String(greenRuntime?.effective_public_source || "blue").toLowerCase();
 const allTasks = Array.isArray(payload?.tasks) ? payload.tasks : [];
 const tasks = effectiveTeamPointsSource === "green"
@@ -331,6 +353,18 @@ mark: "●",
 url: integratedAdminHref("tasks")
 });
 }
+const baseHealth = [...state.adminPriorityHealth];
+const supplementalHealth = {};
+const publishHealth = () => {
+state.adminPriorityHealth = [
+...(supplementalHealth.storage ? [supplementalHealth.storage] : []),
+...(supplementalHealth.mca ? [supplementalHealth.mca] : []),
+...baseHealth
+];
+renderAdminPriorityCard();
+};
+renderAdminPriorityCard();
+const storageTask = (async () => {
 try {
 const storagePayload = await loadJSON("server/team-points/public/storage-metrics.php", { credentials: "same-origin" });
 const storage = storagePayload?.storage || {}, core = storage?.databases?.core || {}, analytics = storage?.databases?.analytics || {}, fs = storage?.filesystem || {};
@@ -338,16 +372,23 @@ const ratios = [core.ratio, analytics.ratio, fs.ratio].filter(value => Number.is
 const worst = ratios.length ? Math.max(...ratios) : null;
 const tone = worst === null ? "warn" : worst >= .8 ? "bad" : worst >= .7 ? "warn" : "good";
 const pct = value => Number.isFinite(Number(value)) ? `${Number(value).toFixed(1)}%` : "unknown";
-state.adminPriorityHealth.unshift({ name: "Storage capacity", detail: `Core ${pct(core.percent)} · Analytics ${pct(analytics.percent)} · filesystem ${pct(fs.percent)}`, tone, mark: "●", url: integratedAdminHref("storage") });
+supplementalHealth.storage = { name: "Storage capacity", detail: `Core ${pct(core.percent)} · Analytics ${pct(analytics.percent)} · filesystem ${pct(fs.percent)}`, tone, mark: "●", url: integratedAdminHref("storage") };
 } catch (storageError) {
-state.adminPriorityHealth.unshift({ name: "Storage capacity", detail: `Storage metrics unavailable: ${storageError?.message || storageError}`, tone: "warn", mark: "●", url: integratedAdminHref("storage") });
+supplementalHealth.storage = { name: "Storage capacity", detail: `Storage metrics unavailable: ${storageError?.message || storageError}`, tone: "warn", mark: "●", url: integratedAdminHref("storage") };
 }
+publishHealth();
+})();
+const mcaTask = (async () => {
 try {
 const live = await loadJSON("server/team-points/public/live-ranks.php", { credentials: "same-origin" });
 const finished = live?.processing?.finished_at || null;
-state.adminPriorityHealth.unshift({ name: "MCA data import", detail: finished ? `Last completed import ${formatRelative(`${String(finished).replace(" ","T")}Z`)}` : "No MCA import has completed yet", tone: finished ? "good" : "warn", mark: "●", url: integratedAdminHref("live-ranks") });
-} catch (mcaError) { state.adminPriorityHealth.unshift({ name:"MCA data import", detail:"Import status unavailable", tone:"warn", mark:"●", url:integratedAdminHref("live-ranks") }); }
-try { const recent = await loadJSON("server/team-points/public/recent-matches.php?hours=24", {credentials:"same-origin"}); state.adminRecentMatches = Array.isArray(recent?.matches) ? recent.matches : []; } catch (_) { state.adminRecentMatches = null; }
+supplementalHealth.mca = { name: "MCA data import", detail: finished ? `Last completed import ${formatRelative(`${String(finished).replace(" ","T")}Z`)}` : "No MCA import has completed yet", tone: finished ? "good" : "warn", mark: "●", url: integratedAdminHref("live-ranks") };
+} catch (_) {
+supplementalHealth.mca = { name:"MCA data import", detail:"Import status unavailable", tone:"warn", mark:"●", url:integratedAdminHref("live-ranks") };
+}
+publishHealth();
+})();
+await Promise.allSettled([storageTask, mcaTask]);
 state.adminPriorityHealthLoadedAt = Date.now();
 } catch (error) {
 state.adminPriorityHealth = [{ name: "Scheduled tasks", detail: error?.message || "Unable to read unified task health", tone: "warn", mark: "●", url: integratedAdminHref("tasks") }];

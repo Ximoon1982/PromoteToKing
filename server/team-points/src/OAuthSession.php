@@ -11,6 +11,11 @@ final class OAuthSession
     private const VERSION = '2.9.22.4';
     private const SESSION_RETENTION_SECONDS = 604800; // Seven days of inactivity; refreshed on every same-origin session request.
     private const TOKEN_REFRESH_LEEWAY_SECONDS = 300;
+    private static ?array $sessionRuntimeBackup = null;
+    private static bool $sessionCookiePresentAtStart = false;
+    private static ?bool $sessionBackingPresentAtStart = null;
+    private static bool $sessionLegacyMigratedAtStart = false;
+    private static bool $sessionStoreIsolated = false;
 
     public static function config(): array
     {
@@ -33,18 +38,130 @@ final class OAuthSession
         return ($cfg['name']??'')!=='' && ($cfg['client_id']??'')!=='' && ($cfg['redirect_url']??'')!=='';
     }
 
+    private static function oauthSessionDirectory(): string
+    {
+        $runtime = '';
+        try {
+            $config = \p2k_tp_config();
+            $storage = is_array($config['storage'] ?? null) ? $config['storage'] : [];
+            $runtime = rtrim((string)($storage['runtime_dir'] ?? ''), '/\\');
+        } catch (\Throwable) {
+            $runtime = '';
+        }
+        if ($runtime === '') $runtime = dirname(__DIR__, 3) . '/data/runtime-v280';
+        $dir = $runtime . '/sessions/oauth';
+        if (!is_dir($dir) && !@mkdir($dir, 0700, true) && !is_dir($dir)) {
+            throw new \RuntimeException('Unable to prepare protected OAuth session storage.');
+        }
+        @chmod($dir, 0700);
+        return $dir;
+    }
+
+    private static function fileSessionPath(string $savePath, string $sessionId): string
+    {
+        if (!preg_match('/^[A-Za-z0-9,_-]{1,256}$/D', $sessionId)) return '';
+        $parts = explode(';', trim($savePath));
+        $base = trim((string)array_pop($parts));
+        if ($base === '') $base = sys_get_temp_dir();
+        $depth = isset($parts[0]) && ctype_digit((string)$parts[0]) ? min(5, max(0, (int)$parts[0])) : 0;
+        for ($i = 0; $i < $depth; $i++) {
+            if (!isset($sessionId[$i])) return '';
+            $base .= DIRECTORY_SEPARATOR . $sessionId[$i];
+        }
+        return rtrim($base, '/\\') . DIRECTORY_SEPARATOR . 'sess_' . $sessionId;
+    }
+
+    private static function migrateLegacySessionFile(string $source, string $target): bool
+    {
+        if ($source === '' || $target === '' || $source === $target || is_file($target) || !is_file($source)) return false;
+        $in = @fopen($source, 'rb');
+        if ($in === false) return false;
+        if (!@flock($in, LOCK_SH)) {
+            fclose($in);
+            return false;
+        }
+        $out = @fopen($target, 'x+b');
+        if ($out === false) {
+            @flock($in, LOCK_UN);
+            fclose($in);
+            return is_file($target);
+        }
+        $copied = stream_copy_to_stream($in, $out);
+        @fflush($out);
+        @chmod($target, 0600);
+        fclose($out);
+        @flock($in, LOCK_UN);
+        fclose($in);
+        if ($copied === false) {
+            @unlink($target);
+            return false;
+        }
+        return true;
+    }
+
+    private static function restoreSessionRuntime(): void
+    {
+        if (self::$sessionRuntimeBackup === null || session_status() === PHP_SESSION_ACTIVE) return;
+        $backup = self::$sessionRuntimeBackup;
+        self::$sessionRuntimeBackup = null;
+        @session_save_path((string)($backup['save_path'] ?? ''));
+        $gc = (string)($backup['gc_maxlifetime'] ?? '');
+        if ($gc !== '') @ini_set('session.gc_maxlifetime', $gc);
+    }
+
+    private static function closeSession(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+        self::restoreSessionRuntime();
+    }
+
     public static function start(): void
     {
-        if (session_status()===PHP_SESSION_ACTIVE) return;
+        if (session_status() === PHP_SESSION_ACTIVE) return;
         $forwarded=strtolower(trim(explode(',',(string)($_SERVER['HTTP_X_FORWARDED_PROTO']??''))[0]??''));
         $secure=(!empty($_SERVER['HTTPS'])&&strtolower((string)$_SERVER['HTTPS'])!=='off')||$forwarded==='https';
+        $legacySavePath = (string)session_save_path();
+        if (self::$sessionRuntimeBackup === null) {
+            self::$sessionRuntimeBackup = [
+                'save_path'=>$legacySavePath,
+                'gc_maxlifetime'=>(string)(ini_get('session.gc_maxlifetime') ?: ''),
+            ];
+        }
+        self::$sessionCookiePresentAtStart = trim((string)($_COOKIE[self::SESSION_NAME] ?? '')) !== '';
+        self::$sessionBackingPresentAtStart = null;
+        self::$sessionLegacyMigratedAtStart = false;
+        self::$sessionStoreIsolated = false;
+        $cookieId = trim((string)($_COOKIE[self::SESSION_NAME] ?? ''));
+
         session_name(self::SESSION_NAME);
         // Persist only the opaque session id across browser restarts. Both PHP's
         // server-side retention and the browser cookie use the same seven-day
         // inactivity window; the explicit Set-Cookie below makes it sliding.
         @ini_set('session.gc_maxlifetime',(string)self::SESSION_RETENTION_SECONDS);
+        if (strtolower(trim((string)ini_get('session.save_handler'))) === 'files') {
+            $isolatedPath = self::oauthSessionDirectory();
+            if ($cookieId !== '') {
+                $isolatedFile = self::fileSessionPath($isolatedPath, $cookieId);
+                $legacyFile = self::fileSessionPath($legacySavePath, $cookieId);
+                $isolatedPresent = $isolatedFile !== '' && is_file($isolatedFile);
+                $legacyPresent = $legacyFile !== '' && $legacyFile !== $isolatedFile && is_file($legacyFile);
+                self::$sessionBackingPresentAtStart = $isolatedPresent || $legacyPresent;
+                if (!$isolatedPresent && $legacyPresent) {
+                    self::$sessionLegacyMigratedAtStart = self::migrateLegacySessionFile($legacyFile, $isolatedFile);
+                }
+            }
+            @session_save_path($isolatedPath);
+            self::$sessionStoreIsolated = (string)session_save_path() === $isolatedPath;
+            if (!self::$sessionStoreIsolated) {
+                self::restoreSessionRuntime();
+                throw new \RuntimeException('Unable to isolate OAuth session storage.');
+            }
+        }
         session_set_cookie_params(['lifetime'=>self::SESSION_RETENTION_SECONDS,'path'=>'/','secure'=>$secure,'httponly'=>true,'samesite'=>'Lax']);
-        session_start();
+        if (!session_start()) {
+            self::restoreSessionRuntime();
+            throw new \RuntimeException('Unable to open the OAuth session.');
+        }
         // session_start() does not reliably re-issue an existing persistent cookie
         // on every host. Refresh it explicitly after each successful session open,
         // so activity moves the seven-day expiry without exposing the Bearer token.
@@ -61,6 +178,8 @@ final class OAuthSession
     {
         self::start();
         $cfg=self::config();
+        $accessBefore=is_array($_SESSION['oauth_access']??null)?$_SESSION['oauth_access']:[];
+        $refreshTokenAvailable=trim((string)($accessBefore['refresh_token']??''))!=='';
         $token=self::accessToken();
         $user=is_array($_SESSION['oauth_user']??null)?$_SESSION['oauth_user']:[];
         $profile=is_array($_SESSION['oauth_profile']??null)?$_SESSION['oauth_profile']:[];
@@ -80,6 +199,15 @@ final class OAuthSession
             // proves only the real OAuth username; session.php still re-checks
             // current club-admin membership before issuing P2KTPSESSID.
             'admin_bootstrap'=>$authenticated?self::adminBootstrapAssertion($username,(int)($user['expires_at']??0)):'',
+            'persistence'=>[
+                'retention_seconds'=>self::SESSION_RETENTION_SECONDS,
+                'sliding'=>true,
+                'store_isolated'=>self::$sessionStoreIsolated,
+                'cookie_present_at_start'=>self::$sessionCookiePresentAtStart,
+                'backing_session_present_at_start'=>self::$sessionBackingPresentAtStart,
+                'legacy_session_migrated'=>self::$sessionLegacyMigratedAtStart,
+                'refresh_token_available'=>$refreshTokenAvailable,
+            ],
             'transport'=>['batch_available'=>$curl,'http2_capable'=>self::curlHttp2Capable(),'max_concurrency'=>$curl?self::runtimeOpenFileCap():1],
         ];
     }
@@ -97,7 +225,7 @@ final class OAuthSession
         $claims = is_array($_SESSION['oauth_claims'] ?? null) ? $_SESSION['oauth_claims'] : [];
         $username = trim((string)($user['username'] ?? $profile['username'] ?? $claims['preferred_username'] ?? ''));
         if ($token === '' || $username === '') $username = '';
-        if ($closeSession && session_status() === PHP_SESSION_ACTIVE) session_write_close();
+        if ($closeSession) self::closeSession();
         return strtolower($username);
     }
 
@@ -237,7 +365,7 @@ final class OAuthSession
             $normalized[]=['id'=>(string)($row['id']??$i),'url'=>$url,'headers'=>$headers];
         }
         if($normalized===[])return ['ok'=>true,'mode'=>'oauth-bearer','results'=>[],'processed'=>0,'successes'=>0,'rate_429'=>0,'errors'=>0,'elapsed_ms'=>0,'cps'=>0,'concurrency'=>0,'peak_in_flight'=>0,'transport_cap'=>self::runtimeOpenFileCap(),'transport_capacity'=>self::runtimeOpenFileCap(),'batch_size'=>0,'requested_rate_cps'=>$requestedRateCps,'rate_cps'=>$requestedRateCps];
-        session_write_close();
+        self::closeSession();
         return self::multiGet($normalized,$token,$requestedConcurrency,$requestedRateCps,$trafficClass);
     }
 
@@ -252,14 +380,14 @@ final class OAuthSession
         if(PHP_SAPI==='cli'||empty($_COOKIE[self::SESSION_NAME]))return null;
         if(session_status()===PHP_SESSION_ACTIVE&&session_name()!==self::SESSION_NAME)session_write_close();
         self::start();$token=self::accessToken();
-        if($token===''){session_write_close();return null;}
+        if($token===''){self::closeSession();return null;}
         $normalized=[];
         foreach(array_slice($requests,0,512) as $i=>$row){
             if(!is_array($row))continue;$url=self::allowedPubApiUrl((string)($row['url']??''));if($url==='')continue;
             $headers=[];foreach((array)($row['headers']??[]) as $name=>$value){$n=strtolower(trim((string)$name));if(in_array($n,['if-none-match','if-modified-since','accept'],true))$headers[$n]=trim((string)$value);}
             $normalized[]=['id'=>(string)($row['id']??$i),'url'=>$url,'headers'=>$headers];
         }
-        session_write_close();
+        self::closeSession();
         if($normalized===[])return ['ok'=>true,'mode'=>'oauth-bearer','results'=>[],'processed'=>0,'successes'=>0,'rate_429'=>0,'errors'=>0,'elapsed_ms'=>0,'cps'=>0,'concurrency'=>0,'peak_in_flight'=>0,'transport_cap'=>self::runtimeOpenFileCap(),'transport_capacity'=>self::runtimeOpenFileCap(),'batch_size'=>0,'requested_rate_cps'=>$requestedRateCps,'rate_cps'=>$requestedRateCps];
         return self::multiGet($normalized,$token,$requestedConcurrency,$requestedRateCps,$trafficClass);
     }

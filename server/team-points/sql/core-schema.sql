@@ -150,6 +150,7 @@ CREATE TABLE IF NOT EXISTS p2k_tp_match_metadata (
   KEY idx_tp_match_metadata_opponent (club_slug,opponent_slug,status),
   KEY idx_tp_match_metadata_status (club_slug,status,match_id),
   KEY idx_tp_match_detail_due (club_slug,status,next_detail_check_at),
+  KEY idx_tp_match_discovered (club_slug,first_discovered_at),
   KEY idx_tp_match_time (club_slug,start_time,end_time),
   KEY idx_tp_match_result (club_slug,result,end_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

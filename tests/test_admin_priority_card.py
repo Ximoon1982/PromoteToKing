@@ -6,6 +6,8 @@ ui = (ROOT / 'ui-v2.html').read_text(encoding='utf-8')
 dashboard = dashboard_source()
 finder = (ROOT / 'assets/js/pages/find-match.js').read_text(encoding='utf-8')
 css = (ROOT / 'assets/css/dashboard-v2.css').read_text(encoding='utf-8')
+recent_endpoint = (ROOT / 'server/team-points/public/recent-matches.php').read_text(encoding='utf-8')
+core_schema = (ROOT / 'server/team-points/sql/core-schema.sql').read_text(encoding='utf-8')
 
 assert 'id="dashboardAdminPriorityCard"' not in ui, 'Administrator card content must not ship in public HTML.'
 assert 'function ensureAdminPriorityCard()' in dashboard
@@ -18,8 +20,22 @@ assert 'server/control/public/api.php' in dashboard
 assert 'function integratedAdminHref(tool, extra = {})' in dashboard and 'url.searchParams.set("page", "administration")' in dashboard
 assert 'expected === 300' in dashboard and 'expected === 3600' in dashboard and 'expected === 86400' in dashboard
 assert 'dashboardAdminQueue(processedCache?.entries || matches)' in finder, 'Priority queue must reuse the existing Match Assistant scan.'
-for label in ('Below minimum', 'Start within 48 h', 'League recruitment', 'Operational exceptions'):
+for label in ('Below minimum', 'Start within 48 h', 'League recruitment', 'Operational exceptions', 'New matches · 24 h'):
     assert label in dashboard
+assert 'async function loadAdminRecentMatches({ force = false } = {})' in dashboard
+recent_start = dashboard.index('async function loadAdminRecentMatches({ force = false } = {})')
+health_start = dashboard.index('async function loadAdminPriorityHealth({ force = false } = {})')
+health_end = dashboard.index('function renderAdminApiThroughput', health_start)
+assert recent_start < health_start
+assert dashboard.count('server/team-points/public/recent-matches.php?hours=24') == 1
+health = dashboard[health_start:health_end]
+assert 'void loadAdminRecentMatches({ force });' in health
+assert health.index('void loadAdminRecentMatches({ force });') < health.index('state.adminPriorityHealthLoading')
+assert 'const [payload, greenRuntime] = await Promise.all([' in health
+assert 'await Promise.allSettled([storageTask, mcaTask]);' in health
+assert health.index('renderAdminPriorityCard();\nconst storageTask') < health.index('await Promise.allSettled([storageTask, mcaTask]);')
+assert recent_endpoint.count('schemaInstalled()') == 1
+assert 'KEY idx_tp_match_discovered (club_slug,first_discovered_at)' in core_schema
 assert '.dashboard-admin-priority-card' in css
 assert '#ef5c4d' in css or '#ff6152' in css
 print('Validated-admin priority queue card tests passed.')

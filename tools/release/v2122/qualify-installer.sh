@@ -88,6 +88,11 @@ qualify_source(){
 [[ -f "$PACKAGE/payload/server/events-showcase/public/embed-card.php" ]]
 [[ -f "$PACKAGE/payload/assets/js/pages/recruit-match-v2121-bootstrap.js" ]]
 [[ -f "$PACKAGE/payload/assets/js/pages/recruit-match.js" ]]
+[[ -f "$PACKAGE/payload/assets/js/admin/admin-session-controller.js" ]]
+[[ -f "$PACKAGE/payload/assets/js/shared/real-oauth.js" ]]
+[[ -f "$PACKAGE/payload/server/team-points/src/OAuthSession.php" ]]
+[[ -f "$PACKAGE/payload/server/team-points/public/recent-matches.php" ]]
+[[ -f "$PACKAGE/payload/server/team-points/sql/core-schema.sql" ]]
 
 # Both supported 2.12.x baselines must converge to the identical v2.12.2 payload.
 # The 2.12.0 case deliberately reproduces the production failure condition where

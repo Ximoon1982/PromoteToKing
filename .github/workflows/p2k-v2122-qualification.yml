@@ -31,13 +31,20 @@ jobs:
           node --check assets/js/admin/match-recruitment-access-v2121.js
           node --check assets/js/admin/trophy-card-presentation-v2122.js
           node --check assets/js/admin/tool-registry.js
+          node --check assets/js/admin/admin-session-controller.js
+          node --check assets/js/shared/real-oauth.js
           node --check assets/js/pages/recruit-match-v2121-bootstrap.js
           node --check assets/js/pages/recruit-match.js
           php -l server/events-showcase/src/EventsShowcaseStore.php
           php -l server/events-showcase/public/api.php
           php -l server/events-showcase/public/embed.php
           php -l server/events-showcase/public/embed-card.php
+          php -l server/team-points/src/OAuthSession.php
+          php -l server/team-points/public/recent-matches.php
+          php tests/test_v2111_oauth_session_isolation.php
           php tests/test_events_showcase_store.php
+          python tests/test_admin_priority_card.py
+          python -m pytest -q tests/test_v2111_persistent_oauth.py
           node tests/test_recruitment_lineup_parity.js
           python tests/test_events_showcase_contract.py
           bash -n tools/release/v2122/build-package.sh
