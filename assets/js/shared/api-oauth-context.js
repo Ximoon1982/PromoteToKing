@@ -322,10 +322,13 @@
     // non-reserved lanes; a queued foreground wave suppresses further background.
     if (oauthGatewayQueue.length) scheduleOAuthGatewayFlush();
     const requests = active.map(entry => ({ id: entry.id, url: entry.url, headers: oauthHeadersObject(entry.headers) }));
+    const postTimeoutMs = Math.max(1_000, Math.min(...active.map(entry => Math.max(1_000, Number(entry.timeoutMs) || 20_000))));
+    const postController = new AbortController();
+    const postTimer = window.setTimeout(() => postController.abort(), postTimeoutMs);
     try {
       const endpoint = new URL(OAUTH_GATEWAY_ENDPOINT, window.location.href); endpoint.searchParams.set("action", "batch");
       const response = await nativeFetch(endpoint.href, {
-        method:"POST", credentials:"same-origin", cache:"no-store",
+        method:"POST", credentials:"same-origin", cache:"no-store", signal:postController.signal,
         headers:{"Content-Type":"application/json","Accept":"application/json","X-P2K-OAuth-CSRF":csrf},
         body:JSON.stringify({
           requests,
@@ -358,8 +361,15 @@
         catch (cause) { entry.finish(false, apiError("Unable to construct OAuth gateway response.", { category:"parse", code:"OAUTH_GATEWAY_RESPONSE", status, url:entry.url, retryable:true, cause })); }
       });
     } catch (error) {
-      active.forEach(entry => entry.finish(false, normalizeError(error, entry.url, entry.signal)));
+      if (postController.signal.aborted) {
+        active.forEach(entry => entry.finish(false, apiError("OAuth API gateway timed out.", {
+          category:"timeout", code:"OAUTH_GATEWAY_TIMEOUT", url:entry.url, retryable:true
+        })));
+      } else {
+        active.forEach(entry => entry.finish(false, normalizeError(error, entry.url, entry.signal)));
+      }
     } finally {
+      window.clearTimeout(postTimer);
       oauthGatewayActivePosts = Math.max(0, oauthGatewayActivePosts - 1);
       if (trafficClass === "background") oauthGatewayActiveBackgroundPosts = Math.max(0, oauthGatewayActiveBackgroundPosts - 1);
       else oauthGatewayActiveForegroundPosts = Math.max(0, oauthGatewayActiveForegroundPosts - 1);
@@ -368,13 +378,14 @@
     }
   }
 
-  function executeOAuthGateway(url, { headers, signal, priority = 0, trafficClass = "foreground" }) {
+  function executeOAuthGateway(url, { headers, signal, priority = 0, trafficClass = "foreground", timeoutMs = 20_000 }) {
     if (signal?.aborted) return Promise.reject(abortError(url));
     return new Promise((resolve, reject) => {
       const entry = {
         id:`g${++oauthGatewayBatchSequence}`,
         sequence: oauthGatewayBatchSequence,
         url, headers, signal,
+        timeoutMs: Math.max(1_000, Math.min(120_000, Number(timeoutMs) || 20_000)),
         priority: Number(priority) || 0,
         trafficClass: trafficClass === "background" ? "background" : "foreground",
         endpointClass: oauthEndpointClass(url),

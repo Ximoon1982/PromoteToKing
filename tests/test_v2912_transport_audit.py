@@ -52,12 +52,16 @@ def test_browser_gateway_is_multi_post_but_server_rate_authoritative():
     # Endpoint-homogeneous / traffic-class-homogeneous batches prevent a slow
     # endpoint class from poisoning an unrelated fast class.
     assert "entry.trafficClass === trafficClass && entry.endpointClass === endpointClass" in src
-    # OAuth queue wait is not governed by the ordinary browser request timeout;
-    # the PHP transfer timeout begins when cURL really launches the request.
+    # OAuth gateway traffic must inherit the same bounded request lifetime as
+    # direct Chess.com transport. A stuck PHP gateway POST may not strand the
+    # Match Creation bootstrap or any processPriority feeder indefinitely.
     oauth_pos = src.index("if (oauthSessionActive())")
     combine_pos = src.index("const combined = combineSignal", oauth_pos)
     assert oauth_pos < combine_pos
-    assert "return await executeOAuthGateway" in src[oauth_pos:combine_pos]
+    assert "executeOAuthGateway(url, { headers, signal, priority, trafficClass, timeoutMs })" in src[oauth_pos:combine_pos]
+    assert "const postController = new AbortController()" in src
+    assert "signal:postController.signal" in src
+    assert 'code:"OAUTH_GATEWAY_TIMEOUT"' in src
     # Avoid browser-side duplicate global punishment; the server owns cooldown.
     assert "shared server coordinator already applies Retry-After/cooldown" in src
 

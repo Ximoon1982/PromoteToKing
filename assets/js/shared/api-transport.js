@@ -98,7 +98,7 @@
         counters.fetches += 1;
         if (conditional) counters.conditionalFetches += 1;
         if (oauthSessionActive()) {
-          try { return await executeOAuthGateway(url, { headers, signal, priority, trafficClass }); }
+          try { return await executeOAuthGateway(url, { headers, signal, priority, trafficClass, timeoutMs }); }
           catch (error) { throw normalizeError(error, url, signal); }
         }
         const combined = combineSignal(signal, timeoutMs, url);

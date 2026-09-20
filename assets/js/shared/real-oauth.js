@@ -128,7 +128,11 @@
   function numberOrNull(value) { const n = Number(value); return Number.isFinite(n) ? Math.trunc(n) : null; }
 
   function syncApiMode() {
-    if (typeof window.P2K_API_CLIENT?.setOAuthBearerMode === "function") window.P2K_API_CLIENT.setOAuthBearerMode(Boolean(session));
+    // Keep the last verified identity visible across a transient status outage,
+    // but do not route API traffic through an OAuth gateway whose own health
+    // could not be verified. A successful session probe re-enables Bearer mode.
+    const bearerReady = Boolean(session) && !sessionStatusUnavailable;
+    if (typeof window.P2K_API_CLIENT?.setOAuthBearerMode === "function") window.P2K_API_CLIENT.setOAuthBearerMode(bearerReady);
     else if (typeof window.P2K_API_CLIENT?.setConcurrentMode === "function") window.P2K_API_CLIENT.setConcurrentMode(false);
   }
 

@@ -34,7 +34,13 @@ async function main() {
   // Execute the whole OAuth adapter; keep the DOM uninitialized to isolate transport.
   const events = [];
   const document = { readyState: 'loading', addEventListener() {}, querySelector() { return null; }, getElementById() { return null; } };
-  const window = { location: { search: '', href: 'https://p2k.test/index.html' }, setTimeout: fn => { fn(); }, dispatchEvent: event => events.push(event.detail) };
+  const bearerModes = [];
+  const window = {
+    location: { search: '', href: 'https://p2k.test/index.html' },
+    setTimeout: fn => { fn(); },
+    dispatchEvent: event => events.push(event.detail),
+    P2K_API_CLIENT: { setOAuthBearerMode: enabled => bearerModes.push(Boolean(enabled)) }
+  };
   const oauth = vm.createContext({ window, document, URL, URLSearchParams, CustomEvent: class { constructor(name, options) { this.detail = options.detail; } }, console: { warn() {}, error() {} }, requestAnimationFrame() {}, fetch: async () => { throw new Error('offline'); } });
   vm.runInContext(read('assets/js/shared/real-oauth.js'), oauth);
   const api = window.P2K_AUTH;
@@ -43,6 +49,7 @@ async function main() {
   oauth.fetch = async () => ({ ok: true, json: async () => ({ authenticated: true, profile: { username: 'Alice' }, csrf: 'csrf', admin_bootstrap: 'bootstrap' }) });
   await api.refresh();
   assert.equal(api.getSession().username, 'Alice');
+  assert.equal(bearerModes.at(-1), true, 'verified OAuth session enables Bearer transport');
   events.length = 0;
   for (const failure of [async () => { throw new Error('offline'); }, async () => ({ ok: false, status: 503, json: async () => ({}) }), async () => ({ ok: true, json: async () => ({}) })]) {
     oauth.fetch = failure;
@@ -50,6 +57,7 @@ async function main() {
     assert.equal(api.getSession().username, 'Alice');
     assert.equal(api.getCsrf(), 'csrf');
     assert.equal(api.getAdminBootstrap(), 'bootstrap');
+    assert.equal(bearerModes.at(-1), false, 'status outage must disable Bearer transport while retaining identity');
   }
   assert.ok(events.every(event => event?.username === 'Alice'), 'outages must not emit a logout');
   oauth.fetch = async () => ({ ok: true, json: async () => ({ authenticated: false }) });
