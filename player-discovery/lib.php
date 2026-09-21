@@ -62,7 +62,7 @@ final class P2KPlayerDiscoveryStore
             $q->execute([$id]);$items=$q->fetchAll(PDO::FETCH_ASSOC)?:[];if($items){$keys=array_column($items,'username_key');$ph=implode(',',array_fill(0,count($keys),'?'));
                 if($p==='discovery')$up=$this->pdo->prepare("UPDATE p2k_pd_players SET discovery_state='in_progress',discovery_attempts=discovery_attempts+1,lease_token=?,lease_owner=?,lease_until=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 10 MINUTE),updated_at=UTC_TIMESTAMP() WHERE job_id=? AND username_key IN ({$ph})");
                 else $up=$this->pdo->prepare("UPDATE p2k_pd_players SET enrichment_state='in_progress',enrichment_attempts=enrichment_attempts+1,lease_token=?,lease_owner=?,lease_until=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 10 MINUTE),updated_at=UTC_TIMESTAMP() WHERE job_id=? AND username_key IN ({$ph})");
-                $up->execute(array_merge([$token,$client,$id],$keys));foreach($items as &$x)$x['attempts']+1;unset($x);}
+                $up->execute(array_merge([$token,$client,$id],$keys));foreach($items as &$x)$x['attempts']=(int)$x['attempts']+1;unset($x);}
             $this->pdo->commit();}catch(Throwable $e){$this->rollback();throw $e;}return ['job'=>$this->job($id,$owner),'lease_token'=>$items?$token:'','items'=>$items];
     }
 
