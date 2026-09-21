@@ -3205,7 +3205,13 @@ final class Repository
             ])),0,20);
             $membersObserved=$greenState['last_roster_fetch']??null;
             $indexObserved=$greenState['last_index_fetch']??null;
-            $coreUpdated=$greenState['last_analytics_rebuild']??$greenState['last_index_fetch']??$greenState['last_roster_fetch']??null;
+            $coreCandidates=array_values(array_filter([
+                $greenState['last_roster_fetch']??null,
+                $greenState['last_index_fetch']??null,
+                $greenState['last_analytics_rebuild']??null,
+            ],static fn($v):bool=>is_string($v)&&$v!==''));
+            sort($coreCandidates);
+            $coreUpdated=$coreCandidates?(string)end($coreCandidates):null;
         } else {
             $coreState=$this->readState($clubSlug);
             $coreGeneration=max(1,(int)($coreState['core_generation']??1));

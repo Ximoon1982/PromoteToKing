@@ -94,7 +94,7 @@ function p2k_events_showcase_catalog(?array $matchIds = null, bool $includeStart
             'opponentName' => trim((string)($row['opponent_name'] ?? '')) ?: 'Opponent',
             'opponentLogo' => $logos[$opponentSlug] ?? '',
             'joinable' => true,
-            'source' => 'p2k-green',
+            'source' => 'p2k-core',
         ];
     }
     return $rows;
