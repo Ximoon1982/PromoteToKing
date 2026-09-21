@@ -22,14 +22,14 @@ The recent-match response contract remains stable. Fields unavailable as native 
 
 | Surface | Current compatibility dependency | Why not migrated here |
 |---|---|---|
-| Events Showcase catalog | `p2k_tp_match_metadata`, `p2k_tp_opponents` | Match facts can come from `p2k_g_matches`, but the contract also carries opponent aliases/profile icon enrichment for which Green has no native opponent-profile store yet. Migrate the factual source together with a native enrichment design. |
+| Events Showcase catalog | match facts now `p2k_g_matches`; optional logo enrichment remains `p2k_tp_opponents` | migrated factual source | Registered/Daily membership, timing and names are Green-native. The legacy opponent table is non-gating visual enrichment only; a failed/missing logo lookup cannot hide a match. |
 | Recruitment rating pool | `p2k_tp_members` | Verified Daily/960 ratings exist in `p2k_g_players`, but recruitment deliberately prefers newer claim-backed observed ratings when fresh. Those observed-rating provenance fields are not native Green facts yet. Moving only the verified part would change eligibility/rating precedence. |
 | Match insights / match sections | `p2k_tp_match_metadata`, summaries, opponent aliases/profiles, void tables | Core match facts exist natively, but the public contract combines alias repair, opponent enrichment, historical aggregates and compatibility summary semantics. Requires a dedicated equivalence migration. |
 | Member insights / player profile | members, participations, match metadata, point events plus Analytics | Green has the underlying player/match/event facts, but these endpoints also depend on MIAC aliases, chronology, achievements/live materializations and recent-match aggregation. Too broad for a freshness hotfix. |
 | Match detail / opponent profile / league seasons / team insights | multiple `p2k_tp_*` facts and aggregate tables | Native equivalents are partial and the existing contracts aggregate several domains. Migrate per endpoint with parity tests rather than table substitution. |
 | Opponent/admin profile cache and Events logos | `p2k_tp_opponents`, aliases | Green currently has no first-class opponent metadata/icon table. |
 | Recruitment/admin and player-card profile overlays | `p2k_tp_members` profile/observation fields | Green player facts do not yet contain every passive-observation/profile provenance field used by these tools. |
-| Public read generation/freshness metadata | `p2k_tp_state` via `readState()` | Not on the recent-match factual path. Green state does not expose a drop-in equivalent for every compatibility generation/freshness field; migrate as a separate cache-generation contract change. |
+| Public read generation/freshness metadata | Green source now reads `p2k_g_state` | migrated | Cache generation uses stable cycle/discovery/analytics checkpoints rather than noisy `updated_at`; legacy `readState()` is retained only for non-Green contexts. Existing endpoint TTLs are unchanged. |
 
 ## Legitimate retained compatibility/internal code
 

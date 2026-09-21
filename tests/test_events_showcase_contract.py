@@ -1,6 +1,7 @@
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 admin=(root/'assets/js/admin/events-showcase-v2122.js').read_text()
+api=(root/'server/events-showcase/public/api.php').read_text()
 embed=(root/'server/events-showcase/public/embed.php').read_text()
 line_runtime=(root/'assets/js/events-showcase-line-v2122.js').read_text()
 card_embed=(root/'server/events-showcase/public/embed-card.php').read_text()
@@ -15,6 +16,8 @@ qualify=(root/'tools/release/v2122/qualify-installer.sh').read_text()
 readme=(root/'tools/release/v2122/README.md').read_text()
 checks={
 'competition card': 'Events showcase' in admin and 'data-v2122-events-showcase' in admin,
+'catalog Green-native facts': 'FROM p2k_g_matches m' in api and 'p2k_tp_match_metadata' not in api and "'source' => 'p2k-green'" in api,
+'catalog enrichment cannot gate': 'Enrichment failure must never hide authoritative Green matches.' in api,
 'card metrics': 'data-es-arena-metric' in admin and 'data-es-match-metric' in admin,
 'pagination 20': 'SEARCH_PAGE_SIZE=20' in admin,
 'arena modal save': 'data-es-arena-form' in admin and 'Save arena' in admin,

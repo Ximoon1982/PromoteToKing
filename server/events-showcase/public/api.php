@@ -12,7 +12,12 @@ function p2k_events_showcase_catalog(?array $matchIds = null, bool $includeStart
     $config = p2k_tp_config();
     $club = strtolower(trim((string)($config['app']['club_slug'] ?? DEFAULT_CLUB_SLUG)));
     $pdo = PublicReadDatabase::core();
-    $where = ["m.club_slug=?", "m.status='registered'", "m.is_void=0"];
+    // Registered-match membership and timing come directly from authoritative
+    // Green facts. Optional opponent icons remain an enrichment cache only and
+    // can never suppress or delay a newly discovered match.
+    $where = ["m.club_verified=1", "m.verified_club_slug=?", "m.is_void=0",
+        "COALESCE(NULLIF(m.time_class,''),NULLIF(m.index_time_class,''))='daily'",
+        "(CASE WHEN m.status='unknown' THEN COALESCE(m.index_bucket,'unknown') ELSE m.status END)='registered'"];
     $params = [$club];
     if (is_array($matchIds)) {
         $ids = array_values(array_unique(array_filter(array_map(static function(mixed $value): int {
@@ -23,42 +28,73 @@ function p2k_events_showcase_catalog(?array $matchIds = null, bool $includeStart
         $where[] = 'm.match_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
         array_push($params, ...$ids);
     }
-    $sql = "SELECT m.match_id,m.match_name,m.match_url,m.is_league,m.start_time,m.time_control,m.opponent_slug,m.opponent_name,o.icon_url
-            FROM p2k_tp_match_metadata m
-            LEFT JOIN p2k_tp_opponents o ON o.club_slug=m.club_slug AND o.opponent_slug=m.opponent_slug
+    $sql = "SELECT m.match_id,m.api_url,m.web_url,m.name,m.start_epoch,m.time_control,m.opponent_url,m.opponent_name
+            FROM p2k_g_matches m
             WHERE " . implode(' AND ', $where) . "
-            ORDER BY m.is_league DESC,CASE WHEN m.start_time IS NULL THEN 1 ELSE 0 END,m.start_time ASC,m.match_id ASC";
+            ORDER BY CASE WHEN m.start_epoch IS NULL THEN 1 ELSE 0 END,m.start_epoch ASC,m.match_id ASC";
     $query = $pdo->prepare($sql);
     $query->execute($params);
+    $nativeRows = $query->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    $slugs = [];
+    foreach ($nativeRows as &$row) {
+        $opponentUrl = trim((string)($row['opponent_url'] ?? ''));
+        $slug = '';
+        if ($opponentUrl !== '') {
+            $path = trim((string)(parse_url($opponentUrl, PHP_URL_PATH) ?: ''), '/');
+            $parts = $path === '' ? [] : array_values(array_filter(explode('/', $path), static fn($v) => $v !== ''));
+            $candidate = strtolower((string)end($parts));
+            if ($candidate !== '' && preg_match('/^[a-z0-9_-]{1,160}$/', $candidate)) $slug = $candidate;
+        }
+        $row['_opponent_slug'] = $slug;
+        if ($slug !== '') $slugs[$slug] = true;
+    }
+    unset($row);
+
+    $logos = [];
+    if ($slugs !== []) {
+        try {
+            $keys = array_keys($slugs);
+            $logoQuery = $pdo->prepare('SELECT opponent_slug,icon_url FROM p2k_tp_opponents WHERE club_slug=? AND opponent_slug IN (' . implode(',', array_fill(0, count($keys), '?')) . ')');
+            $logoQuery->execute(array_merge([$club], $keys));
+            foreach ($logoQuery->fetchAll(PDO::FETCH_ASSOC) ?: [] as $logoRow) {
+                $slug = strtolower(trim((string)($logoRow['opponent_slug'] ?? '')));
+                if ($slug !== '') $logos[$slug] = trim((string)($logoRow['icon_url'] ?? ''));
+            }
+        } catch (Throwable) {
+            // Enrichment failure must never hide authoritative Green matches.
+        }
+    }
+
     $rows = [];
     $now = time();
-    foreach ($query->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+    foreach ($nativeRows as $row) {
         $id = (string)($row['match_id'] ?? '');
         if ($id === '') continue;
-        $name = trim((string)($row['match_name'] ?? ''));
+        $name = trim((string)($row['name'] ?? ''));
         if ($name === '') $name = 'Match #' . $id;
-        $start = trim((string)($row['start_time'] ?? ''));
-        $startEpoch = $start === '' ? null : strtotime($start . ' UTC');
-        $started = $startEpoch !== null && $startEpoch !== false && $startEpoch <= $now;
+        $startEpoch = is_numeric($row['start_epoch'] ?? null) && (int)$row['start_epoch'] > 0 ? (int)$row['start_epoch'] : null;
+        $started = $startEpoch !== null && $startEpoch <= $now;
         if ($started && !$includeStarted) continue;
         $leagueAcronyms = league_codes($name);
-        $isLeague = !empty($row['is_league']) || $leagueAcronyms !== [];
+        $isLeague = $leagueAcronyms !== [];
+        $opponentSlug = trim((string)($row['_opponent_slug'] ?? ''));
         $rows[] = [
             'matchId' => $id,
             'name' => $name,
-            'url' => trim((string)($row['match_url'] ?? '')) ?: 'https://www.chess.com/club/matches/' . rawurlencode($club) . '/' . $id,
-            'apiUrl' => chess_match_url($id),
+            'url' => trim((string)($row['web_url'] ?? '')) ?: 'https://www.chess.com/club/matches/' . rawurlencode($club) . '/' . $id,
+            'apiUrl' => trim((string)($row['api_url'] ?? '')) ?: chess_match_url($id),
             'category' => $isLeague ? 'league' : 'friendly',
             'isLeague' => $isLeague,
             'leagueAcronyms' => $leagueAcronyms,
-            'startTime' => $startEpoch === false ? null : $startEpoch,
+            'startTime' => $startEpoch,
             'started' => $started,
             'timeControl' => $row['time_control'] ?? null,
-            'opponentSlug' => trim((string)($row['opponent_slug'] ?? '')),
+            'opponentSlug' => $opponentSlug,
             'opponentName' => trim((string)($row['opponent_name'] ?? '')) ?: 'Opponent',
-            'opponentLogo' => trim((string)($row['icon_url'] ?? '')),
+            'opponentLogo' => $logos[$opponentSlug] ?? '',
             'joinable' => true,
-            'source' => 'p2k-core',
+            'source' => 'p2k-green',
         ];
     }
     return $rows;

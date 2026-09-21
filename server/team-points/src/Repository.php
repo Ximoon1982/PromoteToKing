@@ -3174,6 +3174,14 @@ final class Repository
     public function publicReadMeta(string $clubSlug): array
     {
         $clubSlug = $this->resolveDataClubSlug($clubSlug);
+        $greenSource = PublicReadDatabase::source() === 'green';
+        $greenState = [];
+        if ($greenSource) {
+            try {
+                $q=$this->pdo->prepare('SELECT cycle_no,discovery_high_watermark,last_index_fetch,last_roster_fetch,last_analytics_rebuild,updated_at FROM p2k_g_state WHERE club_slug=? LIMIT 1');
+                $q->execute([$clubSlug]);$greenState=$q->fetch(PDO::FETCH_ASSOC)?:[];
+            } catch (\Throwable) { $greenState=[]; }
+        }
         $states = [];
         try {
             $q = $this->analytics()->prepare("SELECT domain_key,refreshed_at,row_count,last_error FROM p2k_an_refresh_state WHERE club_slug=? AND domain_key IN ('all','achievements')");
@@ -3189,11 +3197,26 @@ final class Repository
         } catch (\Throwable) {}
         $allUpdated = (string)($states['all']['refreshed_at'] ?? '');
         $achievementUpdated = (string)($states['achievements']['refreshed_at'] ?? '');
-        $coreState=$this->readState($clubSlug);$coreGeneration=max(1,(int)($coreState['core_generation']??1));
-        $latest = array_values(array_filter([$allUpdated,$achievementUpdated,$liveUpdated,(string)($coreState['updated_at']??'')], static fn($v): bool => is_string($v) && $v !== ''));
+        if ($greenSource) {
+            $coreGeneration='g'.substr(hash('sha256',implode('|',[
+                (string)($greenState['cycle_no']??0),
+                (string)($greenState['discovery_high_watermark']??0),
+                (string)($greenState['last_analytics_rebuild']??''),
+            ])),0,20);
+            $membersObserved=$greenState['last_roster_fetch']??null;
+            $indexObserved=$greenState['last_index_fetch']??null;
+            $coreUpdated=$greenState['last_analytics_rebuild']??$greenState['last_index_fetch']??$greenState['last_roster_fetch']??null;
+        } else {
+            $coreState=$this->readState($clubSlug);
+            $coreGeneration=max(1,(int)($coreState['core_generation']??1));
+            $membersObserved=$coreState['members_last_observed_at']??null;
+            $indexObserved=$coreState['club_index_last_observed_at']??null;
+            $coreUpdated=$coreState['updated_at']??null;
+        }
+        $latest = array_values(array_filter([$allUpdated,$achievementUpdated,$liveUpdated,(string)($coreUpdated??'')], static fn($v): bool => is_string($v) && $v !== ''));
         sort($latest);
         return [
-            'source'=>PublicReadDatabase::source()==='green'?'green_core_live':'database','generated_at'=>gmdate('c'),
+            'source'=>$greenSource?'green_core_live':'database','generated_at'=>gmdate('c'),
             'last_database_update'=>$latest ? str_replace(' ','T',(string)end($latest)).'Z' : null,
             'schema_version'=>$this->schemaVersion(),'analytics_schema_version'=>$this->analyticsSchemaVersion(),
             'database_architecture'=>'core+analytics','resolved_club_slug'=>$clubSlug,
@@ -3204,9 +3227,9 @@ final class Repository
                 'live'=>$liveUpdated ?: null,
             ],
             'freshness'=>[
-                'members_last_observed_at'=>$coreState['members_last_observed_at']??null,
-                'club_index_last_observed_at'=>$coreState['club_index_last_observed_at']??null,
-                'core_updated_at'=>$coreState['updated_at']??null,
+                'members_last_observed_at'=>$membersObserved,
+                'club_index_last_observed_at'=>$indexObserved,
+                'core_updated_at'=>$coreUpdated,
                 'analytics_updated_at'=>$allUpdated?:null,
             ],
         ];
