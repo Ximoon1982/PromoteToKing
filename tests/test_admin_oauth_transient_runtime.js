@@ -35,9 +35,11 @@ async function main() {
   const events = [];
   const document = { readyState: 'loading', addEventListener() {}, querySelector() { return null; }, getElementById() { return null; } };
   const bearerModes = [];
+  const scheduledTimeouts = [];
   const window = {
     location: { search: '', href: 'https://p2k.test/index.html' },
-    setTimeout: fn => { fn(); },
+    setTimeout: (fn, delay = 0) => { scheduledTimeouts.push(delay); if (delay <= 250) fn(); return scheduledTimeouts.length; },
+    clearTimeout() {},
     dispatchEvent: event => events.push(event.detail),
     P2K_API_CLIENT: { setOAuthBearerMode: enabled => bearerModes.push(Boolean(enabled)) }
   };
@@ -57,9 +59,10 @@ async function main() {
     assert.equal(api.getSession().username, 'Alice');
     assert.equal(api.getCsrf(), 'csrf');
     assert.equal(api.getAdminBootstrap(), 'bootstrap');
-    assert.equal(bearerModes.at(-1), false, 'status outage must disable Bearer transport while retaining identity');
+    assert.equal(bearerModes.at(-1), true, 'status outage must retain Bearer transport for the last verified session');
   }
   assert.ok(events.every(event => event?.username === 'Alice'), 'outages must not emit a logout');
+  assert.ok(scheduledTimeouts.some(delay => delay === 30_000), 'transient outage schedules a bounded recovery probe');
   oauth.fetch = async () => ({ ok: true, json: async () => ({ authenticated: false }) });
   await api.refresh();
   assert.equal(api.getSession(), null, 'authoritative logout must clear identity');

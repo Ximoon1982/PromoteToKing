@@ -27,6 +27,7 @@
   let adminBootstrapReceivedAt = 0;
   let enabled = true;
   let sessionStatusUnavailable = false;
+  let sessionRecoveryTimer = null;
   let modal = null;
   let lastFocused = null;
   let renderQueued = false;
@@ -79,6 +80,11 @@
   function initialize() {
     activateSurface();
     refreshSession();
+    window.addEventListener?.("online", () => {
+      if (!sessionStatusUnavailable) return;
+      clearSessionRecovery();
+      void refreshSession();
+    });
     window.addEventListener("pagehide", () => observer?.disconnect(), { once: true });
   }
 
@@ -90,6 +96,7 @@
       if (!response.ok || payload?.ok === false) throw new Error(payload?.error?.message || `HTTP ${response.status}`);
       if (typeof payload?.authenticated !== "boolean" || (payload.authenticated && !normalizeSession(payload.profile))) throw new Error("Invalid OAuth session response");
       sessionStatusUnavailable = false;
+      clearSessionRecovery();
       enabled = payload.enabled !== false; csrf = String(payload.csrf || "");
       session = payload.authenticated && payload.profile ? normalizeSession(payload.profile) : null;
       adminBootstrap = session ? String(payload.admin_bootstrap || "") : "";
@@ -106,8 +113,9 @@
       }
       sessionStatusUnavailable = true;
       // A failed status check is not an authoritative logout. Retain the last
-      // verified identity; protected requests still authenticate on the server.
-      enabled = false; syncApiMode();
+      // verified identity and its Bearer transport; the bounded OAuth gateway
+      // request remains authoritative for protected API traffic.
+      enabled = false; syncApiMode(); scheduleSessionRecovery();
       activateSurface();
       if (apiInstalled) { notify(); queueRender(); }
       console.warn("Real OAuth session unavailable.", error); return session;
@@ -127,11 +135,25 @@
   function safeHTTPS(value) { try { const u = new URL(String(value || "")); return u.protocol === "https:" ? u.href : ""; } catch (_) { return ""; } }
   function numberOrNull(value) { const n = Number(value); return Number.isFinite(n) ? Math.trunc(n) : null; }
 
+  function clearSessionRecovery() {
+    if (sessionRecoveryTimer === null) return;
+    try { window.clearTimeout?.(sessionRecoveryTimer); } catch (_) {}
+    sessionRecoveryTimer = null;
+  }
+
+  function scheduleSessionRecovery() {
+    if (sessionRecoveryTimer !== null) return;
+    sessionRecoveryTimer = window.setTimeout(() => {
+      sessionRecoveryTimer = null;
+      if (sessionStatusUnavailable) void refreshSession();
+    }, 30_000);
+  }
+
   function syncApiMode() {
-    // Keep the last verified identity visible across a transient status outage,
-    // but do not route API traffic through an OAuth gateway whose own health
-    // could not be verified. A successful session probe re-enables Bearer mode.
-    const bearerReady = Boolean(session) && !sessionStatusUnavailable;
+    // A transient status-probe failure is not an authoritative logout. Keep the
+    // last verified session on the authenticated Bearer/gateway transport; the
+    // gateway itself is bounded by timeout and can reject an invalid session.
+    const bearerReady = Boolean(session);
     if (typeof window.P2K_API_CLIENT?.setOAuthBearerMode === "function") window.P2K_API_CLIENT.setOAuthBearerMode(bearerReady);
     else if (typeof window.P2K_API_CLIENT?.setConcurrentMode === "function") window.P2K_API_CLIENT.setConcurrentMode(false);
   }
@@ -155,7 +177,7 @@
     try {
       const response = await fetch(`${ENDPOINT}?action=logout`, { method: "POST", credentials: "same-origin", cache: "no-store", headers: { "Content-Type": "application/json", "X-P2K-OAuth-CSRF": csrf, Accept: "application/json" }, body: JSON.stringify({ csrf }) });
       const payload = await response.json(); if (!response.ok || payload?.ok === false) throw new Error(payload?.error?.message || `HTTP ${response.status}`);
-      csrf = String(payload.csrf || csrf); session = null; adminBootstrap = ""; adminBootstrapReceivedAt = 0; syncApiMode(); notify(); closeModal(); queueRender(); clearAssistantUsername();
+      csrf = String(payload.csrf || csrf); session = null; adminBootstrap = ""; adminBootstrapReceivedAt = 0; sessionStatusUnavailable = false; clearSessionRecovery(); syncApiMode(); notify(); closeModal(); queueRender(); clearAssistantUsername();
     } catch (error) { window.alert(error?.message || "Unable to log out."); }
   }
 

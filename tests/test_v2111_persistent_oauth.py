@@ -55,7 +55,11 @@ def test_transient_session_endpoint_failure_is_not_presented_as_logout():
     assert 'if (attempt < 1)' in source
     assert 'Authentication temporarily unavailable' in source
     assert 'sessionStatusUnavailable' in source
-    assert 'const bearerReady = Boolean(session) && !sessionStatusUnavailable' in source
+    assert 'const bearerReady = Boolean(session)' in source
+    assert 'const bearerReady = Boolean(session) && !sessionStatusUnavailable' not in source
+    assert 'scheduleSessionRecovery' in source
+    assert '30_000' in source
+    assert 'window.addEventListener?.("online"' in source
 
 
 def test_transient_auth_and_admin_responses_at_runtime():
