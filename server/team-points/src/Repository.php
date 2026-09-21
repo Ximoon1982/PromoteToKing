@@ -2709,7 +2709,7 @@ final class Repository
         // Green club-index discovery is authoritative before match-detail hydration.
         // Read it directly: compatibility projection must not delay a newly-created
         // match from appearing in the recent-discovery view.
-        $q=$this->pdo->prepare("SELECT match_id,api_url,web_url,name,status,index_bucket,rules,time_control,start_epoch,end_epoch,board_count,p2k_score,opponent_score,opponent_name,opponent_url,created_at,last_verified_at FROM p2k_g_matches WHERE club_verified=1 AND verified_club_slug=? AND COALESCE(NULLIF(time_class,''),NULLIF(index_time_class,''))='daily' AND created_at>=? ORDER BY created_at DESC,match_id DESC");
+        $q=$this->pdo->prepare("SELECT match_id,api_url,web_url,name,status,index_bucket,rules,time_control,start_epoch,end_epoch,board_count,p2k_score,opponent_score,opponent_name,opponent_url,created_at,created_at AS first_discovered_at,last_verified_at FROM p2k_g_matches WHERE club_verified=1 AND verified_club_slug=? AND COALESCE(NULLIF(time_class,''),NULLIF(index_time_class,''))='daily' AND created_at>=? ORDER BY first_discovered_at DESC,match_id DESC");
         $q->execute([$clubSlug,$cutoff]);
         return array_map(static function(array $r): array {
             $matchId=(int)$r['match_id'];
