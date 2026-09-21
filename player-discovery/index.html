@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.chess.com; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<title>P2K Player Discovery</title>
+<link rel="icon" href="../assets/images/p2k-logo.jpg">
+<link rel="stylesheet" href="style.css?v=0.1.0">
+</head>
+<body>
+<main class="shell">
+  <header class="header">
+    <div class="brand"><img src="../assets/images/p2k-logo.jpg" alt="Promote to King"><div><h1>Player Discovery</h1><p>Resumable one-hop Daily match opponent discovery</p></div></div>
+    <div id="authBox" class="auth"></div>
+  </header>
+
+  <section id="loginPanel" class="panel centered" hidden>
+    <h2>Authentication required</h2>
+    <p>This standalone tool uses your existing P2K Chess.com OAuth session. Chess.com PubAPI reads are performed directly by this browser.</p>
+    <button id="loginButton" class="button primary">Log in with Chess.com</button>
+  </section>
+
+  <div id="app" hidden>
+    <section class="panel">
+      <div class="panel-head"><div><h2>New analysis</h2><p>Paste up to 100,000 usernames. Seeds are de-duplicated before upload.</p></div></div>
+      <div class="form-grid">
+        <label class="wide">Seed usernames
+          <textarea id="seedInput" rows="8" spellcheck="false" placeholder="username1&#10;username2&#10;username3"></textarea>
+        </label>
+        <label>Rolling months
+          <input id="monthsInput" type="number" min="1" max="24" value="2">
+          <span class="hint">Default 2. A rolling N-month window normally touches N+1 monthly archive files.</span>
+        </label>
+        <label>Daily games
+          <select id="modeInput"><option value="team" selected>Team matches only</option><option value="all">All Daily games</option></select>
+        </label>
+        <label>Variants
+          <select id="variantInput"><option value="standard" selected>Standard chess only</option><option value="with960">Standard + Chess960</option></select>
+        </label>
+        <label>Maximum parallel Chess.com requests
+          <input id="concurrencyInput" type="number" min="1" max="64" value="24">
+          <span class="hint">Adaptive scheduler starts lower and backs off automatically on 429 responses.</span>
+        </label>
+      </div>
+      <div class="actions"><button id="createButton" class="button primary">Create analysis</button><span id="importStatus" class="status"></span></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><div><h2>Saved analyses</h2><p>Jobs persist on the P2K server and can be resumed in later browser sessions.</p></div><button id="refreshJobs" class="button">Refresh</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Created</th><th>State</th><th>Window</th><th>Seeds</th><th>Players</th><th>Progress</th><th></th></tr></thead><tbody id="jobsBody"></tbody></table></div>
+    </section>
+
+    <section id="jobPanel" class="panel" hidden>
+      <div class="panel-head"><div><h2 id="jobTitle">Current analysis</h2><p id="jobSubtitle"></p></div><div class="actions"><button id="resumeButton" class="button primary">Resume</button><button id="pauseButton" class="button">Pause</button><button id="exportButton" class="button">Export CSV</button><button id="deleteButton" class="button danger">Delete</button></div></div>
+      <div class="metrics">
+        <div><span>Phase</span><strong id="mPhase">—</strong></div>
+        <div><span>Seeds</span><strong id="mSeeds">—</strong></div>
+        <div><span>Unique players</span><strong id="mPlayers">—</strong></div>
+        <div><span>Discovery</span><strong id="mDiscovery">—</strong></div>
+        <div><span>Enrichment</span><strong id="mEnrichment">—</strong></div>
+        <div><span>API requests</span><strong id="mRequests">—</strong></div>
+        <div><span>Current rate</span><strong id="mRate">—</strong></div>
+        <div><span>Adaptive parallelism</span><strong id="mConcurrency">—</strong></div>
+        <div><span>429s / retries</span><strong id="mThrottle">—</strong></div>
+        <div><span>ETA</span><strong id="mEta">—</strong></div>
+      </div>
+      <div class="progress"><div id="progressBar"></div></div>
+      <div id="workerStatus" class="status">Idle in this browser.</div>
+    </section>
+
+    <section id="resultsPanel" class="panel" hidden>
+      <div class="panel-head"><div><h2>Players</h2><p>Original seeds and newly discovered opponents are merged into one unique population.</p></div></div>
+      <div class="filters">
+        <input id="resultSearch" type="search" placeholder="Search username or name">
+        <select id="sourceFilter"><option value="">All sources</option><option value="seed">Original seeds</option><option value="new">New opponents only</option><option value="discovered">All encountered opponents</option></select>
+        <select id="sortFilter"><option value="username">Username</option><option value="rating-desc">Daily rating ↓</option><option value="last-online-desc">Last online ↓</option><option value="clubs-desc">Clubs ↓</option><option value="hits-desc">Discovery hits ↓</option></select>
+        <button id="applyFilters" class="button">Apply</button>
+      </div>
+      <div class="table-wrap result-wrap"><table><thead><tr><th>Player</th><th>Source</th><th>Daily</th><th>Last online</th><th>Clubs</th><th>W / D / L</th><th>Timeout</th><th>Status</th></tr></thead><tbody id="resultsBody"></tbody></table></div>
+      <div class="pager"><button id="prevPage" class="button">Previous</button><span id="pageStatus"></span><button id="nextPage" class="button">Next</button></div>
+    </section>
+  </div>
+</main>
+<script src="app.js?v=0.1.0"></script>
+</body>
+</html>
