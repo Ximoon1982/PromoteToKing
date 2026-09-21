@@ -184,7 +184,8 @@ CREATE TABLE IF NOT EXISTS p2k_g_matches (
   KEY idx_g_match_status (status,match_id),
   KEY idx_g_match_retry (retry_after,status),
   KEY idx_g_match_current (index_bucket,index_time_class,status,last_verified_at),
-  KEY idx_g_match_eligibility (club_verified,time_class,scoring_eligible,status)
+  KEY idx_g_match_eligibility (club_verified,time_class,scoring_eligible,status),
+  KEY idx_g_match_discovered (verified_club_slug,club_verified,created_at,match_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS p2k_g_players (

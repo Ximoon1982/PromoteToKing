@@ -1859,9 +1859,21 @@ final class Repository
         if ($preferred === '') $preferred = 'promote-to-king';
         if (isset($this->resolvedClubSlugs[$preferred])) return $this->resolvedClubSlugs[$preferred];
 
-        // vNext audit fix: state is keyed by club_slug and is maintained by every
-        // supported v2.8 deployment. A single indexed lookup is enough to resolve
-        // the normal configured club; do not COUNT members/participations/events.
+        // Green is the production authority. Resolve the configured club from its
+        // native state first so Green-native public reads do not depend on a
+        // compatibility projection merely to establish the club key.
+        try {
+            $q=$this->pdo->prepare('SELECT club_slug FROM p2k_g_state WHERE club_slug=? LIMIT 1');
+            $q->execute([$preferred]);$found=$q->fetchColumn();
+            if(is_string($found)&&trim($found)!=='') return $this->resolvedClubSlugs[$preferred]=strtolower(trim($found));
+
+            $q=$this->pdo->query("SELECT club_slug FROM p2k_g_state WHERE club_slug IS NOT NULL AND club_slug<>'' ORDER BY club_slug LIMIT 2");
+            $rows=array_values(array_unique(array_map(static fn($v):string=>strtolower(trim((string)$v)),$q->fetchAll(PDO::FETCH_COLUMN)?:[])));
+            if(count($rows)===1&&$rows[0]!=='') return $this->resolvedClubSlugs[$preferred]=$rows[0];
+        } catch (\Throwable) {}
+
+        // Legacy/compatibility fallback for non-Green utility contexts. Production
+        // Green installations resolve above and never need these probes.
         try {
             $q=$this->pdo->prepare('SELECT club_slug FROM p2k_tp_state WHERE club_slug=? LIMIT 1');
             $q->execute([$preferred]);$found=$q->fetchColumn();
@@ -1870,11 +1882,7 @@ final class Repository
             $q=$this->pdo->query("SELECT club_slug FROM p2k_tp_state WHERE club_slug IS NOT NULL AND club_slug<>'' ORDER BY club_slug LIMIT 2");
             $rows=array_values(array_unique(array_map(static fn($v):string=>strtolower(trim((string)$v)),$q->fetchAll(PDO::FETCH_COLUMN)?:[])));
             if(count($rows)===1&&$rows[0]!=='') return $this->resolvedClubSlugs[$preferred]=$rows[0];
-        } catch (\Throwable) {}
 
-        // Compatibility fallback for an incomplete legacy state row. All probes
-        // are LIMIT 1/indexed and therefore independent of club population size.
-        try {
             foreach (['p2k_tp_members','p2k_tp_participations','p2k_tp_match_metadata'] as $table) {
                 $q=$this->pdo->prepare("SELECT club_slug FROM {$table} WHERE club_slug=? LIMIT 1");$q->execute([$preferred]);
                 if($q->fetchColumn()!==false) return $this->resolvedClubSlugs[$preferred]=$preferred;
@@ -2698,12 +2706,36 @@ final class Repository
     {
         $clubSlug=$this->resolveDataClubSlug($clubSlug); $hours=max(1,min(168,$hours));
         $cutoff=gmdate('Y-m-d H:i:s', time() - ($hours * 3600));
-        $q=$this->pdo->prepare("SELECT match_id,match_name AS name,match_url AS url,status,rules,time_control,is_league,start_time,end_time,board_count,p2k_score,opponent_score,opponent_name,opponent_slug,max_rating,first_discovered_at,last_verified_at FROM p2k_tp_match_metadata WHERE club_slug=? AND first_discovered_at>=? ORDER BY first_discovered_at DESC,match_id DESC");
+        // Green club-index discovery is authoritative before match-detail hydration.
+        // Read it directly: compatibility projection must not delay a newly-created
+        // match from appearing in the recent-discovery view.
+        $q=$this->pdo->prepare("SELECT match_id,api_url,web_url,name,status,index_bucket,rules,time_control,start_epoch,end_epoch,board_count,p2k_score,opponent_score,opponent_name,opponent_url,created_at,last_verified_at FROM p2k_g_matches WHERE club_verified=1 AND verified_club_slug=? AND COALESCE(NULLIF(time_class,''),NULLIF(index_time_class,''))='daily' AND created_at>=? ORDER BY created_at DESC,match_id DESC");
         $q->execute([$clubSlug,$cutoff]);
-        return array_map(static fn(array $r): array => [
-            'match_id'=>(int)$r['match_id'],'name'=>(string)$r['name'],'url'=>$r['url'],'status'=>(string)$r['status'],'rules'=>$r['rules'],'time_control'=>$r['time_control'],'is_league'=>(bool)$r['is_league'],
-            'start_time'=>$r['start_time'],'end_time'=>$r['end_time'],'boards'=>(int)$r['board_count'],'our_score'=>(float)$r['p2k_score'],'their_score'=>(float)$r['opponent_score'],'opponent_name'=>$r['opponent_name'],'opponent_slug'=>$r['opponent_slug'],'max_rating'=>$r['max_rating']===null?null:(int)$r['max_rating'],'first_discovered_at'=>$r['first_discovered_at'],'last_verified_at'=>$r['last_verified_at']
-        ],$q->fetchAll() ?: []);
+        return array_map(static function(array $r): array {
+            $matchId=(int)$r['match_id'];
+            $name=trim((string)($r['name']??''));if($name==='')$name='Match '.$matchId;
+            $url=trim((string)($r['web_url']??''));if($url==='')$url=trim((string)($r['api_url']??''));
+            $status=(string)($r['status']??'unknown');
+            if(!in_array($status,['registered','in_progress','finished','cancelled','unavailable'],true)){
+                $indexed=(string)($r['index_bucket']??'unknown');
+                $status=in_array($indexed,['registered','in_progress','finished'],true)?$indexed:'unknown';
+            }
+            if(in_array($status,['cancelled','unavailable'],true))$status='finished';
+            $opponentUrl=trim((string)($r['opponent_url']??''));
+            return [
+                'match_id'=>$matchId,'name'=>$name,'url'=>$url,'status'=>$status,
+                'rules'=>($r['rules']??null)!==null?(string)$r['rules']:null,
+                'time_control'=>($r['time_control']??null)!==null?(string)$r['time_control']:null,
+                'is_league'=>preg_match('/(^|[^A-Z0-9])(1WL|TCMAC|KOTML|TMCL|WKCL|PCL|CW)([^A-Z0-9]|$)/i',$name)===1,
+                'start_time'=>is_numeric($r['start_epoch']??null)&&(int)$r['start_epoch']>0?gmdate('Y-m-d H:i:s',(int)$r['start_epoch']):null,
+                'end_time'=>is_numeric($r['end_epoch']??null)&&(int)$r['end_epoch']>0?gmdate('Y-m-d H:i:s',(int)$r['end_epoch']):null,
+                'boards'=>(int)($r['board_count']??0),'our_score'=>(float)($r['p2k_score']??0),'their_score'=>(float)($r['opponent_score']??0),
+                'opponent_name'=>$r['opponent_name']??null,'opponent_slug'=>self::chessClubSlugFromUrl($opponentUrl),
+                // Match rating caps are not yet a native Green fact. Preserve the
+                // response key without reintroducing a compatibility-table join.
+                'max_rating'=>null,'first_discovered_at'=>$r['created_at']??null,'last_verified_at'=>$r['last_verified_at']??null
+            ];
+        },$q->fetchAll(PDO::FETCH_ASSOC) ?: []);
     }
 
     public function publicMatchInsights(string $clubSlug, array $options = []): array

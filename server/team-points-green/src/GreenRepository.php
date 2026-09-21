@@ -81,6 +81,7 @@ final class GreenRepository
         }
         if(!$this->indexExists('p2k_g_matches','idx_g_match_current'))$this->core->exec('ALTER TABLE p2k_g_matches ADD INDEX idx_g_match_current (index_bucket,index_time_class,status,last_verified_at)');
         if(!$this->indexExists('p2k_g_matches','idx_g_match_eligibility'))$this->core->exec('ALTER TABLE p2k_g_matches ADD INDEX idx_g_match_eligibility (club_verified,time_class,scoring_eligible,status)');
+        if(!$this->indexExists('p2k_g_matches','idx_g_match_discovered'))$this->core->exec('ALTER TABLE p2k_g_matches ADD INDEX idx_g_match_discovered (verified_club_slug,club_verified,created_at,match_id)');
         if(!$this->columnExists('p2k_g_state','public_read_target'))$this->core->exec("ALTER TABLE p2k_g_state ADD COLUMN public_read_target ENUM('blue','green') NOT NULL DEFAULT 'blue' AFTER force_mode");
         if(!$this->columnExists('p2k_g_state','migration_phase'))$this->core->exec("ALTER TABLE p2k_g_state ADD COLUMN migration_phase ENUM('blue_primary','shadow_writing','green_validated','green_reads_both_writing','green_primary') NOT NULL DEFAULT 'blue_primary' AFTER public_read_target");
         $stateColumns=[
