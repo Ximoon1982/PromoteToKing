@@ -254,6 +254,18 @@ def main() -> None:
             order.select_option("league-az")
             hall.wait_for_timeout(50)
             assert hall.locator("#p2kTrophyHallPanel .p2k-trophy-group > h3").first.inner_text() == "Alpha League"
+            # Inspect in the click task itself: deferred cleanup must not expose legacy fields.
+            immediate_modal = hall.locator("#p2kTrophyHallPanel [data-open]").first.evaluate("""button => {
+                button.click();
+                const modal = document.querySelector('#p2kTrophyModal');
+                return {
+                    visible: !!modal && !modal.hidden,
+                    enlarge: modal.querySelectorAll('[data-enlarge]').length,
+                    award: [...modal.querySelectorAll('dt')].filter(el => el.textContent.trim() === 'Award').length,
+                };
+            }""")
+            assert immediate_modal == {"visible": True, "enlarge": 0, "award": 0}, immediate_modal
+            hall.locator("#p2kTrophyModal [data-close]").click()
             hall.locator("#p2kTrophyHallPanel [data-open]").first.click()
             hall.wait_for_selector("#p2kTrophyModal:not([hidden])")
             assert hall.locator("#p2kTrophyModal [data-enlarge]").count() == 0

@@ -241,9 +241,10 @@ async function decorate(root) {
     control.addEventListener(control.matches('[data-search]') ? "input" : "change", () => setTimeout(apply, 0));
   }
   apply();
+  // Bubble after the card handler builds the modal, before the click task ends.
   root.addEventListener("click", e => {
-    if (e.target.closest?.("[data-open]")) setTimeout(cleanupModal, 0);
-  }, true);
+    if (e.target.closest?.("[data-open]")) cleanupModal();
+  });
   setTimeout(cleanupModal, 0);
 }
 
