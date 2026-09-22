@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS p2k_lr_sync_state (
   discovery_failure_streak INT UNSIGNED NOT NULL DEFAULT 0,
   last_discovery_attempt_at DATETIME NULL,
   last_successful_discovery_at DATETIME NULL,
+  last_index_page_fingerprint CHAR(64) NULL,
   request_count INT UNSIGNED NOT NULL DEFAULT 0,
   current_arena_id BIGINT UNSIGNED NULL,
   current_arena_slug VARCHAR(255) NULL,

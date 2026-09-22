@@ -50,7 +50,7 @@ final class McaResultsCronService
     {
         return $this->withGlobalLock(function(){
             $this->ensureState();
-            $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='running',phase='discovery',total_events=0,checked_events=0,csv_found=0,csv_added=0,dates_added=0,error_count=0,request_count=0,current_stage='index:1',high_water_arena_id=1,started_at=UTC_TIMESTAMP(),finished_at=NULL,next_scan_at=NULL,last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$this->clubSlug]);
+            $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='running',phase='discovery',total_events=0,checked_events=0,csv_found=0,csv_added=0,dates_added=0,error_count=0,request_count=0,current_stage='index:1',high_water_arena_id=1,last_index_page_fingerprint=NULL,started_at=UTC_TIMESTAMP(),finished_at=NULL,next_scan_at=NULL,last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$this->clubSlug]);
             return $this->status();
         });
     }
@@ -74,7 +74,7 @@ final class McaResultsCronService
         return $this->withGlobalLock(function()use($maxSeconds,$force){$this->ensureState();$this->seedHistoricalBacklog();$state=$this->stateRow();
             // If the release lands while a legacy ID-boundary discovery is mid-cycle,
             // restart that cycle from page 1 as the required one-time full reconciliation.
-            if(($state['status']??'')==='running'&&($state['phase']??'')==='discovery'&&(int)($state['high_water_arena_id']??0)>1){$this->pdo->prepare("UPDATE p2k_lr_sync_state SET current_stage='index:1',high_water_arena_id=1,started_at=UTC_TIMESTAMP(),last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$this->clubSlug]);$state=$this->stateRow();}
+            if(($state['status']??'')==='running'&&($state['phase']??'')==='discovery'&&(int)($state['high_water_arena_id']??0)>1){$this->pdo->prepare("UPDATE p2k_lr_sync_state SET current_stage='index:1',high_water_arena_id=1,last_index_page_fingerprint=NULL,started_at=UTC_TIMESTAMP(),last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$this->clubSlug]);$state=$this->stateRow();}
             if($force&&($state['status']??'')!=='running'){$this->pdo->prepare('UPDATE p2k_lr_sync_state SET next_scan_at=UTC_TIMESTAMP(),last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')->execute([$this->clubSlug]);$state=$this->stateRow();}
             if(($state['status']??'')!=='running'||($state['phase']??'')!=='discovery'){$due=empty($state['next_scan_at'])||(strtotime((string)$state['next_scan_at'].' UTC')?:0)<=time();if(!$due)return $this->status();$this->beginDiscoveryCycle();}
             $deadline=microtime(true)+max(4,min(60,$maxSeconds));while(microtime(true)<$deadline-6.0){$state=$this->stateRow();if(($state['status']??'')!=='running'||($state['phase']??'')!=='discovery')break;if(!$this->discoveryStep($state,$deadline))break;}return $this->status();});
@@ -113,7 +113,7 @@ final class McaResultsCronService
         // legacy value forces one exhaustive occurrence-ordered reconciliation. Once it
         // succeeds we permanently retire the ID boundary by setting it to zero.
         $fullReconciliation=(int)($state['high_water_arena_id']??0)>0;
-        $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='running',phase='discovery',total_events=0,checked_events=0,csv_found=0,csv_added=0,dates_added=0,error_count=0,request_count=0,current_stage='index:1',high_water_arena_id=?,started_at=UTC_TIMESTAMP(),finished_at=NULL,last_error=NULL,last_scan_at=UTC_TIMESTAMP(),next_scan_at=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")
+        $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='running',phase='discovery',total_events=0,checked_events=0,csv_found=0,csv_added=0,dates_added=0,error_count=0,request_count=0,current_stage='index:1',high_water_arena_id=?,last_index_page_fingerprint=NULL,started_at=UTC_TIMESTAMP(),finished_at=NULL,last_error=NULL,last_scan_at=UTC_TIMESTAMP(),next_scan_at=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")
             ->execute([$fullReconciliation?1:0,$this->clubSlug]);
     }
 
@@ -143,8 +143,8 @@ final class McaResultsCronService
                 $ins->execute([$this->clubSlug,$id,(string)$e['arena_slug'],(string)$e['arena_url'],(string)$e['csv_url'],$e['event_start_at'],$e['event_date'],(string)$e['date_precision']]);
                 $checked++;if($ins->rowCount()===1)$inserted++;
             }
-            $this->pdo->prepare('UPDATE p2k_lr_sync_state SET total_events=total_events+?,checked_events=checked_events+?,current_stage=?,discovery_failure_streak=0,last_discovery_attempt_at=UTC_TIMESTAMP(),last_successful_discovery_at=UTC_TIMESTAMP(),last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')
-                ->execute([$inserted,$checked,'index:'.($page+1),$this->clubSlug]);
+            $this->pdo->prepare('UPDATE p2k_lr_sync_state SET total_events=total_events+?,checked_events=checked_events+?,current_stage=?,last_index_page_fingerprint=?,discovery_failure_streak=0,last_discovery_attempt_at=UTC_TIMESTAMP(),last_successful_discovery_at=UTC_TIMESTAMP(),last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')
+                ->execute([$inserted,$checked,'index:'.($page+1),(string)($parsed['page_fingerprint']??''),$this->clubSlug]);
 
             if($reachedKnown){$this->completeDiscoveryCycle();return false;}
             // Current Chess.com index pages contain 25 events. A short page is a genuine
@@ -162,7 +162,7 @@ final class McaResultsCronService
 
     private function completeDiscoveryCycle(): void
     {
-        $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='completed',phase='discovery_complete',high_water_arena_id=0,current_stage=NULL,finished_at=UTC_TIMESTAMP(),next_scan_at=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 12 HOUR),last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")
+        $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='completed',phase='discovery_complete',high_water_arena_id=0,current_stage=NULL,last_index_page_fingerprint=NULL,finished_at=UTC_TIMESTAMP(),next_scan_at=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 12 HOUR),last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")
             ->execute([$this->clubSlug]);
     }
 
@@ -232,26 +232,25 @@ final class McaResultsCronService
 
     private function fetchDiscoveryIndexPage(int $page,float $deadline,array $state): array
     {
-        $page=max(1,$page);$started=(string)($state['started_at']??'');$url=$this->indexUrl($page);
+        $page=max(1,$page);$url=$this->indexUrl($page);
         $http=$this->httpGet($url,$deadline);
         $parsed=McaIndexParser::parse((string)$http['body'],$page);
         $events=$parsed['events']??[];
         if($events===[])throw new \RuntimeException('No tournament rows at '.$url);
-        if($page===1)return $parsed+['source_url'=>$url,'effective_url'=>$http['effective_url']??$url,'body_sha256'=>$http['body_sha256']??hash('sha256',(string)$http['body'])];
-        $ids=array_values(array_unique(array_map(static fn($e)=>(int)($e['arena_id']??0),$events)));
-        $ids=array_values(array_filter($ids,static fn($id)=>$id>0));
-        if($this->countNotSeenThisCycle($ids,$started)>0)return $parsed+['source_url'=>$url,'effective_url'=>$http['effective_url']??$url,'body_sha256'=>$http['body_sha256']??hash('sha256',(string)$http['body'])];
-        $first=$ids[0]??0;$last=$ids!==[]?$ids[count($ids)-1]:0;
-        throw new \RuntimeException('MCA index pagination did not advance on page '.$page.'. Requested '.$url.'; effective '.($http['effective_url']??$url).'; rows '.count($ids).'; first '.$first.'; last '.$last.'; body '.substr((string)($http['body_sha256']??''),0,16).'.');
+        $fingerprint=$this->discoveryPageFingerprint($events);
+        $previous=trim((string)($state['last_index_page_fingerprint']??''));
+        if($page>1&&$previous!==''&&hash_equals($previous,$fingerprint)){
+            $ids=array_values(array_filter(array_map(static fn($e)=>(int)($e['arena_id']??0),$events),static fn($id)=>$id>0));
+            $first=$ids[0]??0;$last=$ids!==[]?$ids[count($ids)-1]:0;
+            throw new \RuntimeException('MCA index pagination repeated the previous page on page '.$page.'. Requested '.$url.'; effective '.($http['effective_url']??$url).'; rows '.count($ids).'; first '.$first.'; last '.$last.'; body '.substr((string)($http['body_sha256']??''),0,16).'.');
+        }
+        return $parsed+['source_url'=>$url,'effective_url'=>$http['effective_url']??$url,'body_sha256'=>$http['body_sha256']??hash('sha256',(string)$http['body']),'page_fingerprint'=>$fingerprint];
     }
 
-    private function countNotSeenThisCycle(array $arenaIds,string $startedAt): int
+    private function discoveryPageFingerprint(array $events): string
     {
-        if($arenaIds===[]||$startedAt==='')return count($arenaIds);
-        $placeholders=implode(',',array_fill(0,count($arenaIds),'?'));
-        $sql="SELECT COUNT(*) FROM p2k_lr_arena_acquisition WHERE club_slug=? AND arena_id IN ($placeholders) AND source_kind='index' AND updated_at>=?";
-        $q=$this->pdo->prepare($sql);$q->execute(array_merge([$this->clubSlug],$arenaIds,[$startedAt]));
-        return max(0,count($arenaIds)-(int)$q->fetchColumn());
+        $ids=array_values(array_filter(array_map(static fn($e)=>(int)($e['arena_id']??0),$events),static fn($id)=>$id>0));
+        return hash('sha256',count($ids).':'.implode(',',$ids));
     }
     private function dimensionUrl(string $arena,string $kind,int $page): string{$x=['clubs'=>1,'players'=>1,'pairings'=>1];$x[$kind]=$page;return rtrim($arena,'?&').'?' . http_build_query($x,'','&',PHP_QUERY_RFC3986);}
 
@@ -278,7 +277,7 @@ final class McaResultsCronService
     private function ensureState(): void
     {
         if(!$this->syncSchemaReady){
-            $columns=['discovery_failure_streak'=>"INT UNSIGNED NOT NULL DEFAULT 0 AFTER error_count",'last_discovery_attempt_at'=>"DATETIME NULL AFTER discovery_failure_streak",'last_successful_discovery_at'=>"DATETIME NULL AFTER last_discovery_attempt_at"];
+            $columns=['discovery_failure_streak'=>"INT UNSIGNED NOT NULL DEFAULT 0 AFTER error_count",'last_discovery_attempt_at'=>"DATETIME NULL AFTER discovery_failure_streak",'last_successful_discovery_at'=>"DATETIME NULL AFTER last_discovery_attempt_at",'last_index_page_fingerprint'=>"CHAR(64) NULL AFTER last_successful_discovery_at"];
             foreach($columns as $name=>$definition){$q=$this->pdo->prepare('SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=?');$q->execute(['p2k_lr_sync_state',$name]);if((int)$q->fetchColumn()===0){try{$this->pdo->exec('ALTER TABLE p2k_lr_sync_state ADD COLUMN '.$name.' '.$definition);}catch(\Throwable){}}}
             $this->syncSchemaReady=true;
         }
