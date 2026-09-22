@@ -1,0 +1,59 @@
+name: P2K v2.13.0 cumulative installer qualification
+
+on:
+  push:
+    branches: [release/v2.13.0-installer]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  installer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Verify exact qualified source exists
+        run: |
+          git cat-file -e 9c2f08e3f59945ae983f30d6b214f10140dbd345^{commit}
+          test "$(git show 9c2f08e3f59945ae983f30d6b214f10140dbd345:VERSION)" = "2.13.0"
+      - name: Build cumulative v2.13.0 package
+        run: bash tools/release/v2130/build-package.sh "$RUNNER_TEMP/build-v2130"
+      - name: Package syntax and release identity
+        run: |
+          P="$RUNNER_TEMP/build-v2130/PromoteToKing_v2.13.0_INCREMENTAL_FROM_2.12.x/payload"
+          node --check "$P/assets/js/admin/admin-session-controller.js"
+          node --check "$P/assets/js/pages/dashboard-insights.js"
+          node --check "$P/assets/js/pages/dashboard-insights-charts.js"
+          node --check "$P/assets/js/pages/team-points-features.js"
+          php -l "$P/server/team-points/src/Repository.php"
+          php -l "$P/server/team-points/src/LiveRanksService.php"
+          php -l "$P/server/team-points/src/McaResultsCronService.php"
+          php -l "$P/server/team-points/public/live-ranks-admin.php"
+          php -l "$P/server/team-points-green/src/GreenRepository.php"
+          php -l "$P/server/team-points-green/src/GreenCompatibility.php"
+          python -m json.tool "$P/site-manifest.json" >/dev/null
+          grep -F 'version: "2.13.0"' "$P/assets/js/site-config.js"
+          grep -F '"version": "2.13.0"' "$P/site-manifest.json"
+      - name: Qualify cumulative installer
+        run: bash tools/release/v2130/qualify-installer.sh "$RUNNER_TEMP/build-v2130"
+      - name: Build standalone run installer
+        run: bash tools/release/v2130/build-standalone.sh "$RUNNER_TEMP/build-v2130"
+      - name: Qualify standalone run installer
+        run: bash tools/release/v2130/qualify-standalone.sh "$RUNNER_TEMP/build-v2130"
+      - name: Upload qualified installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: PromoteToKing-v2.13.0-qualified-installer-9c2f08e3
+          path: |
+            ${{ runner.temp }}/build-v2130/PromoteToKing_v2.13.0_INCREMENTAL_FROM_2.12.x_9c2f08e3.run
+            ${{ runner.temp }}/build-v2130/PromoteToKing_v2.13.0_INCREMENTAL_FROM_2.12.x.zip
+            ${{ runner.temp }}/build-v2130/SHA256SUMS.txt
+            ${{ runner.temp }}/build-v2130/STANDALONE-SHA256SUM.txt
+            ${{ runner.temp }}/build-v2130/INSTALL-v2.13.0.txt
+          if-no-files-found: error
