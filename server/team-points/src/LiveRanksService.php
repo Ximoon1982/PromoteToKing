@@ -82,7 +82,9 @@ final class LiveRanksService
         );
         $query->execute([$this->clubSlug]);
         $rows=$query->fetchAll()?:[];$catalogue=McaSourceCatalogue::analyze($rows);$meta=$catalogue['row_meta'];
-        return array_map(static function (array $row) use($meta): array {
+        $acq=[];$aq=$this->pdo->prepare("SELECT arena_id,status,stage,game_count FROM p2k_lr_arena_acquisition WHERE club_slug=?");$aq->execute([$this->clubSlug]);foreach($aq->fetchAll(PDO::FETCH_ASSOC)?:[] as $r)$acq[(int)$r['arena_id']]=$r;
+        $playerCounts=[];$pq=$this->pdo->prepare("SELECT arena_id,COUNT(*) n,SUM(result_club_slug=? AND wins IS NOT NULL AND draws IS NOT NULL AND losses IS NOT NULL) covered FROM p2k_lr_arena_players WHERE club_slug=? GROUP BY arena_id");$pq->execute([$this->clubSlug,$this->clubSlug]);foreach($pq->fetchAll(PDO::FETCH_ASSOC)?:[] as $r)$playerCounts[(int)$r['arena_id']]=['rows'=>(int)$r['n'],'covered'=>(int)$r['covered']];
+        return array_map(static function (array $row) use($meta,$acq,$playerCounts): array {
             $name=(string)$row['original_name'];$identity=McaSourceCatalogue::identityFromRow($row);
             $slug=$identity['arena_slug']??(trim((string)($row['arena_slug']??''))?:preg_replace('/\.csv$/i','',$name));
             $arenaId=$identity['arena_id']??null;$rowMeta=$meta[(int)$row['id']]??['canonical'=>true,'duplicate_of_id'=>null,'copy_index'=>0,'content_conflict'=>false];
@@ -111,6 +113,11 @@ final class LiveRanksService
                 'duplicate_of_id' => $rowMeta['duplicate_of_id'],
                 'browser_copy_index' => (int)($rowMeta['copy_index']??0),
                 'duplicate_content_conflict' => !empty($rowMeta['content_conflict']),
+                'acquisition_status' => $arenaId!==null ? (string)($acq[(int)$arenaId]['status']??'unknown') : 'legacy',
+                'acquisition_stage' => $arenaId!==null ? (string)($acq[(int)$arenaId]['stage']??'unknown') : 'legacy',
+                'scraped_player_rows' => $arenaId!==null ? (int)($playerCounts[(int)$arenaId]['rows']??0) : 0,
+                'scraped_result_players' => $arenaId!==null ? (int)($playerCounts[(int)$arenaId]['covered']??0) : 0,
+                'scraped_games' => $arenaId!==null ? (int)($acq[(int)$arenaId]['game_count']??0) : 0,
             ];
         }, $rows);
     }
@@ -797,6 +804,7 @@ final class LiveRanksService
 
         $arenas = $this->arenaInsightsRows();
         $resultsByFile = $this->arenaCanonicalResults();
+        $scrapedByArena = $this->arenaScrapedResultTotals();
         $trend = [];
         $cumulative = 0.0;
         foreach ($arenas as $arena) {
@@ -825,6 +833,8 @@ final class LiveRanksService
                 $draws += (int)($player['draws'] ?? 0);
                 $losses += (int)($player['losses'] ?? 0);
             }
+            $arenaId=(int)($arena['arena_id']??0);$scraped=$arenaId>0?($scrapedByArena[$arenaId]??null):null;
+            if(is_array($scraped)&&!empty($scraped['complete'])){$games=(int)$scraped['games'];$wins=(int)$scraped['wins'];$draws=(int)$scraped['draws'];$losses=(int)$scraped['losses'];$hasGames=true;}
             $points = round((float)$arena['p2k_points'], 2);
             $cumulative = round($cumulative + $points, 2);
             $fieldSize = max(0, (int)$arena['total_players']);
@@ -915,6 +925,14 @@ final class LiveRanksService
                 'processed_at'=>$row['processed_at']!==null?(string)$row['processed_at']:null,
             ];
         },$q->fetchAll(PDO::FETCH_ASSOC)?:[]);
+    }
+
+    private function arenaScrapedResultTotals(): array
+    {
+        $q=$this->pdo->prepare("SELECT arena_id,COUNT(*) players,SUM(wins IS NOT NULL AND draws IS NOT NULL AND losses IS NOT NULL) covered,COALESCE(SUM(COALESCE(wins,0)+COALESCE(draws,0)+COALESCE(losses,0)),0) games,COALESCE(SUM(wins),0) wins,COALESCE(SUM(draws),0) draws,COALESCE(SUM(losses),0) losses FROM p2k_lr_arena_players WHERE club_slug=? AND result_club_slug=? GROUP BY arena_id");
+        $q->execute([$this->clubSlug,$this->clubSlug]);$out=[];
+        foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){$players=(int)$row['players'];$covered=(int)$row['covered'];$out[(int)$row['arena_id']]=['complete'=>$players>0&&$covered===$players,'games'=>(int)$row['games'],'wins'=>(int)$row['wins'],'draws'=>(int)$row['draws'],'losses'=>(int)$row['losses']];}
+        return $out;
     }
 
     /** Canonical per-arena Results rows. Multiple historical aliases are merged exactly as in MIRA processing. */

@@ -10,6 +10,7 @@ final class McaResultsCronService
 {
     private readonly string $clubSlug;
     private readonly string $storageDir;
+    private bool $syncSchemaReady=false;
 
     public function __construct(private readonly PDO $pdo, private readonly Repository $repository)
     {
@@ -40,8 +41,32 @@ final class McaResultsCronService
             'arena_backlog_total'=>$total,'index_confirmed_arenas'=>$indexConfirmed,'arena_backlog_remaining'=>$counts['pending']+$counts['running']+$counts['error'],'games_stored'=>$games,'club_rows_stored'=>(int)$perf[0],'player_rows_stored'=>(int)$perf[1],
             'source_records_stored'=>$catalogue['stored_records'],'canonical_source_count'=>$catalogue['canonical_sources'],'recognized_source_arenas'=>$catalogue['recognized_arena_sources'],
             'duplicate_source_records'=>$catalogue['duplicate_records'],'duplicate_source_groups'=>$catalogue['duplicate_groups'],'conflicting_duplicate_source_groups'=>$catalogue['conflicting_duplicate_groups'],'unidentified_source_records'=>$catalogue['unidentified_records'],
+            'discovery_health'=>(int)($state['discovery_failure_streak']??0)>=2?'error':((int)($state['discovery_failure_streak']??0)===1?'warning':'healthy'),
             'serial'=>true,'request_spacing_ms'=>1000,'worker_frequency'=>'every_minute','worker_slice_seconds'=>55,'new_arena_priority'=>true,'discovery_strategy'=>'index-occurrence-first-known','full_reconciliation_active'=>(int)($state['high_water_arena_id']??0)>0,
         ];
+    }
+
+    public function startFullDiscovery(): array
+    {
+        return $this->withGlobalLock(function(){
+            $this->ensureState();
+            $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='running',phase='discovery',total_events=0,checked_events=0,csv_found=0,csv_added=0,dates_added=0,error_count=0,request_count=0,current_stage='index:1',high_water_arena_id=1,started_at=UTC_TIMESTAMP(),finished_at=NULL,next_scan_at=NULL,last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$this->clubSlug]);
+            return $this->status();
+        });
+    }
+
+    public function queueHistoricalStatsBackfill(): array
+    {
+        return $this->withGlobalLock(function(){
+            $this->ensureState();$this->seedHistoricalBacklog();
+            $q=$this->pdo->prepare("SELECT DISTINCT f.arena_id FROM p2k_lr_files f JOIN p2k_lr_source_rows r ON r.club_slug=f.club_slug AND r.file_id=f.id WHERE f.club_slug=? AND f.arena_id IS NOT NULL AND f.status='processed' AND (r.games IS NULL OR r.wins IS NULL OR r.draws IS NULL OR r.losses IS NULL)");
+            $q->execute([$this->clubSlug]);$ids=array_values(array_filter(array_map('intval',$q->fetchAll(PDO::FETCH_COLUMN)?:[]),static fn(int $id):bool=>$id>0));
+            if($ids!==[]){
+                $u=$this->pdo->prepare("UPDATE p2k_lr_arena_acquisition SET priority=GREATEST(priority,20),status='pending',stage='arena',needs_players=1,arena_page_done=0,players_next_page=1,pairings_next_page=1,last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=? AND arena_id=?");
+                foreach($ids as $id)$u->execute([$this->clubSlug,$id]);
+            }
+            return ['queued'=>count($ids),'arena_ids'=>$ids,'sync'=>$this->status()];
+        });
     }
 
     public function runDiscovery(int $maxSeconds=12,bool $force=false): array
@@ -118,7 +143,7 @@ final class McaResultsCronService
                 $ins->execute([$this->clubSlug,$id,(string)$e['arena_slug'],(string)$e['arena_url'],(string)$e['csv_url'],$e['event_start_at'],$e['event_date'],(string)$e['date_precision']]);
                 $checked++;if($ins->rowCount()===1)$inserted++;
             }
-            $this->pdo->prepare('UPDATE p2k_lr_sync_state SET total_events=total_events+?,checked_events=checked_events+?,current_stage=?,last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')
+            $this->pdo->prepare('UPDATE p2k_lr_sync_state SET total_events=total_events+?,checked_events=checked_events+?,current_stage=?,discovery_failure_streak=0,last_discovery_attempt_at=UTC_TIMESTAMP(),last_successful_discovery_at=UTC_TIMESTAMP(),last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')
                 ->execute([$inserted,$checked,'index:'.($page+1),$this->clubSlug]);
 
             if($reachedKnown){$this->completeDiscoveryCycle();return false;}
@@ -129,7 +154,7 @@ final class McaResultsCronService
             // walking. fetchDiscoveryIndexPage rejects a repeated/non-advancing page.
             return true;
         }catch(\Throwable $e){
-            $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='running',phase='discovery',error_count=error_count+1,last_error=?,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")
+            $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='running',phase='discovery',error_count=error_count+1,discovery_failure_streak=discovery_failure_streak+1,last_discovery_attempt_at=UTC_TIMESTAMP(),last_error=?,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")
                 ->execute([substr($e->getMessage(),0,4000),$this->clubSlug]);
             return false;
         }
@@ -161,7 +186,8 @@ final class McaResultsCronService
     private function processResults(array $item,float $deadline): array
     {$id=(int)$item['arena_id'];$existing=$this->existingFile($id,(string)$item['arena_slug']);$parsed=null;$added=0;$error=null;if($existing!==null){try{$body=file_get_contents($this->storageDir.'/'.basename((string)$existing['stored_name']));if($body===false)throw new \RuntimeException('Stored Results CSV file is missing.');$parsed=McaArenaParser::resultsCsv($body);}catch(\Throwable $e){$error=$e->getMessage();}}else{try{$body=(string)$this->httpGet((string)$item['csv_url'],$deadline)['body'];$this->validateResultsCsv($body);$parsed=McaArenaParser::resultsCsv($body);$date=['event_date'=>$item['event_date']??null,'event_start_at'=>$item['event_start_at']??null,'date_precision'=>$item['date_precision']??'unknown'];$this->storeAutomaticCsv($item,$body,$date,'auto');$added=1;}catch(\Throwable $e){$error=$e->getMessage();}}
         $clubs=is_array($parsed)?($parsed['clubs']??[]):[];$players=is_array($parsed)?($parsed['players']??[]):[];if($clubs!==[]){$this->replaceClubRows($id,$clubs,'csv');}if($players!==[]){$this->replacePlayerRows($id,$players,'csv');}
-        $needClubs=$clubs===[]?1:0;$needPlayers=$players===[]?1:0;$source=($clubs!==[]||$players!==[])?'csv':'html';$next=$needClubs?'clubs':($needPlayers?'players':'pairings');$this->pdo->prepare("UPDATE p2k_lr_arena_acquisition SET results_source=?,needs_clubs=?,needs_players=?,stage=?,status='pending',last_error=?,updated_at=UTC_TIMESTAMP() WHERE club_slug=? AND arena_id=?")->execute([$source,$needClubs,$needPlayers,$next,$error!==null?substr('CSV fallback: '.$error,0,4000):null,$this->clubSlug,$id]);if($added){$this->pdo->prepare('UPDATE p2k_lr_sync_state SET csv_found=csv_found+1,csv_added=csv_added+1,rebuild_required=1,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')->execute([$this->clubSlug]);}return ['csv_added'=>$added];}
+        $playerStatsComplete=$players!==[];foreach($players as $player){if(($player['wins']??null)===null||($player['draws']??null)===null||($player['losses']??null)===null){$playerStatsComplete=false;break;}}
+        $needClubs=$clubs===[]?1:0;$needPlayers=$playerStatsComplete?0:1;$source=($clubs!==[]||$players!==[])?'csv':'html';$next=$needClubs?'clubs':($needPlayers?'players':'pairings');$this->pdo->prepare("UPDATE p2k_lr_arena_acquisition SET results_source=?,needs_clubs=?,needs_players=?,stage=?,status='pending',last_error=?,updated_at=UTC_TIMESTAMP() WHERE club_slug=? AND arena_id=?")->execute([$source,$needClubs,$needPlayers,$next,$error!==null?substr('CSV fallback: '.$error,0,4000):null,$this->clubSlug,$id]);if($added){$this->pdo->prepare('UPDATE p2k_lr_sync_state SET csv_found=csv_found+1,csv_added=csv_added+1,rebuild_required=1,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')->execute([$this->clubSlug]);}return ['csv_added'=>$added];}
 
     private function replaceClubRows(int $id,array $rows,string $source): void{$this->pdo->beginTransaction();try{$this->pdo->prepare('DELETE FROM p2k_lr_arena_clubs WHERE club_slug=? AND arena_id=?')->execute([$this->clubSlug,$id]);$this->insertClubRows($id,$rows,$source);$this->pdo->commit();}catch(\Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}}
     private function insertClubRows(int $id,array $rows,string $source): void{$q=$this->pdo->prepare('INSERT INTO p2k_lr_arena_clubs(club_slug,arena_id,result_key,result_club,result_club_slug,rank_value,total_players,score,source_kind,captured_at) VALUES(?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE result_club=VALUES(result_club),result_club_slug=VALUES(result_club_slug),rank_value=VALUES(rank_value),total_players=VALUES(total_players),score=VALUES(score),source_kind=VALUES(source_kind),captured_at=UTC_TIMESTAMP()');foreach($rows as $r){$name=trim((string)($r['club']??''));$slug=trim((string)($r['club_slug']??''));$key=$slug!==''?$slug:substr(hash('sha256',strtolower($name)),0,48);$q->execute([$this->clubSlug,$id,$key,$name!==''?$name:$slug,$slug!==''?$slug:null,$r['rank']??null,(int)($r['total_players']??0),(float)($r['score']??0),$source]);}}
@@ -249,7 +275,15 @@ final class McaResultsCronService
 
     private function waitForRequestSlot(): void{$this->ensureState();$q=$this->pdo->prepare('SELECT last_request_at FROM p2k_lr_sync_state WHERE club_slug=?');$q->execute([$this->clubSlug]);$last=(string)($q->fetchColumn()?:'');if($last!==''){$stamp=(float)(strtotime(substr($last,0,19).' UTC')?:0);$micro=0.0;if(preg_match('/\.(\d+)/',$last,$m))$micro=(float)('0.'.substr($m[1],0,6));$elapsed=microtime(true)-($stamp+$micro);if($elapsed<1.0)usleep((int)ceil((1.0-$elapsed)*1000000));}$this->pdo->prepare('UPDATE p2k_lr_sync_state SET last_request_at=UTC_TIMESTAMP(6),request_count=request_count+1,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')->execute([$this->clubSlug]);}
     private function withGlobalLock(callable $cb): mixed{$key='p2k:mca-sync:'.substr($this->clubSlug,0,40);$q=$this->pdo->prepare('SELECT GET_LOCK(?,0)');$q->execute([$key]);if((int)$q->fetchColumn()!==1)throw new ApiException('Another MCA source synchronization job is already active.',409,'MCA_SYNC_BUSY');try{return $cb();}finally{try{$r=$this->pdo->prepare('SELECT RELEASE_LOCK(?)');$r->execute([$key]);}catch(\Throwable){}}}
-    private function ensureState(): void{$this->pdo->prepare("INSERT IGNORE INTO p2k_lr_sync_state(club_slug,status,phase,updated_at) VALUES(?,'idle','idle',UTC_TIMESTAMP())")->execute([$this->clubSlug]);}
+    private function ensureState(): void
+    {
+        if(!$this->syncSchemaReady){
+            $columns=['discovery_failure_streak'=>"INT UNSIGNED NOT NULL DEFAULT 0 AFTER error_count",'last_discovery_attempt_at'=>"DATETIME NULL AFTER discovery_failure_streak",'last_successful_discovery_at'=>"DATETIME NULL AFTER last_discovery_attempt_at"];
+            foreach($columns as $name=>$definition){$q=$this->pdo->prepare('SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=?');$q->execute(['p2k_lr_sync_state',$name]);if((int)$q->fetchColumn()===0){try{$this->pdo->exec('ALTER TABLE p2k_lr_sync_state ADD COLUMN '.$name.' '.$definition);}catch(\Throwable){}}}
+            $this->syncSchemaReady=true;
+        }
+        $this->pdo->prepare("INSERT IGNORE INTO p2k_lr_sync_state(club_slug,status,phase,updated_at) VALUES(?,'idle','idle',UTC_TIMESTAMP())")->execute([$this->clubSlug]);
+    }
     private function stateRow(): array{$q=$this->pdo->prepare('SELECT * FROM p2k_lr_sync_state WHERE club_slug=?');$q->execute([$this->clubSlug]);return $q->fetch(PDO::FETCH_ASSOC)?:[];}
     private function ensureStorage(): void{if(!is_dir($this->storageDir)&&!mkdir($this->storageDir,0770,true)&&!is_dir($this->storageDir))throw new \RuntimeException('Unable to create MCA upload directory.');}
     private function fileIdentity(array $f): ?array{$x=McaSourceCatalogue::identityFromRow($f);return $x===null?null:['arena_id'=>$x['arena_id'],'arena_slug'=>$x['arena_slug'],'arena_url'=>$x['arena_url']];}
