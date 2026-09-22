@@ -62,3 +62,16 @@ def test_v2130_discovery_page_fingerprint_rejects_only_repeated_page_content():
     p=subprocess.run(["php","-r",php],cwd=ROOT,text=True,capture_output=True)
     assert p.returncode==0,(p.stdout,p.stderr)
     assert p.stdout.strip()=="ok"
+
+
+def test_v2130_full_refresh_falls_back_to_known_inventory_when_upstream_pagination_repeats():
+    service=read("server/team-points/src/McaResultsCronService.php")
+    assert "$this->seedHistoricalBacklog();" in service
+    assert "$this->requeueKnownInventoryForFullRefresh();" in service
+    assert "private function requeueKnownInventoryForFullRefresh(): int" in service
+    assert "priority=GREATEST(priority,80)" in service
+    assert "'pagination_repeated'=>true" in service
+    assert "if($fullReconciliation){$this->completeDiscoveryCycle($error);return false;}" in service
+    assert "'discovery_limited'" in service
+    assert "Exhaustive historical index discovery is unavailable upstream" in service
+    assert "hash_equals($previous,$fingerprint)" in service

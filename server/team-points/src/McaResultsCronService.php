@@ -33,7 +33,7 @@ final class McaResultsCronService
         $indexQ=$this->pdo->prepare("SELECT COUNT(*) FROM p2k_lr_arena_acquisition WHERE club_slug=? AND source_kind='index'");$indexQ->execute([$this->clubSlug]);$indexConfirmed=(int)$indexQ->fetchColumn();
         $errQ=$this->pdo->prepare("SELECT arena_id,arena_slug,arena_url,stage,attempts,last_error,updated_at FROM p2k_lr_arena_acquisition WHERE club_slug=? AND status='error' ORDER BY priority DESC,updated_at DESC LIMIT 100");$errQ->execute([$this->clubSlug]);
         $errors=array_map(static fn($r)=>['arena_id'=>(int)$r['arena_id'],'arena_slug'=>(string)$r['arena_slug'],'arena_url'=>(string)$r['arena_url'],'stage'=>(string)$r['stage'],'attempts'=>(int)$r['attempts'],'error'=>(string)($r['last_error']??''),'updated_at'=>(string)$r['updated_at']],$errQ->fetchAll(PDO::FETCH_ASSOC)?:[]);
-        $total=array_sum($counts);$done=$counts['completed'];$workflow='current';if(($state['status']??'')==='running'&&($state['phase']??'')==='discovery')$workflow=!empty($state['last_error'])?'discovery_attention':'discovery';elseif($counts['running']+$counts['pending']>0)$workflow='acquisition';elseif($counts['error']>0)$workflow='attention';
+        $total=array_sum($counts);$done=$counts['completed'];$workflow='current';if(($state['phase']??'')==='discovery_limited')$workflow='discovery_attention';elseif(($state['status']??'')==='running'&&($state['phase']??'')==='discovery')$workflow=!empty($state['last_error'])?'discovery_attention':'discovery';elseif($counts['running']+$counts['pending']>0)$workflow='acquisition';elseif($counts['error']>0)$workflow='attention';
         $catalogue=$this->sourceCatalogue();$missingDates=0;foreach($catalogue['canonical_rows'] as $row)if(empty($row['actual_event_date']))$missingDates++;
         return $state+[
             'mode'=>'v21094_row_scoped_live_tournaments','workflow_status'=>$workflow,'queue'=>$counts,'hydration_queue'=>$counts,'stage_queue'=>$stage,'errors'=>$errors,
@@ -50,6 +50,8 @@ final class McaResultsCronService
     {
         return $this->withGlobalLock(function(){
             $this->ensureState();
+            $this->seedHistoricalBacklog();
+            $this->requeueKnownInventoryForFullRefresh();
             $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='running',phase='discovery',total_events=0,checked_events=0,csv_found=0,csv_added=0,dates_added=0,error_count=0,request_count=0,current_stage='index:1',high_water_arena_id=1,last_index_page_fingerprint=NULL,started_at=UTC_TIMESTAMP(),finished_at=NULL,next_scan_at=NULL,last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$this->clubSlug]);
             return $this->status();
         });
@@ -126,6 +128,11 @@ final class McaResultsCronService
             $parsed=$this->fetchDiscoveryIndexPage($page,$deadline,$state);
             $events=$parsed['events']??[];
             if($events===[])throw new \RuntimeException('MCA index page contained no arena links.');
+            if(!empty($parsed['pagination_repeated'])){
+                $error=(string)($parsed['pagination_error']??'Chess.com repeated the previous MCA index page.');
+                if($fullReconciliation){$this->completeDiscoveryCycle($error);return false;}
+                throw new \RuntimeException($error);
+            }
 
             $knownQ=$this->pdo->prepare('SELECT source_kind FROM p2k_lr_arena_acquisition WHERE club_slug=? AND arena_id=?');
             $ins=$this->pdo->prepare("INSERT INTO p2k_lr_arena_acquisition(club_slug,arena_id,arena_slug,arena_url,csv_url,source_kind,priority,status,stage,results_source,needs_clubs,needs_players,event_start_at,event_date,date_precision,discovered_at,updated_at) VALUES(?,?,?,?,?,'index',100,'pending','arena','unknown',1,1,?,?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE arena_slug=VALUES(arena_slug),arena_url=VALUES(arena_url),csv_url=COALESCE(NULLIF(VALUES(csv_url),''),csv_url),source_kind='index',priority=GREATEST(priority,100),event_start_at=COALESCE(VALUES(event_start_at),event_start_at),event_date=COALESCE(VALUES(event_date),event_date),date_precision=IF(VALUES(event_date) IS NOT NULL,VALUES(date_precision),date_precision),updated_at=UTC_TIMESTAMP()");
@@ -160,10 +167,18 @@ final class McaResultsCronService
         }
     }
 
-    private function completeDiscoveryCycle(): void
+    private function completeDiscoveryCycle(?string $warning=null): void
     {
-        $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='completed',phase='discovery_complete',high_water_arena_id=0,current_stage=NULL,last_index_page_fingerprint=NULL,finished_at=UTC_TIMESTAMP(),next_scan_at=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 12 HOUR),last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")
-            ->execute([$this->clubSlug]);
+        $phase=$warning===null?'discovery_complete':'discovery_limited';
+        $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='completed',phase=?,high_water_arena_id=0,current_stage=NULL,last_index_page_fingerprint=NULL,finished_at=UTC_TIMESTAMP(),next_scan_at=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 12 HOUR),last_error=?,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")
+            ->execute([$phase,$warning,$this->clubSlug]);
+    }
+
+    private function requeueKnownInventoryForFullRefresh(): int
+    {
+        $q=$this->pdo->prepare("UPDATE p2k_lr_arena_acquisition SET priority=GREATEST(priority,80),status='pending',stage='arena',arena_page_done=0,needs_clubs=1,needs_players=1,clubs_next_page=1,players_next_page=1,pairings_next_page=1,date_index_next_page=1,attempts=0,last_error=NULL,started_at=NULL,completed_at=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?");
+        $q->execute([$this->clubSlug]);
+        return $q->rowCount();
     }
 
     private function nextAcquisitionItem(): ?array{$q=$this->pdo->prepare("SELECT * FROM p2k_lr_arena_acquisition WHERE club_slug=? AND status='pending' ORDER BY priority DESC,arena_id DESC LIMIT 1");$q->execute([$this->clubSlug]);$r=$q->fetch(PDO::FETCH_ASSOC);return is_array($r)?$r:null;}
@@ -242,9 +257,10 @@ final class McaResultsCronService
         if($page>1&&$previous!==''&&hash_equals($previous,$fingerprint)){
             $ids=array_values(array_filter(array_map(static fn($e)=>(int)($e['arena_id']??0),$events),static fn($id)=>$id>0));
             $first=$ids[0]??0;$last=$ids!==[]?$ids[count($ids)-1]:0;
-            throw new \RuntimeException('MCA index pagination repeated the previous page on page '.$page.'. Requested '.$url.'; effective '.($http['effective_url']??$url).'; rows '.count($ids).'; first '.$first.'; last '.$last.'; body '.substr((string)($http['body_sha256']??''),0,16).'.');
+            $error='Chess.com returned the previous MCA index page again for requested page '.$page.'. Exhaustive historical index discovery is unavailable upstream; the complete known MCA arena inventory has been requeued and will continue through durable acquisition. Requested '.$url.'; effective '.($http['effective_url']??$url).'; rows '.count($ids).'; first '.$first.'; last '.$last.'; body '.substr((string)($http['body_sha256']??''),0,16).'.';
+            return $parsed+['source_url'=>$url,'effective_url'=>$http['effective_url']??$url,'body_sha256'=>$http['body_sha256']??hash('sha256',(string)$http['body']),'page_fingerprint'=>$fingerprint,'pagination_repeated'=>true,'pagination_error'=>$error];
         }
-        return $parsed+['source_url'=>$url,'effective_url'=>$http['effective_url']??$url,'body_sha256'=>$http['body_sha256']??hash('sha256',(string)$http['body']),'page_fingerprint'=>$fingerprint];
+        return $parsed+['source_url'=>$url,'effective_url'=>$http['effective_url']??$url,'body_sha256'=>$http['body_sha256']??hash('sha256',(string)$http['body']),'page_fingerprint'=>$fingerprint,'pagination_repeated'=>false];
     }
 
     private function discoveryPageFingerprint(array $events): string
