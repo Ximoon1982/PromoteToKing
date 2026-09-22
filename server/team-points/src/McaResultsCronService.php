@@ -294,7 +294,16 @@ final class McaResultsCronService
     {
         if(!$this->syncSchemaReady){
             $columns=['discovery_failure_streak'=>"INT UNSIGNED NOT NULL DEFAULT 0 AFTER error_count",'last_discovery_attempt_at'=>"DATETIME NULL AFTER discovery_failure_streak",'last_successful_discovery_at'=>"DATETIME NULL AFTER last_discovery_attempt_at",'last_index_page_fingerprint'=>"CHAR(64) NULL AFTER last_successful_discovery_at"];
-            foreach($columns as $name=>$definition){$q=$this->pdo->prepare('SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=?');$q->execute(['p2k_lr_sync_state',$name]);if((int)$q->fetchColumn()===0){try{$this->pdo->exec('ALTER TABLE p2k_lr_sync_state ADD COLUMN '.$name.' '.$definition);}catch(\Throwable){}}}
+            foreach($columns as $name=>$definition){
+                $q=$this->pdo->prepare('SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=?');
+                $q->execute(['p2k_lr_sync_state',$name]);
+                if((int)$q->fetchColumn()===0){
+                    try{$this->pdo->exec('ALTER TABLE p2k_lr_sync_state ADD COLUMN '.$name.' '.$definition);}
+                    catch(\Throwable $e){throw new \RuntimeException('MCA schema convergence failed while adding p2k_lr_sync_state.'.$name.': '.$e->getMessage(),0,$e);}
+                }
+                $q->execute(['p2k_lr_sync_state',$name]);
+                if((int)$q->fetchColumn()===0)throw new \RuntimeException('MCA schema convergence verification failed: missing p2k_lr_sync_state.'.$name);
+            }
             $this->syncSchemaReady=true;
         }
         $this->pdo->prepare("INSERT IGNORE INTO p2k_lr_sync_state(club_slug,status,phase,updated_at) VALUES(?,'idle','idle',UTC_TIMESTAMP())")->execute([$this->clubSlug]);

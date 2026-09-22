@@ -15,6 +15,28 @@ final class GreenRepository
     private const GQAC_TRANSIENT_ATTEMPT_LIMIT = 3;
     private const ACCELERATOR_FINITE_RESERVE_MAX = 16;
 
+    private const RUNTIME_SCHEMA_TABLES = [
+        'p2k_g_state','p2k_g_matches','p2k_g_quick_board_cycle_items',
+        'p2k_g_gab_lanes','p2k_g_gab_external_work','p2k_g_gffl_match_debt',
+        'p2k_g_phase_progress','p2k_g_member_events',
+    ];
+    private const RUNTIME_SCHEMA_COLUMNS = [
+        'p2k_g_matches'=>[
+            'index_time_class','index_result','club_verified','verified_club_slug',
+            'club_side','scoring_eligible','exclusion_reason','trusted_legacy',
+            'fact_source','max_rating',
+        ],
+        'p2k_g_state'=>[
+            'public_read_target','migration_phase','gab_status','gab_phase',
+            'gab_started_at','gab_completed_at','gab_last_error','gffl_enabled',
+            'gffl_target_freshness_seconds','compat_analytics_rebuilt_at',
+        ],
+        'p2k_g_quick_board_cycle_items'=>['claim_count'],
+    ];
+    private const RUNTIME_SCHEMA_INDEXES = [
+        'p2k_g_matches'=>['idx_g_match_current','idx_g_match_eligibility','idx_g_match_discovered'],
+    ];
+
     public function __construct(PDO $core, PDO $analytics, string $clubSlug)
     {
         $this->core = $core;
@@ -22,7 +44,74 @@ final class GreenRepository
         $this->clubSlug = $clubSlug;
     }
 
-    public static function open(): self { return new self(GreenConfig::core(),GreenConfig::analytics(),GreenConfig::clubSlug()); }
+    public static function open(): self
+    {
+        $repo=new self(GreenConfig::core(),GreenConfig::analytics(),GreenConfig::clubSlug());
+        $repo->ensureRuntimeSchema();
+        return $repo;
+    }
+
+    /**
+     * Lightweight physical contract used by every normal Green open.
+     * No DDL is executed when the contract is already complete.
+     */
+    public function ensureRuntimeSchema(): array
+    {
+        $base=$this->core->query("SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('p2k_g_state','p2k_g_matches')")->fetchAll(PDO::FETCH_COLUMN)?:[];
+        $base=array_fill_keys(array_map('strval',$base),true);
+        if(!isset($base['p2k_g_state'])&&!isset($base['p2k_g_matches'])){
+            return ['installed'=>false,'changed'=>false,'repaired'=>[],'verified'=>false];
+        }
+        if(!isset($base['p2k_g_state'])||!isset($base['p2k_g_matches'])){
+            throw new RuntimeException('Green base schema is incomplete; p2k_g_state and p2k_g_matches must either both exist or both be absent.');
+        }
+
+        $before=$this->runtimeSchemaContractIssues();
+        if($before!==[])$this->upgradeCoreSchema();
+        $after=$this->runtimeSchemaContractIssues();
+        if($after!==[]){
+            throw new RuntimeException('Green runtime schema convergence failed: '.implode(', ',$after));
+        }
+        return ['installed'=>true,'changed'=>$before!==[],'repaired'=>$before,'verified'=>true];
+    }
+
+    private function runtimeSchemaContractIssues(): array
+    {
+        $issues=[];
+
+        $tables=self::RUNTIME_SCHEMA_TABLES;
+        $q=$this->core->prepare('SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('.implode(',',array_fill(0,count($tables),'?')).')');
+        $q->execute($tables);
+        $foundTables=array_fill_keys(array_map('strval',$q->fetchAll(PDO::FETCH_COLUMN)?:[]),true);
+        foreach($tables as $table)if(!isset($foundTables[$table]))$issues[]='missing table '.$table;
+
+        $clauses=[];$params=[];
+        foreach(self::RUNTIME_SCHEMA_COLUMNS as $table=>$columns)foreach($columns as $column){$clauses[]='(table_name=? AND column_name=?)';$params[]=$table;$params[]=$column;}
+        $foundColumns=[];
+        if($clauses!==[]){
+            $q=$this->core->prepare('SELECT table_name,column_name,column_type FROM information_schema.columns WHERE table_schema=DATABASE() AND ('.implode(' OR ',$clauses).')');
+            $q->execute($params);
+            foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $row)$foundColumns[(string)$row['table_name'].'.'.(string)$row['column_name']]=strtolower((string)$row['column_type']);
+        }
+        foreach(self::RUNTIME_SCHEMA_COLUMNS as $table=>$columns)foreach($columns as $column){
+            $key=$table.'.'.$column;
+            if(!array_key_exists($key,$foundColumns))$issues[]='missing column '.$key;
+        }
+        $claimType=$foundColumns['p2k_g_quick_board_cycle_items.claim_count']??'';
+        if($claimType!==''&&str_contains($claimType,'unsigned'))$issues[]='column p2k_g_quick_board_cycle_items.claim_count must be signed';
+
+        $clauses=[];$params=[];
+        foreach(self::RUNTIME_SCHEMA_INDEXES as $table=>$indexes)foreach($indexes as $index){$clauses[]='(table_name=? AND index_name=?)';$params[]=$table;$params[]=$index;}
+        $foundIndexes=[];
+        if($clauses!==[]){
+            $q=$this->core->prepare('SELECT DISTINCT table_name,index_name FROM information_schema.statistics WHERE table_schema=DATABASE() AND ('.implode(' OR ',$clauses).')');
+            $q->execute($params);
+            foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $row)$foundIndexes[(string)$row['table_name'].'.'.(string)$row['index_name']]=true;
+        }
+        foreach(self::RUNTIME_SCHEMA_INDEXES as $table=>$indexes)foreach($indexes as $index)if(!isset($foundIndexes[$table.'.'.$index]))$issues[]='missing index '.$table.'.'.$index;
+
+        return $issues;
+    }
 
     public function initializeSchemas(): void
     {
@@ -35,6 +124,8 @@ final class GreenRepository
         // Keep the live Cycle #1 database and upgrade it in place before any new code uses
         // the integrity/provenance fields introduced by the consolidation release.
         $this->upgradeCoreSchema();
+        $issues=$this->runtimeSchemaContractIssues();
+        if($issues!==[])throw new RuntimeException('Green schema initialization did not satisfy the runtime contract: '.implode(', ',$issues));
         $q=$this->core->prepare("INSERT IGNORE INTO p2k_g_state(club_slug,mode,stage,worker_target,client_ingest_target) VALUES(?,'seeding','not_started','blue','blue')");
         $q->execute([$this->clubSlug]);
     }

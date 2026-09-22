@@ -11,6 +11,22 @@ use P2K\TeamPoints\Repository;
 /** Green-owned compatibility projection consumed by existing public read services. */
 final class GreenCompatibility
 {
+    private static array $verifiedSchemaConnections=[];
+
+    private const REQUIRED_CORE_COLUMNS = [
+        'p2k_tp_members'=>['member_id','club_slug','username_key','username','player_id','current_member','joined_at','daily_rating','chess960_rating','rating_updated_at','player_matches_checked_at','stats_checked_at','avatar_url','profile_url','country_code','profile_status','avatar_checked_at','profile_updated_at','first_seen_at','last_seen_at'],
+        'p2k_tp_state'=>['club_slug','core_generation','members_last_observed_at','members_last_verified_at','updated_at'],
+        'p2k_tp_match_metadata'=>['club_slug','match_id','match_name','match_url','status','observed_status','rules','time_control','is_league','start_time','end_time','board_count','p2k_score','opponent_score','p2k_avg_rating','opponent_avg_rating','rated_board_count','max_rating','first_discovered_at','result','competition_points','is_void','opponent_slug','opponent_name','opponent_url','discovery_source','last_verified_at','last_observed_at','last_index_seen_at','next_detail_check_at','finalized_at','updated_at'],
+        'p2k_tp_opponents'=>['club_slug','opponent_slug','display_name','club_url','first_seen_at','last_seen_at'],
+        'p2k_tp_boards'=>['board_id','member_id','match_id','board_no','p2k_rating','opponent_rating','opponent_username','rating_source','rating_captured_at','board_url_override','white_result','black_result','source_bucket','state','finished_game_count','first_discovered_at','last_discovered_at','last_checked_at','next_check_at','completed_at','failure_count','last_error'],
+        'p2k_tp_games'=>['board_id','sequence_no','game_id','game_url_override','game_end_utc','result_code','points_x2','source_hash','verified_at','is_seed'],
+    ];
+    private const REQUIRED_ANALYTICS_TABLES = [
+        'p2k_an_player_totals','p2k_an_match_facts','p2k_an_player_monthly',
+        'p2k_an_opponent_stats','p2k_an_achievement_unlocks','p2k_an_storage_samples',
+        'p2k_an_refresh_state',
+    ];
+
     public function __construct(private GreenRepository $green) {}
 
     public function ensureSchema(): array
@@ -20,7 +36,76 @@ final class GreenCompatibility
             if ($repo->schemaVersion()===0 || $repo->analyticsSchemaVersion()===0) $repo->installSchema();
             else $repo->upgradeExistingSchema();
         }
-        return ['core_schema'=>$repo->schemaVersion(),'analytics_schema'=>$repo->analyticsSchemaVersion(),'ready'=>$repo->schemaInstalled()];
+
+        $coreName=(string)$this->green->core->query('SELECT DATABASE()')->fetchColumn();
+        $analyticsName=(string)$this->green->analytics->query('SELECT DATABASE()')->fetchColumn();
+        $cacheKey=$coreName.'|'.$analyticsName;
+        if(!isset(self::$verifiedSchemaConnections[$cacheKey])){
+            $repairs=[];
+            if(!$this->compatColumnExists('p2k_tp_match_metadata','max_rating')){
+                $this->green->core->exec('ALTER TABLE p2k_tp_match_metadata ADD COLUMN max_rating SMALLINT UNSIGNED NULL AFTER rated_board_count');
+                $repairs[]='column p2k_tp_match_metadata.max_rating';
+            }
+            if(!$this->compatIndexExists('p2k_tp_match_metadata','idx_tp_match_discovered')){
+                $this->green->core->exec('ALTER TABLE p2k_tp_match_metadata ADD INDEX idx_tp_match_discovered (club_slug,first_discovered_at)');
+                $repairs[]='index p2k_tp_match_metadata.idx_tp_match_discovered';
+            }
+
+            $issues=$this->compatibilitySchemaIssues();
+            if($issues!==[])throw new \RuntimeException('Green compatibility physical schema contract failed: '.implode(', ',$issues));
+            self::$verifiedSchemaConnections[$cacheKey]=['repairs'=>$repairs];
+        }
+
+        $ready=$repo->schemaInstalled();
+        if(!$ready)throw new \RuntimeException('Green compatibility schema versions did not converge after physical verification.');
+        return [
+            'core_schema'=>$repo->schemaVersion(),
+            'analytics_schema'=>$repo->analyticsSchemaVersion(),
+            'ready'=>true,
+            'physical_verified'=>true,
+            'repairs'=>self::$verifiedSchemaConnections[$cacheKey]['repairs']??[],
+        ];
+    }
+
+    private function compatColumnExists(string $table,string $column): bool
+    {
+        $q=$this->green->core->prepare('SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=?');
+        $q->execute([$table,$column]);return (int)$q->fetchColumn()>0;
+    }
+
+    private function compatIndexExists(string $table,string $index): bool
+    {
+        $q=$this->green->core->prepare('SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name=? AND index_name=?');
+        $q->execute([$table,$index]);return (int)$q->fetchColumn()>0;
+    }
+
+    private function compatibilitySchemaIssues(): array
+    {
+        $issues=[];
+
+        $tables=array_keys(self::REQUIRED_CORE_COLUMNS);
+        $q=$this->green->core->prepare('SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('.implode(',',array_fill(0,count($tables),'?')).')');
+        $q->execute($tables);
+        $foundTables=array_fill_keys(array_map('strval',$q->fetchAll(PDO::FETCH_COLUMN)?:[]),true);
+        foreach($tables as $table)if(!isset($foundTables[$table]))$issues[]='missing table '.$table;
+
+        $clauses=[];$params=[];
+        foreach(self::REQUIRED_CORE_COLUMNS as $table=>$columns)foreach($columns as $column){$clauses[]='(table_name=? AND column_name=?)';$params[]=$table;$params[]=$column;}
+        $q=$this->green->core->prepare('SELECT table_name,column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND ('.implode(' OR ',$clauses).')');
+        $q->execute($params);
+        $found=[];
+        foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $row)$found[(string)$row['table_name'].'.'.(string)$row['column_name']]=true;
+        foreach(self::REQUIRED_CORE_COLUMNS as $table=>$columns)foreach($columns as $column)if(!isset($found[$table.'.'.$column]))$issues[]='missing column '.$table.'.'.$column;
+
+        if(!$this->compatIndexExists('p2k_tp_match_metadata','idx_tp_match_discovered'))$issues[]='missing index p2k_tp_match_metadata.idx_tp_match_discovered';
+
+        $tables=self::REQUIRED_ANALYTICS_TABLES;
+        $q=$this->green->analytics->prepare('SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('.implode(',',array_fill(0,count($tables),'?')).')');
+        $q->execute($tables);
+        $foundAnalytics=array_fill_keys(array_map('strval',$q->fetchAll(PDO::FETCH_COLUMN)?:[]),true);
+        foreach($tables as $table)if(!isset($foundAnalytics[$table]))$issues[]='missing analytics table '.$table;
+
+        return $issues;
     }
 
     private function opponentSlug(?string $url): ?string
