@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS p2k_g_matches (
   rules VARCHAR(32) NULL,
   time_class VARCHAR(32) NULL,
   time_control VARCHAR(64) NULL,
+  max_rating SMALLINT UNSIGNED NULL,
   start_epoch BIGINT NULL,
   end_epoch BIGINT NULL,
   board_count INT UNSIGNED NULL,

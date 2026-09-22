@@ -240,13 +240,13 @@ final class GreenCompatibility
         $result=(string)$m['result'];if(!in_array($result,['win','draw','loss'],true))$result='unknown';
         $slug=$this->opponentSlug((string)($m['opponent_url']??''));
         $projection=$this->canonicalBoardProjection($matchId);$projectedBoards=$projection['rows']??[];
-        $p2kRatings=[];$oppRatings=[];$rated=0;$maxRating=null;
+        $p2kRatings=[];$oppRatings=[];$rated=0;
         foreach($projectedBoards as $pb){
             $pr=is_numeric($pb['p2k_rating']??null)?(int)$pb['p2k_rating']:0;$or=is_numeric($pb['opponent_rating']??null)?(int)$pb['opponent_rating']:0;
             if($pr<=0||$or<=0)continue;
-            $p2kRatings[]=$pr;$oppRatings[]=$or;$rated++;$maxRating=$maxRating===null?max($pr,$or):max($maxRating,$pr,$or);
+            $p2kRatings[]=$pr;$oppRatings[]=$or;$rated++;
         }
-        $r=['p2k_avg'=>$p2kRatings?(int)round(array_sum($p2kRatings)/count($p2kRatings)):null,'opp_avg'=>$oppRatings?(int)round(array_sum($oppRatings)/count($oppRatings)):null,'rated'=>$rated,'max_rating'=>$maxRating];
+        $r=['p2k_avg'=>$p2kRatings?(int)round(array_sum($p2kRatings)/count($p2kRatings)):null,'opp_avg'=>$oppRatings?(int)round(array_sum($oppRatings)/count($oppRatings)):null,'rated'=>$rated,'max_rating'=>is_numeric($m['max_rating']??null)?(int)$m['max_rating']:null];
         $up=$this->green->core->prepare("INSERT INTO p2k_tp_match_metadata(club_slug,match_id,match_name,match_url,status,observed_status,rules,time_control,is_league,start_time,end_time,board_count,p2k_score,opponent_score,p2k_avg_rating,opponent_avg_rating,rated_board_count,max_rating,first_discovered_at,result,competition_points,is_void,opponent_slug,opponent_name,opponent_url,discovery_source,last_verified_at,last_observed_at,last_index_seen_at,next_detail_check_at,finalized_at,updated_at)
           VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP())
           ON DUPLICATE KEY UPDATE match_name=VALUES(match_name),match_url=VALUES(match_url),status=VALUES(status),observed_status=VALUES(observed_status),rules=VALUES(rules),time_control=VALUES(time_control),start_time=VALUES(start_time),end_time=VALUES(end_time),board_count=VALUES(board_count),p2k_score=VALUES(p2k_score),opponent_score=VALUES(opponent_score),p2k_avg_rating=VALUES(p2k_avg_rating),opponent_avg_rating=VALUES(opponent_avg_rating),rated_board_count=VALUES(rated_board_count),max_rating=VALUES(max_rating),result=VALUES(result),competition_points=VALUES(competition_points),is_void=VALUES(is_void),opponent_slug=VALUES(opponent_slug),opponent_name=VALUES(opponent_name),opponent_url=VALUES(opponent_url),last_verified_at=VALUES(last_verified_at),last_observed_at=VALUES(last_observed_at),last_index_seen_at=VALUES(last_index_seen_at),finalized_at=VALUES(finalized_at),updated_at=UTC_TIMESTAMP()");

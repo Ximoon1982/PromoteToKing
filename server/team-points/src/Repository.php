@@ -3662,15 +3662,15 @@ final class Repository
 
         $timeControls=[];$tcQuery=$this->pdo->prepare("SELECT COALESCE(NULLIF(TRIM(metadata.time_control),''),'Unknown') raw_time_control,COUNT(*) finished,SUM(summaries.result='win') wins,SUM(summaries.result='draw') draws,SUM(summaries.result='loss') losses".$scopeJoin." AND metadata.status='finished' AND summaries.result IN ('win','draw','loss') GROUP BY raw_time_control");
         $tcQuery->execute([$clubSlug,$canonical]);foreach($tcQuery->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){$rawTc=(string)$row['raw_time_control'];$label=$rawTc;if(preg_match('/^1\/(\d+)$/',$rawTc,$tm)===1){$days=(int)$tm[1]/86400;$label=rtrim(rtrim(number_format($days,2,'.',''),'0'),'.').($days===1.0?' day / move':' days / move');}$timeControls[$rawTc]=['key'=>$rawTc,'label'=>$label,'finished'=>(int)$row['finished'],'wins'=>(int)$row['wins'],'draws'=>(int)$row['draws'],'losses'=>(int)$row['losses']];}
-        $maxRatingRates=[];$mrQuery=$this->pdo->prepare("SELECT metadata.max_rating,COUNT(*) finished,SUM(summaries.result='win') wins,SUM(summaries.result='draw') draws,SUM(summaries.result='loss') losses".$scopeJoin." AND metadata.status='finished' AND summaries.result IN ('win','draw','loss') AND metadata.max_rating IS NOT NULL AND metadata.max_rating>0 GROUP BY metadata.max_rating");
-        $mrQuery->execute([$clubSlug,$canonical]);foreach($mrQuery->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){$maxRating=(int)$row['max_rating'];$key=(string)$maxRating;$maxRatingRates[$key]=['key'=>$key,'label'=>'≤ '.$maxRating,'max_rating'=>$maxRating,'finished'=>(int)$row['finished'],'wins'=>(int)$row['wins'],'draws'=>(int)$row['draws'],'losses'=>(int)$row['losses']];}
+        $maxRatingRates=[];$mrQuery=$this->pdo->prepare("SELECT CASE WHEN g.max_rating IS NULL OR g.max_rating<=0 OR g.max_rating>1800 THEN 'open' WHEN g.max_rating>1600 THEN 'u1800' WHEN g.max_rating>1400 THEN 'u1600' WHEN g.max_rating>1200 THEN 'u1400' WHEN g.max_rating>1000 THEN 'u1200' ELSE 'u1000' END bucket,COUNT(*) finished,SUM(summaries.result='win') wins,SUM(summaries.result='draw') draws,SUM(summaries.result='loss') losses FROM p2k_tp_match_metadata metadata JOIN p2k_g_matches g ON g.match_id=metadata.match_id LEFT JOIN p2k_tp_match_summaries summaries ON summaries.club_slug=metadata.club_slug AND summaries.match_id=metadata.match_id LEFT JOIN p2k_tp_opponent_aliases aliases ON aliases.club_slug=metadata.club_slug AND aliases.alias_slug=metadata.opponent_slug WHERE metadata.club_slug=? AND metadata.is_void=0 AND COALESCE(aliases.canonical_slug,metadata.opponent_slug)=? AND metadata.status='finished' AND summaries.result IN ('win','draw','loss') GROUP BY bucket");
+        $mrQuery->execute([$clubSlug,$canonical]);$ratingDefs=['open'=>['Open',null,0],'u1800'=>['U1800',1800,1],'u1600'=>['U1600',1600,2],'u1400'=>['U1400',1400,3],'u1200'=>['U1200',1200,4],'u1000'=>['U1000',1000,5]];foreach($mrQuery->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){$key=(string)$row['bucket'];$def=$ratingDefs[$key]??[$key,null,99];$maxRatingRates[$key]=['key'=>$key,'label'=>$def[0],'max_rating'=>$def[1],'ordering'=>$def[2],'finished'=>(int)$row['finished'],'wins'=>(int)$row['wins'],'draws'=>(int)$row['draws'],'losses'=>(int)$row['losses']];}
 
         $matchQuery=$this->pdo->prepare("SELECT metadata.match_id,metadata.match_name AS name,metadata.match_url AS url,metadata.status,metadata.start_time,metadata.end_time,metadata.board_count,metadata.p2k_score,metadata.opponent_score,summaries.result,summaries.competition_points,CASE WHEN metadata.start_time IS NOT NULL AND metadata.end_time IS NOT NULL THEN TIMESTAMPDIFF(SECOND,metadata.start_time,metadata.end_time)/86400 ELSE NULL END duration_days".$scopeJoin." ORDER BY COALESCE(metadata.end_time,metadata.start_time,metadata.last_verified_at) DESC LIMIT 200");
         $matchQuery->execute([$clubSlug,$canonical]);$matches=[];foreach($matchQuery->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){$matches[]=['match_id'=>(int)$row['match_id'],'name'=>(string)$row['name'],'url'=>$row['url'],'status'=>(string)$row['status'],'start_time'=>$row['start_time'],'end_time'=>$row['end_time'],'boards'=>(int)$row['board_count'],'our_score'=>(float)$row['p2k_score'],'their_score'=>(float)$row['opponent_score'],'result'=>$row['result'],'club_points'=>(int)($row['competition_points']??0),'duration_days'=>$row['duration_days']===null?null:(float)$row['duration_days']];}
 
         // v2.10.6 Opponent-player intelligence: compact lineup facts are enough to
         // describe who we repeatedly face without issuing one profile request per player.
-        $playerSql="SELECT LOWER(TRIM(b.opponent_username)) opponent_key,MAX(b.opponent_username) username,
+        $playerScopeSql="SELECT LOWER(TRIM(b.opponent_username)) opponent_key,MAX(b.opponent_username) username,
                            COUNT(*) appearances,COUNT(DISTINCT b.match_id) matches,
                            ROUND(AVG(NULLIF(b.opponent_rating,0))) average_rating,MAX(NULLIF(b.opponent_rating,0)) max_rating,
                            MIN(COALESCE(metadata.start_time,metadata.end_time,metadata.last_verified_at)) first_seen_at,
@@ -3687,8 +3687,8 @@ final class Repository
                       ) bg ON bg.board_id=b.board_id
                      WHERE member.club_slug=? AND metadata.is_void=0 AND COALESCE(aliases.canonical_slug,metadata.opponent_slug)=?
                        AND b.opponent_username IS NOT NULL AND TRIM(b.opponent_username)<>''
-                     GROUP BY LOWER(TRIM(b.opponent_username))
-                     ORDER BY appearances DESC,last_seen_at DESC,username ASC LIMIT 250";
+                     GROUP BY LOWER(TRIM(b.opponent_username))";
+        $playerSql=$playerScopeSql." ORDER BY appearances DESC,last_seen_at DESC,username ASC LIMIT 250";
         $pq=$this->pdo->prepare($playerSql);$pq->execute([$clubSlug,$canonical]);$players=[];
         foreach($pq->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){$players[]=[
             'username'=>(string)$row['username'],'appearances'=>(int)$row['appearances'],'matches'=>(int)$row['matches'],
@@ -3697,10 +3697,9 @@ final class Repository
             'wins'=>(int)$row['wins'],'draws'=>(int)$row['draws'],'losses'=>(int)$row['losses'],'p2k_points'=>(float)$row['p2k_points'],
             'recent'=>(!empty($row['last_seen_at']) && (strtotime((string)$row['last_seen_at'].' UTC')?:0)>=time()-31536000),
         ];}
-        $playerSummary=['unique_players'=>count($players),'recent_players'=>count(array_filter($players,static fn(array $r):bool=>(bool)$r['recent'])),
-            'appearances'=>array_sum(array_column($players,'appearances')),'games'=>array_sum(array_column($players,'games'))];
-        $ratedPlayers=array_values(array_filter($players,static fn(array $r):bool=>$r['average_rating']!==null));
-        $playerSummary['average_rating']=$ratedPlayers?(int)round(array_sum(array_column($ratedPlayers,'average_rating'))/count($ratedPlayers)):null;
+        $psq=$this->pdo->prepare("SELECT COUNT(*) unique_players,SUM(last_seen_at>=UTC_TIMESTAMP()-INTERVAL 1 YEAR) recent_players,COALESCE(SUM(appearances),0) appearances,COALESCE(SUM(games),0) games,ROUND(AVG(average_rating)) average_rating FROM (".$playerScopeSql.") opponent_players");
+        $psq->execute([$clubSlug,$canonical]);$ps=$psq->fetch(PDO::FETCH_ASSOC)?:[];
+        $playerSummary=['unique_players'=>(int)($ps['unique_players']??0),'recent_players'=>(int)($ps['recent_players']??0),'appearances'=>(int)($ps['appearances']??0),'games'=>(int)($ps['games']??0),'average_rating'=>$ps['average_rating']===null?null:(int)$ps['average_rating']];
         $finished=max(0,$summary['finished']);
         $tags = [];
         if ($summary['total'] >= 10) $tags[] = 'Frequent opponent';
@@ -3717,7 +3716,7 @@ final class Repository
         foreach($timeControls as &$r)$r['win_rate']=$r['finished']?round(100*$r['wins']/$r['finished'],1):0;unset($r);
         foreach($maxRatingRates as &$r)$r['win_rate']=$r['finished']?round(100*$r['wins']/$r['finished'],1):0;unset($r);
         uasort($timeControls,static fn(array $a,array $b):int=>$b['finished']<=>$a['finished']?:strcmp((string)$a['label'],(string)$b['label']));
-        ksort($maxRatingRates,SORT_NUMERIC);
+        uasort($maxRatingRates,static fn(array $a,array $b):int=>(int)($a['ordering']??99)<=>(int)($b['ordering']??99));foreach($maxRatingRates as &$rateRow)unset($rateRow['ordering']);unset($rateRow);
         return [
             'slug'=>$canonical,'name'=>(string)$opponent['display_name'],'url'=>self::chessClubHumanUrl((string)($opponent['club_url']??''),$canonical),'disabled'=>(bool)$opponent['disabled'],
             'first_seen_at'=>$opponent['first_seen_at']??null,'last_seen_at'=>$opponent['last_seen_at']??null,'last_checked_at'=>$opponent['last_checked_at']??null,
