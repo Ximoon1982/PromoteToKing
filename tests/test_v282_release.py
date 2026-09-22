@@ -20,8 +20,11 @@ def test_03_priority_forecast_compact_and_minimum_rule():
     for tone in ['is-good','is-warn','is-bad']: assert f'.dashboard-admin-priority-probability.{tone}' in css
 
 def test_04_mca_health_link():
-    dash=text('assets/js/pages/dashboard-v2.js')
-    assert 'name: "MCA data import"' in dash and 'Last completed import' in dash and 'integratedAdminHref("live-ranks")' in dash
+    admin=text('assets/js/admin/admin-session-controller.js')
+    assert 'name: "MCA arena synchronization"' in admin
+    assert 'discovery_failure_streak' in admin and 'last_successful_discovery_at' in admin
+    assert 'processing?.finished_at' not in admin
+    assert 'integratedAdminHref("live-ranks")' in admin
 
 def test_05_06_dashboard_navigation():
     ui=text('ui-v2.html'); dash=text('assets/js/pages/dashboard-v2.js'); finder=text('assets/js/pages/find-match.js')
@@ -104,8 +107,10 @@ def test_17_18_match_chart_readability():
 def test_19_20_21_opponent_insights():
     insights=text('assets/js/pages/dashboard-insights.js'); charts=text('assets/js/pages/dashboard-insights-charts.js'); repo=text('server/team-points/src/Repository.php'); css=text('assets/css/dashboard-v2.css')
     assert 'slice(0,15)' in charts and 'Others' not in charts[charts.index('function renderOpponentTopChart'):]
-    assert 'Win rate by max rating' in insights and 'max_rating_rates' in insights
-    assert 'metadata.max_rating' in repo and "'max_rating_rates'=>array_values($maxRatingRates)" in repo
+    assert 'Win rate by match rating cap' in insights and 'max_rating_rates' in insights
+    assert 'JOIN p2k_g_matches g ON g.match_id=metadata.match_id' in repo and "'max_rating_rates'=>array_values($maxRatingRates)" in repo
+    for label in ["'Open'","'U1800'","'U1600'","'U1400'","'U1200'","'U1000'"]:
+        assert label in repo
     assert '.p2k-opponents-table{font-size:13px}' in css
 
 

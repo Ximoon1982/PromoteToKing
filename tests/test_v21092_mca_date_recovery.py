@@ -169,9 +169,10 @@ def test_processing_and_manual_dates_use_canonical_catalogue_only():
 def test_admin_surfaces_canonical_vs_stored_source_counts():
     html = text('TeamPointsAdmin.html')
     js = text('assets/js/pages/team-points-features.js')
-    assert 'MCA source integrity' in html
-    assert 'non-destructive deduplication' in html
+    assert 'Stored MCA source CSV files / arena inventory' in html
+    assert 'liveRanksIntegrityMetrics' in html and 'liveRanksDuplicateRows' in html
     assert 'Canonical MCA sources' in js
     assert 'Stored CSV records' in js
     assert 'Legacy duplicate records' in js
     assert 'Excluded legacy duplicate' in js
+    assert 'allFiles.filter(file => file.canonical_source !== false)' in js

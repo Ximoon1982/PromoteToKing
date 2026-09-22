@@ -29,7 +29,7 @@ def test_recruitment_rm2_and_opportunistic_ratings():
 
 def test_team_insights_recoveryfix7_on_v281_ui():
     html = text("TeamInsights.html")
-    for marker in ["Low probability", "Medium probability", "High probability", "Current registration status",
+    for marker in ["Low points projection", "Medium points projection", "High points projection", "Current registration status",
                    "forecast-line", "future-zone", "function escapeHTML"]:
         assert marker in html
     assert "id=\"comparison\"" not in html
