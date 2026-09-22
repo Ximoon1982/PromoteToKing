@@ -249,7 +249,7 @@ function membersTableColumns() {
       { key: "ongoing", label: "In progress", color: "#a98ae8", decimals: 0 },
       { key: "finished", label: "Finished", color: "#66d19e", decimals: 0 }
     ] });
-    renderNativeLine("matchesAverageBoardsChart", recent.filter(row=>row.average_boards!=null), { xKey:"month", series:[{key:"average_boards",label:"Average boards / finished match",color:"#f6b73c",decimals:1}] });
+    renderNativeLine("matchesAverageBoardsChart", recent.filter(row=>row.average_boards!=null||row.average_boards_started!=null), { xKey:"month", series:[{key:"average_boards",label:"Average boards / finished match",color:"#f6b73c",decimals:1},{key:"average_boards_started",label:"Average boards / started match",color:"#4aa8d8",decimals:1}] });
     document.querySelectorAll('[data-chart-reset="matchesTrendChart"]').forEach(button => {
       button.onclick = () => byId("matchesTrendChart")?._p2kResetZoom?.();
     });
