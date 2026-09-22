@@ -1,0 +1,66 @@
+name: P2K v2.13.0 qualification
+
+on:
+  push:
+    branches: [release/v2.13.0]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Install browser regression dependencies
+        run: |
+          python -m pip install --disable-pip-version-check -r tests/requirements.txt
+          python -m playwright install --with-deps chromium
+          sudo ln -sf "$(find "$HOME/.cache/ms-playwright" -type f -name chrome -path '*chrome-linux*' | head -1)" /usr/bin/chromium
+      - name: v2.13.0 syntax and focused contracts
+        run: |
+          test "$(cat VERSION)" = "2.13.0"
+          node --check assets/js/pages/dashboard-insights.js
+          node --check assets/js/pages/dashboard-insights-charts.js
+          node --check assets/js/pages/team-points-features.js
+          node --check assets/js/admin/admin-session-controller.js
+          node --check assets/js/shared/real-oauth.js
+          php -l server/team-points/src/Repository.php
+          php -l server/team-points/src/LiveRanksService.php
+          php -l server/team-points/src/McaResultsCronService.php
+          php -l server/team-points/public/live-ranks-admin.php
+          php -l server/team-points-green/src/GreenRepository.php
+          php -l server/team-points-green/src/GreenCompatibility.php
+          python -m pytest -q             tests/test_v2130_insights_dashboard.py             tests/test_v2130_opponent_intelligence.py             tests/test_v2130_mca_admin.py
+          python tests/test_admin_priority_card.py
+          python -m pytest -q tests/test_v2111_persistent_oauth.py
+          node tests/test_recruitment_lineup_parity.js
+          python tests/test_events_showcase_contract.py
+      - name: Events Showcase and Trophy browser gate
+        run: python tests/browser_gate_v2122.py
+      - name: Events Showcase card renderer browser gate
+        run: python tests/browser_gate_events_showcase_card_v2122.py
+      - name: Events Showcase admin editor browser gate
+        run: python tests/browser_gate_events_showcase_admin_v2122.py
+      - name: Match Recruitment controller readiness browser gate
+        run: python tests/browser_gate_recruit_match_ready_v2122.py
+      - name: Match Recruitment native admin detail browser gate
+        run: python tests/browser_gate_match_recruitment_admin_v2122.py
+      - name: Existing Match Recruitment browser gate
+        run: python tests/browser_gate_recruit_match_v2.py
+      - name: Existing Trophy v2.12.1 browser gate
+        run: python tests/browser_gate_trophy_gallery_v2121.py
+      - name: Inherited architecture and canonical audit
+        run: |
+          python tools/test-suite/architecture_gate.py
+          python tools/test-suite/p2k_test_suite.py audit --json
+      - name: Full canonical P2K regression
+        run: python tools/test-suite/p2k_test_suite.py regression
+      - name: Full canonical P2K browser regression
+        run: python tools/test-suite/p2k_test_suite.py browser
