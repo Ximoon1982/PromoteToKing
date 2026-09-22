@@ -36,6 +36,17 @@ try {
         $body = Http::body();
         Http::json(['ok' => true, 'sync' => $mcaSync->runDiscovery(max(8, min(40, (int)($body['max_seconds'] ?? 25))), !empty($body['force']))] + $service->statusPayload());
     }
+    if ($action === 'sync_full_discovery') {
+        Http::method('POST');
+        $body=Http::body();$mcaSync->startFullDiscovery();
+        Http::json(['ok'=>true,'sync'=>$mcaSync->runDiscovery(max(8,min(40,(int)($body['max_seconds']??25))),false)] + $service->statusPayload());
+    }
+    if ($action === 'sync_backfill_stats') {
+        Http::method('POST');
+        $queued=$mcaSync->queueHistoricalStatsBackfill();
+        $result=$mcaSync->runHydration(35);
+        Http::json(['ok'=>true,'stats_backfill'=>$queued,'hydration'=>$result] + $service->statusPayload());
+    }
     if ($action === 'sync_hydrate') {
         Http::method('POST');
         $body = Http::body();

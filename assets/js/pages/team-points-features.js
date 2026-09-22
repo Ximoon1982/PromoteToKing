@@ -158,6 +158,8 @@
     if ($('liveRanksSyncStart')) $('liveRanksSyncStart').disabled = state.mcaSyncRunning;
     if ($('liveRanksSyncResume')) $('liveRanksSyncResume').disabled = state.mcaSyncRunning || remaining === 0;
     if ($('liveRanksSyncRetry')) $('liveRanksSyncRetry').disabled = state.mcaSyncRunning || errors.length === 0;
+    if ($('liveRanksFullRefresh')) $('liveRanksFullRefresh').disabled = state.mcaSyncRunning;
+    if ($('liveRanksStatsBackfill')) $('liveRanksStatsBackfill').disabled = state.mcaSyncRunning;
   }
 
   function renderMcaDateSync(sync = {}) {
@@ -194,7 +196,7 @@
   }
 
   function renderLive(payload) {
-    const files = payload.files || [], players = payload.players || [], summary = payload.summary || {}, processing = payload.processing || {}, integrity = payload.source_integrity || {};
+    const allFiles = payload.files || [], files = allFiles.filter(file => file.canonical_source !== false), players = payload.players || [], summary = payload.summary || {}, processing = payload.processing || {}, integrity = payload.source_integrity || {};
     renderMcaSync(payload.sync || {});
     renderMcaDateSync(payload.date_sync || {});
     $('liveRanksFileRows').innerHTML = files.length ? files.map(file => {
@@ -203,13 +205,14 @@
       const sourceNote = file.canonical_source === false
         ? `<br><small><strong>Excluded legacy duplicate</strong>${file.duplicate_of_id ? ` · canonical file #${fmt(file.duplicate_of_id,0)}` : ''}${file.duplicate_content_conflict ? ' · different content hash' : ''}</small>`
         : file.arena_id ? '<br><small>Canonical arena source</small>' : '<br><small>Independent legacy source</small>';
+      const coverage=Number(file.scraped_player_rows||0)>0?`${fmt(file.scraped_result_players||0,0)}/${fmt(file.scraped_player_rows||0,0)} W/D/L`:'—';
+      const integrityLabel=file.duplicate_content_conflict?'Review conflict':'Canonical';
       return `<tr>
-      <td><a href="${esc(file.event_url || '#')}" target="_blank" rel="noopener noreferrer"><strong>${esc(file.name)}</strong></a>${file.arena_id ? `<br><small>Arena #${fmt(file.arena_id,0)}</small>` : ''}${file.replaced_at ? '<br><small>Corrected replacement</small>' : ''}${sourceNote}</td>
+      <td><a href="${esc(file.event_url || '#')}" target="_blank" rel="noopener noreferrer"><strong>${esc(file.name)}</strong></a>${file.arena_id ? `<br><small>Arena #${fmt(file.arena_id,0)}</small>` : ''}<br><small><code>${esc(String(file.sha256 || '').slice(0,12))}…</code></small></td>
       <td><strong>${esc(file.event_date || '—')}</strong>${approx}<br><button type="button" class="p2k-tp-small" data-mca-event-date="${Number(file.id)||0}" data-current-date="${esc(file.actual_event_date || '')}">${editLabel}</button></td>
-      <td>${bytes(file.size)}</td><td><code>${esc(String(file.sha256 || '').slice(0,12))}…</code></td><td>${esc(file.uploaded_at || '—')}</td>
-      <td>${stateBadge(file.status === 'processed' ? 'current_member' : file.status === 'error' ? 'closed_account' : 'pending_profile').replace(/current member|closed account|pending profile/, esc(file.status || 'uploaded'))}${file.error ? `<br><small>${esc(file.error)}</small>` : ''}</td>
-      <td>${fmt(file.rows,0)}</td><td>${fmt(file.p2k_rows,0)}</td></tr>`;
-    }).join('') : '<tr><td colspan="8">No stored MCA source CSV files.</td></tr>';
+      <td>${esc(file.source_origin || 'manual')}</td><td>${esc(file.acquisition_status || '—')}<br><small>${esc(file.acquisition_stage || '')}</small></td>
+      <td>${fmt(file.rows,0)}</td><td>${fmt(file.p2k_rows,0)}</td><td>${coverage}</td><td>${fmt(file.scraped_games||0,0)}</td><td>${esc(integrityLabel)}</td></tr>`;
+    }).join('') : '<tr><td colspan="9">No stored MCA source arenas.</td></tr>';
     $('liveRanksFileRows').querySelectorAll('[data-mca-event-date]').forEach(button => button.addEventListener('click', async () => {
       const fileId=Number(button.dataset.mcaEventDate||0),current=String(button.dataset.currentDate||'');
       const value=window.prompt('Actual MCA event date (YYYY-MM-DD). Leave blank to clear the known date and return to interpolation/upload fallback.',current);
@@ -225,7 +228,7 @@
       <td>${esc(player.profile_checked_at || 'Pending')}${player.error ? `<br><small>${esc(player.error)}</small>` : ''}</td></tr>`).join('') : '<tr><td colspan="6">No computed players.</td></tr>';
     const metrics = [
       ['Canonical MCA sources', integrity.canonical_sources ?? files.filter(file => file.canonical_source !== false).length],
-      ['Stored CSV records', integrity.stored_records ?? files.length], ['P2K players', summary.players || 0], ['Arena points', fmt(summary.total_points,2)],
+      ['Stored CSV records', integrity.stored_records ?? allFiles.length], ['P2K players', summary.players || 0], ['Arena points', fmt(summary.total_points,2)],
       ['Ranked 50+', summary.ranked_players || 0], ['Current members', summary.current_members || 0], ['Possible renames', summary.possible_renames || 0],
       ['Closed accounts', summary.closed_accounts || 0], ['Pending checks', summary.pending_checks || 0]
     ];
@@ -401,6 +404,22 @@
     finally { state.mcaSyncRunning = false; renderMcaSync(state.mcaSync || {}); }
   }
 
+  async function runMcaFullRefresh() {
+    if (state.mcaSyncRunning) return;
+    state.mcaSyncRunning=true;renderMcaSync(state.mcaSync||{});
+    try{message('liveRanksSyncStatus','Starting exhaustive arena index refresh from page 1…');const payload=await endpoint(liveEndpoint,{action:'sync_full_discovery',method:'POST',body:{max_seconds:25},timeoutMs:45_000});renderLive(payload);message('liveRanksSyncStatus','Full index refresh started. The durable CRON will continue every page until the terminal index page.','success');}
+    catch(error){message('liveRanksSyncStatus',error.message,'error');}
+    finally{state.mcaSyncRunning=false;renderMcaSync(state.mcaSync||{});}
+  }
+
+  async function runMcaStatsBackfill() {
+    if (state.mcaSyncRunning) return;
+    state.mcaSyncRunning=true;renderMcaSync(state.mcaSync||{});
+    try{message('liveRanksSyncStatus','Queueing historical arenas that lack W/D/L statistics…');const payload=await endpoint(liveEndpoint,{action:'sync_backfill_stats',method:'POST',body:{},timeoutMs:55_000});renderLive(payload);message('liveRanksSyncStatus',`${fmt(payload.stats_backfill?.queued||0,0)} historical arena(s) queued. The durable CRON will continue Player Results and Pairings backfill.`,'success');}
+    catch(error){message('liveRanksSyncStatus',error.message,'error');}
+    finally{state.mcaSyncRunning=false;renderMcaSync(state.mcaSync||{});}
+  }
+
   async function retryMcaSourceErrors() {
     if (state.mcaSyncRunning) return;
     try {
@@ -476,6 +495,8 @@
     $('liveRanksRefresh').addEventListener('click', loadLive);
     $('liveRanksProcess').addEventListener('click', processLive);
     $('liveRanksSyncStart')?.addEventListener('click', () => runMcaSourceSync(true));
+    $('liveRanksFullRefresh')?.addEventListener('click', runMcaFullRefresh);
+    $('liveRanksStatsBackfill')?.addEventListener('click', runMcaStatsBackfill);
     $('liveRanksSyncResume')?.addEventListener('click', () => runMcaSourceSync(false));
     $('liveRanksSyncRetry')?.addEventListener('click', retryMcaSourceErrors);
     $('liveRanksDateSyncStart')?.addEventListener('click', () => runMcaDateSync(true));
