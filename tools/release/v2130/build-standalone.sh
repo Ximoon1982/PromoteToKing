@@ -60,11 +60,11 @@ Then run:
 
 cd /kunden/homepages/43/d141198007/htdocs/PromoteToKing
 echo "$RUN_SHA  $(basename "$RUN")" | sha256sum -c -
-bash ./$(basename "$RUN") "$PWD"
+bash ./$(basename "$RUN") "\$PWD"
 
 Post-install verification:
 
-bash ./$(basename "$RUN") "$PWD" verify
+bash ./$(basename "$RUN") "\$PWD" verify
 
 The installer is transactional and preserves mutable state, unrelated files and system CRON.
 EOF
