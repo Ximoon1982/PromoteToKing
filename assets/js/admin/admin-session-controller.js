@@ -378,11 +378,14 @@ publishHealth();
 })();
 const mcaTask = (async () => {
 try {
-const live = await loadJSON("server/team-points/public/live-ranks.php", { credentials: "same-origin" });
-const finished = live?.processing?.finished_at || null;
-supplementalHealth.mca = { name: "MCA data import", detail: finished ? `Last completed import ${formatRelative(`${String(finished).replace(" ","T")}Z`)}` : "No MCA import has completed yet", tone: finished ? "good" : "warn", mark: "●", url: integratedAdminHref("live-ranks") };
+const live = await loadJSON("server/team-points/public/live-ranks-admin.php?action=status", { credentials: "same-origin" });
+const sync = live?.sync || {}, streak = Number(sync.discovery_failure_streak || 0), success = sync.last_successful_discovery_at || null;
+const lastSuccess = success ? formatRelative(`${String(success).replace(" ","T")}Z`) : "never";
+const tone = streak >= 2 ? "bad" : streak === 1 ? "warn" : success ? "good" : "warn";
+const detail = streak >= 2 ? `Arena discovery failed ${streak} consecutive times · last successful index check ${lastSuccess}` : streak === 1 ? `Arena discovery failed once · last successful index check ${lastSuccess}` : success ? `Arena index checked successfully ${lastSuccess} · ${Number(sync.index_confirmed_arenas || 0).toLocaleString()} index-confirmed arena(s)` : "No successful arena index check recorded yet";
+supplementalHealth.mca = { name: "MCA arena synchronization", detail, tone, mark: "●", url: integratedAdminHref("live-ranks") };
 } catch (_) {
-supplementalHealth.mca = { name:"MCA data import", detail:"Import status unavailable", tone:"warn", mark:"●", url:integratedAdminHref("live-ranks") };
+supplementalHealth.mca = { name:"MCA arena synchronization", detail:"Synchronization status unavailable", tone:"warn", mark:"●", url:integratedAdminHref("live-ranks") };
 }
 publishHealth();
 })();
