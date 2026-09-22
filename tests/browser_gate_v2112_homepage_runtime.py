@@ -77,7 +77,8 @@ def main():
             page.add_script_tag(path=str(ROOT / relative))
         page.wait_for_timeout(700)
         dashboard = page.evaluate("""() => ({
-          status:document.getElementById('teamStatusBadge')?.textContent||'',
+          // v2.13.0 removes database-status pills from the public dashboard.
+          databaseStatusBadges:document.querySelectorAll('#teamStatusBadge, #personalStatusBadge').length,
           members:document.getElementById('teamMembers')?.textContent||'',
           adminMode:window.P2K_ADMIN_MODE===true,
           adminTabHidden:document.getElementById('dashboardAdministrationTab')?.hidden??null,
@@ -112,7 +113,7 @@ def main():
     result = {"errors": errors, "dashboard": dashboard, "recommendations": recommendations, "administration": administration}
     if (
         errors
-        or dashboard["status"] != "Database ready"
+        or dashboard["databaseStatusBadges"] != 0
         or dashboard["members"] != "4,000"
         or not dashboard["adminMode"]
         or dashboard["adminTabHidden"]
