@@ -32,7 +32,7 @@ function indexExists(PDO $pdo,string $table,string $index): bool {
 }
 
 $admin=new PDO("mysql:host={$host};port={$port};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
-foreach([$coreName,$analyticsName] as $db){$admin->exec("DROP DATABASE IF EXISTS \`{$db}\`");$admin->exec("CREATE DATABASE \`{$db}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");}
+foreach([$coreName,$analyticsName] as $db){$admin->exec("DROP DATABASE IF EXISTS `{$db}`");$admin->exec("CREATE DATABASE `{$db}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");}
 
 $core=new PDO("mysql:host={$host};port={$port};dbname={$coreName};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);
 $analytics=new PDO("mysql:host={$host};port={$port};dbname={$analyticsName};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);
@@ -113,5 +113,5 @@ try{
 } finally {
     if($priorGreenConfig===null)@unlink($greenConfigPath);else file_put_contents($greenConfigPath,$priorGreenConfig);
     @unlink($blueConfig);
-    foreach([$coreName,$analyticsName] as $db){try{$admin->exec("DROP DATABASE IF EXISTS \`{$db}\`");}catch(Throwable){}}
+    foreach([$coreName,$analyticsName] as $db){try{$admin->exec("DROP DATABASE IF EXISTS `{$db}`");}catch(Throwable){}}
 }
