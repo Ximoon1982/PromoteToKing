@@ -40,12 +40,12 @@ def test_v2133_pre_save_artwork_and_engraver_cleanup_contract():
     assert "window.addEventListener('p2k-admin-shell-route'" in engraver
     assert "window.addEventListener('pagehide',close)" in engraver
 
-def test_v2133_release_identity_and_manual_validation_handoff():
+def test_v2133_release_identity_and_branch_qualification():
     assert read("VERSION").strip()=="2.13.3"
     workflow=read(".github/workflows/p2k-v2133-qualification.yml")
     package=read(".github/workflows/p2k-v2133-package.yml")
-    assert "workflow_dispatch" in workflow and "branches:" not in workflow.split("jobs:",1)[0]
-    assert "workflow_dispatch" in package and "branches:" not in package.split("jobs:",1)[0]
+    assert "workflow_dispatch" in workflow and "branches: [release/v2.13.3]" in workflow.split("jobs:",1)[0]
+    assert "workflow_dispatch" in package and "branches: [release/v2.13.3]" in package.split("jobs:",1)[0]
     assert "browser_gate_trophy_gallery_v2121.py" in workflow
     assert "test_v2133_trophy_admin_contract.py" in workflow
     assert "Full canonical P2K regression" in workflow

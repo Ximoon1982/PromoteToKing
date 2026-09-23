@@ -1,6 +1,8 @@
 name: P2K v2.13.3 qualification
 
 on:
+  push:
+    branches: [release/v2.13.3]
   workflow_dispatch:
 
 permissions:
