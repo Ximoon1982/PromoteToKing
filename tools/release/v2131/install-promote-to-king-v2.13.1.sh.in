@@ -1,0 +1,178 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+ROOT="${1:-/kunden/homepages/43/d141198007/htdocs/PromoteToKing}"
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PAYLOAD_DIR="$SELF_DIR/payload"
+BACKUP_ROOT="$ROOT/storage/release-backups"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+BACKUP_DIR="$BACKUP_ROOT/v2.13.1-$STAMP"
+ABSENT_FILE="$BACKUP_DIR/.absent-before-install"
+ACTIVATED=0
+SOURCE_HEAD="@@SOURCE_HEAD@@"
+
+sha256_file() { sha256sum "$1" | awk '{print $1}'; }
+fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+
+find_php() {
+  local c v
+  if [[ -n "${P2K_PHP_CLI:-}" ]]; then
+    [[ -x "$P2K_PHP_CLI" ]] || fail "P2K_PHP_CLI is not executable: $P2K_PHP_CLI"
+    v="$("$P2K_PHP_CLI" -r 'echo PHP_VERSION_ID;' 2>/dev/null || true)"
+    [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 80000 )) || fail "P2K_PHP_CLI must be PHP >= 8.0"
+    printf '%s\n' "$P2K_PHP_CLI"
+    return
+  fi
+  for c in /usr/bin/php8.5-cli /usr/bin/php8.5 /usr/bin/php8.4-cli /usr/bin/php8.4 /usr/bin/php8.3-cli /usr/bin/php8.3 /usr/bin/php8.2-cli /usr/bin/php8.2 /usr/bin/php8.1-cli /usr/bin/php8.1 /usr/bin/php8.0-cli /usr/bin/php8.0; do
+    [[ -x "$c" ]] || continue
+    v="$("$c" -r 'echo PHP_VERSION_ID;' 2>/dev/null || true)"
+    if [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 80000 )); then printf '%s\n' "$c"; return; fi
+  done
+  if command -v php >/dev/null 2>&1; then
+    c="$(command -v php)"
+    v="$("$c" -r 'echo PHP_VERSION_ID;' 2>/dev/null || true)"
+    if [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 80000 )); then printf '%s\n' "$c"; return; fi
+  fi
+  fail "No PHP >= 8.0 CLI found. Do not use the legacy IONOS /usr/bin/php."
+}
+
+allowed_existing_hash() {
+  local path="$1" hash="$2"
+  case "$path" in
+    VERSION) [[ "$hash" == "@@VERSION_BASE@@" || "$hash" == "@@VERSION_TARGET@@" ]] ;;
+    server/team-points/sql/analytics-schema.sql) [[ "$hash" == "@@ANALYTICS_9C2@@" || "$hash" == "@@ANALYTICS_TARGET@@" ]] ;;
+    server/team-points-green/src/GreenRepository.php) [[ "$hash" == "@@GREEN_REPO_BASE@@" || "$hash" == "@@GREEN_REPO_TARGET@@" ]] ;;
+    server/team-points-green/src/GreenCompatibility.php) [[ "$hash" == "@@GREEN_COMPAT_BASE@@" || "$hash" == "@@GREEN_COMPAT_TARGET@@" ]] ;;
+    server/team-points/src/McaResultsCronService.php) [[ "$hash" == "@@MCA_9C2@@" || "$hash" == "@@MCA_1C17@@" || "$hash" == "@@MCA_385@@" || "$hash" == "@@MCA_TARGET@@" ]] ;;
+    server/team-points-green/tools/converge-v2.13.1.php) [[ "$hash" == "@@CONVERGE_TARGET@@" ]] ;;
+    *) return 1 ;;
+  esac
+}
+
+target_hash() {
+  case "$1" in
+    VERSION) printf '%s\n' "@@VERSION_TARGET@@" ;;
+    server/team-points/sql/analytics-schema.sql) printf '%s\n' "@@ANALYTICS_TARGET@@" ;;
+    server/team-points-green/src/GreenRepository.php) printf '%s\n' "@@GREEN_REPO_TARGET@@" ;;
+    server/team-points-green/src/GreenCompatibility.php) printf '%s\n' "@@GREEN_COMPAT_TARGET@@" ;;
+    server/team-points/src/McaResultsCronService.php) printf '%s\n' "@@MCA_TARGET@@" ;;
+    server/team-points-green/tools/converge-v2.13.1.php) printf '%s\n' "@@CONVERGE_TARGET@@" ;;
+    *) return 1 ;;
+  esac
+}
+
+FILES=(
+  "VERSION"
+  "server/team-points/sql/analytics-schema.sql"
+  "server/team-points-green/src/GreenRepository.php"
+  "server/team-points-green/src/GreenCompatibility.php"
+  "server/team-points/src/McaResultsCronService.php"
+  "server/team-points-green/tools/converge-v2.13.1.php"
+)
+
+rollback() {
+  local path
+  printf 'Rolling back source files from %s\n' "$BACKUP_DIR" >&2
+  for path in "${FILES[@]}"; do
+    if [[ -f "$BACKUP_DIR/$path" ]]; then
+      mkdir -p "$(dirname "$ROOT/$path")"
+      cp -p "$BACKUP_DIR/$path" "$ROOT/$path" || true
+    elif [[ -f "$ABSENT_FILE" ]] && grep -Fxq "$path" "$ABSENT_FILE"; then
+      rm -f "$ROOT/$path" || true
+    fi
+  done
+  ACTIVATED=0
+}
+
+abort_after_activation() {
+  printf 'ERROR: %s\n' "$*" >&2
+  rollback
+  printf 'Source files were rolled back. Any successful additive schema changes are intentionally left in place.\n' >&2
+  exit 1
+}
+
+[[ -d "$ROOT" ]] || fail "Promote to King root not found: $ROOT"
+[[ -d "$PAYLOAD_DIR" ]] || fail "Installer payload directory missing: $PAYLOAD_DIR"
+command -v sha256sum >/dev/null 2>&1 || fail "sha256sum is required"
+
+PHP_BIN="$(find_php)"
+PHP_VERSION="$("$PHP_BIN" -r 'echo PHP_VERSION;')"
+printf 'Using PHP CLI: %s (%s)\n' "$PHP_BIN" "$PHP_VERSION"
+printf 'Source identity: v2.13.1 %s\n' "$SOURCE_HEAD"
+
+printf 'Verifying package payload...\n'
+( cd "$PAYLOAD_DIR" && sha256sum -c "$SELF_DIR/PAYLOAD.sha256" ) || fail "Package payload hash verification failed"
+
+printf 'Checking installed source baseline...\n'
+for path in "${FILES[@]}"; do
+  live="$ROOT/$path"
+  if [[ ! -e "$live" ]]; then
+    if [[ "$path" == "server/team-points-green/tools/converge-v2.13.1.php" ]]; then
+      printf '  %s: absent as expected on v2.13.0\n' "$path"
+      continue
+    fi
+    fail "Required installed file is missing: $path"
+  fi
+  h="$(sha256_file "$live")"
+  allowed_existing_hash "$path" "$h" || fail "Installed file is not an approved v2.13.0/v2.13.1 state: $path ($h)"
+  printf '  %s: approved (%s)\n' "$path" "$h"
+done
+
+printf 'Linting staged PHP...\n'
+for path in server/team-points-green/src/GreenRepository.php server/team-points-green/src/GreenCompatibility.php server/team-points/src/McaResultsCronService.php server/team-points-green/tools/converge-v2.13.1.php; do
+  "$PHP_BIN" -l "$PAYLOAD_DIR/$path" >/dev/null || fail "PHP lint failed for staged $path"
+done
+
+mkdir -p "$BACKUP_DIR" || fail "Unable to create backup directory: $BACKUP_DIR"
+: > "$ABSENT_FILE"
+for path in "${FILES[@]}"; do
+  if [[ -e "$ROOT/$path" ]]; then
+    mkdir -p "$BACKUP_DIR/$(dirname "$path")" || fail "Unable to prepare backup path for $path"
+    cp -p "$ROOT/$path" "$BACKUP_DIR/$path" || fail "Unable to back up $path"
+  else
+    printf '%s\n' "$path" >> "$ABSENT_FILE"
+  fi
+done
+printf 'Backup created: %s\n' "$BACKUP_DIR"
+
+ACTIVATED=1
+trap 'if (( ACTIVATED )); then rollback; fi; exit 130' INT TERM HUP
+
+activate_file() {
+  local path="$1" src="$PAYLOAD_DIR/$1" dst="$ROOT/$1" tmp
+  mkdir -p "$(dirname "$dst")" || abort_after_activation "Unable to create destination directory for $path"
+  tmp="$dst.p2k-v2131-$$.tmp"
+  cp -p "$src" "$tmp" || abort_after_activation "Unable to stage live $path"
+  mv -f "$tmp" "$dst" || abort_after_activation "Unable to activate $path"
+}
+
+printf 'Activating v2.13.1 runtime files...\n'
+for path in server/team-points/sql/analytics-schema.sql server/team-points-green/src/GreenRepository.php server/team-points-green/src/GreenCompatibility.php server/team-points/src/McaResultsCronService.php server/team-points-green/tools/converge-v2.13.1.php; do
+  activate_file "$path"
+done
+
+printf 'Linting active PHP...\n'
+for path in server/team-points-green/src/GreenRepository.php server/team-points-green/src/GreenCompatibility.php server/team-points/src/McaResultsCronService.php server/team-points-green/tools/converge-v2.13.1.php; do
+  "$PHP_BIN" -l "$ROOT/$path" >/dev/null || abort_after_activation "PHP lint failed after activation: $path"
+done
+
+printf 'Converging and physically verifying Green schemas...\n'
+"$PHP_BIN" "$ROOT/server/team-points-green/tools/converge-v2.13.1.php" || abort_after_activation "Green schema convergence/verification failed"
+
+activate_file "VERSION"
+
+printf 'Verifying installed target hashes...\n'
+for path in "${FILES[@]}"; do
+  got="$(sha256_file "$ROOT/$path")"
+  expected="$(target_hash "$path")"
+  [[ "$got" == "$expected" ]] || abort_after_activation "Target hash mismatch after activation: $path"
+  printf '  %s: OK\n' "$path"
+done
+
+[[ "$(tr -d '\r\n' < "$ROOT/VERSION")" == "2.13.1" ]] || abort_after_activation "VERSION did not converge to 2.13.1"
+
+ACTIVATED=0
+trap - INT TERM HUP
+printf 'SUCCESS: Promote to King v2.13.1 is active and Green schema convergence is verified.\n'
+printf 'Qualified source HEAD: %s\n' "$SOURCE_HEAD"
+printf 'Rollback backup retained at: %s\n' "$BACKUP_DIR"
