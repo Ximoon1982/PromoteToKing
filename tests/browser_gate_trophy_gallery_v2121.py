@@ -25,7 +25,7 @@ PNG_BYTES = PNG.getvalue()
 
 def trophy(tid: str, league: str, date: str, title: str) -> dict:
     return {
-        "id": tid, "status": "published", "league": league, "competition": "Cup",
+        "id": tid, "status": "published", "league": league, "competition": f"{league} Cup",
         "award": "Winner", "title": title, "award_date": date,
         "description_md": "Qualified v2.12.1 trophy", "award_page": "",
         "competition_page": "", "result_table_url": "", "vignette_media_id": "",
@@ -58,7 +58,7 @@ class Fixture(SimpleHTTPRequestHandler):
 
     @classmethod
     def summaries(cls) -> list[dict]:
-        return [{k: r.get(k, "") for k in ("id", "status", "title", "league", "award_date")}
+        return [{k: r.get(k, "") for k in ("id", "status", "title", "league", "competition", "award_date")}
                 for r in cls.records.values()]
 
     def fixture_get(self) -> bool:
@@ -198,6 +198,17 @@ def main() -> None:
             assert "admin-list" not in Fixture.actions, Fixture.actions
             assert page.locator(f"{host} input[name='award']").count() == 0
             assert page.locator(f"{host} input[name='award_page']").count() == 1
+            assert page.locator(f"{host} [data-v2121-admin-root]").count() == 1
+            assert page.locator(f"{host} [data-v2121-filter]").count() == 1
+            page.fill(f"{host} [data-v2121-filter]", "t-2025")
+            expect(page.locator(f"{host} [data-v2121-select]")).to_have_count(1)
+            assert page.locator(f"{host} [data-v2121-select]").first.get_attribute("data-v2121-select") == "t-2025"
+            page.fill(f"{host} [data-v2121-filter]", "Beta League Cup")
+            expect(page.locator(f"{host} [data-v2121-select]")).to_have_count(1)
+            page.fill(f"{host} [data-v2121-filter]", "2024-06-01")
+            expect(page.locator(f"{host} [data-v2121-select]")).to_have_count(1)
+            page.fill(f"{host} [data-v2121-filter]", "")
+            expect(page.locator(f"{host} [data-v2121-select]")).to_have_count(3)
 
             page.fill(f"{host} [data-v2121-match-search]", "Golden")
             page.wait_for_selector(f"{host} [data-v2121-add-match='987']", timeout=10000)
@@ -210,19 +221,47 @@ def main() -> None:
             page.fill(f"{host} [name='title']", "New v2.12.1 Trophy")
             page.fill(f"{host} [name='league']", "Gamma League")
             page.fill(f"{host} [name='vignette_url']", "https://example.test/trophy.png")
+
+            # Engraving can be prepared before the first save. The file remains browser-local
+            # until the canonical save creates an ID and uploads pending artwork.
+            page.click(f"{host} [data-v2121-engrave='modal']")
+            page.wait_for_selector("#p2kTrophyEngraverV2121:not([hidden]) iframe.p2k-engraver", timeout=15000)
+            assert page.evaluate("document.body.classList.contains('p2k-engraver-open')")
+            pre_save_frame = page.frame_locator("#p2kTrophyEngraverV2121 iframe.p2k-engraver")
+            pre_save_frame.locator("body").evaluate("""() => parent.postMessage({
+                type:'p2k-trophy-engraving',
+                name:'pre-save-modal.png',
+                blob:new Blob(['pre-save'],{type:'image/png'})
+            }, location.origin)""")
+            page.wait_for_selector("#p2kTrophyEngraverV2121[hidden]", timeout=10000)
+            assert not page.evaluate("document.body.classList.contains('p2k-engraver-open')")
+            page.wait_for_function("""() => {
+                const img=document.querySelector('#adminShellNativeDetailHost [data-v2121-art="modal"] .p2k-media-preview img');
+                return !!img && img.src.startsWith('blob:');
+            }""")
+
             upload = Path(os.environ.get("RUNNER_TEMP", "/tmp")) / "p2k-v2121-upload.png"
             Image.new("RGB", (16, 16), (180, 100, 20)).save(upload)
             page.set_input_files(f"{host} [data-v2121-file='vignette']", str(upload))
             page.evaluate("window.__p2kV2121Form = document.querySelector('#adminShellNativeDetailHost [data-v2121-form]')")
+            page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
+            page.wait_for_timeout(50)
+            before_scroll = page.evaluate("window.scrollY")
             before_upload = Fixture.upload_count
-            page.click(f"{host} [data-v2121-form] button[type='submit']")
+            page.locator(f"{host} [data-v2121-form] button[type='submit']").evaluate("button => button.click()")
             page.wait_for_function("document.querySelector('#adminShellNativeDetailHost [data-v2121-status]')?.textContent === 'Saved.'", timeout=15000)
-            assert Fixture.upload_count == before_upload + 1
+            assert Fixture.upload_count == before_upload + 2
             assert Fixture.records["new-trophy"]["vignette_url"] == "https://example.test/trophy.png"
             assert page.evaluate("window.__p2kV2121Form === document.querySelector('#adminShellNativeDetailHost [data-v2121-form]')")
+            after_scroll = page.evaluate("window.scrollY")
+            assert abs(after_scroll - before_scroll) <= 2, (before_scroll, after_scroll)
+            page.fill(f"{host} [data-v2121-filter]", "new-trophy")
+            expect(page.locator(f"{host} [data-v2121-select]")).to_have_count(1)
+            page.fill(f"{host} [data-v2121-filter]", "")
 
             page.click(f"{host} [data-v2121-engrave='vignette']")
             page.wait_for_selector("#p2kTrophyEngraverV2121:not([hidden]) iframe.p2k-engraver", timeout=15000)
+            assert page.evaluate("document.body.classList.contains('p2k-engraver-open')")
             frame = page.frame_locator("#p2kTrophyEngraverV2121 iframe.p2k-engraver")
             frame.locator("#finish").wait_for(timeout=15000)
             page.wait_for_timeout(300)
@@ -231,6 +270,7 @@ def main() -> None:
             page.wait_for_timeout(300)
             assert master_requests == ["medal_gold.png", "medal_silver.png"], master_requests
             page.click("#p2kTrophyEngraverV2121 [data-v2121-engraver-close]")
+            assert not page.evaluate("document.body.classList.contains('p2k-engraver-open')")
 
             Fixture.authenticated = False
             public = browser.new_context(bypass_csp=True, viewport={"width": 390, "height": 844})

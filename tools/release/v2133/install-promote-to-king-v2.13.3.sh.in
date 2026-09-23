@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -uo pipefail
+ROOT="${1:-/kunden/homepages/43/d141198007/htdocs/PromoteToKing}"
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PAYLOAD_DIR="$SELF_DIR/payload"
+BACKUP_ROOT="$ROOT/storage/release-backups"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+BACKUP_DIR="$BACKUP_ROOT/v2.13.3-$STAMP"
+ACTIVATED=0
+SOURCE_HEAD="@@SOURCE_HEAD@@"
+CACHE_KEY="@@CACHE_KEY@@"
+FILES=("VERSION" "ui-v2.html" "assets/js/admin/admin-shell.js" "assets/js/admin/tool-registry.js" "assets/js/admin/trophy-gallery-admin-v2121.js" "assets/js/admin/trophy-gallery-engraver-v2121.js" "assets/js/admin/trophy-gallery-poc.js" "server/trophy-gallery/src/TrophyGalleryStore.php")
+BASE_HASHES=("@@BASE_0@@" "@@BASE_1@@" "@@BASE_2@@" "@@BASE_3@@" "@@BASE_4@@" "@@BASE_5@@" "@@BASE_6@@" "@@BASE_7@@")
+TARGET_HASHES=("@@TARGET_0@@" "@@TARGET_1@@" "@@TARGET_2@@" "@@TARGET_3@@" "@@TARGET_4@@" "@@TARGET_5@@" "@@TARGET_6@@" "@@TARGET_7@@")
+sha256_file(){ sha256sum "$1" | awk '{print $1}'; }
+fail(){ printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+find_php(){
+  local c v
+  for c in /usr/bin/php8.5-cli /usr/bin/php8.5 /usr/bin/php8.4-cli /usr/bin/php8.4 /usr/bin/php8.3-cli /usr/bin/php8.3 /usr/bin/php8.2-cli /usr/bin/php8.2 /usr/bin/php8.1-cli /usr/bin/php8.1 /usr/bin/php8.0-cli /usr/bin/php8.0; do
+    [[ -x "$c" ]] || continue
+    v="$("$c" -r 'echo PHP_VERSION_ID;' 2>/dev/null || true)"
+    if [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 80000 )); then printf '%s\n' "$c"; return; fi
+  done
+  fail "No PHP >= 8.0 CLI found. Do not use legacy /usr/bin/php."
+}
+rollback(){ local path; printf 'Rolling back source files from %s\n' "$BACKUP_DIR" >&2; for path in "${FILES[@]}"; do [[ -f "$BACKUP_DIR/$path" ]] || continue; mkdir -p "$(dirname "$ROOT/$path")"; cp -p "$BACKUP_DIR/$path" "$ROOT/$path" || true; done; ACTIVATED=0; }
+abort_after_activation(){ printf 'ERROR: %s\n' "$*" >&2; rollback; exit 1; }
+[[ -d "$ROOT" ]] || fail "Promote to King root not found: $ROOT"
+[[ -d "$PAYLOAD_DIR" ]] || fail "Installer payload missing"
+command -v sha256sum >/dev/null 2>&1 || fail "sha256sum is required"
+PHP_BIN="$(find_php)"
+printf 'Source identity: v2.13.3 %s\n' "$SOURCE_HEAD"
+printf 'Static asset cache key: %s\n' "$CACHE_KEY"
+( cd "$PAYLOAD_DIR" && sha256sum -c "$SELF_DIR/PAYLOAD.sha256" ) || fail "Payload verification failed"
+for i in "${!FILES[@]}"; do path="${FILES[$i]}"; live="$ROOT/$path"; [[ -f "$live" ]] || fail "Required installed file is missing: $path"; got="$(sha256_file "$live")"; [[ "$got" == "${BASE_HASHES[$i]}" || "$got" == "${TARGET_HASHES[$i]}" ]] || fail "Installed file is not an approved v2.13.2/v2.13.3 state: $path ($got)"; done
+"$PHP_BIN" -l "$PAYLOAD_DIR/server/trophy-gallery/src/TrophyGalleryStore.php" >/dev/null || fail "Staged TrophyGalleryStore.php lint failed"
+mkdir -p "$BACKUP_DIR" || fail "Unable to create backup directory"
+for path in "${FILES[@]}"; do mkdir -p "$BACKUP_DIR/$(dirname "$path")"; cp -p "$ROOT/$path" "$BACKUP_DIR/$path" || fail "Unable to back up $path"; done
+ACTIVATED=1
+trap 'if (( ACTIVATED )); then rollback; fi; exit 130' INT TERM HUP
+activate_file(){ local path="$1" dst="$ROOT/$1" tmp="$dst.p2k-v2133-$$.tmp"; mkdir -p "$(dirname "$dst")" || abort_after_activation "Unable to create destination"; cp -p "$PAYLOAD_DIR/$path" "$tmp" || abort_after_activation "Unable to stage $path"; mv -f "$tmp" "$dst" || abort_after_activation "Unable to activate $path"; }
+for path in "${FILES[@]}"; do activate_file "$path"; done
+"$PHP_BIN" -l "$ROOT/server/trophy-gallery/src/TrophyGalleryStore.php" >/dev/null || abort_after_activation "Active TrophyGalleryStore.php lint failed"
+for i in "${!FILES[@]}"; do got="$(sha256_file "$ROOT/${FILES[$i]}")"; [[ "$got" == "${TARGET_HASHES[$i]}" ]] || abort_after_activation "Target hash mismatch: ${FILES[$i]}"; done
+[[ "$(tr -d '\r\n' < "$ROOT/VERSION")" == "2.13.3" ]] || abort_after_activation "VERSION did not converge to 2.13.3"
+grep -Fq "assets/js/admin/admin-shell.js?v=$CACHE_KEY" "$ROOT/ui-v2.html" || abort_after_activation "admin-shell cache key was not activated"
+grep -Fq "assets/js/admin/tool-registry.js?v=$CACHE_KEY" "$ROOT/ui-v2.html" || abort_after_activation "tool-registry cache key was not activated"
+grep -Fq "const TROPHY_RUNTIME_KEY = \"$CACHE_KEY\";" "$ROOT/assets/js/admin/tool-registry.js" || abort_after_activation "Trophy runtime cache key was not activated"
+ACTIVATED=0; trap - INT TERM HUP
+printf 'SUCCESS: Promote to King v2.13.3 Trophy Gallery administration corrective increment is active.\n'
+printf 'Source HEAD: %s\n' "$SOURCE_HEAD"
+printf 'Static cache key: %s\n' "$CACHE_KEY"
+printf 'Rollback backup: %s\n' "$BACKUP_DIR"
