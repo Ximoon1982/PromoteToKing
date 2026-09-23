@@ -36,7 +36,9 @@ def test_v2131_mca_schema_convergence_never_swallows_alter_failure():
     assert block.index("syncSchemaReady=true") > block.index("MCA schema convergence verification failed")
 
 def test_v2131_release_identity_and_dynamic_gate():
-    assert read("VERSION").strip()=="2.13.1"
+    # This schema contract remains mandatory for subsequent releases.
+    version = tuple(int(part) for part in read("VERSION").strip().split("."))
+    assert len(version) == 3 and version >= (2, 13, 1)
     workflow=read(".github/workflows/p2k-v2131-qualification.yml")
     assert "release/v2.13.1" in workflow
     assert "mariadb:" in workflow
