@@ -24,7 +24,7 @@ final class GreenRepository
         'p2k_g_matches'=>[
             'index_time_class','index_result','club_verified','verified_club_slug',
             'club_side','scoring_eligible','exclusion_reason','trusted_legacy',
-            'fact_source','max_rating',
+            'fact_source','max_rating','max_rating_state',
         ],
         'p2k_g_state'=>[
             'public_read_target','migration_phase','gab_status','gab_phase',
@@ -34,7 +34,7 @@ final class GreenRepository
         'p2k_g_quick_board_cycle_items'=>['claim_count'],
     ];
     private const RUNTIME_SCHEMA_INDEXES = [
-        'p2k_g_matches'=>['idx_g_match_current','idx_g_match_eligibility','idx_g_match_discovered'],
+        'p2k_g_matches'=>['idx_g_match_current','idx_g_match_eligibility','idx_g_match_discovered','idx_g_match_rating_cap'],
     ];
 
     public function __construct(PDO $core, PDO $analytics, string $clubSlug)
@@ -167,6 +167,7 @@ final class GreenRepository
             'trusted_legacy'=>"TINYINT(1) NOT NULL DEFAULT 0 AFTER exclusion_reason",
             'fact_source'=>"VARCHAR(32) NOT NULL DEFAULT 'api' AFTER trusted_legacy",
             'max_rating'=>"SMALLINT UNSIGNED NULL AFTER time_control",
+            'max_rating_state'=>"ENUM('unknown','capped','open','unavailable') NOT NULL DEFAULT 'unknown' AFTER max_rating",
         ];
         foreach($columns as $name=>$definition){
             if(!$this->columnExists('p2k_g_matches',$name))$this->core->exec('ALTER TABLE p2k_g_matches ADD COLUMN '.$name.' '.$definition);
@@ -174,6 +175,8 @@ final class GreenRepository
         if(!$this->indexExists('p2k_g_matches','idx_g_match_current'))$this->core->exec('ALTER TABLE p2k_g_matches ADD INDEX idx_g_match_current (index_bucket,index_time_class,status,last_verified_at)');
         if(!$this->indexExists('p2k_g_matches','idx_g_match_eligibility'))$this->core->exec('ALTER TABLE p2k_g_matches ADD INDEX idx_g_match_eligibility (club_verified,time_class,scoring_eligible,status)');
         if(!$this->indexExists('p2k_g_matches','idx_g_match_discovered'))$this->core->exec('ALTER TABLE p2k_g_matches ADD INDEX idx_g_match_discovered (verified_club_slug,club_verified,created_at,match_id)');
+        if(!$this->indexExists('p2k_g_matches','idx_g_match_rating_cap'))$this->core->exec('ALTER TABLE p2k_g_matches ADD INDEX idx_g_match_rating_cap (max_rating_state,club_verified,time_class,status,match_id)');
+        $this->core->exec("UPDATE p2k_g_matches SET max_rating_state='capped' WHERE max_rating IS NOT NULL AND max_rating>0 AND max_rating_state='unknown'");
         if(!$this->columnExists('p2k_g_state','public_read_target'))$this->core->exec("ALTER TABLE p2k_g_state ADD COLUMN public_read_target ENUM('blue','green') NOT NULL DEFAULT 'blue' AFTER force_mode");
         if(!$this->columnExists('p2k_g_state','migration_phase'))$this->core->exec("ALTER TABLE p2k_g_state ADD COLUMN migration_phase ENUM('blue_primary','shadow_writing','green_validated','green_reads_both_writing','green_primary') NOT NULL DEFAULT 'blue_primary' AFTER public_read_target");
         $stateColumns=[
@@ -953,7 +956,7 @@ final class GreenRepository
 
     public function storeMatch(int $id,array $payload,int $httpStatus=200): array
     {
-        $oldQ=$this->core->prepare('SELECT payload_hash,trusted_legacy,status,time_class,board_count,p2k_score,opponent_score,result,competition_points,is_void,scoring_eligible,exclusion_reason,fact_source FROM p2k_g_matches WHERE match_id=?');
+        $oldQ=$this->core->prepare('SELECT payload_hash,trusted_legacy,status,time_class,board_count,p2k_score,opponent_score,result,competition_points,is_void,scoring_eligible,exclusion_reason,fact_source,max_rating,max_rating_state FROM p2k_g_matches WHERE match_id=?');
         $oldQ->execute([$id]);$old=$oldQ->fetch()?:[];$oldHash=$old['payload_hash']??null;$trusted=(int)($old['trusted_legacy']??0)===1;
         $teams=array_values(is_array($payload['teams']??null)?$payload['teams']:[]);$hits=[];
         foreach($teams as $idx=>$team){
@@ -988,8 +991,8 @@ final class GreenRepository
 
         $rawStatus=$this->normalizeMatchStatus((string)($payload['status']??'unknown'));
         $settings=is_array($payload['settings']??null)?$payload['settings']:[];
-        $maxRatingRaw=$settings['max_rating']??$settings['maxRating']??$payload['max_rating']??null;
-        $maxRating=is_numeric($maxRatingRaw)&&(int)$maxRatingRaw>0&&(int)$maxRatingRaw<10000?(int)$maxRatingRaw:null;
+        $cap=$this->ratingCapObservation($payload,$old['max_rating']??null,(string)($old['max_rating_state']??'unknown'));
+        $maxRating=$cap['max_rating'];$maxRatingState=$cap['state'];
         $timeClass=strtolower(trim((string)($settings['time_class']??$payload['time_class']??'')));
         $boards=max(0,(int)($payload['boards']??0));
         $score=is_numeric($club['score']??null)?(float)$club['score']:null;$oppScore=is_numeric($opp['score']??null)?(float)$opp['score']:null;
@@ -1009,8 +1012,8 @@ final class GreenRepository
             $exclusion=$old['exclusion_reason']??null;
         }
 
-        $q=$this->core->prepare('UPDATE p2k_g_matches SET web_url=?,name=?,opponent_name=?,opponent_url=?,status=?,club_verified=1,verified_club_slug=?,club_side=?,scoring_eligible=?,exclusion_reason=?,fact_source=?,rules=?,time_class=?,time_control=?,max_rating=?,start_epoch=?,end_epoch=CASE WHEN trusted_legacy=1 THEN end_epoch ELSE ? END,board_count=?,p2k_score=?,opponent_score=?,result=?,competition_points=?,is_void=?,payload_hash=?,last_http_status=?,last_observed_at=UTC_TIMESTAMP(),last_verified_at=UTC_TIMESTAMP(),retry_after=NULL WHERE match_id=?');
-        $q->execute([(string)($payload['url']??''),(string)($payload['name']??''),(string)($opp['name']??''),(string)($opp['url']??$opp['@id']??''),$status,$this->clubSlug,'team_'.$clubIdx,$eligible?1:0,$exclusion,$trusted?'trusted_legacy_csv':'api',(string)($settings['rules']??''),$timeClass,(string)($settings['time_control']??$settings['time_per_move']??''),$maxRating,is_numeric($payload['start_time']??null)?(int)$payload['start_time']:null,is_numeric($payload['end_time']??null)?(int)$payload['end_time']:null,$boards?:null,$score,$oppScore,$result,$points,$void?1:0,$hash,$httpStatus,$id]);
+        $q=$this->core->prepare('UPDATE p2k_g_matches SET web_url=?,name=?,opponent_name=?,opponent_url=?,status=?,club_verified=1,verified_club_slug=?,club_side=?,scoring_eligible=?,exclusion_reason=?,fact_source=?,rules=?,time_class=?,time_control=?,max_rating=?,max_rating_state=?,start_epoch=?,end_epoch=CASE WHEN trusted_legacy=1 THEN end_epoch ELSE ? END,board_count=?,p2k_score=?,opponent_score=?,result=?,competition_points=?,is_void=?,payload_hash=?,last_http_status=?,last_observed_at=UTC_TIMESTAMP(),last_verified_at=UTC_TIMESTAMP(),retry_after=NULL WHERE match_id=?');
+        $q->execute([(string)($payload['url']??''),(string)($payload['name']??''),(string)($opp['name']??''),(string)($opp['url']??$opp['@id']??''),$status,$this->clubSlug,'team_'.$clubIdx,$eligible?1:0,$exclusion,$trusted?'trusted_legacy_csv':'api',(string)($settings['rules']??''),$timeClass,(string)($settings['time_control']??$settings['time_per_move']??''),$maxRating,$maxRatingState,is_numeric($payload['start_time']??null)?(int)$payload['start_time']:null,is_numeric($payload['end_time']??null)?(int)$payload['end_time']:null,$boards?:null,$score,$oppScore,$result,$points,$void?1:0,$hash,$httpStatus,$id]);
 
         $boardEligible=$timeClass==='daily'&&!$void&&in_array($status,['registered','in_progress','finished'],true)&&$boards>0;
         if(!$boardEligible){
@@ -1042,6 +1045,85 @@ final class GreenRepository
         }
         $this->releaseMatchClaim($id);
         return ['status'=>$status,'changed'=>$changed,'boards'=>$boards,'void'=>$void,'points'=>$points,'time_class'=>$timeClass,'scoring_eligible'=>$eligible,'trusted_legacy'=>$trusted];
+    }
+
+    private function ratingCapObservation(array $payload,mixed $oldMaxRatingRaw=null,string $oldState='unknown'): array
+    {
+        $settings=is_array($payload['settings']??null)?$payload['settings']:[];
+        $present=array_key_exists('max_rating',$settings)||array_key_exists('maxRating',$settings)||array_key_exists('max_rating',$payload);
+        $raw=array_key_exists('max_rating',$settings)?$settings['max_rating']:(array_key_exists('maxRating',$settings)?$settings['maxRating']:($payload['max_rating']??null));
+        $oldMaxRating=is_numeric($oldMaxRatingRaw)?(int)$oldMaxRatingRaw:null;
+        $oldState=in_array($oldState,['unknown','capped','open','unavailable'],true)?$oldState:($oldMaxRating!==null&&$oldMaxRating>0?'capped':'unknown');
+        if($present){
+            if(is_numeric($raw)&&(int)$raw>0&&(int)$raw<10000)return ['max_rating'=>(int)$raw,'state'=>'capped','present'=>true];
+            if($raw===null||(is_numeric($raw)&&(int)$raw<=0))return ['max_rating'=>null,'state'=>'open','present'=>true];
+            if(in_array($oldState,['capped','open'],true))return ['max_rating'=>$oldMaxRating,'state'=>$oldState,'present'=>true];
+            return ['max_rating'=>null,'state'=>'unavailable','present'=>true];
+        }
+        if(in_array($oldState,['capped','open'],true))return ['max_rating'=>$oldMaxRating,'state'=>$oldState,'present'=>false];
+        return ['max_rating'=>null,'state'=>'unavailable','present'=>false];
+    }
+
+    public function storeMaxRatingBackfill(int $matchId,array $payload): array
+    {
+        if($matchId<=0)throw new RuntimeException('A valid match id is required.');
+        if(!$this->containsExactClub($payload))throw new RuntimeException('Backfill payload does not identify exactly one Promote to King side.');
+        $q=$this->core->prepare("SELECT max_rating,max_rating_state FROM p2k_g_matches WHERE match_id=? AND club_verified=1 AND time_class='daily' AND is_void=0 LIMIT 1");
+        $q->execute([$matchId]);$old=$q->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($old))throw new RuntimeException('Backfill match is not an eligible stored Promote to King Daily match.');
+        $cap=$this->ratingCapObservation($payload,$old['max_rating']??null,(string)($old['max_rating_state']??'unknown'));
+        $u=$this->core->prepare("UPDATE p2k_g_matches SET max_rating=?,max_rating_state=?,updated_at=UTC_TIMESTAMP() WHERE match_id=?");
+        $u->execute([$cap['max_rating'],$cap['state'],$matchId]);
+        return ['match_id'=>$matchId,'max_rating'=>$cap['max_rating'],'state'=>$cap['state'],'source_field_present'=>$cap['present'],'changed'=>$u->rowCount()>0];
+    }
+
+    public function maxRatingBackfillSnapshot(): array
+    {
+        $r=$this->core->query("SELECT COUNT(*) total,
+            COALESCE(SUM(max_rating_state='unknown'),0) unknown,
+            COALESCE(SUM(max_rating_state='capped'),0) capped,
+            COALESCE(SUM(max_rating_state='open'),0) open_matches,
+            COALESCE(SUM(max_rating_state='unavailable'),0) unavailable,
+            COALESCE(SUM(status='finished'),0) finished,
+            COALESCE(SUM(status='finished' AND max_rating_state='unknown'),0) finished_unknown,
+            COALESCE(SUM(status='finished' AND max_rating_state='capped'),0) finished_capped,
+            COALESCE(SUM(status='finished' AND max_rating_state='open'),0) finished_open,
+            COALESCE(SUM(status='finished' AND max_rating_state='unavailable'),0) finished_unavailable
+            FROM p2k_g_matches
+            WHERE club_verified=1 AND time_class='daily' AND is_void=0 AND status IN ('registered','in_progress','finished')")->fetch(PDO::FETCH_ASSOC)?:[];
+        foreach($r as $k=>$v)$r[$k]=(int)$v;
+        $resolved=$r['capped']+$r['open_matches']+$r['unavailable'];
+        $r['resolved']=$resolved;
+        $r['resolved_percent']=$r['total']>0?round(100*$resolved/$r['total'],2):100.0;
+        $r['known_cap_percent']=$r['total']>0?round(100*($r['capped']+$r['open_matches'])/$r['total'],2):0.0;
+        return $r;
+    }
+
+    public function maxRatingBackfillCandidates(int $limit=250): array
+    {
+        $limit=max(1,min(1000,$limit));
+        $q=$this->core->query("SELECT match_id,api_url,name,status,last_verified_at
+            FROM p2k_g_matches
+            WHERE club_verified=1 AND time_class='daily' AND is_void=0
+              AND status IN ('registered','in_progress','finished')
+              AND max_rating_state='unknown'
+            ORDER BY CASE status WHEN 'registered' THEN 0 WHEN 'in_progress' THEN 1 ELSE 2 END,match_id DESC
+            LIMIT {$limit}");
+        return $q->fetchAll(PDO::FETCH_ASSOC)?:[];
+    }
+
+    public function markMaxRatingUnavailable(array $matchIds): int
+    {
+        $ids=array_values(array_unique(array_filter(array_map('intval',$matchIds),static fn(int $id):bool=>$id>0)));
+        if(!$ids)return 0;
+        $count=0;
+        foreach(array_chunk($ids,200) as $chunk){
+            $marks=implode(',',array_fill(0,count($chunk),'?'));
+            $q=$this->core->prepare("UPDATE p2k_g_matches SET max_rating_state='unavailable',updated_at=UTC_TIMESTAMP()
+                WHERE max_rating_state='unknown' AND match_id IN ({$marks})");
+            $q->execute($chunk);$count+=$q->rowCount();
+        }
+        return $count;
     }
 
     public function markMatchHttp(int $id,int $status,string $error=''): void

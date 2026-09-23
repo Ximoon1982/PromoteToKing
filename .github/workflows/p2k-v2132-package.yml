@@ -1,0 +1,26 @@
+name: P2K v2.13.2 package
+
+on:
+  push:
+    branches: [release/v2.13.2]
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Build exact incremental installer
+        run: |
+          bash tools/release/v2132/build-incremental.sh "$RUNNER_TEMP/v2132"
+          unzip -t "$RUNNER_TEMP/v2132/PromoteToKing_v2.13.2_INCREMENTAL_FROM_2.13.1.zip"
+          sha256sum "$RUNNER_TEMP/v2132/PromoteToKing_v2.13.2_INCREMENTAL_FROM_2.13.1.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PromoteToKing-v2.13.2-incremental-${{ github.sha }}
+          path: ${{ runner.temp }}/v2132/PromoteToKing_v2.13.2_INCREMENTAL_FROM_2.13.1.zip
+          if-no-files-found: error
+          retention-days: 30
