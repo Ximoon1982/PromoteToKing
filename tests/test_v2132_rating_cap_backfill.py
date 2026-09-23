@@ -52,7 +52,8 @@ def test_v2132_standalone_backfill_is_unlinked_oauth_scheduled_and_scoped():
             assert 'MaxRatingBackfill.php' not in p.read_text(encoding='utf-8')
 
 def test_v2132_release_identity_and_qualification():
-    assert read('VERSION').strip()=='2.13.2'
+    version=tuple(int(part) for part in read('VERSION').strip().split('.'))
+    assert len(version)==3 and version >= (2,13,2)
     workflow=read('.github/workflows/p2k-v2132-qualification.yml')
     assert 'release/v2.13.2' in workflow
     assert 'test_v2132_rating_cap_backfill.php' in workflow

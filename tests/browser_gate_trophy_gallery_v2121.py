@@ -233,7 +233,7 @@ def main() -> None:
                 name:'pre-save-modal.png',
                 blob:new Blob(['pre-save'],{type:'image/png'})
             }, location.origin)""")
-            page.wait_for_selector("#p2kTrophyEngraverV2121[hidden]", timeout=10000)
+            page.wait_for_selector("#p2kTrophyEngraverV2121[hidden]", state="attached", timeout=10000)
             assert not page.evaluate("document.body.classList.contains('p2k-engraver-open')")
             page.wait_for_function("""() => {
                 const img=document.querySelector('#adminShellNativeDetailHost [data-v2121-art="modal"] .p2k-media-preview img');
