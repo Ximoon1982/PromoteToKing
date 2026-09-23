@@ -38,7 +38,7 @@ mkdir -p "$BACKUP_DIR" || fail "Unable to create backup directory"
 for path in "${FILES[@]}"; do mkdir -p "$BACKUP_DIR/$(dirname "$path")"; cp -p "$ROOT/$path" "$BACKUP_DIR/$path" || fail "Unable to back up $path"; done
 ACTIVATED=1
 trap 'if (( ACTIVATED )); then rollback; fi; exit 130' INT TERM HUP
-activate_file(){ local path="$1" dst="$ROOT/$1" tmp="$dst.p2k-v2133-$$.tmp"; mkdir -p "$(dirname "$dst")" || abort_after_activation "Unable to create destination"; cp -p "$PAYLOAD_DIR/$path" "$tmp" || abort_after_activation "Unable to stage $path"; mv -f "$tmp" "$dst" || abort_after_activation "Unable to activate $path"; }
+activate_file(){ local path="$1" dst="$ROOT/$1" tmp; tmp="$dst.p2k-v2133-$$.tmp"; mkdir -p "$(dirname "$dst")" || abort_after_activation "Unable to create destination"; cp -p "$PAYLOAD_DIR/$path" "$tmp" || abort_after_activation "Unable to stage $path"; mv -f "$tmp" "$dst" || abort_after_activation "Unable to activate $path"; }
 for path in "${FILES[@]}"; do activate_file "$path"; done
 "$PHP_BIN" -l "$ROOT/server/trophy-gallery/src/TrophyGalleryStore.php" >/dev/null || abort_after_activation "Active TrophyGalleryStore.php lint failed"
 for i in "${!FILES[@]}"; do got="$(sha256_file "$ROOT/${FILES[$i]}")"; [[ "$got" == "${TARGET_HASHES[$i]}" ]] || abort_after_activation "Target hash mismatch: ${FILES[$i]}"; done
