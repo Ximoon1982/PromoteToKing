@@ -41,6 +41,7 @@ def test_v2132_standalone_backfill_is_unlinked_oauth_scheduled_and_scoped():
     assert 'P2K_TEAM_POINTS_CLIENT' in page
     assert 'Start / resume backfill' in page
     assert 'server/team-points-green/public/max-rating-backfill.php' in page
+    assert 'Object.values(rawTeams)' in page
     assert 'GreenConfig::authorizeAdmin();' in endpoint
     assert 'storeMaxRatingBackfill' in endpoint
     assert 'markMaxRatingUnavailable' in endpoint

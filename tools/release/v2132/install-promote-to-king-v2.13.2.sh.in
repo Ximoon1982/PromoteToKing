@@ -41,7 +41,8 @@ allowed_existing_hash(){
     server/team-points-green/sql/core-schema.sql) [[ "$hash" == "@@SCHEMA_BASE@@" || "$hash" == "@@SCHEMA_TARGET@@" ]] ;;
     server/team-points-green/src/GreenRepository.php) [[ "$hash" == "@@GREEN_BASE@@" || "$hash" == "@@GREEN_TARGET@@" ]] ;;
     server/team-points/src/Repository.php) [[ "$hash" == "@@REPO_BASE@@" || "$hash" == "@@REPO_TARGET@@" ]] ;;
-    MaxRatingBackfill.php|server/team-points-green/public/max-rating-backfill.php|server/team-points-green/tools/converge-v2.13.2.php)
+    MaxRatingBackfill.php) [[ "$hash" == "@@PAGE_PREVIOUS@@" || "$hash" == "@@PAGE_TARGET@@" ]] ;;
+    server/team-points-green/public/max-rating-backfill.php|server/team-points-green/tools/converge-v2.13.2.php)
       [[ "$hash" == "$(target_hash "$path")" ]] ;;
     *) return 1 ;;
   esac
@@ -99,7 +100,7 @@ printf 'Source identity: v2.13.2 %s\n' "$SOURCE_HEAD"
 printf 'Verifying package payload...\n'
 ( cd "$PAYLOAD_DIR" && sha256sum -c "$SELF_DIR/PAYLOAD.sha256" ) || fail "Package payload hash verification failed"
 
-printf 'Checking installed v2.13.1 baseline...\n'
+printf 'Checking installed v2.13.1 / qualified v2.13.2 baseline...\n'
 for path in "${FILES[@]}"; do
   live="$ROOT/$path"
   if [[ ! -e "$live" ]]; then

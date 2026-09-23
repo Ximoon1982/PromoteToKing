@@ -6,6 +6,7 @@ PKG="PromoteToKing_v2.13.2_INCREMENTAL_FROM_2.13.1"
 DIR="$OUT/$PKG"; ZIP="$OUT/$PKG.zip"
 TEMPLATE="$ROOT/tools/release/v2132/install-promote-to-king-v2.13.2.sh.in"
 BASE="d2b7468f3f660dd7194d402386ce5d24b69ae349"
+PREVIOUS_QUALIFIED="081090f923deb8248158aab9709ce9eb29724428"
 HEAD="$(git -C "$ROOT" rev-parse HEAD)"
 [[ "$(cat "$ROOT/VERSION")" == "2.13.2" ]] || { echo 'VERSION must be 2.13.2' >&2; exit 1; }
 git -C "$ROOT" merge-base --is-ancestor "$BASE" "$HEAD" || { echo "HEAD must descend from qualified v2.13.1 $BASE" >&2; exit 1; }
@@ -18,13 +19,13 @@ VERSION_BASE="$(hash_ref "$BASE" VERSION)"; VERSION_TARGET="$(hash_file VERSION)
 SCHEMA_BASE="$(hash_ref "$BASE" server/team-points-green/sql/core-schema.sql)"; SCHEMA_TARGET="$(hash_file server/team-points-green/sql/core-schema.sql)"
 GREEN_BASE="$(hash_ref "$BASE" server/team-points-green/src/GreenRepository.php)"; GREEN_TARGET="$(hash_file server/team-points-green/src/GreenRepository.php)"
 REPO_BASE="$(hash_ref "$BASE" server/team-points/src/Repository.php)"; REPO_TARGET="$(hash_file server/team-points/src/Repository.php)"
-PAGE_TARGET="$(hash_file MaxRatingBackfill.php)"; ENDPOINT_TARGET="$(hash_file server/team-points-green/public/max-rating-backfill.php)"; CONVERGE_TARGET="$(hash_file server/team-points-green/tools/converge-v2.13.2.php)"
-sed -e "s/@@SOURCE_HEAD@@/$HEAD/g" -e "s/@@VERSION_BASE@@/$VERSION_BASE/g" -e "s/@@VERSION_TARGET@@/$VERSION_TARGET/g" -e "s/@@SCHEMA_BASE@@/$SCHEMA_BASE/g" -e "s/@@SCHEMA_TARGET@@/$SCHEMA_TARGET/g" -e "s/@@GREEN_BASE@@/$GREEN_BASE/g" -e "s/@@GREEN_TARGET@@/$GREEN_TARGET/g" -e "s/@@REPO_BASE@@/$REPO_BASE/g" -e "s/@@REPO_TARGET@@/$REPO_TARGET/g" -e "s/@@PAGE_TARGET@@/$PAGE_TARGET/g" -e "s/@@ENDPOINT_TARGET@@/$ENDPOINT_TARGET/g" -e "s/@@CONVERGE_TARGET@@/$CONVERGE_TARGET/g" "$TEMPLATE" > "$DIR/install-promote-to-king-v2.13.2.sh"
+PAGE_PREVIOUS="$(hash_ref "$PREVIOUS_QUALIFIED" MaxRatingBackfill.php)"; PAGE_TARGET="$(hash_file MaxRatingBackfill.php)"; ENDPOINT_TARGET="$(hash_file server/team-points-green/public/max-rating-backfill.php)"; CONVERGE_TARGET="$(hash_file server/team-points-green/tools/converge-v2.13.2.php)"
+sed -e "s/@@SOURCE_HEAD@@/$HEAD/g" -e "s/@@VERSION_BASE@@/$VERSION_BASE/g" -e "s/@@VERSION_TARGET@@/$VERSION_TARGET/g" -e "s/@@SCHEMA_BASE@@/$SCHEMA_BASE/g" -e "s/@@SCHEMA_TARGET@@/$SCHEMA_TARGET/g" -e "s/@@GREEN_BASE@@/$GREEN_BASE/g" -e "s/@@GREEN_TARGET@@/$GREEN_TARGET/g" -e "s/@@REPO_BASE@@/$REPO_BASE/g" -e "s/@@REPO_TARGET@@/$REPO_TARGET/g" -e "s/@@PAGE_PREVIOUS@@/$PAGE_PREVIOUS/g" -e "s/@@PAGE_TARGET@@/$PAGE_TARGET/g" -e "s/@@ENDPOINT_TARGET@@/$ENDPOINT_TARGET/g" -e "s/@@CONVERGE_TARGET@@/$CONVERGE_TARGET/g" "$TEMPLATE" > "$DIR/install-promote-to-king-v2.13.2.sh"
 chmod +x "$DIR/install-promote-to-king-v2.13.2.sh"
 cat > "$DIR/README_INSTALL.txt" <<TXT
 Promote to King v2.13.2 incremental installer
 Qualified source HEAD: $HEAD
-Required baseline: qualified v2.13.1 $BASE (or idempotent reinstall of this exact v2.13.2 payload).
+Supported installed states: qualified v2.13.1 $BASE, original qualified v2.13.2 $PREVIOUS_QUALIFIED, or idempotent reinstall of this corrected v2.13.2 payload.
 
 Install:
   cd ~/PromoteToKing

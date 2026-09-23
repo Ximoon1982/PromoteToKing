@@ -1,0 +1,18 @@
+"use strict";
+const fs=require("fs");
+const vm=require("vm");
+const source=fs.readFileSync("MaxRatingBackfill.php","utf8");
+const start=source.indexOf("function compactPayload(data)");
+const end=source.indexOf("\nasync function adminRequest",start);
+if(start<0||end<0)throw new Error("compactPayload function not found in MaxRatingBackfill.php");
+const fnSource=source.slice(start,end);
+const sandbox={result:null};
+vm.createContext(sandbox);
+vm.runInContext(fnSource+"; result=compactPayload({teams:{team1:{'@id':'https://api.chess.com/pub/club/promote-to-king',name:'Promote to King'},team2:{'@id':'https://api.chess.com/pub/club/example-opponent',name:'Opponent'}},status:'finished',settings:{max_rating:1600,time_class:'daily'}});",sandbox);
+if(!Array.isArray(sandbox.result.teams)||sandbox.result.teams.length!==2)throw new Error("object-shaped Chess.com teams were not preserved");
+if(sandbox.result.teams[0]["@id"]!=="https://api.chess.com/pub/club/promote-to-king")throw new Error("P2K team identity was lost");
+if(Number(sandbox.result.settings.max_rating)!==1600)throw new Error("max_rating was lost");
+sandbox.result=null;
+vm.runInContext("result=compactPayload({teams:[{'@id':'https://api.chess.com/pub/club/promote-to-king'},{'@id':'https://api.chess.com/pub/club/example-opponent'}],settings:{max_rating:1400}});",sandbox);
+if(!Array.isArray(sandbox.result.teams)||sandbox.result.teams.length!==2)throw new Error("array-shaped teams compatibility regressed");
+console.log("PASS: v2.13.2 browser backfill payload preserves object-shaped Chess.com teams");

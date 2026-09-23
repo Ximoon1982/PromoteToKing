@@ -58,6 +58,7 @@ jobs:
           php -l server/team-points-green/public/max-rating-backfill.php
           php -l server/team-points-green/tools/converge-v2.13.2.php
           python -m pytest -q tests/test_v2132_rating_cap_backfill.py
+          node tests/test_v2132_backfill_payload.js
           P2K_TEST_DB_HOST=127.0.0.1 P2K_TEST_DB_PORT=3306 P2K_TEST_DB_USER=root P2K_TEST_DB_PASS=root php tests/test_v2132_rating_cap_backfill.php
           python -m pytest -q             tests/test_v2130_insights_dashboard.py             tests/test_v2130_opponent_intelligence.py             tests/test_v2130_mca_admin.py
           python tests/test_admin_priority_card.py
