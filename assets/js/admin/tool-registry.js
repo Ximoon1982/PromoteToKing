@@ -67,7 +67,7 @@ return ({ find: "FindMatch.htm", upcoming: "AnalyzeMatches.htm", creation: "Matc
 }
 /* v2.12.1 Trophy runtime owns public/admin state; suppress the obsolete r5fix3.8 enhancer synchronously. */
 window.__P2K_TROPHY_R5FIX3_8 = true;
-const TROPHY_RUNTIME_KEY = "p2k-2.12.2-src-79c27cc76eb1f256";
+const TROPHY_RUNTIME_KEY = "p2k-2.13.3-4307bc8e7abf-597920fbfa80d77e";
 function loadTrophyScript(id, path) {
 if (document.getElementById(id)) return Promise.resolve();
 return new Promise((resolve, reject) => {
@@ -83,6 +83,7 @@ try {
  await loadTrophyScript("p2kTrophyAdminV2121", "assets/js/admin/trophy-gallery-admin-v2121.js");
  if (!window.P2K_TROPHY_GALLERY_POC) await loadTrophyScript("p2kTrophyGalleryPocScript", "assets/js/admin/trophy-gallery-poc.js");
  window.P2K_TROPHY_GALLERY_POC?.mount?.(context);
+ window.P2K_TROPHY_ADMIN_V2121?.mount?.();
  await loadTrophyScript("p2kTrophyPublicV2121", "assets/js/admin/trophy-gallery-public-v2121.js");
  await loadTrophyScript("p2kTrophyCardPresentationV2122", "assets/js/admin/trophy-card-presentation-v2122.js");
 } catch (error) { console.error("P2K Trophy v2.12.1 failed to initialize", error); }

@@ -190,7 +190,7 @@ function renderAdminShellDetail(){
     setIntegratedFrameActivity("");
     if(frameWrap)frameWrap.hidden=true;
     if(frame){frame.hidden=true;frame.removeAttribute("data-p2k-r2-stable");}
-    if(nativeHost){nativeHost.hidden=false;nativeHost.dataset.nativeDetail=nativeKey||validTab.key;if(nativeKey==="trophy-gallery")window.P2K_TROPHY_GALLERY_POC?.mountAdmin?.(nativeHost);}
+    if(nativeHost){nativeHost.hidden=false;nativeHost.dataset.nativeDetail=nativeKey||validTab.key;if(nativeKey==="trophy-gallery")window.P2K_TROPHY_ADMIN_V2121?.mount?.();}
     return;
   }
   if(nativeHost){nativeHost.hidden=true;nativeHost.replaceChildren();nativeHost.removeAttribute("data-native-detail");}
