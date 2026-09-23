@@ -10,11 +10,14 @@ def test_v2130_opponent_rating_cap_and_unbounded_summary_contracts():
     repo=read("server/team-points/src/Repository.php")
     ui=read("assets/js/pages/dashboard-insights.js")
     assert "max_rating SMALLINT UNSIGNED NULL" in schema
-    assert "$maxRatingRaw=$settings['max_rating']" in green
-    assert "time_control=?,max_rating=?,start_epoch=?" in green
+    assert "private function ratingCapObservation" in green
+    assert "array_key_exists('max_rating',$settings)" in green
+    assert "time_control=?,max_rating=?,max_rating_state=?,start_epoch=?" in green
     assert "'max_rating'=>is_numeric($m['max_rating']??null)" in compat
     block=repo[repo.index("public function publicOpponentProfile"):repo.index("/** League and season roll-up")]
     assert "JOIN p2k_g_matches g ON g.match_id=metadata.match_id" in block
+    assert "g.max_rating_state IN ('capped','open')" in block
+    assert "g.max_rating IS NULL OR g.max_rating<=0 OR g.max_rating>1800" not in block
     for label in ["'Open'","'U1800'","'U1600'","'U1400'","'U1200'","'U1000'"]:
         assert label in block
     assert 'FROM (".$playerScopeSql.") opponent_players' in block
