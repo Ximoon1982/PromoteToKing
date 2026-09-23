@@ -81,6 +81,11 @@ jobs:
           python tools/test-suite/architecture_gate.py
           python tools/test-suite/p2k_test_suite.py audit --json
       - name: Full canonical P2K regression
-        run: python tools/test-suite/p2k_test_suite.py regression
+        run: |
+          set +e
+          python tools/test-suite/p2k_test_suite.py regression > "$RUNNER_TEMP/p2k-v2133-regression.log" 2>&1
+          rc=$?
+          tail -n 300 "$RUNNER_TEMP/p2k-v2133-regression.log"
+          exit "$rc"
       - name: Full canonical P2K browser regression
         run: python tools/test-suite/p2k_test_suite.py browser
