@@ -1,0 +1,70 @@
+name: P2K v2.13.1 Incremental Installer Qualification
+
+on:
+  push:
+    branches:
+      - build/v2.13.1-installer
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-installer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - name: Checkout exact build branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install qualification dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y php-mysql mariadb-client
+          php -v
+          php -m | grep -i pdo_mysql
+          mariadb --version
+
+      - name: Recover and verify build driver
+        run: |
+          echo "0f62ef660d29a2be0384d58ef10ac14795823f023694315beecdecffe6635f89  .build/v2131/build_and_qualify.py.gz" | sha256sum -c -
+          gzip -dc .build/v2131/build_and_qualify.py.gz > /tmp/build_and_qualify.py
+          echo "ec2b5ecb5b9126861bc5266b0a7814c4e4cab5a0b34e66bb7a874d75d5e7ee37  /tmp/build_and_qualify.py" | sha256sum -c -
+          python3 -m py_compile /tmp/build_and_qualify.py
+
+      - name: Qualify installer from all supported v2.13.0 states
+        env:
+          P2K_TEST_DB_HOST: 127.0.0.1
+          P2K_TEST_DB_PORT: "3306"
+          P2K_TEST_DB_USER: root
+          P2K_TEST_DB_PASS: root
+        run: python3 /tmp/build_and_qualify.py
+
+      - name: Show final artifact identity
+        run: |
+          cat dist-v2131-installer/PromoteToKing_v2.13.1_INCREMENTAL_FROM_2.13.0_r1.zip.sha256
+          unzip -l dist-v2131-installer/PromoteToKing_v2.13.1_INCREMENTAL_FROM_2.13.0_r1.zip
+
+      - name: Upload qualified installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: PromoteToKing-v2.13.1-incremental
+          path: |
+            dist-v2131-installer/PromoteToKing_v2.13.1_INCREMENTAL_FROM_2.13.0_r1.zip
+            dist-v2131-installer/PromoteToKing_v2.13.1_INCREMENTAL_FROM_2.13.0_r1.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
