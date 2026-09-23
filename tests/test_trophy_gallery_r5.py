@@ -22,8 +22,12 @@ def test_exact_engraving_poc_is_retained_and_integrated_assets_are_externalized(
 
 def test_runtime_contract_has_persistence_filters_safe_markdown_and_no_old_model():
     js=text("assets/js/admin/trophy-gallery-poc.js")
-    for token in ("award_date","description_md","award_page","competition_page","result_table_url","vignette_media_id","modal_media_id","Search match name…","Enlarge image","Open engraving editor","Import r4 browser data","Undated"):
+    for token in ("award_date","description_md","award_page","competition_page","result_table_url","vignette_media_id","modal_media_id","Search match name…","Enlarge image","Open engraving editor","Undated"):
         assert token in js
+    # v2.13.3 retires the obsolete POC-owned admin UI so it cannot race the
+    # canonical v2.12.1 admin controller. Keep the legacy r4 data reader for
+    # compatibility, but do not require its former independent admin button.
+    assert "legacyImport" in js and "p2k-trophy-gallery-poc-v1" in js
     for forbidden in ("localStorage.setItem","players","source_url"):
         assert forbidden not in js
     assert "javascript:" not in js and "safeUrl" in js and "target=\"_blank\" rel=\"noopener noreferrer\"" in js
@@ -37,7 +41,9 @@ def test_admin_shell_uses_canonical_team_card_and_deep_link():
     assert 'window.addEventListener("p2k-admin-shell-route"' in js
     assert 'mountActiveAdmin()' in js
     assert 'adminShellCard({key:"trophies",category:"team"' in shell
-    assert 'window.P2K_TROPHY_GALLERY_POC?.mountAdmin?.(nativeHost)' in shell
+    assert 'window.P2K_TROPHY_ADMIN_V2121?.mount?.()' in shell
+    assert 'window.P2K_TROPHY_GALLERY_POC?.mountAdmin?.(nativeHost)' not in shell
+    assert 'async function mountAdmin(_host){window.P2K_TROPHY_ADMIN_V2121?.mount?.()}' in js
     assert 'adminDetail: trophyCompatibilityRoute ? "trophies"' in navigation
 
 def test_backend_contract_is_bounded_owned_atomic_and_parameterized():
