@@ -53,6 +53,8 @@ def test_v2133_pre_save_artwork_and_engraver_cleanup_contract():
     admin=read("assets/js/admin/trophy-gallery-admin-v2121.js")
     engraver=read("assets/js/admin/trophy-gallery-engraver-v2121.js")
     assert "state.pending[slot]=file" in admin
+    assert 'slot==="modal"&&form.elements?.modal_media_mode' in admin
+    assert 'form.elements.modal_media_mode.value="custom"' in admin
     assert "await uploadPending(out.record.id)" in admin
     assert "Save the Trophy before assigning artwork." not in admin
     assert "Save the Trophy before creating artwork." not in admin
