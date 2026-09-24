@@ -80,6 +80,9 @@ def test_v2133_universal_installer_contract():
     assert "build-universal-2.13x.sh" in workflow and "build-universal-2.13x.sh" in package
     assert "assets/js/admin/trophy-gallery-r5fix3.8.js" in build
     assert "assets/trophy-gallery/trophy-gallery-r5fix3.8.css" in build
+    assert "trophies/index.html" in build
+    assert 'trophy-gallery-r5fix3.8.js?v=$CACHE_KEY' in build
+    assert 'trophy-gallery-r5fix3.8.css?v=$CACHE_KEY' in build
     assert "082aab7d5b8b30547fb14bd8e6143aa84f74e105" in build
 
 def test_v2133_release_identity_and_branch_qualification():
