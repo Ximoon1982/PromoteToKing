@@ -110,7 +110,10 @@ emit_baselines() {
     for ref in "${refs[@]}"; do
       if git -C "$ROOT" cat-file -e "$ref:$path" 2>/dev/null; then
         hash="$(canonical_ref_hash "$ref" "$path")"
-        case ",$hashes," in *",$hash,"*) ;; *) hashes="${hashes;+$hashes,}$hash" ;; esac
+        case ",$hashes," in
+          *",$hash,"*) ;;
+          *) if [[ -n "$hashes" ]]; then hashes="$hashes,$hash"; else hashes="$hash"; fi ;;
+        esac
       else
         absent=1
       fi
