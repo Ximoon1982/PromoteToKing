@@ -43,7 +43,8 @@ def test_v2133_trophy_mount_race_is_stale_host_safe():
     assert "function currentHostMounted()" in admin
     assert "function queueRemount(host)" in admin
     assert "if(currentHostMounted())return" in admin
-    assert '$("[data-v2121-select]",list).forEach' in admin
+    assert '$$("[data-v2121-select]",list).forEach' in admin
+    assert '$$("[data-v2121-row]",list).forEach' in admin
     assert "if(!isCurrentHost(host)||state.host!==host){queueRemount(host);return}" in admin
     assert "const filter=$(\"[data-v2121-filter]\",host),add=$(\"[data-v2121-new]\",host),editor=$(\"[data-v2121-editor]\",host)" in admin
     assert "if(!filter||!add||!editor)" in admin
