@@ -12,7 +12,8 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const ART=Object.freeze({"owl-2024-swiss4all":{legacy:"owl-2024-swiss4all.jpg",generic:"cup_gold.png"},"owl-2024-grand-prix-candidates":{legacy:"owl-2024-grand-prix-candidates.png",generic:"medal_gold.png"},"owl-2024-vote-g1":{legacy:"owl-2024-vote-g1.png",generic:"medal_gold.png"},"owl-2024-classic-u1700":{legacy:"owl-2024-classic-u1700.png",generic:"cup_gold.png"},"pcl-super-bingo-2025":{legacy:"pcl-super-bingo-2025.png",generic:"crystal_gold.png"},"tcmac-centurion-s4":{legacy:"tcmac-centurion-s4.png",generic:"medal_gold.png"},"club-wars-galactic-conflict":{legacy:"club-wars-galactic-conflict.png",generic:"crystal_gold.png"}});
 const state={index:[],revision:0,current:null,meta:{},pending:{vignette:null,modal:null},urls:{},host:null,mutation:Promise.resolve(),page:1,pageSize:10};
 function isCurrentHost(host){return Boolean(host&&host.isConnected&&host===$(HOST)&&!host.hidden&&window.P2K_ADMIN_MODE===true)}
-function queueRemount(host){if(state.host===host)state.host=null;queueMicrotask(mount)}
+function currentHostMounted(){const current=$(HOST);return Boolean(isCurrentHost(current)&&current.dataset.v2121Admin==='1'&&current.querySelector('[data-v2121-admin-root]'))}
+function queueRemount(host){if(state.host===host)state.host=null;if(currentHostMounted())return;queueMicrotask(mount)}
 
 function client(){const c=window.P2K_TEAM_POINTS_CLIENT;if(!c?.endpointRequest)throw new Error("Secured P2K administrator client unavailable.");return c}
 const req=(action,{method="GET",body=null,params={}}={})=>client().endpointRequest(API,{action,method,body,params,timeoutMs:60000});

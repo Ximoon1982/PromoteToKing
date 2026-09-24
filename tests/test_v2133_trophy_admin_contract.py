@@ -40,7 +40,10 @@ def test_v2133_trophy_lookup_and_in_place_save_contract():
 def test_v2133_trophy_mount_race_is_stale_host_safe():
     admin=read("assets/js/admin/trophy-gallery-admin-v2121.js")
     assert "function isCurrentHost(host)" in admin
+    assert "function currentHostMounted()" in admin
     assert "function queueRemount(host)" in admin
+    assert "if(currentHostMounted())return" in admin
+    assert '$("[data-v2121-select]",list).forEach' in admin
     assert "if(!isCurrentHost(host)||state.host!==host){queueRemount(host);return}" in admin
     assert "const filter=$(\"[data-v2121-filter]\",host),add=$(\"[data-v2121-new]\",host),editor=$(\"[data-v2121-editor]\",host)" in admin
     assert "if(!filter||!add||!editor)" in admin
@@ -72,6 +75,7 @@ def test_v2133_universal_installer_contract():
     assert "test_v2133_universal_installer.sh" in workflow
     assert "browser_gate_trophy_admin_mount_race_v2133.py" in workflow
     assert "build-universal-2.13x.sh" in workflow and "build-universal-2.13x.sh" in package
+    assert "082aab7d5b8b30547fb14bd8e6143aa84f74e105" in build
 
 def test_v2133_release_identity_and_branch_qualification():
     assert read("VERSION").strip()=="2.13.3"
