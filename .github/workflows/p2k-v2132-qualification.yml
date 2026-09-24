@@ -88,9 +88,9 @@ jobs:
         run: |
           python tools/test-suite/architecture_gate.py
           python tools/test-suite/p2k_test_suite.py audit --json
-      - name: Full canonical P2K static regression
+      - name: Full canonical P2K regression — static
         run: python tools/test-suite/p2k_test_suite.py static
-      - name: Full canonical P2K pytest regression
+      - name: Full canonical P2K regression — pytest
         run: |
           python - <<'PY'
           import importlib.util
@@ -105,7 +105,7 @@ jobs:
               raise SystemExit("\n".join(failures))
           module.pytest_gate(report)
           PY
-      - name: Full canonical P2K standalone regression
+      - name: Full canonical P2K regression — standalone
         run: |
           python - <<'PY'
           import importlib.util
