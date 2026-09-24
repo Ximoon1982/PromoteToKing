@@ -196,7 +196,7 @@ activate_file(){
   mkdir -p "$(dirname "$dst")" || abort_after_activation "Unable to create destination directory for $path"
   tmp="$dst.p2k-v2133-$$.tmp"
   cp -p "$src" "$tmp" || abort_after_activation "Unable to stage live $path"
-  mv -f "$tmp" "$dst" || abort_after_activativion "Unable to activate $path"
+  mv -f "$tmp" "$dst" || abort_after_activation "Unable to activate $path"
 }
 
 printf 'Activating cumulative v2.13.3 runtime files...\n'
@@ -211,8 +211,8 @@ for path in "${PHP_FILES[@]}"; do
 done
 
 printf 'Converging and verifying v2.13.x Green schemas...\n'
-"$PHP_BIN" "$ROOT/server/team-points-green/tools/converge-v2.13.1.php" || abort_after_activativation "v2.13.1 Green schema convergence/verification failed"
-"$PHP_BIN" "$ROOT/server/team-points-green/tools/converge-v2.13.2.php" || abort_after_activativation "v2.13.2 Green schema convergence/verification failed"
+"$PHP_BIN" "$ROOT/server/team-points-green/tools/converge-v2.13.1.php" || abort_after_activation "v2.13.1 Green schema convergence/verification failed"
+"$PHP_BIN" "$ROOT/server/team-points-green/tools/converge-v2.13.2.php" || abort_after_activation "v2.13.2 Green schema convergence/verification failed"
 
 activate_file VERSION
 
@@ -227,8 +227,8 @@ done
 
 grep -Fq "?v=$CACHE_KEY" "$ROOT/ui-v2.html" || abort_after_activation "ui-v2 cache key was not activated"
 grep -Fq "?v=$CACHE_KEY" "$ROOT/RecruitMatch.html" || abort_after_activation "RecruitMatch cache key was not activated"
-grep -Fq "const TROPHY_RUNTIME_KEY = \"$CACHE_KEY\";" "$ROOT/assets/js/admin/tool-registry.js" || abort_after_activativation "Trophy runtime cache key was not activated"
-grep -Fq "assets/js/pages/recruit-match.js?v=$CACHE_KEY" "$ROOT/assets/js/pages/recruit-match-v2121-bootstrap.js" || abort_after_activativation "Recruitment controller cache key was not activated"
+grep -Fq "const TROPHY_RUNTIME_KEY = \"$CACHE_KEY\";" "$ROOT/assets/js/admin/tool-registry.js" || abort_after_activation "Trophy runtime cache key was not activated"
+grep -Fq "assets/js/pages/recruit-match.js?v=$CACHE_KEY" "$ROOT/assets/js/pages/recruit-match-v2121-bootstrap.js" || abort_after_activation "Recruitment controller cache key was not activated"
 
 ACTIVATED=0
 trap - INT TERM HUP
