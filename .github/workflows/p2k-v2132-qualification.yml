@@ -88,7 +88,37 @@ jobs:
         run: |
           python tools/test-suite/architecture_gate.py
           python tools/test-suite/p2k_test_suite.py audit --json
-      - name: Full canonical P2K regression
-        run: python tools/test-suite/p2k_test_suite.py regression
+      - name: Full canonical P2K static regression
+        run: python tools/test-suite/p2k_test_suite.py static
+      - name: Full canonical P2K pytest regression
+        run: |
+          python - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          path = Path("tools/test-suite/p2k_test_suite.py")
+          spec = importlib.util.spec_from_file_location("p2k_test_suite", path)
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          report = module.inventory()
+          failures = module.validate_policy(report)
+          if failures:
+              raise SystemExit("\n".join(failures))
+          module.pytest_gate(report)
+          PY
+      - name: Full canonical P2K standalone regression
+        run: |
+          python - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          path = Path("tools/test-suite/p2k_test_suite.py")
+          spec = importlib.util.spec_from_file_location("p2k_test_suite", path)
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          report = module.inventory()
+          failures = module.validate_policy(report)
+          if failures:
+              raise SystemExit("\n".join(failures))
+          module.standalone_gate(report)
+          PY
       - name: Full canonical P2K browser regression
         run: python tools/test-suite/p2k_test_suite.py browser
