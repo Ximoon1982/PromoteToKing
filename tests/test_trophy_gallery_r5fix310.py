@@ -28,7 +28,7 @@ def test_r5fix310_is_immutable_and_loaded_after_approved_r538_runtime():
     assert "trophy-gallery-r5fix3.8.css?v=r538-fdcea54d62ba" in ui
 
 
-def test_r5fix310_hardens_admin_preview_containment_without_changing_r538():
+def test_r5fix310_hardens_admin_preview_containment_without_competing_with_current_r538():
     js = PATCH.read_text(encoding="utf-8")
     for token in (
         '#adminShellNativeDetailHost[data-native-detail="trophy-gallery"]',
@@ -44,8 +44,14 @@ def test_r5fix310_hardens_admin_preview_containment_without_changing_r538():
         "preview.dataset.r5310Contained",
     ):
         assert token in js
-    assert hashlib.sha256((ROOT / "assets/js/admin/trophy-gallery-r5fix3.8.js").read_bytes()).hexdigest().startswith("d52193a71712")
-    assert hashlib.sha256((ROOT / "assets/trophy-gallery/trophy-gallery-r5fix3.8.css").read_bytes()).hexdigest().startswith("fdcea54d62ba")
+    # r5fix3.10 remains the admin-preview containment layer. Later qualified
+    # r5fix3.8 revisions may evolve the public modal, but r5fix3.10 must not
+    # target or override that public-modal ownership.
+    assert ".p2k-r538-modal" not in js
+    r538_js = text("assets/js/admin/trophy-gallery-r5fix3.8.js")
+    r538_css = text("assets/trophy-gallery/trophy-gallery-r5fix3.8.css")
+    assert "data-r538-view-image" in r538_js
+    assert ".p2k-r538-modal-art img[data-r538-view-image]" in r538_css
 
 
 def test_r5fix310_javascript_syntax():
