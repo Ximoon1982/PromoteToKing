@@ -251,11 +251,15 @@ def main() -> None:
             page.wait_for_selector("#p2kTrophyEngraverV2121:not([hidden]) iframe.p2k-engraver", timeout=15000)
             assert page.evaluate("document.body.classList.contains('p2k-engraver-open')")
             pre_save_frame = page.frame_locator("#p2kTrophyEngraverV2121 iframe.p2k-engraver")
-            pre_save_frame.locator("body").evaluate("""() => parent.postMessage({
-                type:'p2k-trophy-engraving',
-                name:'pre-save-modal.png',
-                blob:new Blob(['pre-save'],{type:'image/png'})
-            }, location.origin)""")
+            pre_save_frame.locator("body").evaluate("""() => {
+                const raw=atob('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGUlEQVR4nGPckiLCQApgIkn1qIZRDUNKAwDJRQFMFkEbaQAAAABJRU5ErkJggg==');
+                const bytes=Uint8Array.from(raw, ch => ch.charCodeAt(0));
+                parent.postMessage({
+                    type:'p2k-trophy-engraving',
+                    name:'pre-save-modal.png',
+                    blob:new Blob([bytes],{type:'image/png'})
+                }, location.origin);
+            }""")
             page.wait_for_selector("#p2kTrophyEngraverV2121[hidden]", state="attached", timeout=10000)
             assert not page.evaluate("document.body.classList.contains('p2k-engraver-open')")
             page.wait_for_function("""() => {
