@@ -14,7 +14,7 @@ BOOTSTRAP_CACHE = re.compile(r'(assets/js/pages/(?:recruit-match-v2-core|recruit
 
 def canonical_bytes(logical_path: str, raw: bytes) -> bytes:
     text = raw.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
-    if logical_path.lower().endswith((".html", ".htm")):
+    if logical_path.lower().endswith((".html", ".htm")) or logical_path == "assets/js/admin/tool-registry.js":
         text = CACHE_PARAM.sub(r'\1__P2K_CACHE__', text)
     if logical_path == "assets/js/admin/tool-registry.js":
         text = TROPHY_RUNTIME.sub('const TROPHY_RUNTIME_KEY = "__P2K_CACHE__";', text)
