@@ -38,7 +38,7 @@ class Fixture(SimpleHTTPRequestHandler):
     revision = 1
     records = {
         "t-2026": trophy("t-2026", "Beta League", "2026-08-01", "Beta 2026"),
-        "t-2025": trophy("t-2025", "Alpha League", "2025-07-01", "Alpha 2025"),
+        "t-2025": {**trophy("t-2025", "Alpha League", "2025-07-01", "Alpha 2025"), "vignette_media_id": "c" * 32},
         "t-2024": trophy("t-2024", "Alpha League", "2024-06-01", "Alpha 2024"),
     }
     meta: dict[str, dict] = {}
