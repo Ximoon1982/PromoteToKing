@@ -26,7 +26,7 @@ def main():
       window.open=url=>{window.__profileOpens.push(url);return null};
       window.P2K_API_CLIENT={
         userMessage:e=>e.message,
-        json:async(url,options={})=>{window.__p2kCalls.push({url,cacheMode:options.cacheMode||'default'});if(url.includes('/pub/match/777'))return match;if(url.includes('/pub/match/888'))return replacementMatch;if(url.includes('/pub/club/rivals/members')){if(window.__failRoster)throw Error('roster unavailable');return {weekly:[{username:"Opponent"}],monthly:[],all_time:[]}}const m=url.match(/player\/([^/]+)/),key=m&&decodeURIComponent(m[1]).toLowerCase(),x=live[key];if(!x)throw Error('unexpected '+url);if(url.endsWith('/games')){await new Promise((resolve,reject)=>{const timer=setTimeout(resolve,900);options.signal?.addEventListener('abort',()=>{clearTimeout(timer);window.__gamesAborted++;reject(new DOMException('Aborted','AbortError'))},{once:true})});window.__gamesCompleted++;if(x.gamesError)throw Error('optional games unavailable');return {games:Array(x.games).fill({})}}await new Promise(resolve=>setTimeout(resolve,60));if(x.error)throw Error(x.error);if(key==='eligible'&&window.__staleProfile&&!url.endsWith('/stats')){if(options.cacheMode==='no-store')throw Error('current profile unavailable')}if(key==='eligible'&&window.__staleStats&&url.endsWith('/stats')){if(options.cacheMode==='no-store')throw Error('current stats unavailable')}if(url.endsWith('/stats'))return {chess_daily:{record:{timeout_percent:x.timeout}}};return {username:key,last_online:x.last_online};},
+        json:async(url,options={})=>{window.__p2kCalls.push({url,cacheMode:options.cacheMode||'default'});if(url.includes('/pub/match/777'))return match;if(url.includes('/pub/match/888'))return replacementMatch;if(url.includes('/pub/club/rivals/members')){if(window.__failRoster){const error=Error('roster unavailable');error.category='not-found';error.status=404;throw error};return {weekly:[{username:"Opponent"}],monthly:[],all_time:[]}}const m=url.match(/player\/([^/]+)/),key=m&&decodeURIComponent(m[1]).toLowerCase(),x=live[key];if(url.endsWith('/clubs')){if(key==='opponent')return {clubs:[{"@id":"https://api.chess.com/pub/club/rivals"}]};if(key==='broken'&&window.__failRoster)throw Error('player clubs unavailable');return {clubs:[{"@id":"https://api.chess.com/pub/club/not-rivals"}]}}if(!x)throw Error('unexpected '+url);if(url.endsWith('/games')){await new Promise((resolve,reject)=>{const timer=setTimeout(resolve,900);options.signal?.addEventListener('abort',()=>{clearTimeout(timer);window.__gamesAborted++;reject(new DOMException('Aborted','AbortError'))},{once:true})});window.__gamesCompleted++;if(x.gamesError)throw Error('optional games unavailable');return {games:Array(x.games).fill({})}}await new Promise(resolve=>setTimeout(resolve,60));if(x.error)throw Error(x.error);if(key==='eligible'&&window.__staleProfile&&!url.endsWith('/stats')){if(options.cacheMode==='no-store')throw Error('current profile unavailable')}if(key==='eligible'&&window.__staleStats&&url.endsWith('/stats')){if(options.cacheMode==='no-store')throw Error('current stats unavailable')}if(url.endsWith('/stats'))return {chess_daily:{record:{timeout_percent:x.timeout}}};return {username:key,last_online:x.last_online};},
         processPriority:async(items,worker)=>{const settled=await Promise.all(items.map(async(item,index)=>{try{return {ok:true,item,index,value:await worker(item)}}catch(error){return {ok:false,item,index,error}}})),succeeded=settled.filter(x=>x.ok),failures=settled.filter(x=>!x.ok);return {succeeded,failures,pending:[],cancelled:false,get partialValues(){return succeeded.map(x=>x.value)}};}
       };
     '''
@@ -106,10 +106,16 @@ def main():
         page.wait_for_selector("#p2kSettingsPanel:not([hidden])")
         page.evaluate("window.__failRoster=true;window.__p2kCalls=[]")
         page.click("#p2kScanButton")
-        page.locator("#p2kStatusText",has_text="Opponent membership could not be verified").wait_for()
+        page.locator("#p2kStatusText",has_text="Scan complete").wait_for()
         failed_calls=page.evaluate("window.__p2kCalls")
         assert sum("/pub/club/rivals/members" in x["url"] for x in failed_calls)==1
-        assert not any("/player/" in x["url"] for x in failed_calls)
+        club_calls=[x for x in failed_calls if x["url"].endswith("/clubs")]
+        assert len(club_calls)==6
+        assert all(x["cacheMode"]=="no-store" for x in club_calls)
+        assert not any("/player/opponent/stats" in x["url"] or x["url"].endswith("/player/opponent") for x in failed_calls)
+        assert not any("/player/broken/stats" in x["url"] or x["url"].endswith("/player/broken") for x in failed_calls)
+        assert page.locator(".p2k-result-card.p2k-good .p2k-result-card-value").inner_text()=="2"
+        assert page.locator(".p2k-result-card.p2k-bad .p2k-result-card-value").inner_text()=="1"
         browser.close()
     finally:
       server.shutdown()

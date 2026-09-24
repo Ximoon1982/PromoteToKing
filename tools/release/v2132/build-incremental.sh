@@ -13,19 +13,23 @@ git -C "$ROOT" merge-base --is-ancestor "$BASE" "$HEAD" || { echo "HEAD must des
 hash_ref(){ git -C "$ROOT" show "$1:$2" | sha256sum | awk '{print $1}'; }
 hash_file(){ sha256sum "$ROOT/$1" | awk '{print $1}'; }
 rm -rf "$OUT"; mkdir -p "$DIR/payload"
-FILES=(VERSION MaxRatingBackfill.php server/team-points-green/sql/core-schema.sql server/team-points-green/src/GreenRepository.php server/team-points-green/public/max-rating-backfill.php server/team-points-green/tools/converge-v2.13.2.php server/team-points/src/Repository.php)
+FILES=(VERSION MaxRatingBackfill.php server/team-points-green/sql/core-schema.sql server/team-points-green/src/GreenRepository.php server/team-points-green/public/max-rating-backfill.php server/team-points-green/tools/converge-v2.13.2.php server/team-points/src/Repository.php RecruitMatch.html assets/js/pages/recruit-match-v2121-bootstrap.js assets/js/pages/recruit-match.js)
 for path in "${FILES[@]}"; do mkdir -p "$DIR/payload/$(dirname "$path")"; cp -p "$ROOT/$path" "$DIR/payload/$path"; done
 VERSION_BASE="$(hash_ref "$BASE" VERSION)"; VERSION_TARGET="$(hash_file VERSION)"
 SCHEMA_BASE="$(hash_ref "$BASE" server/team-points-green/sql/core-schema.sql)"; SCHEMA_TARGET="$(hash_file server/team-points-green/sql/core-schema.sql)"
 GREEN_BASE="$(hash_ref "$BASE" server/team-points-green/src/GreenRepository.php)"; GREEN_TARGET="$(hash_file server/team-points-green/src/GreenRepository.php)"
 REPO_BASE="$(hash_ref "$BASE" server/team-points/src/Repository.php)"; REPO_TARGET="$(hash_file server/team-points/src/Repository.php)"
+RECRUIT_HTML_BASE="$(hash_ref "$BASE" RecruitMatch.html)"; RECRUIT_HTML_TARGET="$(hash_file RecruitMatch.html)"
+RECRUIT_BOOTSTRAP_BASE="$(hash_ref "$BASE" assets/js/pages/recruit-match-v2121-bootstrap.js)"; RECRUIT_BOOTSTRAP_TARGET="$(hash_file assets/js/pages/recruit-match-v2121-bootstrap.js)"
+RECRUIT_CONTROLLER_BASE="$(hash_ref "$BASE" assets/js/pages/recruit-match.js)"; RECRUIT_CONTROLLER_TARGET="$(hash_file assets/js/pages/recruit-match.js)"
 PAGE_PREVIOUS="$(hash_ref "$PREVIOUS_QUALIFIED" MaxRatingBackfill.php)"; PAGE_TARGET="$(hash_file MaxRatingBackfill.php)"; ENDPOINT_TARGET="$(hash_file server/team-points-green/public/max-rating-backfill.php)"; CONVERGE_TARGET="$(hash_file server/team-points-green/tools/converge-v2.13.2.php)"
-sed -e "s/@@SOURCE_HEAD@@/$HEAD/g" -e "s/@@VERSION_BASE@@/$VERSION_BASE/g" -e "s/@@VERSION_TARGET@@/$VERSION_TARGET/g" -e "s/@@SCHEMA_BASE@@/$SCHEMA_BASE/g" -e "s/@@SCHEMA_TARGET@@/$SCHEMA_TARGET/g" -e "s/@@GREEN_BASE@@/$GREEN_BASE/g" -e "s/@@GREEN_TARGET@@/$GREEN_TARGET/g" -e "s/@@REPO_BASE@@/$REPO_BASE/g" -e "s/@@REPO_TARGET@@/$REPO_TARGET/g" -e "s/@@PAGE_PREVIOUS@@/$PAGE_PREVIOUS/g" -e "s/@@PAGE_TARGET@@/$PAGE_TARGET/g" -e "s/@@ENDPOINT_TARGET@@/$ENDPOINT_TARGET/g" -e "s/@@CONVERGE_TARGET@@/$CONVERGE_TARGET/g" "$TEMPLATE" > "$DIR/install-promote-to-king-v2.13.2.sh"
+sed -e "s/@@SOURCE_HEAD@@/$HEAD/g" -e "s/@@VERSION_BASE@@/$VERSION_BASE/g" -e "s/@@VERSION_TARGET@@/$VERSION_TARGET/g" -e "s/@@SCHEMA_BASE@@/$SCHEMA_BASE/g" -e "s/@@SCHEMA_TARGET@@/$SCHEMA_TARGET/g" -e "s/@@GREEN_BASE@@/$GREEN_BASE/g" -e "s/@@GREEN_TARGET@@/$GREEN_TARGET/g" -e "s/@@REPO_BASE@@/$REPO_BASE/g" -e "s/@@REPO_TARGET@@/$REPO_TARGET/g" -e "s/@@RECRUIT_HTML_BASE@@/$RECRUIT_HTML_BASE/g" -e "s/@@RECRUIT_HTML_TARGET@@/$RECRUIT_HTML_TARGET/g" -e "s/@@RECRUIT_BOOTSTRAP_BASE@@/$RECRUIT_BOOTSTRAP_BASE/g" -e "s/@@RECRUIT_BOOTSTRAP_TARGET@@/$RECRUIT_BOOTSTRAP_TARGET/g" -e "s/@@RECRUIT_CONTROLLER_BASE@@/$RECRUIT_CONTROLLER_BASE/g" -e "s/@@RECRUIT_CONTROLLER_TARGET@@/$RECRUIT_CONTROLLER_TARGET/g" -e "s/@@PAGE_PREVIOUS@@/$PAGE_PREVIOUS/g" -e "s/@@PAGE_TARGET@@/$PAGE_TARGET/g" -e "s/@@ENDPOINT_TARGET@@/$ENDPOINT_TARGET/g" -e "s/@@CONVERGE_TARGET@@/$CONVERGE_TARGET/g" "$TEMPLATE" > "$DIR/install-promote-to-king-v2.13.2.sh"
 chmod +x "$DIR/install-promote-to-king-v2.13.2.sh"
 cat > "$DIR/README_INSTALL.txt" <<TXT
 Promote to King v2.13.2 incremental installer
 Qualified source HEAD: $HEAD
-Supported installed states: qualified v2.13.1 $BASE, original qualified v2.13.2 $PREVIOUS_QUALIFIED, or idempotent reinstall of this corrected v2.13.2 payload.
+Supported installed states: qualified v2.13.1 $BASE, original qualified v2.13.2 $PREVIOUS_QUALIFIED, the subsequent v2.13.2 backfill correction, or idempotent reinstall of this corrected v2.13.2 payload.
+This package also includes the Match Recruitment private-opponent-roster fallback.
 
 Install:
   cd ~/PromoteToKing

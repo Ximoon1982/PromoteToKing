@@ -5,7 +5,7 @@
   window.__P2K_RECRUIT_MATCH_V2121_BOOTSTRAP__ = true;
 
   const CORE = "assets/js/pages/recruit-match-v2-core.js?v=p2k-2.12.1-recruit-core-0869b3cd-v2121a";
-  const CONTROLLER = "assets/js/pages/recruit-match.js?v=p2k-2.12.1-recruit-controller-0869b3cd-v2121a";
+  const CONTROLLER = "assets/js/pages/recruit-match.js?v=p2k-2.13.2-4307bc8e7abf-private-roster-2a1e0002c788";
 
   function showFailure(message) {
     const box = document.getElementById("p2kStatus");
