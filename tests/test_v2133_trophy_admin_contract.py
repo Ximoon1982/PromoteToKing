@@ -26,6 +26,14 @@ def test_v2133_trophy_lookup_and_in_place_save_contract():
     assert "performSave" in admin
     assert "window.scrollTo({left:scroll.x,top:scroll.y,behavior:'auto'})" in admin
     assert "competition:rec.competition" in admin
+    assert "pageSize:10" in admin
+    assert "p2k-trophy-admin-table" in admin
+    assert "data-v2121-page-info" in admin
+    assert 'class="p2k-trophy-tools"' in admin
+    assert "function normalizeArtworkControls(form)" in admin
+    assert "function artworkCandidates(r,slot,form=null)" in admin
+    assert "function openArtworkViewer(url" in admin
+    assert "f.matches?.('[data-v2121-form]')" in poc
     assert "['id','status','title','league','competition','award_date']" in store
 
 def test_v2133_trophy_mount_race_is_stale_host_safe():
@@ -35,7 +43,7 @@ def test_v2133_trophy_mount_race_is_stale_host_safe():
     assert "if(!isCurrentHost(host)||state.host!==host){queueRemount(host);return}" in admin
     assert "const filter=$(\"[data-v2121-filter]\",host),add=$(\"[data-v2121-new]\",host),editor=$(\"[data-v2121-editor]\",host)" in admin
     assert "if(!filter||!add||!editor)" in admin
-    assert 'filter.oninput=renderList' in admin
+    assert 'filter.oninput=()=>{state.page=1;renderList()}' in admin
 def test_v2133_pre_save_artwork_and_engraver_cleanup_contract():
     admin=read("assets/js/admin/trophy-gallery-admin-v2121.js")
     engraver=read("assets/js/admin/trophy-gallery-engraver-v2121.js")

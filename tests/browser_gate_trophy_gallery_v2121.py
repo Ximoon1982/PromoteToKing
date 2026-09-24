@@ -58,8 +58,13 @@ class Fixture(SimpleHTTPRequestHandler):
 
     @classmethod
     def summaries(cls) -> list[dict]:
-        return [{k: r.get(k, "") for k in ("id", "status", "title", "league", "competition", "award_date")}
+        base = [{k: r.get(k, "") for k in ("id", "status", "title", "league", "competition", "award_date")}
                 for r in cls.records.values()]
+        extras = [{"id": f"fixture-{n:02d}", "status": "draft" if n % 2 else "published",
+                   "title": f"Fixture Trophy {n:02d}", "league": "Fixture League",
+                   "competition": "Fixture Cup", "award_date": f"2023-{(n % 12) + 1:02d}-01"}
+                  for n in range(1, 21)]
+        return base + extras
 
     def fixture_get(self) -> bool:
         parsed = urlparse(self.path)
@@ -200,6 +205,13 @@ def main() -> None:
             assert page.locator(f"{host} input[name='award_page']").count() == 1
             assert page.locator(f"{host} [data-v2121-admin-root]").count() == 1
             assert page.locator(f"{host} [data-v2121-filter]").count() == 1
+            assert page.locator(f"{host} .p2k-trophy-tools [data-v2121-filter]").count() == 1
+            assert page.locator(f"{host} .p2k-trophy-admin-table").count() == 1
+            expect(page.locator(f"{host} [data-v2121-row]")).to_have_count(10)
+            assert page.locator(f"{host} [data-v2121-page-info]").inner_text() == "1–10 of 23 · Page 1 of 3"
+            page.click(f"{host} [data-v2121-next]")
+            expect(page.locator(f"{host} [data-v2121-row]")).to_have_count(10)
+            assert page.locator(f"{host} [data-v2121-page-info]").inner_text() == "11–20 of 23 · Page 2 of 3"
             page.fill(f"{host} [data-v2121-filter]", "t-2025")
             expect(page.locator(f"{host} [data-v2121-select]")).to_have_count(1)
             assert page.locator(f"{host} [data-v2121-select]").first.get_attribute("data-v2121-select") == "t-2025"
@@ -208,7 +220,8 @@ def main() -> None:
             page.fill(f"{host} [data-v2121-filter]", "2024-06-01")
             expect(page.locator(f"{host} [data-v2121-select]")).to_have_count(1)
             page.fill(f"{host} [data-v2121-filter]", "")
-            expect(page.locator(f"{host} [data-v2121-select]")).to_have_count(3)
+            expect(page.locator(f"{host} [data-v2121-select]")).to_have_count(10)
+            assert page.locator(f"{host} [data-v2121-page-info]").inner_text() == "1–10 of 23 · Page 1 of 3"
 
             page.fill(f"{host} [data-v2121-match-search]", "Golden")
             page.wait_for_selector(f"{host} [data-v2121-add-match='987']", timeout=10000)
@@ -221,6 +234,16 @@ def main() -> None:
             page.fill(f"{host} [name='title']", "New v2.12.1 Trophy")
             page.fill(f"{host} [name='league']", "Gamma League")
             page.fill(f"{host} [name='vignette_url']", "https://example.test/trophy.png")
+            page.wait_for_selector(f"{host} [data-v2121-art='vignette'] .p2k-media-preview img", timeout=5000)
+            assert page.locator(f"{host} .p2k-media-controls").count() == 2
+            preview_style = page.locator(f"{host} [data-v2121-art='vignette'] .p2k-media-preview").evaluate(
+                "el => ({overflow:getComputedStyle(el).overflow, width:el.getBoundingClientRect().width, height:el.getBoundingClientRect().height})")
+            assert preview_style["overflow"] == "hidden" and preview_style["width"] > 100 and preview_style["height"] > 100, preview_style
+            assert page.locator(f"{host} [data-v2121-art='vignette'] .p2k-media-preview img").evaluate(
+                "img => getComputedStyle(img).objectFit") == "contain"
+            page.click(f"{host} [data-v2121-art='vignette'] .p2k-media-preview")
+            page.wait_for_selector("#p2kTrophyAdminViewerV2121:not([hidden]) img", timeout=5000)
+            page.click("#p2kTrophyAdminViewerV2121 [data-v2121-view-close]")
 
             # Engraving can be prepared before the first save. The file remains browser-local
             # until the canonical save creates an ID and uploads pending artwork.
