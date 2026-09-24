@@ -26,6 +26,8 @@ FILES=(
   assets/js/admin/trophy-gallery-admin-v2121.js
   assets/js/admin/trophy-gallery-engraver-v2121.js
   assets/js/admin/trophy-gallery-poc.js
+  assets/js/admin/trophy-gallery-r5fix3.8.js
+  assets/trophy-gallery/trophy-gallery-r5fix3.8.css
   assets/js/pages/recruit-match-v2121-bootstrap.js
   assets/js/pages/recruit-match.js
   server/team-points/sql/analytics-schema.sql

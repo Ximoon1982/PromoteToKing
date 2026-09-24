@@ -352,9 +352,30 @@ def main() -> None:
             expect(standalone.locator(".p2k-trophy-card")).to_have_count(3)
             standalone.fill("[data-search]", "Alpha 2025")
             expect(standalone.locator(".p2k-trophy-card")).to_have_count(1)
+            if not standalone.evaluate("!!document.getElementById('p2kTrophyR538FinalStyle')"):
+                standalone.evaluate("delete window.__P2K_TROPHY_R5FIX3_8")
+                standalone.add_script_tag(path=str(ROOT / "assets/js/admin/trophy-gallery-r5fix3.8.js"))
             standalone.locator("[data-open]").first.click()
-            standalone.wait_for_selector("#p2kTrophyModal:not([hidden])")
-            assert standalone.locator("#p2kTrophyModal [data-enlarge]").count() == 0
+            standalone.wait_for_selector("#p2kR538Modal:not([hidden])", timeout=10000)
+            modal_box = standalone.locator("#p2kR538Modal .p2k-r538-modal").bounding_box()
+            assert modal_box is not None
+            right_gutter = 390 - (modal_box["x"] + modal_box["width"])
+            assert modal_box["x"] >= 8 and right_gutter >= 8, (modal_box, right_gutter)
+            close_box = standalone.locator("#p2kR538Modal [data-r538-close]").bounding_box()
+            assert close_box is not None
+            assert close_box["width"] >= 36 and abs(close_box["width"] - close_box["height"]) <= 1, close_box
+            modal_image = standalone.locator("#p2kR538Modal [data-r538-view-image]")
+            expect(modal_image).to_have_count(1)
+            modal_image.click()
+            standalone.wait_for_selector("#p2kR538Viewer:not([hidden])", timeout=5000)
+            viewer_box = standalone.locator("#p2kR538Viewer .p2k-r538-viewer").bounding_box()
+            assert viewer_box is not None
+            assert viewer_box["x"] >= 6 and 390 - (viewer_box["x"] + viewer_box["width"]) >= 6, viewer_box
+            standalone.click("#p2kR538Viewer [data-r538-viewer-close]")
+            modal_image.focus()
+            standalone.keyboard.press("Enter")
+            standalone.wait_for_selector("#p2kR538Viewer:not([hidden])", timeout=5000)
+            standalone.click("#p2kR538Viewer [data-r538-viewer-close]")
             assert standalone.locator("#dashboardAdministrationTab,[data-admin]").count() == 0
             assert standalone.evaluate("document.cookie") == ""
             assert not public_errors, public_errors

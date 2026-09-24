@@ -147,9 +147,16 @@
 .p2k-r538-close{
   display:grid!important;
   place-items:center!important;
+  box-sizing:border-box!important;
+  flex:0 0 38px!important;
   width:38px!important;
+  min-width:38px!important;
+  max-width:38px!important;
   height:38px!important;
   min-height:38px!important;
+  max-height:38px!important;
+  aspect-ratio:1/1!important;
+  line-height:1!important;
   padding:0!important;
   border:1px solid rgba(255,255,255,.15)!important;
   border-radius:50%!important;
@@ -189,6 +196,10 @@
   margin:auto!important;
   object-fit:contain!important;
   object-position:center!important
+}
+.p2k-r538-modal-art img[data-r538-view-image]{
+  cursor:zoom-in!important;
+  touch-action:manipulation!important
 }
 .p2k-r538-modal-details{display:grid!important;gap:12px!important;min-width:0!important}
 .p2k-r538-lead,
@@ -335,9 +346,11 @@ body.p2k-engraver-open{overflow:hidden!important}
 /* r5fix3.8 mobile viewport safety: mirrors the proven P2K profile modal shell. */
 @media(max-width:780px){.p2k-r538-modal-body{grid-template-columns:minmax(0,1fr)!important}}
 @media(max-width:560px){
- .p2k-r538-modal-overlay{padding:4px!important}
- .p2k-r538-modal{width:100%!important;max-width:100%!important;max-height:calc(100dvh - 8px)!important;margin:auto!important;border-radius:10px!important}
+ .p2k-r538-modal-overlay{padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))!important}
+ .p2k-r538-modal{width:100%!important;max-width:100%!important;max-height:calc(100dvh - 20px)!important;margin:auto!important;border-radius:10px!important}
  .p2k-r538-modal-head{padding:13px 14px!important}
  .p2k-r538-modal-body{padding:12px!important}
  .p2k-r538-modal-art{min-height:0!important}
+ .p2k-r538-viewer-overlay{box-sizing:border-box!important;padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))!important}
+ .p2k-r538-viewer{box-sizing:border-box!important;width:100%!important;max-width:100%!important;height:calc(100dvh - 16px)!important;max-height:calc(100dvh - 16px)!important;padding:10px!important;border-radius:12px!important}
 }

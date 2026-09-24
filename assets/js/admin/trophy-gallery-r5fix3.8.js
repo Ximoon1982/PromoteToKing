@@ -34,8 +34,11 @@ const R538_FINAL_STYLE=`
 .p2k-r538-modal{width:min(1080px,100%)!important;max-width:100%!important;min-width:0!important;max-height:calc(100dvh - 16px)!important;margin:auto!important;overflow:auto!important;overscroll-behavior:contain!important}
 .p2k-r538-modal-head,.p2k-r538-modal-body,.p2k-r538-modal-left,.p2k-r538-modal-details,.p2k-r538-modal-art,.p2k-r538-lead,.p2k-r538-detail,.p2k-r538-meta,.p2k-r538-meta>div{max-width:100%!important;min-width:0!important}
 .p2k-r538-modal-body{width:100%!important}
+.p2k-r538-modal-head>div{min-width:0!important;flex:1 1 auto!important}
+.p2k-r538-close{box-sizing:border-box!important;flex:0 0 38px!important;width:38px!important;min-width:38px!important;max-width:38px!important;height:38px!important;min-height:38px!important;max-height:38px!important;aspect-ratio:1/1!important;line-height:1!important}
+.p2k-r538-modal-art img[data-r538-view-image]{cursor:zoom-in!important;touch-action:manipulation!important}
 @media(max-width:780px){.p2k-r538-modal-body{grid-template-columns:minmax(0,1fr)!important}}
-@media(max-width:560px){.p2k-r538-modal-overlay{padding:4px!important}.p2k-r538-modal{width:100%!important;max-width:100%!important;max-height:calc(100dvh - 8px)!important;border-radius:10px!important;margin:auto!important}.p2k-r538-modal-head{padding:13px 14px!important}.p2k-r538-modal-body{padding:12px!important}.p2k-r538-modal-art{min-height:0!important}.p2k-r538-meta{grid-template-columns:1fr 1fr!important}}
+@media(max-width:560px){.p2k-r538-modal-overlay{padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))!important}.p2k-r538-modal{width:100%!important;max-width:100%!important;max-height:calc(100dvh - 20px)!important;border-radius:10px!important;margin:auto!important}.p2k-r538-modal-head{padding:13px 14px!important}.p2k-r538-modal-body{padding:12px!important}.p2k-r538-modal-art{min-height:0!important}.p2k-r538-meta{grid-template-columns:1fr 1fr!important}.p2k-r538-viewer-overlay{box-sizing:border-box!important;padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))!important}.p2k-r538-viewer{box-sizing:border-box!important;width:100%!important;max-width:100%!important;height:calc(100dvh - 16px)!important;max-height:calc(100dvh - 16px)!important;padding:10px!important;border-radius:12px!important}}
 `;
 function ensureFinalStyle(){
  const head=document.head||document.documentElement;
@@ -440,7 +443,7 @@ function renderShowcaseModal(r,meta={}){
   </header>
   <div class="p2k-r538-modal-body">
    <div class="p2k-r538-modal-left">
-    <div class="p2k-r538-modal-art">${artUrl?`<img src="${esc(artUrl)}" alt="${esc(r?.title||"Trophy artwork")}">`:""}</div>
+    <div class="p2k-r538-modal-art">${artUrl?`<img data-r538-view-image src="${esc(artUrl)}" alt="${esc(r?.title||"Trophy artwork")}" tabindex="0" role="button" aria-label="View ${esc(r?.title||"Trophy")} image full screen">`:""}</div>
     ${artUrl?'<button type="button" class="p2k-r538-view-art">View image larger</button>':""}
    </div>
    <div class="p2k-r538-modal-details">
@@ -457,7 +460,14 @@ function renderShowcaseModal(r,meta={}){
   </div>
  </section>`;
  const artImg=$(".p2k-r538-modal-art img",overlay);
- if(artImg)attachImageFallback(artImg,r);
+ if(artImg){
+  attachImageFallback(artImg,r);
+  const enlarge=()=>openViewer(artImg.src||artUrl,r?.title||"Trophy artwork");
+  artImg.addEventListener("click",enlarge);
+  artImg.addEventListener("keydown",event=>{
+   if(event.key==="Enter"||event.key===" "){event.preventDefault();enlarge()}
+  });
+ }
  $(".p2k-r538-view-art",overlay)?.addEventListener("click",()=>openViewer(artImg?.src||artUrl,r?.title||"Trophy artwork"));
  overlay.hidden=false;
 }
