@@ -41,6 +41,9 @@ allowed_existing_hash(){
     server/team-points-green/sql/core-schema.sql) [[ "$hash" == "@@SCHEMA_BASE@@" || "$hash" == "@@SCHEMA_TARGET@@" ]] ;;
     server/team-points-green/src/GreenRepository.php) [[ "$hash" == "@@GREEN_BASE@@" || "$hash" == "@@GREEN_TARGET@@" ]] ;;
     server/team-points/src/Repository.php) [[ "$hash" == "@@REPO_BASE@@" || "$hash" == "@@REPO_TARGET@@" ]] ;;
+    RecruitMatch.html) [[ "$hash" == "@@RECRUIT_HTML_BASE@@" || "$hash" == "@@RECRUIT_HTML_TARGET@@" ]] ;;
+    assets/js/pages/recruit-match-v2121-bootstrap.js) [[ "$hash" == "@@RECRUIT_BOOTSTRAP_BASE@@" || "$hash" == "@@RECRUIT_BOOTSTRAP_TARGET@@" ]] ;;
+    assets/js/pages/recruit-match.js) [[ "$hash" == "@@RECRUIT_CONTROLLER_BASE@@" || "$hash" == "@@RECRUIT_CONTROLLER_TARGET@@" ]] ;;
     MaxRatingBackfill.php) [[ "$hash" == "@@PAGE_PREVIOUS@@" || "$hash" == "@@PAGE_TARGET@@" ]] ;;
     server/team-points-green/public/max-rating-backfill.php|server/team-points-green/tools/converge-v2.13.2.php)
       [[ "$hash" == "$(target_hash "$path")" ]] ;;
@@ -54,6 +57,9 @@ target_hash(){
     server/team-points-green/sql/core-schema.sql) printf '%s\n' "@@SCHEMA_TARGET@@" ;;
     server/team-points-green/src/GreenRepository.php) printf '%s\n' "@@GREEN_TARGET@@" ;;
     server/team-points/src/Repository.php) printf '%s\n' "@@REPO_TARGET@@" ;;
+    RecruitMatch.html) printf '%s\n' "@@RECRUIT_HTML_TARGET@@" ;;
+    assets/js/pages/recruit-match-v2121-bootstrap.js) printf '%s\n' "@@RECRUIT_BOOTSTRAP_TARGET@@" ;;
+    assets/js/pages/recruit-match.js) printf '%s\n' "@@RECRUIT_CONTROLLER_TARGET@@" ;;
     MaxRatingBackfill.php) printf '%s\n' "@@PAGE_TARGET@@" ;;
     server/team-points-green/public/max-rating-backfill.php) printf '%s\n' "@@ENDPOINT_TARGET@@" ;;
     server/team-points-green/tools/converge-v2.13.2.php) printf '%s\n' "@@CONVERGE_TARGET@@" ;;
@@ -69,6 +75,9 @@ FILES=(
   "server/team-points-green/public/max-rating-backfill.php"
   "server/team-points-green/tools/converge-v2.13.2.php"
   "server/team-points/src/Repository.php"
+  "RecruitMatch.html"
+  "assets/js/pages/recruit-match-v2121-bootstrap.js"
+  "assets/js/pages/recruit-match.js"
 )
 NEW_FILES=(
   "MaxRatingBackfill.php"
@@ -129,7 +138,7 @@ trap 'if (( ACTIVATED )); then rollback; fi; exit 130' INT TERM HUP
 activate_file(){ local path="$1" src="$PAYLOAD_DIR/$1" dst="$ROOT/$1" tmp; mkdir -p "$(dirname "$dst")" || abort_after_activation "Unable to create destination directory for $path"; tmp="$dst.p2k-v2132-$$.tmp"; cp -p "$src" "$tmp" || abort_after_activation "Unable to stage live $path"; mv -f "$tmp" "$dst" || abort_after_activation "Unable to activate $path"; }
 
 printf 'Activating v2.13.2 runtime files...\n'
-for path in MaxRatingBackfill.php server/team-points-green/sql/core-schema.sql server/team-points-green/src/GreenRepository.php server/team-points-green/public/max-rating-backfill.php server/team-points-green/tools/converge-v2.13.2.php server/team-points/src/Repository.php; do activate_file "$path"; done
+for path in MaxRatingBackfill.php server/team-points-green/sql/core-schema.sql server/team-points-green/src/GreenRepository.php server/team-points-green/public/max-rating-backfill.php server/team-points-green/tools/converge-v2.13.2.php server/team-points/src/Repository.php RecruitMatch.html assets/js/pages/recruit-match-v2121-bootstrap.js assets/js/pages/recruit-match.js; do activate_file "$path"; done
 
 printf 'Linting active PHP...\n'
 for path in MaxRatingBackfill.php server/team-points-green/src/GreenRepository.php server/team-points-green/public/max-rating-backfill.php server/team-points-green/tools/converge-v2.13.2.php server/team-points/src/Repository.php; do "$PHP_BIN" -l "$ROOT/$path" >/dev/null || abort_after_activation "PHP lint failed after activation: $path"; done
@@ -143,7 +152,7 @@ for path in "${FILES[@]}"; do got="$(sha256_file "$ROOT/$path")"; expected="$(ta
 [[ "$(tr -d '\r\n' < "$ROOT/VERSION")" == "2.13.2" ]] || abort_after_activation "VERSION did not converge to 2.13.2"
 
 ACTIVATED=0; trap - INT TERM HUP
-printf 'SUCCESS: Promote to King v2.13.2 is active and rating-cap provenance schema is verified.\n'
+printf 'SUCCESS: Promote to King v2.13.2 is active; rating-cap provenance and private-roster recruitment fallback are installed.\n'
 printf 'Standalone backfill URL: https://www.promotetoking.org/MaxRatingBackfill.php\n'
 printf 'Qualified source HEAD: %s\n' "$SOURCE_HEAD"
 printf 'Rollback backup retained at: %s\n' "$BACKUP_DIR"
