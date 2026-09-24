@@ -24,7 +24,8 @@ def test_recruitment_v2_does_not_scan_live_before_db_filter():
     js = text("assets/js/pages/recruit-match.js")
     scan = js[js.index("async function scan") :]
     assert scan.index("C.preselect") < scan.index("processPriority")
-    assert "pub/club/${encodeURIComponent(slug(b[1]))}/members" in scan
+    assert "pub/club/${encodeURIComponent(opponentSlug)}/members" in scan
+    assert "fallbackOpponentMembership(localPre,opponentSlug,ctl.signal)" in scan
     assert "pub/player/${encodeURIComponent(row.username)}" in js
 
 def test_recruitment_pool_remains_current_member_db_source():
@@ -45,6 +46,11 @@ def test_hard_roster_freshness_timeout_and_optional_load_contracts():
     assert 'members`,ctl.signal,"no-store"' in js
     assert 'api(base,signal,"no-store")' in js and 'api(`${base}/stats`,signal,"no-store")' in js
     assert "Opponent membership could not be verified from a current roster" in js
+    assert "function rosterUnavailable" in js and "[403,404,410]" in js
+    assert "async function fallbackOpponentMembership" in js
+    assert 'api(`${base}/clubs`,signal,"no-store")' in js
+    assert "membership===null" in js and 'decision:"unverified"' in js
+    assert "membershipUnverified" in js
     assert "Chess.com Daily record timeout_percent" in js
     assert "stats?.chess_daily?.record" in js and "timeout_percent" in js
     assert "current_match_load_error" in js
