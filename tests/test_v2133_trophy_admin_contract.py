@@ -18,6 +18,7 @@ def test_v2133_trophy_admin_has_single_canonical_owner():
 
 def test_v2133_trophy_lookup_and_in_place_save_contract():
     admin=read("assets/js/admin/trophy-gallery-admin-v2121.js")
+    poc=read("assets/js/admin/trophy-gallery-poc.js")
     store=read("server/trophy-gallery/src/TrophyGalleryStore.php")
     assert "[r.id,r.title,r.league,r.competition,r.status,r.award_date]" in admin
     assert "Search existing trophies" in admin
