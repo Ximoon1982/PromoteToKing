@@ -46,17 +46,27 @@ jobs:
           node --check assets/js/admin/trophy-gallery-admin-v2121.js
           node --check assets/js/admin/trophy-gallery-engraver-v2121.js
           node --check assets/js/admin/trophy-gallery-poc.js
+          node --check assets/js/pages/recruit-match.js
+          node --check assets/js/pages/recruit-match-v2121-bootstrap.js
           php -l server/trophy-gallery/src/TrophyGalleryStore.php
+          bash -n tools/release/v2133/build-universal-2.13x.sh
+          bash -n tools/release/v2133/install-promote-to-king-v2.13.3-universal.sh.in
+          python -m py_compile tools/release/v2133/canonical-hash.py tools/release/v2133/stamp-runtime-cache-key.py
           python -m pytest -q tests/test_v2133_trophy_admin_contract.py
           python -m pytest -q tests/test_v2132_rating_cap_backfill.py
           node tests/test_v2132_backfill_payload.js
           P2K_TEST_DB_HOST=127.0.0.1 P2K_TEST_DB_PORT=3306 P2K_TEST_DB_USER=root P2K_TEST_DB_PASS=root php tests/test_v2132_rating_cap_backfill.php
-      - name: Build v2.13.3 incremental installer
+      - name: Universal 2.13.x installer baseline gate
+        run: bash tests/test_v2133_universal_installer.sh
+      - name: Build v2.13.3 universal incremental installer
         run: |
-          bash tools/release/v2133/build-incremental.sh "$RUNNER_TEMP/v2133-qual"
-          unzip -t "$RUNNER_TEMP/v2133-qual/PromoteToKing_v2.13.3_INCREMENTAL_FROM_2.13.2.zip"
-          test -s "$RUNNER_TEMP/v2133-qual/PromoteToKing_v2.13.3_INCREMENTAL_FROM_2.13.2/ASSET_CACHE_KEY.txt"
-          sha256sum "$RUNNER_TEMP/v2133-qual/PromoteToKing_v2.13.3_INCREMENTAL_FROM_2.13.2.zip"
+          bash tools/release/v2133/build-universal-2.13x.sh "$RUNNER_TEMP/v2133-qual"
+          unzip -t "$RUNNER_TEMP/v2133-qual/PromoteToKing_v2.13.3_INCREMENTAL_FROM_2.13.x.zip"
+          test -s "$RUNNER_TEMP/v2133-qual/PromoteToKing_v2.13.3_INCREMENTAL_FROM_2.13.x/ASSET_CACHE_KEY.txt"
+          test -s "$RUNNER_TEMP/v2133-qual/PromoteToKing_v2.13.3_INCREMENTAL_FROM_2.13.x/BASELINES.tsv"
+          sha256sum "$RUNNER_TEMP/v2133-qual/PromoteToKing_v2.13.3_INCREMENTAL_FROM_2.13.x.zip"
+      - name: Trophy admin mount-race browser gate
+        run: python tests/browser_gate_trophy_admin_mount_race_v2133.py
       - name: Focused Trophy Gallery v2.13.3 browser lifecycle
         run: python tests/browser_gate_trophy_gallery_v2121.py
       - name: Events Showcase and Trophy browser gate

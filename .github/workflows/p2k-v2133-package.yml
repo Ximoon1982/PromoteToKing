@@ -14,14 +14,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
-      - name: Build exact incremental installer
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Build exact universal incremental installer
         run: |
-          bash tools/release/v2133/build-incremental.sh "$RUNNER_TEMP/v2133"
-          unzip -t "$RUNNER_TEMP/v2133/PromoteToKing_v2.13.3_INCREMENTAL_FROM_2.13.2.zip"
-          sha256sum "$RUNNER_TEMP/v2133/PromoteToKing_v2.13.3_INCREMENTAL_FROM_2.13.2.zip"
+          bash tools/release/v2133/build-universal-2.13x.sh "$RUNNER_TEMP/v2133"
+          unzip -t "$RUNNER_TEMP/v2133/PromoteToKing_v2.13.3_INCREMENTAL_FROM_2.13.x.zip"
+          sha256sum "$RUNNER_TEMP/v2133/PromoteToKing_v2.13.3_INCREMENTAL_FROM_2.13.x.zip"
       - uses: actions/upload-artifact@v4
         with:
-          name: PromoteToKing-v2.13.3-incremental-${{ github.sha }}
-          path: ${{ runner.temp }}/v2133/PromoteToKing_v2.13.3_INCREMENTAL_FROM_2.13.2.zip
+          name: PromoteToKing-v2.13.3-universal-${{ github.sha }}
+          path: ${{ runner.temp }}/v2133/PromoteToKing_v2.13.3_INCREMENTAL_FROM_2.13.x.zip
           if-no-files-found: error
           retention-days: 30

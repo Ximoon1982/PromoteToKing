@@ -28,6 +28,14 @@ def test_v2133_trophy_lookup_and_in_place_save_contract():
     assert "competition:rec.competition" in admin
     assert "['id','status','title','league','competition','award_date']" in store
 
+def test_v2133_trophy_mount_race_is_stale_host_safe():
+    admin=read("assets/js/admin/trophy-gallery-admin-v2121.js")
+    assert "function isCurrentHost(host)" in admin
+    assert "function queueRemount(host)" in admin
+    assert "if(!isCurrentHost(host)||state.host!==host){queueRemount(host);return}" in admin
+    assert "const filter=$(\"[data-v2121-filter]\",host),add=$(\"[data-v2121-new]\",host),editor=$(\"[data-v2121-editor]\",host)" in admin
+    assert "if(!filter||!add||!editor)" in admin
+    assert 'filter.oninput=renderList' in admin
 def test_v2133_pre_save_artwork_and_engraver_cleanup_contract():
     admin=read("assets/js/admin/trophy-gallery-admin-v2121.js")
     engraver=read("assets/js/admin/trophy-gallery-engraver-v2121.js")
@@ -39,6 +47,22 @@ def test_v2133_pre_save_artwork_and_engraver_cleanup_contract():
     assert 'classList.remove("p2k-engraver-open")' in engraver
     assert "window.addEventListener('p2k-admin-shell-route'" in engraver
     assert "window.addEventListener('pagehide',close)" in engraver
+
+def test_v2133_universal_installer_contract():
+    build=read("tools/release/v2133/build-universal-2.13x.sh")
+    installer=read("tools/release/v2133/install-promote-to-king-v2.13.3-universal.sh.in")
+    workflow=read(".github/workflows/p2k-v2133-qualification.yml")
+    package=read(".github/workflows/p2k-v2133-package.yml")
+    assert 'PromoteToKing_v2.13.3_INCREMENTAL_FROM_2.13.x' in build
+    for version in ("2.13.0", "2.13.1", "2.13.2", "2.13.3"):
+        assert version in build
+        assert version in installer
+    assert "BASELINES.tsv" in build and "canonical-hash.py" in build
+    assert "P2K_INSTALL_PREFLIGHT_ONLY" in installer
+    assert "converge-v2.13.1.php" in installer and "converge-v2.13.2.php" in installer
+    assert "test_v2133_universal_installer.sh" in workflow
+    assert "browser_gate_trophy_admin_mount_race_v2133.py" in workflow
+    assert "build-universal-2.13x.sh" in workflow and "build-universal-2.13x.sh" in package
 
 def test_v2133_release_identity_and_branch_qualification():
     assert read("VERSION").strip()=="2.13.3"
