@@ -19,6 +19,7 @@ git -C "$ROOT" merge-base --is-ancestor "$EARLIEST" "$HEAD" || { echo "HEAD must
 FILES=(
   VERSION
   ui-v2.html
+  trophies/index.html
   RecruitMatch.html
   MaxRatingBackfill.php
   assets/js/admin/admin-shell.js
@@ -57,6 +58,10 @@ python3 "$ROOT/tools/release/static_asset_cache_key.py" verify --root "$DIR/payl
 
 grep -Fq "const TROPHY_RUNTIME_KEY = \"$CACHE_KEY\";" "$DIR/payload/assets/js/admin/tool-registry.js"
 grep -Fq "assets/js/pages/recruit-match.js?v=$CACHE_KEY" "$DIR/payload/assets/js/pages/recruit-match-v2121-bootstrap.js"
+grep -Fq "assets/js/admin/trophy-gallery-r5fix3.8.js?v=$CACHE_KEY" "$DIR/payload/ui-v2.html"
+grep -Fq "assets/trophy-gallery/trophy-gallery-r5fix3.8.css?v=$CACHE_KEY" "$DIR/payload/ui-v2.html"
+grep -Fq "../assets/js/admin/trophy-gallery-r5fix3.8.js?v=$CACHE_KEY" "$DIR/payload/trophies/index.html"
+grep -Fq "../assets/trophy-gallery/trophy-gallery-r5fix3.8.css?v=$CACHE_KEY" "$DIR/payload/trophies/index.html"
 
 cp "$CANON" "$DIR/canonical-hash.py"
 chmod +x "$DIR/canonical-hash.py"
