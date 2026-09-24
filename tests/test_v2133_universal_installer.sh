@@ -53,7 +53,8 @@ PY
 }
 
 preflight_ref(){
-  local version="$1" ref="$2" stamp="${3:-0}" dst="$TMP/$version-${ref:0:8}"
+  local version="$1" ref="$2" stamp="${3:-0}"
+  local dst="$TMP/$version-${ref:0:8}"
   materialize_ref "$ref" "$dst"
   [[ "$(tr -d '\r\n' < "$dst/VERSION")" == "$version" ]]
   if [[ "$stamp" == "1" ]]; then
