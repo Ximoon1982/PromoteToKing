@@ -17,13 +17,18 @@ CACHE_KEY="@@CACHE_KEY@@"
 FILES=(
   VERSION
   ui-v2.html
+  trophies/index.html
   RecruitMatch.html
   MaxRatingBackfill.php
   assets/js/admin/admin-shell.js
   assets/js/admin/tool-registry.js
   assets/js/admin/trophy-gallery-admin-v2121.js
+  assets/js/admin/trophy-gallery-admin-view-v2121.js
   assets/js/admin/trophy-gallery-engraver-v2121.js
   assets/js/admin/trophy-gallery-poc.js
+  assets/js/admin/trophy-gallery-r5fix3.8.js
+  assets/trophy-gallery/trophy-gallery-r5fix3.8.css
+  assets/trophy-gallery/engraving/editor-v2121.html
   assets/js/pages/recruit-match-v2121-bootstrap.js
   assets/js/pages/recruit-match.js
   server/team-points/sql/analytics-schema.sql

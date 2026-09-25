@@ -10,10 +10,12 @@ bash "$ROOT/tools/release/v2133/build-universal-2.13x.sh" "$OUT" >/dev/null
 INSTALLER="$OUT/$PKG/install-promote-to-king-v2.13.3.sh"
 
 FILES=(
-  VERSION ui-v2.html RecruitMatch.html MaxRatingBackfill.php
+  VERSION ui-v2.html trophies/index.html RecruitMatch.html MaxRatingBackfill.php
   assets/js/admin/admin-shell.js assets/js/admin/tool-registry.js
-  assets/js/admin/trophy-gallery-admin-v2121.js assets/js/admin/trophy-gallery-engraver-v2121.js
-  assets/js/admin/trophy-gallery-poc.js assets/js/pages/recruit-match-v2121-bootstrap.js
+  assets/js/admin/trophy-gallery-admin-v2121.js assets/js/admin/trophy-gallery-admin-view-v2121.js
+  assets/js/admin/trophy-gallery-engraver-v2121.js assets/js/admin/trophy-gallery-poc.js
+  assets/js/admin/trophy-gallery-r5fix3.8.js assets/trophy-gallery/trophy-gallery-r5fix3.8.css
+  assets/trophy-gallery/engraving/editor-v2121.html assets/js/pages/recruit-match-v2121-bootstrap.js
   assets/js/pages/recruit-match.js server/team-points/sql/analytics-schema.sql
   server/team-points/src/McaResultsCronService.php server/team-points/src/Repository.php
   server/team-points-green/sql/core-schema.sql server/team-points-green/src/GreenCompatibility.php

@@ -73,6 +73,17 @@ chmod +x "$DIR/canonical-hash.py"
 cp "$TEMPLATE" "$DIR/install-promote-to-king-v2.13.3.sh"
 chmod +x "$DIR/install-promote-to-king-v2.13.3.sh"
 
+mapfile -t INSTALLER_FILES < <(
+  awk '/^FILES=\($/{inside=1;next} inside&&/^\)$/{exit} inside{gsub(/^[[:space:]]+|[[:space:]]+$/,""); if(length) print}' \
+    "$DIR/install-promote-to-king-v2.13.3.sh"
+)
+if [[ "$(printf '%s\n' "${INSTALLER_FILES[@]}")" != "$(printf '%s\n' "${FILES[@]}")" ]]; then
+  echo 'Installer activation FILES list differs from packaged FILES list' >&2
+  printf 'Packaged files:\n%s\n' "$(printf '%s\n' "${FILES[@]}")" >&2
+  printf 'Installer files:\n%s\n' "$(printf '%s\n' "${INSTALLER_FILES[@]}")" >&2
+  exit 1
+fi
+
 # Version-specific accepted source lineages. Cache-query values are canonicalized
 # separately so production-stamped HTML remains verifiable without weakening drift checks.
 REFS_2130=(
