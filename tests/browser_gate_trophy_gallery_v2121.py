@@ -235,7 +235,30 @@ def main() -> None:
             page.fill(f"{host} [name='league']", "Gamma League")
             page.fill(f"{host} [name='vignette_url']", "https://example.test/trophy.png")
             page.wait_for_selector(f"{host} [data-v2121-art='vignette'] .p2k-media-preview img", timeout=5000)
+            page.wait_for_selector(f"{host} [data-v2121-art='modal'] .p2k-media-preview img", timeout=5000)
             assert page.locator(f"{host} .p2k-media-controls").count() == 2
+            art_boxes = page.locator(f"{host} [data-v2121-art]")
+            assert art_boxes.count() == 2
+            vignette_box = art_boxes.nth(0).bounding_box()
+            modal_box_admin = art_boxes.nth(1).bounding_box()
+            assert vignette_box and modal_box_admin
+            assert abs(vignette_box["y"] - modal_box_admin["y"]) <= 2, (vignette_box, modal_box_admin)
+            assert modal_box_admin["x"] > vignette_box["x"], (vignette_box, modal_box_admin)
+            assert page.locator(f"{host} [data-v2121-art='modal'] [data-v2121-modal-mode]").count() == 1
+            assert page.locator(f"{host} [data-v2121-file='modal']").is_disabled()
+            assert page.locator(f"{host} [name='modal_url']").is_disabled()
+            assert page.locator(f"{host} [data-v2121-engrave='modal']").is_disabled()
+            vignette_src = page.locator(f"{host} [data-v2121-art='vignette'] .p2k-media-preview img").get_attribute("src")
+            modal_src = page.locator(f"{host} [data-v2121-art='modal'] .p2k-media-preview img").get_attribute("src")
+            assert modal_src == vignette_src, (vignette_src, modal_src)
+            page.click(f"{host} [data-v2121-preview]")
+            page.wait_for_selector("#p2kTrophyAdminCombinedPreviewV2121:not([hidden])", timeout=5000)
+            expect(page.locator("#p2kTrophyAdminCombinedPreviewV2121 .p2k-trophy-preview-output")).to_have_count(2)
+            page.click("#p2kTrophyAdminCombinedPreviewV2121 [data-v2121-preview-close]")
+            page.select_option(f"{host} [name='modal_media_mode']", "custom")
+            assert not page.locator(f"{host} [data-v2121-file='modal']").is_disabled()
+            assert not page.locator(f"{host} [name='modal_url']").is_disabled()
+            assert not page.locator(f"{host} [data-v2121-engrave='modal']").is_disabled()
             preview_style = page.locator(f"{host} [data-v2121-art='vignette'] .p2k-media-preview").evaluate(
                 "el => ({overflow:getComputedStyle(el).overflow, width:el.getBoundingClientRect().width, height:el.getBoundingClientRect().height})")
             assert preview_style["overflow"] == "hidden" and preview_style["width"] > 100 and preview_style["height"] > 100, preview_style
@@ -286,6 +309,17 @@ def main() -> None:
             expect(page.locator(f"{host} [data-v2121-select]")).to_have_count(1)
             page.fill(f"{host} [data-v2121-filter]", "")
 
+            replacement = Path(os.environ.get("RUNNER_TEMP", "/tmp")) / "p2k-v2121-replacement.png"
+            Image.new("RGB", (18, 18), (20, 130, 190)).save(replacement)
+            before_direct_upload = Fixture.upload_count
+            page.set_input_files(f"{host} [data-v2121-file='vignette']", str(replacement))
+            page.wait_for_function("document.querySelector('#adminShellNativeDetailHost [data-v2121-status]')?.textContent === 'Artwork updated.'", timeout=15000)
+            assert Fixture.upload_count == before_direct_upload + 1
+            page.wait_for_function("""() => {
+                const img=document.querySelector('#adminShellNativeDetailHost [data-v2121-art="vignette"] .p2k-media-preview img');
+                return !!img && img.src.startsWith('blob:');
+            }""")
+
             page.click(f"{host} [data-v2121-engrave='vignette']")
             page.wait_for_selector("#p2kTrophyEngraverV2121:not([hidden]) iframe.p2k-engraver", timeout=15000)
             assert page.evaluate("document.body.classList.contains('p2k-engraver-open')")
@@ -293,10 +327,32 @@ def main() -> None:
             frame.locator("#finish").wait_for(timeout=15000)
             page.wait_for_timeout(300)
             assert master_requests == ["medal_gold.png"], master_requests
+            assert frame.locator("#sampleBtn").count() == 0
+            assert frame.locator("#downloadBtn").inner_text() == "Use in gallery"
+            assert frame.locator("#deviceDownloadBtn").inner_text() == "Download image"
+            assert frame.locator("#middleText").input_value() == "Promote to King"
             frame.locator("#finish").select_option("silver")
             page.wait_for_timeout(300)
             assert master_requests == ["medal_gold.png", "medal_silver.png"], master_requests
-            page.click("#p2kTrophyEngraverV2121 [data-v2121-engraver-close]")
+            assert frame.locator("#middleText").input_value() == "Promote to King"
+            frame.locator("#awardType").select_option("cup")
+            page.wait_for_timeout(300)
+            assert frame.locator("#cupPlaque").input_value() == "Promote\nto King"
+            frame.locator("#finish").select_option("bronze")
+            page.wait_for_timeout(300)
+            assert frame.locator("#cupPlaque").input_value() == "Promote\nto King"
+            frame.locator("#awardType").select_option("crystal")
+            page.wait_for_timeout(300)
+            assert frame.locator("#crystalTop").input_value() == "Promote\nto King"
+            assert frame.locator("#crystalTopSize").input_value() == "140"
+            with page.expect_download(timeout=10000) as download_info:
+                frame.locator("#deviceDownloadBtn").click()
+            assert download_info.value.suggested_filename.endswith(".png")
+            before_engraver_upload = Fixture.upload_count
+            frame.locator("#downloadBtn").click()
+            page.wait_for_selector("#p2kTrophyEngraverV2121[hidden]", state="attached", timeout=10000)
+            page.wait_for_function("document.querySelector('#adminShellNativeDetailHost [data-v2121-status]')?.textContent === 'Artwork updated.'", timeout=15000)
+            assert Fixture.upload_count == before_engraver_upload + 1
             assert not page.evaluate("document.body.classList.contains('p2k-engraver-open')")
 
             Fixture.authenticated = False

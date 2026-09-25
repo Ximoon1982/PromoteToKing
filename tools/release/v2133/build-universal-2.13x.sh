@@ -25,10 +25,12 @@ FILES=(
   assets/js/admin/admin-shell.js
   assets/js/admin/tool-registry.js
   assets/js/admin/trophy-gallery-admin-v2121.js
+  assets/js/admin/trophy-gallery-admin-view-v2121.js
   assets/js/admin/trophy-gallery-engraver-v2121.js
   assets/js/admin/trophy-gallery-poc.js
   assets/js/admin/trophy-gallery-r5fix3.8.js
   assets/trophy-gallery/trophy-gallery-r5fix3.8.css
+  assets/trophy-gallery/engraving/editor-v2121.html
   assets/js/pages/recruit-match-v2121-bootstrap.js
   assets/js/pages/recruit-match.js
   server/team-points/sql/analytics-schema.sql
@@ -62,6 +64,9 @@ grep -Fq "assets/js/admin/trophy-gallery-r5fix3.8.js?v=$CACHE_KEY" "$DIR/payload
 grep -Fq "assets/trophy-gallery/trophy-gallery-r5fix3.8.css?v=$CACHE_KEY" "$DIR/payload/ui-v2.html"
 grep -Fq "../assets/js/admin/trophy-gallery-r5fix3.8.js?v=$CACHE_KEY" "$DIR/payload/trophies/index.html"
 grep -Fq "../assets/trophy-gallery/trophy-gallery-r5fix3.8.css?v=$CACHE_KEY" "$DIR/payload/trophies/index.html"
+grep -Fq 'data-v2121-preview' "$DIR/payload/assets/js/admin/trophy-gallery-admin-view-v2121.js"
+grep -Fq 'Use in gallery' "$DIR/payload/assets/trophy-gallery/engraving/editor-v2121.html"
+grep -Fq 'Download image' "$DIR/payload/assets/trophy-gallery/engraving/editor-v2121.html"
 
 cp "$CANON" "$DIR/canonical-hash.py"
 chmod +x "$DIR/canonical-hash.py"

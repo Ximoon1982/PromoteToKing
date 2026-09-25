@@ -63,6 +63,31 @@ def test_v2133_pre_save_artwork_and_engraver_cleanup_contract():
     assert "window.addEventListener('p2k-admin-shell-route'" in engraver
     assert "window.addEventListener('pagehide',close)" in engraver
 
+def test_v2133_trophy_artwork_workflow_contract():
+    admin=read("assets/js/admin/trophy-gallery-admin-v2121.js")
+    view=read("assets/js/admin/trophy-gallery-admin-view-v2121.js")
+    engraver=read("assets/js/admin/trophy-gallery-engraver-v2121.js")
+    editor=read("assets/trophy-gallery/engraving/editor-v2121.html")
+    poc=read("assets/js/admin/trophy-gallery-poc.js")
+    assert "data-v2121-modal-mode" in view
+    assert "data-v2121-preview" in view
+    assert "function syncModalArtworkControls(form)" in admin
+    assert "control.disabled=useVignette" in admin
+    assert "function persistQueuedArtwork(form,slot,file)" in admin
+    assert "function openCombinedPreview(form)" in admin
+    assert 'status("Artwork updated.")' in admin
+    assert 'EDITOR_URL.searchParams.set("v",CACHE_KEY)' in engraver
+    assert "Use in gallery" in editor
+    assert "Download image" in editor
+    assert "downloadDevicePNG" in editor
+    assert "middle:'Promote to King'" in editor
+    assert "plaque:'Promote\\nto King'" in editor
+    assert "top:'Promote\\nto King'" in editor
+    assert "['crystalTopSize',140]" in editor
+    assert ".p2k-media-mode select{width:auto!important" in poc
+    assert ".p2k-media-controls .is-disabled{opacity:.45}" in poc
+
+
 def test_v2133_universal_installer_contract():
     build=read("tools/release/v2133/build-universal-2.13x.sh")
     installer=read("tools/release/v2133/install-promote-to-king-v2.13.3-universal.sh.in")
@@ -79,6 +104,8 @@ def test_v2133_universal_installer_contract():
     assert "browser_gate_trophy_admin_mount_race_v2133.py" in workflow
     assert "build-universal-2.13x.sh" in workflow and "build-universal-2.13x.sh" in package
     assert "assets/js/admin/trophy-gallery-r5fix3.8.js" in build
+    assert "assets/js/admin/trophy-gallery-admin-view-v2121.js" in build
+    assert "assets/trophy-gallery/engraving/editor-v2121.html" in build
     assert "assets/trophy-gallery/trophy-gallery-r5fix3.8.css" in build
     assert "trophies/index.html" in build
     assert 'trophy-gallery-r5fix3.8.js?v=$CACHE_KEY' in build

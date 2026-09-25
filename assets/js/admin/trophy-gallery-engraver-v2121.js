@@ -1,7 +1,7 @@
 (() => {
 "use strict";
 if(window.P2K_TROPHY_ENGRAVER_V2121)return;
-const ROOT=new URL("../../../",document.currentScript?.src||location.href),EDITOR=new URL("assets/trophy-gallery/engraving/editor-v2121.html",ROOT).href;
+const SCRIPT=new URL(document.currentScript?.src||location.href),ROOT=new URL("../../../",SCRIPT),EDITOR_URL=new URL("assets/trophy-gallery/engraving/editor-v2121.html",ROOT),CACHE_KEY=SCRIPT.searchParams.get("v");if(CACHE_KEY)EDITOR_URL.searchParams.set("v",CACHE_KEY);const EDITOR=EDITOR_URL.href;
 let frame=null,slot='vignette',receiver=null,modal=null,previousFocus=null;
 function unlock(){document.body?.classList.remove("p2k-engraver-open")}
 function close(){if(modal)modal.hidden=true;unlock();const focus=previousFocus;previousFocus=null;if(focus?.isConnected&&typeof focus.focus==="function")focus.focus({preventScroll:true})}
