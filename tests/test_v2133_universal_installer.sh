@@ -71,6 +71,7 @@ preflight_ref 2.13.2 cba52fd96ad196cb95321d3a607f99c53f4a2283 1
 preflight_ref 2.13.3 49cfc7b7d201281d03a24a0c4b29907631732018 0
 preflight_ref 2.13.3 675ef78011d749730236af5da9d75f4069dfb102 1
 preflight_ref 2.13.3 082aab7d5b8b30547fb14bd8e6143aa84f74e105 1
+preflight_ref 2.13.3 f0b11fd53dac013852a1e47c163fc4d2c3659d1c 1
 preflight_ref 2.13.3 "$(git -C "$ROOT" rev-parse HEAD)" 0
 
 DRIFT="$TMP/drift"
