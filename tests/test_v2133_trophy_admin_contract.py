@@ -55,7 +55,7 @@ def test_v2133_pre_save_artwork_and_engraver_cleanup_contract():
     assert "state.pending[slot]=file" in admin
     assert 'slot==="modal"&&form.elements?.modal_media_mode' in admin
     assert 'form.elements.modal_media_mode.value="custom"' in admin
-    assert "await uploadPending(out.record.id)" in admin
+    assert "await uploadPending(out.record.id,form)" in admin
     assert "Save the Trophy before assigning artwork." not in admin
     assert "Save the Trophy before creating artwork." not in admin
     assert 'classList.add("p2k-engraver-open")' in engraver
