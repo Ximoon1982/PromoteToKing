@@ -1,0 +1,243 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+ROOT="${1:-/kunden/homepages/43/d141198007/htdocs/PromoteToKing}"
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PAYLOAD_DIR="$SELF_DIR/payload"
+BASELINES="$SELF_DIR/BASELINES.tsv"
+CANON="$SELF_DIR/canonical-hash.py"
+BACKUP_ROOT="$ROOT/storage/release-backups"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+BACKUP_DIR="$BACKUP_ROOT/v2.13.4-$STAMP"
+ABSENT_FILE="$BACKUP_DIR/.absent-before-install"
+ACTIVATED=0
+SOURCE_HEAD="@@SOURCE_HEAD@@"
+CACHE_KEY="@@CACHE_KEY@@"
+
+FILES=(
+  VERSION
+  ui-v2.html
+  trophies/index.html
+  RecruitMatch.html
+  MaxRatingBackfill.php
+  assets/js/admin/admin-shell.js
+  assets/js/admin/tool-registry.js
+  assets/js/admin/trophy-gallery-admin-v2121.js
+  assets/js/admin/trophy-gallery-admin-view-v2121.js
+  assets/js/admin/trophy-gallery-engraver-v2121.js
+  assets/js/admin/trophy-gallery-poc.js
+  assets/js/admin/trophy-gallery-r5fix3.8.js
+  assets/trophy-gallery/trophy-gallery-r5fix3.8.css
+  assets/trophy-gallery/engraving/editor-v2121.html
+  assets/js/pages/recruit-match-v2121-bootstrap.js
+  assets/js/pages/recruit-match.js
+  server/team-points/sql/analytics-schema.sql
+  server/team-points/src/McaResultsCronService.php
+  server/team-points/src/Repository.php
+  server/team-points-green/sql/core-schema.sql
+  server/team-points-green/src/GreenCompatibility.php
+  server/team-points-green/src/GreenRepository.php
+  server/team-points-green/public/max-rating-backfill.php
+  server/team-points-green/tools/converge-v2.13.1.php
+  server/team-points-green/tools/converge-v2.13.2.php
+  server/trophy-gallery/src/TrophyGalleryStore.php
+)
+
+PHP_FILES=(
+  MaxRatingBackfill.php
+  server/team-points/src/McaResultsCronService.php
+  server/team-points/src/Repository.php
+  server/team-points-green/src/GreenCompatibility.php
+  server/team-points-green/src/GreenRepository.php
+  server/team-points-green/public/max-rating-backfill.php
+  server/team-points-green/tools/converge-v2.13.1.php
+  server/team-points-green/tools/converge-v2.13.2.php
+  server/trophy-gallery/src/TrophyGalleryStore.php
+)
+
+sha256_file(){ sha256sum "$1" | awk '{print $1}'; }
+fail(){ printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+
+find_php(){
+  local c v
+  if [[ -n "${P2K_PHP_CLI:-}" ]]; then
+    [[ -x "$P2K_PHP_CLI" ]] || fail "P2K_PHP_CLI is not executable: $P2K_PHP_CLI"
+    v="$("$P2K_PHP_CLI" -r 'echo PHP_VERSION_ID;' 2>/dev/null || true)"
+    [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 80000 )) || fail "P2K_PHP_CLI must be PHP >= 8.0"
+    printf '%s\n' "$P2K_PHP_CLI"; return
+  fi
+  for c in /usr/bin/php8.5-cli /usr/bin/php8.5 /usr/bin/php8.4-cli /usr/bin/php8.4 /usr/bin/php8.3-cli /usr/bin/php8.3 /usr/bin/php8.2-cli /usr/bin/php8.2 /usr/bin/php8.1-cli /usr/bin/php8.1 /usr/bin/php8.0-cli /usr/bin/php8.0; do
+    [[ -x "$c" ]] || continue
+    v="$("$c" -r 'echo PHP_VERSION_ID;' 2>/dev/null || true)"
+    if [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 80000 )); then printf '%s\n' "$c"; return; fi
+  done
+  if command -v php >/dev/null 2>&1; then
+    c="$(command -v php)"; v="$("$c" -r 'echo PHP_VERSION_ID;' 2>/dev/null || true)"
+    if [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 80000 )); then printf '%s\n' "$c"; return; fi
+  fi
+  fail "No PHP >= 8.0 CLI found. Do not use legacy /usr/bin/php."
+}
+
+find_python(){
+  local c major
+  for c in python3 python; do
+    command -v "$c" >/dev/null 2>&1 || continue
+    c="$(command -v "$c")"
+    major="$("$c" -c 'import sys; print(sys.version_info[0])' 2>/dev/null || true)"
+    [[ "$major" == "3" ]] && { printf '%s\n' "$c"; return; }
+  done
+  fail "Python 3 is required for canonical 2.13.x baseline verification."
+}
+
+baseline_row(){
+  local version="$1" path="$2"
+  awk -F '\t' -v version="$version" -v path="$path" '$1==version && $2==path {print $3 "\t" $4; exit}' "$BASELINES"
+}
+
+hash_allowed(){
+  local got="$1" hashes="$2"
+  case ",$hashes," in *",$got,"*) return 0 ;; *) return 1 ;; esac
+}
+
+canonical_hash(){
+  "$PYTHON_BIN" "$CANON" --logical-path "$1" "$2"
+}
+
+target_hash(){
+  local path="$1"
+  awk -v wanted="./$path" '$2==wanted {print $1; exit}' "$SELF_DIR/PAYLOAD.sha256"
+}
+
+rollback(){
+  local path
+  printf 'Rolling back source files from %s\n' "$BACKUP_DIR" >&2
+  for path in "${FILES[@]}"; do
+    if [[ -f "$BACKUP_DIR/$path" ]]; then
+      mkdir -p "$(dirname "$ROOT/$path")"
+      cp -p "$BACKUP_DIR/$path" "$ROOT/$path" || true
+    elif [[ -f "$ABSENT_FILE" ]] && grep -Fxq "$path" "$ABSENT_FILE"; then
+      rm -f "$ROOT/$path" || true
+    fi
+  done
+  ACTIVATED=0
+}
+
+abort_after_activation(){
+  printf 'ERROR: %s\n' "$*" >&2
+  rollback
+  printf 'Source files were rolled back. Successful additive schema changes are intentionally left in place.\n' >&2
+  exit 1
+}
+
+[[ -d "$ROOT" ]] || fail "Promote to King root not found: $ROOT"
+[[ -d "$PAYLOAD_DIR" ]] || fail "Installer payload directory missing: $PAYLOAD_DIR"
+[[ -f "$BASELINES" ]] || fail "Installer baseline manifest missing: $BASELINES"
+[[ -f "$CANON" ]] || fail "Canonical hash helper missing: $CANON"
+command -v sha256sum >/dev/null 2>&1 || fail "sha256sum is required"
+
+PHP_BIN="$(find_php)"
+PYTHON_BIN="$(find_python)"
+PHP_VERSION="$("$PHP_BIN" -r 'echo PHP_VERSION;')"
+INSTALLED_VERSION="$(tr -d '\r\n' < "$ROOT/VERSION" 2>/dev/null || true)"
+case "$INSTALLED_VERSION" in
+  2.13.0|2.13.1|2.13.2|2.13.3|2.13.4) ;;
+  *) fail "Unsupported installed VERSION '$INSTALLED_VERSION'. This installer supports existing 2.13.0 through 2.13.4 installations only." ;;
+esac
+
+printf 'Using PHP CLI: %s (%s)\n' "$PHP_BIN" "$PHP_VERSION"
+printf 'Installed version: %s\n' "$INSTALLED_VERSION"
+printf 'Target source identity: v2.13.4 %s\n' "$SOURCE_HEAD"
+printf 'Static asset cache key: %s\n' "$CACHE_KEY"
+
+printf 'Verifying package payload...\n'
+( cd "$PAYLOAD_DIR" && sha256sum -c "$SELF_DIR/PAYLOAD.sha256" ) || fail "Package payload hash verification failed"
+
+printf 'Checking installed 2.13.x baseline...\n'
+for path in "${FILES[@]}"; do
+  row="$(baseline_row "$INSTALLED_VERSION" "$path")"
+  [[ -n "$row" ]] || fail "No approved baseline rule for $INSTALLED_VERSION: $path"
+  allow_absent="${row%%$'\t'*}"
+  hashes="${row#*$'\t'}"
+  live="$ROOT/$path"
+  if [[ ! -e "$live" ]]; then
+    if [[ "$allow_absent" == "1" ]]; then
+      printf '  %s: absent (approved for %s)\n' "$path" "$INSTALLED_VERSION"
+      continue
+    fi
+    fail "Required installed file is missing for $INSTALLED_VERSION: $path"
+  fi
+  got="$(canonical_hash "$path" "$live")" || fail "Unable to canonicalize installed file: $path"
+  hash_allowed "$got" "$hashes" || fail "Installed file is not an approved $INSTALLED_VERSION state: $path ($got canonical SHA-256)"
+  printf '  %s: approved\n' "$path"
+done
+
+printf 'Linting staged PHP...\n'
+for path in "${PHP_FILES[@]}"; do
+  "$PHP_BIN" -l "$PAYLOAD_DIR/$path" >/dev/null || fail "PHP lint failed for staged $path"
+done
+
+if [[ "${P2K_INSTALL_PREFLIGHT_ONLY:-0}" == "1" ]]; then
+  printf 'SUCCESS: universal v2.13.x installer preflight passed for %s; no files were changed.\n' "$INSTALLED_VERSION"
+  exit 0
+fi
+
+mkdir -p "$BACKUP_DIR" || fail "Unable to create backup directory: $BACKUP_DIR"
+: > "$ABSENT_FILE"
+for path in "${FILES[@]}"; do
+  if [[ -e "$ROOT/$path" ]]; then
+    mkdir -p "$BACKUP_DIR/$(dirname "$path")" || fail "Unable to prepare backup path for $path"
+    cp -p "$ROOT/$path" "$BACKUP_DIR/$path" || fail "Unable to back up $path"
+  else
+    printf '%s\n' "$path" >> "$ABSENT_FILE"
+  fi
+done
+printf 'Backup created: %s\n' "$BACKUP_DIR"
+
+ACTIVATED=1
+trap 'if (( ACTIVATED )); then rollback; fi; exit 130' INT TERM HUP
+
+activate_file(){
+  local path="$1" src="$PAYLOAD_DIR/$1" dst="$ROOT/$1" tmp
+  mkdir -p "$(dirname "$dst")" || abort_after_activation "Unable to create destination directory for $path"
+  tmp="$dst.p2k-v2134-$.tmp"
+  cp -p "$src" "$tmp" || abort_after_activation "Unable to stage live $path"
+  mv -f "$tmp" "$dst" || abort_after_activation "Unable to activate $path"
+}
+
+printf 'Activating cumulative v2.13.4 runtime files...\n'
+for path in "${FILES[@]}"; do
+  [[ "$path" == "VERSION" ]] && continue
+  activate_file "$path"
+done
+
+printf 'Linting active PHP...\n'
+for path in "${PHP_FILES[@]}"; do
+  "$PHP_BIN" -l "$ROOT/$path" >/dev/null || abort_after_activation "PHP lint failed after activation: $path"
+done
+
+printf 'Converging and verifying v2.13.x Green schemas...\n'
+"$PHP_BIN" "$ROOT/server/team-points-green/tools/converge-v2.13.1.php" || abort_after_activation "v2.13.1 Green schema convergence/verification failed"
+"$PHP_BIN" "$ROOT/server/team-points-green/tools/converge-v2.13.2.php" || abort_after_activation "v2.13.2 Green schema convergence/verification failed"
+
+activate_file VERSION
+
+printf 'Verifying installed target hashes...\n'
+for path in "${FILES[@]}"; do
+  got="$(sha256_file "$ROOT/$path")"
+  expected="$(target_hash "$path")"
+  [[ -n "$expected" && "$got" == "$expected" ]] || abort_after_activation "Target hash mismatch after activation: $path"
+  printf '  %s: OK\n' "$path"
+done
+[[ "$(tr -d '\r\n' < "$ROOT/VERSION")" == "2.13.4" ]] || abort_after_activation "VERSION did not converge to 2.13.4"
+
+grep -Fq "?v=$CACHE_KEY" "$ROOT/ui-v2.html" || abort_after_activation "ui-v2 cache key was not activated"
+grep -Fq "?v=$CACHE_KEY" "$ROOT/RecruitMatch.html" || abort_after_activation "RecruitMatch cache key was not activated"
+grep -Fq "const TROPHY_RUNTIME_KEY = \"$CACHE_KEY\";" "$ROOT/assets/js/admin/tool-registry.js" || abort_after_activation "Trophy runtime cache key was not activated"
+grep -Fq "assets/js/pages/recruit-match.js?v=$CACHE_KEY" "$ROOT/assets/js/pages/recruit-match-v2121-bootstrap.js" || abort_after_activation "Recruitment controller cache key was not activated"
+
+ACTIVATED=0
+trap - INT TERM HUP
+printf 'SUCCESS: Promote to King v2.13.4 cumulative 2.13.x upgrade is active.\n'
+printf 'Qualified source HEAD: %s\n' "$SOURCE_HEAD"
+printf 'Static cache key: %s\n' "$CACHE_KEY"
+printf 'Rollback backup retained at: %s\n' "$BACKUP_DIR"
