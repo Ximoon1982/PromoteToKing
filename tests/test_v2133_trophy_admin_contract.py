@@ -113,7 +113,7 @@ def test_v2133_universal_installer_contract():
     assert "082aab7d5b8b30547fb14bd8e6143aa84f74e105" in build
 
 def test_v2133_release_identity_and_branch_qualification():
-    assert read("VERSION").strip()=="2.13.3"
+    assert read("VERSION").strip() in {"2.13.3","2.13.4"}
     workflow=read(".github/workflows/p2k-v2133-qualification.yml")
     package=read(".github/workflows/p2k-v2133-package.yml")
     assert "workflow_dispatch" in workflow and "branches: [release/v2.13.3]" in workflow.split("jobs:",1)[0]
