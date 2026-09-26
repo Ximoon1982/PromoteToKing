@@ -101,8 +101,8 @@ def main():
                 "isLeague": league,
                 "leagueAcronyms": ["PCL"] if league else [],
                 "opponentName": f"Opponent {i}",
-                "opponentSlug": f"opponent-{i}",
-                "opponentLogo": "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==",
+                "opponentSlug": "" if i == 5005 else f"opponent-{i}",
+                "opponentLogo": "" if i == 5005 else "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==",
             })
             details[str(i)] = {
                 "id": i,
@@ -119,11 +119,12 @@ def main():
                 "teams": {
                     "p2k": {
                         "name": "Promote to King",
-                        "@id": "https://api.chess.com/pub/club/promote-to-king",
+                        "@id": "" if i == 5005 else "https://api.chess.com/pub/club/promote-to-king",
                         "players": [{"username": "P2KOne", "rating": 1450}],
                     },
                     "opp": {
                         "name": f"Opponent {i}",
+                        "url": f"https://www.chess.com/club/opponent-{i}" if i == 5005 else "",
                         "players": [{"username": "OppOne", "rating": 1425}, {"username": "OppTwo", "rating": 1400}],
                     },
                 },
@@ -135,13 +136,13 @@ def main():
             page = browser.new_page(viewport={"width": 320, "height": 480})
             page.add_init_script(
                 f"window.__P2K_TEST_NOW={fake_now_ms}; Date.now=()=>window.__P2K_TEST_NOW; "
-                f"window.__CARD_FIXTURE={fixture}; window.__CLUB_INDEX_CALLS=0;"
+                f"window.__CARD_FIXTURE={fixture}; window.__CLUB_INDEX_CALLS=0; window.__CLUB_LOGO_CALLS=0;"
             )
             page.route("**/config/site-branding.js*", lambda route: route.fulfill(status=200, content_type="application/javascript", body=""))
             page.route("**/assets/js/site-config.js*", lambda route: route.fulfill(
                 status=200,
                 content_type="application/javascript",
-                body='window.P2K_SITE_CONFIG={clubSlug:"promote-to-king",leagueAcronyms:["PCL"],api:{defaultAttempts:1}};',
+                body='window.P2K_SITE_CONFIG={clubSlug:"promote-to-king",siteName:"Promote to King",leagueAcronyms:["PCL"],api:{defaultAttempts:1}};',
             ))
             page.route("**/assets/js/shared/api-client.js*", lambda route: route.fulfill(
                 status=200,
@@ -150,6 +151,7 @@ def main():
                   window.P2K_API_CLIENT={json:async url=>{
                     const f=window.__CARD_FIXTURE;
                     if(String(url).includes('/pub/club/promote-to-king/matches')) { window.__CLUB_INDEX_CALLS++; throw new Error('DB-first card must not request club match index'); }
+                    if(String(url).includes('/pub/club/opponent-5005')) { window.__CLUB_LOGO_CALLS++; return {icon:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='}; }
                     const m=String(url).match(/\/pub\/match\/(\d+)/);
                     if(m && f.details[m[1]]) {
                       const detail=f.details[m[1]];
@@ -247,6 +249,10 @@ def main():
             assert "Friendly" in page.locator("[data-daily] .pc-badge").first.inner_text()
             assert page.locator('[data-filter="league"]').get_attribute("aria-selected") == "false"
             assert page.locator('[data-filter="friendly"]').get_attribute("aria-selected") == "true"
+            page.wait_for_function("""() => { const card=document.querySelector("[data-daily] .pc-card"); return card && card.querySelector(".pc-match-need")?.textContent !== "Need ?" && !!card.querySelector("img.pc-club-logo"); }""", timeout=5000)
+            assert "Need ?" not in page.locator("[data-daily] .pc-card").first.inner_text()
+            assert page.locator("[data-daily] .pc-card").first.locator("img.pc-club-logo").count() == 1
+            assert page.evaluate("window.__CLUB_LOGO_CALLS") >= 1
 
             # Hover feedback restored from v18 r4.
             card = page.locator("[data-daily] .pc-card").first

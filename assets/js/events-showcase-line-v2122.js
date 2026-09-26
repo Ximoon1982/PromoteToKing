@@ -5,7 +5,7 @@ const rows = document.getElementById("pmWidgetRows");
 const arenaRows = document.getElementById("pmArenaRows");
 const arenaSeparator = document.getElementById("pmArenaDailySeparator");
 const arenaGap = document.getElementById("pmArenaDailyGap");
-let matches = []; let arenaConfig = []; let filter = "league"; let arenaTimer = 0; let arenaCleanupPending = false; let hydratedFilters = new Set();
+let matches = []; let arenaConfig = []; let filter = "league"; let arenaTimer = 0; let arenaCleanupPending = false; let hydratePromises = new Map();
 async function loadState(){ const response=await fetch("api.php?action=state",{credentials:"same-origin",cache:"no-store"}); const payload=await response.json().catch(()=>({})); if(!response.ok||payload?.ok===false) throw new Error(payload?.error?.message||`HTTP ${response.status}`); return payload; }
 function chooseDefault() {
 if (matches.some(m => m.category === "league")) return "league";
@@ -168,8 +168,8 @@ bindRows();
 requestAnimationFrame(()=>{ fitRows(); resizeParent(); });
 }
 async function hydrateFilter(category) {
-if (hydratedFilters.has(category)) return;
-hydratedFilters.add(category);
+if (hydratePromises.has(category)) return hydratePromises.get(category);
+const task=(async()=>{
 const targets = matches.filter(match => match.category === category).slice(0, 4);
 if (!targets.length) return;
 const applyUpdate = updated => {
@@ -181,6 +181,10 @@ render();
 const enriched = await api.enrichMatches(targets,{onUpdate:applyUpdate});
 const byId = new Map(enriched.map(match => [String(match.matchId), match]));
 matches = matches.map(match => byId.get(String(match.matchId)) || match);
+})();
+hydratePromises.set(category,task);
+try { return await task; }
+finally { if(hydratePromises.get(category)===task) hydratePromises.delete(category); }
 }
 async function selectFilter(category) {
 filter=category;
@@ -194,7 +198,7 @@ const selection = await loadState();
 arenaConfig=selection.arenas || [];
 renderArenas(arenaConfig);
 startArenaClock();
-hydratedFilters = new Set();
+hydratePromises = new Map();
 const localCatalog = api.normalizeCatalog(selection.catalog || []);
 const byId = new Map(localCatalog.map(match => [String(match.matchId), match]));
 matches = (selection.items || [])

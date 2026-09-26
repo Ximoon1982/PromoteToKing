@@ -8,10 +8,10 @@ DIR="$OUT/$PKG"
 ZIP="$OUT/$PKG.zip"
 TEMPLATE="$ROOT/tools/release/v2134/install-promote-to-king-v2.13.4-universal.sh.in"
 CANON="$ROOT/tools/release/v2134/canonical-hash.py"
-STAMPER="$ROOT/tools/release/v2133/stamp-runtime-cache-key.py"
+STAMPER="$ROOT/tools/release/v2134/stamp-runtime-cache-key.py"
 EARLIEST="9c2f08e3f59945ae983f30d6b214f10140dbd345"
 HEAD="$(git -C "$ROOT" rev-parse HEAD)"
-BUILD_ID="v2134-trophy-admin-performance"
+BUILD_ID="v2134-trophy-admin-performance-widget-hydration"
 
 [[ "$(cat "$ROOT/VERSION")" == "2.13.4" ]] || { echo 'VERSION must be 2.13.4' >&2; exit 1; }
 git -C "$ROOT" merge-base --is-ancestor "$EARLIEST" "$HEAD" || { echo "HEAD must descend from qualified v2.13.0 $EARLIEST" >&2; exit 1; }
@@ -33,6 +33,10 @@ FILES=(
   assets/trophy-gallery/engraving/editor-v2121.html
   assets/js/pages/recruit-match-v2121-bootstrap.js
   assets/js/pages/recruit-match.js
+  assets/js/shared/events-showcase-core.js
+  assets/js/events-showcase-line-v2122.js
+  server/events-showcase/public/embed.php
+  server/events-showcase/public/embed-card.php
   server/team-points/sql/analytics-schema.sql
   server/team-points/src/McaResultsCronService.php
   server/team-points/src/Repository.php
@@ -67,6 +71,11 @@ grep -Fq "../assets/trophy-gallery/trophy-gallery-r5fix3.8.css?v=$CACHE_KEY" "$D
 grep -Fq 'data-v2121-preview' "$DIR/payload/assets/js/admin/trophy-gallery-admin-view-v2121.js"
 grep -Fq 'Use in gallery' "$DIR/payload/assets/trophy-gallery/engraving/editor-v2121.html"
 grep -Fq 'Download image' "$DIR/payload/assets/trophy-gallery/engraving/editor-v2121.html"
+grep -Fq "assets/js/shared/events-showcase-core.js?v=$CACHE_KEY" "$DIR/payload/server/events-showcase/public/embed.php"
+grep -Fq "assets/js/events-showcase-line-v2122.js?v=$CACHE_KEY" "$DIR/payload/server/events-showcase/public/embed.php"
+grep -Fq "assets/js/shared/events-showcase-core.js?v=$CACHE_KEY" "$DIR/payload/server/events-showcase/public/embed-card.php"
+grep -Fq 'function teamClubSlug(team)' "$DIR/payload/assets/js/shared/events-showcase-core.js"
+grep -Fq 'hydratePromises=new Map()' "$DIR/payload/server/events-showcase/public/embed-card.php"
 grep -Fq 'if(!force&&adminDetailDefinition())return' "$DIR/payload/assets/js/admin/admin-shell.js"
 grep -Fq 'function loadTrophyAdminV2134()' "$DIR/payload/assets/js/admin/tool-registry.js"
 
@@ -124,6 +133,7 @@ REFS_2133=(
   fe5feaa9d0cd15fec7a72de704dcd72cdbba4d7a
 )
 REFS_2134=(
+  abc70897db538935459d1c4ae7710433786a10d7
   "$HEAD"
 )
 
@@ -178,7 +188,8 @@ Static asset cache key: $CACHE_KEY
 Supported installed versions: 2.13.0, 2.13.1, 2.13.2, 2.13.3, 2.13.4.
 
 This is a cumulative 2.13.x -> 2.13.4 installer. It retains all qualified v2.13.3
-corrections and adds the Trophy Gallery administration load-performance increment.
+corrections, the Trophy Gallery administration load-performance increment, and the
+Events Showcase display-time friendly-match Need/logo hydration correction.
 It preserves config, data, storage and CRON.
 
 Install:

@@ -10,11 +10,12 @@ from pathlib import Path
 CACHE_PARAM = re.compile(r'([?&]v=)[^"\'&<>\s]+')
 TROPHY_RUNTIME = re.compile(r'const\s+TROPHY_RUNTIME_KEY\s*=\s*"[^"]*"\s*;')
 BOOTSTRAP_CACHE = re.compile(r'(assets/js/pages/(?:recruit-match-v2-core|recruit-match)\.js\?v=)[^"\']+')
+CACHE_QUERY_PATHS = {"server/events-showcase/public/embed.php", "server/events-showcase/public/embed-card.php"}
 
 
 def canonical_bytes(logical_path: str, raw: bytes) -> bytes:
     text = raw.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
-    if logical_path.lower().endswith((".html", ".htm")) or logical_path == "assets/js/admin/tool-registry.js":
+    if logical_path.lower().endswith((".html", ".htm")) or logical_path == "assets/js/admin/tool-registry.js" or logical_path in CACHE_QUERY_PATHS:
         text = CACHE_PARAM.sub(r'\1__P2K_CACHE__', text)
     if logical_path == "assets/js/admin/tool-registry.js":
         text = TROPHY_RUNTIME.sub('const TROPHY_RUNTIME_KEY = "__P2K_CACHE__";', text)

@@ -48,13 +48,18 @@ jobs:
           node --check assets/js/admin/trophy-gallery-poc.js
           node --check assets/js/pages/recruit-match.js
           node --check assets/js/pages/recruit-match-v2121-bootstrap.js
+          node --check assets/js/shared/events-showcase-core.js
+          node --check assets/js/events-showcase-line-v2122.js
           php -l server/trophy-gallery/src/TrophyGalleryStore.php
+          php -l server/events-showcase/public/embed.php
+          php -l server/events-showcase/public/embed-card.php
           bash -n tools/release/v2134/build-universal-2.13x.sh
           bash -n tools/release/v2134/install-promote-to-king-v2.13.4-universal.sh.in
-          python -m py_compile tools/release/v2134/canonical-hash.py tools/release/v2133/stamp-runtime-cache-key.py
+          python -m py_compile tools/release/v2134/canonical-hash.py tools/release/v2134/stamp-runtime-cache-key.py
           python -m pytest -q tests/test_v2133_trophy_admin_contract.py
           python -m pytest -q tests/test_v2134_trophy_admin_performance.py
           node tests/test_v2134_trophy_loader.js
+          python tests/test_events_showcase_contract.py
           python -m pytest -q tests/test_v2132_rating_cap_backfill.py
           node tests/test_v2132_backfill_payload.js
           P2K_TEST_DB_HOST=127.0.0.1 P2K_TEST_DB_PORT=3306 P2K_TEST_DB_USER=root P2K_TEST_DB_PASS=root php tests/test_v2132_rating_cap_backfill.php

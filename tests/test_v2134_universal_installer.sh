@@ -17,6 +17,8 @@ FILES=(
   assets/js/admin/trophy-gallery-r5fix3.8.js assets/trophy-gallery/trophy-gallery-r5fix3.8.css
   assets/trophy-gallery/engraving/editor-v2121.html assets/js/pages/recruit-match-v2121-bootstrap.js
   assets/js/pages/recruit-match.js server/team-points/sql/analytics-schema.sql
+  assets/js/shared/events-showcase-core.js assets/js/events-showcase-line-v2122.js
+  server/events-showcase/public/embed.php server/events-showcase/public/embed-card.php
   server/team-points/src/McaResultsCronService.php server/team-points/src/Repository.php
   server/team-points-green/sql/core-schema.sql server/team-points-green/src/GreenCompatibility.php
   server/team-points-green/src/GreenRepository.php server/team-points-green/public/max-rating-backfill.php
@@ -75,6 +77,7 @@ preflight_ref 2.13.3 675ef78011d749730236af5da9d75f4069dfb102 1
 preflight_ref 2.13.3 082aab7d5b8b30547fb14bd8e6143aa84f74e105 1
 preflight_ref 2.13.3 f0b11fd53dac013852a1e47c163fc4d2c3659d1c 1
 preflight_ref 2.13.3 fe5feaa9d0cd15fec7a72de704dcd72cdbba4d7a 0
+preflight_ref 2.13.4 abc70897db538935459d1c4ae7710433786a10d7 0
 preflight_ref 2.13.4 "$(git -C "$ROOT" rev-parse HEAD)" 0
 
 DRIFT="$TMP/drift"
