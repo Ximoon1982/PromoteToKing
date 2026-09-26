@@ -1,0 +1,29 @@
+name: P2K v2.13.4 package
+
+on:
+  push:
+    branches: [release/v2.13.4]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Build exact universal incremental installer
+        run: |
+          bash tools/release/v2134/build-universal-2.13x.sh "$RUNNER_TEMP/v2134"
+          unzip -t "$RUNNER_TEMP/v2134/PromoteToKing_v2.13.4_INCREMENTAL_FROM_2.13.x.zip"
+          sha256sum "$RUNNER_TEMP/v2134/PromoteToKing_v2.13.4_INCREMENTAL_FROM_2.13.x.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PromoteToKing-v2.13.4-universal-${{ github.sha }}
+          path: ${{ runner.temp }}/v2133/PromoteToKing_v2.13.4_INCREMENTAL_FROM_2.13.x.zip
+          if-no-files-found: error
+          retention-days: 30
