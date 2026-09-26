@@ -75,20 +75,36 @@ return new Promise((resolve, reject) => {
  script.onload = resolve; script.onerror = () => reject(new Error(`Unable to load ${path}`)); document.head.appendChild(script);
 });
 }
-async function loadTrophyGalleryV2121() {
-try {
- await loadTrophyScript("p2kTrophyAdminViewV2121", "assets/js/admin/trophy-gallery-admin-view-v2121.js");
- await loadTrophyScript("p2kTrophyMatchesV2121", "assets/js/admin/trophy-gallery-matches-v2121.js");
- await loadTrophyScript("p2kTrophyEngraverV2121", "assets/js/admin/trophy-gallery-engraver-v2121.js");
- await loadTrophyScript("p2kTrophyAdminV2121", "assets/js/admin/trophy-gallery-admin-v2121.js");
- if (!window.P2K_TROPHY_GALLERY_POC) await loadTrophyScript("p2kTrophyGalleryPocScript", "assets/js/admin/trophy-gallery-poc.js");
+const trophyPocReady = loadTrophyScript("p2kTrophyGalleryPocScript", "assets/js/admin/trophy-gallery-poc.js")
+.then(() => {
  window.P2K_TROPHY_GALLERY_POC?.mount?.(context);
- window.P2K_TROPHY_ADMIN_V2121?.mount?.();
- await loadTrophyScript("p2kTrophyPublicV2121", "assets/js/admin/trophy-gallery-public-v2121.js");
- await loadTrophyScript("p2kTrophyCardPresentationV2122", "assets/js/admin/trophy-card-presentation-v2122.js");
-} catch (error) { console.error("P2K Trophy v2.12.1 failed to initialize", error); }
+ void Promise.all([
+  loadTrophyScript("p2kTrophyPublicV2121", "assets/js/admin/trophy-gallery-public-v2121.js"),
+  loadTrophyScript("p2kTrophyCardPresentationV2122", "assets/js/admin/trophy-card-presentation-v2122.js")
+ ]).catch(error => console.error("P2K Trophy public presentation failed to initialize", error));
+})
+.catch(error => { console.error("P2K Trophy public runtime failed to initialize", error); throw error; });
+let trophyAdminReady = null;
+function loadTrophyAdminV2134() {
+ if (window.P2K_TROPHY_ADMIN_V2121) { window.P2K_TROPHY_ADMIN_V2121.mount?.(); return Promise.resolve(); }
+ if (trophyAdminReady) return trophyAdminReady;
+ trophyAdminReady = Promise.all([
+  trophyPocReady,
+  loadTrophyScript("p2kTrophyAdminViewV2121", "assets/js/admin/trophy-gallery-admin-view-v2121.js"),
+  loadTrophyScript("p2kTrophyMatchesV2121", "assets/js/admin/trophy-gallery-matches-v2121.js"),
+  loadTrophyScript("p2kTrophyEngraverV2121", "assets/js/admin/trophy-gallery-engraver-v2121.js")
+ ]).then(() => loadTrophyScript("p2kTrophyAdminV2121", "assets/js/admin/trophy-gallery-admin-v2121.js"))
+ .then(() => window.P2K_TROPHY_ADMIN_V2121?.mount?.())
+ .catch(error => { trophyAdminReady = null; console.error("P2K Trophy admin v2.13.4 failed to initialize", error); throw error; });
+ return trophyAdminReady;
 }
-void loadTrophyGalleryV2121();
+function maybeLoadTrophyAdmin(event=null) {
+ const nativeKey=String(event?.detail?.nativeKey||"");
+ const active=Boolean(document.querySelector('#adminShellNativeDetailHost[data-native-detail="trophy-gallery"]:not([hidden])'));
+ if(nativeKey==="trophy-gallery"||active)void loadTrophyAdminV2134();
+}
+window.addEventListener("p2k-admin-shell-route",maybeLoadTrophyAdmin);
+queueMicrotask(()=>maybeLoadTrophyAdmin());
 
 function loadMatchRecruitmentAccessV2121() {
 if (document.getElementById("p2kMatchRecruitmentAccessV2121")) return;
