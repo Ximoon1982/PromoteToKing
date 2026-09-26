@@ -19,9 +19,12 @@ def test_trophy_gallery_is_loaded_through_normal_registry():
     assert "P2K_TROPHY_GALLERY_POC" in runtime
     assert "mountAdmin" in runtime and "mountPublic" in runtime
     current = text("assets/js/admin/tool-registry.js")
-    assert 'await loadTrophyScript("p2kTrophyGalleryPocScript", "assets/js/admin/trophy-gallery-poc.js")' in current
+    assert 'const trophyPocReady = loadTrophyScript("p2kTrophyGalleryPocScript", "assets/js/admin/trophy-gallery-poc.js")' in current
     assert 'script.src = `${path}?v=${TROPHY_RUNTIME_KEY}`' in current
-    assert 'void loadTrophyGalleryV2121()' in current
+    assert 'window.P2K_TROPHY_GALLERY_POC?.mount?.(context)' in current
+    assert 'function loadTrophyAdminV2134()' in current
+    assert 'window.addEventListener("p2k-admin-shell-route",maybeLoadTrophyAdmin)' in current
+    assert 'void loadTrophyGalleryV2121()' not in current
 
 def test_trophy_gallery_uses_standard_team_native_detail():
     shell = text("assets/js/admin/admin-shell.js")
