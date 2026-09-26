@@ -83,7 +83,7 @@ const trophyPocReady = loadTrophyScript("p2kTrophyGalleryPocScript", "assets/js/
   loadTrophyScript("p2kTrophyCardPresentationV2122", "assets/js/admin/trophy-card-presentation-v2122.js")
  ]).catch(error => console.error("P2K Trophy public presentation failed to initialize", error));
 })
-.catch(error => { console.error("P2K Trophy public runtime failed to initialize", error); throw error; });
+.catch(error => { console.error("P2K Trophy public runtime failed to initialize", error); return null; });
 let trophyAdminReady = null;
 function loadTrophyAdminV2134() {
  if (window.P2K_TROPHY_ADMIN_V2121) { window.P2K_TROPHY_ADMIN_V2121.mount?.(); return Promise.resolve(); }
