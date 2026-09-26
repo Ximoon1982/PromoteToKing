@@ -172,7 +172,9 @@ function adminShellOpenDetail(category,detail,tab="",{updateHistory=true,replace
 }
 function adminShellCloseDetail({updateHistory=true}={}){
   setIntegratedFrameActivity("");
-  state.adminDetail="";state.adminDetailTab="";state.adminToolTab="";adminShellActivate();if(updateHistory)writeNavigationState();
+  state.adminDetail="";state.adminDetailTab="";state.adminToolTab="";adminShellActivate();
+  if(!state.adminShellLoadedAt)void loadAdminShellMetrics();
+  if(updateHistory)writeNavigationState();
 }
 function renderAdminShellDetail(){
   const detailHost=byId("adminShellDetail");if(!detailHost)return;
@@ -221,7 +223,7 @@ function adminShellActivate(){
 }
 async function adminShellJSON(url){const response=await fetch(url,{credentials:"same-origin",cache:"no-store"});const payload=await response.json();if(!response.ok||payload?.ok===false)throw new Error(payload?.error?.message||`HTTP ${response.status}`);return payload}
 async function loadAdminShellMetrics(force=false){
-const host=byId("adminDashboardHost");if(!host||!byId("adminDashboardPanel")||!state.admin)return;if(state.adminShellLoading)return;if(!force&&state.adminShellLoadedAt&&Date.now()-state.adminShellLoadedAt<30000)return;state.adminShellLoading=true;setText("adminShellOverallStatus","Refreshing live administration data…");
+const host=byId("adminDashboardHost");if(!host||!byId("adminDashboardPanel")||!state.admin)return;if(!force&&adminDetailDefinition())return;if(state.adminShellLoading)return;if(!force&&state.adminShellLoadedAt&&Date.now()-state.adminShellLoadedAt<30000)return;state.adminShellLoading=true;setText("adminShellOverallStatus","Refreshing live administration data…");
 const requests={
 team:()=>window.P2K_TEAM_POINTS_CLIENT?.publicRequest?.("team",{_fresh:Date.now()})||adminShellJSON("server/team-points/public/public.php?action=team"),
 live:()=>adminShellJSON("server/team-points/public/public.php?action=live-team"),
