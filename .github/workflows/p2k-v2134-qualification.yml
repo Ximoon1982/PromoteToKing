@@ -1,0 +1,103 @@
+name: P2K v2.13.4 qualification
+
+on:
+  push:
+    branches: [release/v2.13.4]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env: {MARIADB_ROOT_PASSWORD: root}
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mariadb-admin ping -h localhost -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Install MariaDB PHP driver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y php-mysql
+          php -m | grep -qi pdo_mysql
+      - name: Install browser regression dependencies
+        run: |
+          python -m pip install --disable-pip-version-check -r tests/requirements.txt
+          python -m playwright install --with-deps chromium
+          sudo ln -sf "$(find "$HOME/.cache/ms-playwright" -type f -name chrome -path '*chrome-linux*' | head -1)" /usr/bin/chromium
+      - name: v2.13.4 syntax and performance contracts
+        run: |
+          test "$(cat VERSION)" = "2.13.4"
+          node --check assets/js/admin/admin-shell.js
+          node --check assets/js/admin/tool-registry.js
+          node --check assets/js/admin/trophy-gallery-admin-v2121.js
+          node --check assets/js/admin/trophy-gallery-engraver-v2121.js
+          node --check assets/js/admin/trophy-gallery-poc.js
+          node --check assets/js/pages/recruit-match.js
+          node --check assets/js/pages/recruit-match-v2121-bootstrap.js
+          php -l server/trophy-gallery/src/TrophyGalleryStore.php
+          bash -n tools/release/v2134/build-universal-2.13x.sh
+          bash -n tools/release/v2134/install-promote-to-king-v2.13.4-universal.sh.in
+          python -m py_compile tools/release/v2134/canonical-hash.py tools/release/v2133/stamp-runtime-cache-key.py
+          python -m pytest -q tests/test_v2133_trophy_admin_contract.py
+          python -m pytest -q tests/test_v2134_trophy_admin_performance.py
+          node tests/test_v2134_trophy_loader.js
+          python -m pytest -q tests/test_v2132_rating_cap_backfill.py
+          node tests/test_v2132_backfill_payload.js
+          P2K_TEST_DB_HOST=127.0.0.1 P2K_TEST_DB_PORT=3306 P2K_TEST_DB_USER=root P2K_TEST_DB_PASS=root php tests/test_v2132_rating_cap_backfill.php
+      - name: Universal 2.13.x installer baseline gate
+        run: bash tests/test_v2134_universal_installer.sh
+      - name: Build v2.13.4 universal incremental installer
+        run: |
+          bash tools/release/v2134/build-universal-2.13x.sh "$RUNNER_TEMP/v2134-qual"
+          unzip -t "$RUNNER_TEMP/v2134-qual/PromoteToKing_v2.13.4_INCREMENTAL_FROM_2.13.x.zip"
+          test -s "$RUNNER_TEMP/v2134-qual/PromoteToKing_v2.13.4_INCREMENTAL_FROM_2.13.x/ASSET_CACHE_KEY.txt"
+          test -s "$RUNNER_TEMP/v2134-qual/PromoteToKing_v2.13.4_INCREMENTAL_FROM_2.13.x/BASELINES.tsv"
+          sha256sum "$RUNNER_TEMP/v2134-qual/PromoteToKing_v2.13.4_INCREMENTAL_FROM_2.13.x.zip"
+      - name: Trophy admin mount-race browser gate
+        run: python tests/browser_gate_trophy_admin_mount_race_v2133.py
+      - name: Focused Trophy Gallery v2.13.3 browser lifecycle
+        run: python tests/browser_gate_trophy_gallery_v2121.py
+      - name: Events Showcase and Trophy browser gate
+        run: python tests/browser_gate_v2122.py
+      - name: Events Showcase card renderer browser gate
+        run: python tests/browser_gate_events_showcase_card_v2122.py
+      - name: Events Showcase admin editor browser gate
+        run: python tests/browser_gate_events_showcase_admin_v2122.py
+      - name: Match Recruitment controller readiness browser gate
+        run: python tests/browser_gate_recruit_match_ready_v2122.py
+      - name: Match Recruitment native admin detail browser gate
+        run: python tests/browser_gate_match_recruitment_admin_v2122.py
+      - name: Existing Match Recruitment browser gate
+        run: python tests/browser_gate_recruit_match_v2.py
+      - name: Existing Trophy overlay/browser gates
+        run: |
+          python tests/browser_gate_trophy_gallery_overlay.py
+          python tests/browser_gate_trophy_gallery_preview_containment.py
+          python tests/browser_gate_v2120_trophy_mobile_engraver.py
+      - name: Inherited architecture and canonical audit
+        run: |
+          python tools/test-suite/architecture_gate.py
+          python tools/test-suite/p2k_test_suite.py audit --json
+      - name: Full canonical P2K regression
+        run: |
+          set +e
+          python tools/test-suite/p2k_test_suite.py regression > "$RUNNER_TEMP/p2k-v2134-regression.log" 2>&1
+          rc=$?
+          tail -n 300 "$RUNNER_TEMP/p2k-v2134-regression.log"
+          exit "$rc"
+      - name: Full canonical P2K browser regression
+        run: python tools/test-suite/p2k_test_suite.py browser
