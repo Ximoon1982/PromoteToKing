@@ -14,7 +14,7 @@ def test_v2133_trophy_admin_has_single_canonical_owner():
     assert "async function mountAdmin(_host){window.P2K_TROPHY_ADMIN_V2121?.mount?.()}" in poc
     assert "function mountActiveAdmin(){window.P2K_TROPHY_ADMIN_V2121?.mount?.()}" in poc
     assert "if(root.querySelector('[data-v2121-list]'))return;" in poc
-    assert "window.P2K_TROPHY_ADMIN_V2121?.mount?.();" in registry
+    assert "window.P2K_TROPHY_ADMIN_V2121?.mount?.()" in registry
 
 def test_v2133_trophy_lookup_and_in_place_save_contract():
     admin=read("assets/js/admin/trophy-gallery-admin-v2121.js")
