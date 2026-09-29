@@ -236,7 +236,7 @@ for path in "${FILES[@]}"; do
   [[ -n "$expected" && "$got" == "$expected" ]] || abort_after_activation "Target hash mismatch after activation: $path"
   printf '  %s: OK\n' "$path"
 done
-[[ "$(tr -d '\r\n' < "$ROOT/VERSION")" == "2.13.4" ]] || abort_after_activation "VERSION did not converge to 2.13.4"
+[[ "$(tr -d '\r\n' < "$ROOT/VERSION")" == "2.13.5" ]] || abort_after_activation "VERSION did not converge to 2.13.5"
 
 grep -Fq "?v=$CACHE_KEY" "$ROOT/ui-v2.html" || abort_after_activation "ui-v2 cache key was not activated"
 grep -Fq "?v=$CACHE_KEY" "$ROOT/RecruitMatch.html" || abort_after_activation "RecruitMatch cache key was not activated"
