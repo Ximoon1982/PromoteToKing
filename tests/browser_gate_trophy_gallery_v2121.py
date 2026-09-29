@@ -253,7 +253,17 @@ def main() -> None:
             assert modal_src == vignette_src, (vignette_src, modal_src)
             page.click(f"{host} [data-v2121-preview]")
             page.wait_for_selector("#p2kTrophyAdminCombinedPreviewV2121:not([hidden])", timeout=5000)
-            expect(page.locator("#p2kTrophyAdminCombinedPreviewV2121 .p2k-trophy-preview-output")).to_have_count(2)
+            preview_card = page.locator("#p2kTrophyAdminCombinedPreviewV2121 .p2k-trophy-card")
+            expect(preview_card).to_have_count(1)
+            page.wait_for_selector("#p2kTrophyAdminCombinedPreviewV2121 .p2k-trophy-card[data-r538-card]", timeout=5000)
+            assert preview_card.locator("[data-r538-title]").inner_text() == "New v2.12.1 Trophy"
+            preview_card.locator("[data-open]").click()
+            page.wait_for_selector("#p2kTrophyModal:not([hidden])", timeout=5000)
+            assert page.locator("#p2kTrophyModal h2").inner_text() == "New v2.12.1 Trophy"
+            assert page.locator("#p2kTrophyModal [data-enlarge]").count() == 0
+            assert page.locator("#p2kTrophyModal dt").evaluate_all(
+                "els => els.filter(el => el.textContent.trim() === 'Award').length") == 0
+            page.locator("#p2kTrophyModal [data-close]").click()
             page.click("#p2kTrophyAdminCombinedPreviewV2121 [data-v2121-preview-close]")
             page.select_option(f"{host} [name='modal_media_mode']", "custom")
             assert not page.locator(f"{host} [data-v2121-file='modal']").is_disabled()
