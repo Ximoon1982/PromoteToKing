@@ -10,7 +10,7 @@ const tools = [
 { category: "matches", icon: "+", title: "Match Creation", description: "Review match creation activity, opponents, scoring and player participation.", route: "creation" },
 { category: "matches", icon: "◎", title: "Open Match Analyzer", description: "Analyze one match, compare teams and review projections.", route: "open" },
 { category: "matches", icon: "↗", title: "Recruitment Assistant", description: "Prepare targeted recruitment messages for selected matches with availability/load context and an explainable recruitment-confidence score.", route: "recruit" },
-{ category: "matches", icon: "%", title: "Recruitment confidence", description: "Inspect the Match Assistant recommendation score and its underlying justification for each suggested match.", route: "find" },
+{ category: "matches", icon: "%", title: "Recruitment confidence", description: "Review the Recruitment Assistant's candidate verification coverage and explainable recommendation-confidence result.", route: "recruit" },
 { category: "matches", icon: "▦", title: "Recruitment demand planner", description: "Combine upcoming registrations into one rating-range demand plan with risk and win-probability indicators.", path: "RecruitmentDemandPlanner.html" },
 { category: "players", icon: "★", title: "Team Points", description: "Seed, incrementally refresh, repair, monitor, search and export durable player and club point totals.", route: "teamPoints" },
 { category: "players", icon: "✓", title: "Database consistency", description: "Run resumable arithmetic, former-member or full audits and repair confirmed issues in small rollback-backed batches.", adminTool: "reconciliation" },
@@ -50,12 +50,19 @@ url.searchParams.set("ui","v2");url.searchParams.set("page",page||"dashboard");
 Object.entries(extra).forEach(([key,value])=>{if(value!=null&&String(value)!=="")url.searchParams.set(key,String(value))});
 return url.href;
 }
+function standaloneToolHref(route,{classic=false}={}) {
+const url=new URL(route,location.href);
+applyOAuthContext(url);
+if(!url.searchParams.has("release"))url.searchParams.set("release",String(config.version||"2.10.6.11"));
+if(classic)url.searchParams.set("ui","v1");
+return url.href;
+}
 function toolHref(tool) {
 if(tool.adminTool)return integratedAdminHref(tool.adminTool,tool.adminContext?{adminContext:tool.adminContext}:{});
 if(tool.publicPage)return publicPageHref(tool.publicPage,tool.publicParams||{});
-if(tool.path)return preservedURL(tool.path).href;
-if(tool.classic){const url=preservedURL("index.html",{classic:true});if(tool.classicAdminTab)url.searchParams.set("adminTab",tool.classicAdminTab);return url.href}
-return preservedURL(config.routes?.[tool.route]||routeFallback(tool.route)).href;
+if(tool.path)return standaloneToolHref(tool.path);
+if(tool.classic){const url=new URL(standaloneToolHref("index.html",{classic:true}));if(tool.classicAdminTab)url.searchParams.set("adminTab",tool.classicAdminTab);return url.href}
+return standaloneToolHref(config.routes?.[tool.route]||routeFallback(tool.route));
 }
 function renderTools() {
 const host = byId("adminToolGrid");
