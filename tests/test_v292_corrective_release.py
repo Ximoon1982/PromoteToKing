@@ -15,13 +15,14 @@ def test_v292_identity_and_additive_schema_migrations():
     assert 'rated_board_count' in text('server/team-points/sql/analytics-migration-v2.9.2.sql')
 
 def test_v292_public_order_admin_history_and_integrated_tool_context():
-    ui=text('ui-v2.html'); dash=text('assets/js/pages/dashboard-v2.js')
+    ui=text('ui-v2.html'); dash=text('assets/js/pages/dashboard-v2.js'); tools=text('assets/js/admin/tool-registry.js')
     assert ui.index('data-public-page="hall"') < ui.index('data-public-page="insights"')
     assert 'state.adminSubtab = navigation.adminSubtab || "upcoming"' in dash
     assert 'state.adminContext = navigation.adminContext || ""' in dash
     assert 'url.searchParams.set("adminContext", state.adminContext)' in dash
     assert 'current.searchParams.set("tab", state.adminContext)' in dash
-    assert 'tool.adminTool ? integratedAdminHref' in dash
+    assert 'function toolHref(tool)' in tools
+    assert 'if(tool.adminTool)return integratedAdminHref' in tools
 
 def test_v292_achievement_breadth_contract_remains_available_without_deleting_legacy_keys():
     cat=text('server/team-points/src/AchievementCatalog.php'); builder=text('server/team-points/src/AnalyticsBuilder.php')
