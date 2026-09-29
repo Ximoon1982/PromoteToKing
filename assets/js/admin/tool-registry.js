@@ -10,7 +10,7 @@ const tools = [
 { category: "matches", icon: "+", title: "Match Creation", description: "Review match creation activity, opponents, scoring and player participation.", route: "creation" },
 { category: "matches", icon: "◎", title: "Open Match Analyzer", description: "Analyze one match, compare teams and review projections.", route: "open" },
 { category: "matches", icon: "↗", title: "Recruitment Assistant", description: "Prepare targeted recruitment messages for selected matches with availability/load context and an explainable recruitment-confidence score.", route: "recruit" },
-{ category: "matches", icon: "%", title: "Recruitment confidence", description: "Use strength, lineup coverage, rating freshness and member availability to explain confidence in each recruitment recommendation.", route: "recruit" },
+{ category: "matches", icon: "%", title: "Recruitment confidence", description: "Inspect the Match Assistant recommendation score and its underlying justification for each suggested match.", route: "find" },
 { category: "matches", icon: "▦", title: "Recruitment demand planner", description: "Combine upcoming registrations into one rating-range demand plan with risk and win-probability indicators.", path: "RecruitmentDemandPlanner.html" },
 { category: "players", icon: "★", title: "Team Points", description: "Seed, incrementally refresh, repair, monitor, search and export durable player and club point totals.", route: "teamPoints" },
 { category: "players", icon: "✓", title: "Database consistency", description: "Run resumable arithmetic, former-member or full audits and repair confirmed issues in small rollback-backed batches.", adminTool: "reconciliation" },
@@ -18,11 +18,11 @@ const tools = [
 { category: "players", icon: "▥", title: "Team depth visualization", description: "Compare active, available and overloaded member depth across 100-point Daily and Chess960 rating bands.", adminTool: "intelligence", adminContext: "depth" },
 { category: "players", icon: "◉", title: "Member activity & availability", description: "Monitor active/cooling/inactive members, current load, availability score and contribution efficiency.", adminTool: "intelligence", adminContext: "members" },
 { category: "players", icon: "Σ", title: "Member contribution profiles", description: "Review Club Points share, points per game, win rate, activity and availability through the shared member-intelligence projection and unified profile.", adminTool: "intelligence", adminContext: "members" },
-{ category: "players", icon: "🏅", title: "Achievement challenges", description: "Track each member’s nearest unearned Daily, Live and MCA milestones from the unified profile and personalized home.", adminTool: "intelligence", adminContext: "members" },
+{ category: "players", icon: "🏅", title: "Achievement challenges", description: "Track the authenticated member’s nearest unearned Daily, Live and MCA milestones on the personalized home.", publicPage: "dashboard" },
 { category: "players", icon: "♙", title: "Unified player intelligence", description: "Use shared player data across Hall, Achievements, Insights and Recruitment. Operational activity, availability and contribution intelligence remains in Administration; player-facing profiles keep achievements and challenges.", adminTool: "intelligence", adminContext: "members" },
 { category: "players", icon: "⌁", title: "Historical snapshots / time travel", description: "Review compact daily historical snapshots of members, points, matches, boards, activity and rating coverage.", adminTool: "intelligence", adminContext: "snapshots" },
 { category: "players", icon: "♜", title: "Live ranks computation", description: "Upload CSV source files for MCAs, process scores and review possible renamed accounts.", adminTool: "live-ranks" },
-{ category: "opponents", icon: "↻", title: "Opponent maintenance", description: "Refresh club names, detect renamed or disabled opponents and review opponent intelligence in the integrated Administration context.", adminTool: "intelligence", adminContext: "opponents" },
+{ category: "opponents", icon: "↻", title: "Opponent maintenance", description: "Refresh club names, detect renamed or disabled opponents and apply confirmed opponent metadata updates.", path: "TeamPointsAdmin.html?tab=opponents" },
 { category: "opponents", icon: "◇", title: "Opponent intelligence profiles", description: "Review recurring opponent frequency, outcomes, current overlap, recency and historical win rates.", adminTool: "intelligence", adminContext: "opponents" },
 { category: "team", icon: "♛", title: "Tournament management", description: "Refresh, reinitialize and validate the tournament and podium archive.", path: "TournamentManagement.html" },
 { category: "team", icon: "▤", title: "League and season centre", description: "Review database-backed league records, seasons, Club Points, boards and opponent history.", path: "LeagueSeasonCenter.html" },
@@ -38,11 +38,25 @@ const tools = [
 { category: "monitoring", icon: "⌬", title: "Performance telemetry", description: "Review endpoint call volume, errors, p50/p95/max latency and peak memory from protected runtime telemetry.", adminTool: "intelligence", adminContext: "performance" },
 { category: "monitoring", icon: "↻", title: "ACAMR effectiveness", description: "Measure authenticated client-assisted refresh activity, claims, distinct sessions/members and authoritative work yield.", adminTool: "intelligence", adminContext: "acamr" },
 { category: "team", icon: "⌁", title: "Explainable Club Points forecast", description: "Review low/medium/high year-end forecasts with recent-rate and trend drivers exposed.", adminTool: "intelligence", adminContext: "forecast" },
-{ category: "team", icon: "⌂", title: "Personalized authenticated home", description: "Preview the authenticated Dashboard member experience with club/rank context and achievement challenges; operational Member Intelligence remains admin/internal only.", path: "ui-v2.html" },
-{ category: "monitoring", icon: "⌁", title: "Tracked match data", description: "Use the classic Administration center to manage snapshots and history.", classic: true },
+{ category: "team", icon: "⌂", title: "Personalized authenticated home", description: "Open the authenticated Dashboard member experience with club/rank context and achievement challenges.", publicPage: "dashboard" },
+{ category: "monitoring", icon: "⌁", title: "Tracked match data", description: "Open the classic tracked-match manager directly to manage snapshots and lineup history.", classic: true, classicAdminTab: "management" },
 { category: "more", icon: "♔", title: "Classic administrator tabs", description: "Return to the classic interface and its original tab workflow.", classic: true }
 ];
 const categoryLabels = { matches: "Matches", players: "Players", team: "Team", opponents: "Opponents", monitoring: "Monitoring", more: "More" };
+function publicPageHref(page, extra = {}) {
+const url=preservedURL("ui-v2.html");
+["view","adminCategory","adminDetail","adminDetailTab","adminTool","adminContext","adminToolTab","assistant","assistantFilter"].forEach(key=>url.searchParams.delete(key));
+url.searchParams.set("ui","v2");url.searchParams.set("page",page||"dashboard");
+Object.entries(extra).forEach(([key,value])=>{if(value!=null&&String(value)!=="")url.searchParams.set(key,String(value))});
+return url.href;
+}
+function toolHref(tool) {
+if(tool.adminTool)return integratedAdminHref(tool.adminTool,tool.adminContext?{adminContext:tool.adminContext}:{});
+if(tool.publicPage)return publicPageHref(tool.publicPage,tool.publicParams||{});
+if(tool.path)return preservedURL(tool.path).href;
+if(tool.classic){const url=preservedURL("index.html",{classic:true});if(tool.classicAdminTab)url.searchParams.set("adminTab",tool.classicAdminTab);return url.href}
+return preservedURL(config.routes?.[tool.route]||routeFallback(tool.route)).href;
+}
 function renderTools() {
 const host = byId("adminToolGrid");
 if (!host) return;
@@ -58,7 +72,7 @@ const description = document.createElement("p"); description.textContent = tool.
 const foot = document.createElement("div"); foot.className = "dashboard-tool-foot";
 const category = document.createElement("span"); category.className = "dashboard-tool-category"; category.textContent = categoryLabels[tool.category];
 const link = document.createElement("a"); link.className = "dashboard-button"; link.textContent = "Open";
-link.href = tool.adminTool ? integratedAdminHref(tool.adminTool, tool.adminContext ? { adminContext: tool.adminContext } : {}) : tool.path ? preservedURL(tool.path).href : tool.classic ? preservedURL("index.html", { classic: true }).href : preservedURL(config.routes?.[tool.route] || routeFallback(tool.route)).href;
+link.href = toolHref(tool);
 foot.append(category, link); card.append(head, title, description, foot); host.appendChild(card);
 });
 }
