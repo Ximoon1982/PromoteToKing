@@ -758,13 +758,27 @@
     return integer ? Math.floor(value) : value;
   }
 
+  function boardCriterionMode() {
+    return recommendationElement("p2kBoardCriterionMode")?.value === "minimum_matches" ? "minimum_matches" : "average";
+  }
+
+  function syncBoardCriterionControls() {
+    const mode = boardCriterionMode();
+    const matchField = recommendationElement("p2kMinimumMatchCountField");
+    const boardsLabel = recommendationElement("p2kMinimumBoardsLabel");
+    if (matchField) matchField.hidden = mode !== "minimum_matches";
+    if (boardsLabel) boardsLabel.textContent = mode === "minimum_matches" ? "Minimum boards per qualifying match" : "Minimum average boards";
+  }
+
   function recommendationSettings() {
     const exclusionDays = recommendationNumber(recommendationElement("p2kExclusionDays"), { minimum: 0, integer: true, label: "P2K opponent exclusion" });
-    const minimumBoards = recommendationNumber(recommendationElement("p2kMinimumBoards"), { minimum: 0, label: "Minimum average boards" });
-    const historyDays = recommendationNumber(recommendationElement("p2kBoardHistoryDays"), { minimum: 1, integer: true, label: "Board-average history" });
+    const criterionMode = boardCriterionMode();
+    const minimumBoards = recommendationNumber(recommendationElement("p2kMinimumBoards"), { minimum: 0, label: criterionMode === "minimum_matches" ? "Minimum boards per qualifying match" : "Minimum average boards" });
+    const minimumMatchCount = recommendationNumber(recommendationElement("p2kMinimumMatchCount"), { minimum: 1, integer: true, label: "Minimum number of matches" });
+    const historyDays = recommendationNumber(recommendationElement("p2kBoardHistoryDays"), { minimum: 1, integer: true, label: "Board history" });
     const nowSeconds = Date.now() / 1000;
     return {
-      exclusionDays, minimumBoards, historyDays,
+      exclusionDays, criterionMode, minimumBoards, minimumMatchCount, historyDays,
       exclusionCutoffSeconds: nowSeconds - exclusionDays * 86400,
       historyCutoffSeconds: nowSeconds - historyDays * 86400
     };
@@ -827,8 +841,8 @@
     const undated = records.filter(match => matchStartTimestamp(match) === null);
     if (undated.length) throw new Error(`${undated.length} started match${undated.length === 1 ? " has" : "es have"} no start_time`);
     const recent = records.filter(match => matchStartTimestamp(match) >= cutoffSeconds);
-    if (!recent.length) return { count: 0, totalBoards: 0, averageBoards: null, latestStart: null };
-    let totalBoards = 0; let latestStart = null;
+    if (!recent.length) return { count: 0, totalBoards: 0, averageBoards: null, latestStart: null, boardCounts: [] };
+    let totalBoards = 0; let latestStart = null; const boardCounts = [];
     const boardBatch = await window.P2K_API_CLIENT.processPriority(
       recent,
       async summary => {
@@ -847,11 +861,13 @@
     if (boardBatch.cancelled || run.controller.signal.aborted) throw new StopError();
     if (boardBatch.failures.length) throw boardBatch.failures[0].error;
     boardBatch.succeeded.forEach(entry => {
-      totalBoards += Number(entry.value?.boards || 0);
+      const boards = Number(entry.value?.boards || 0);
+      boardCounts.push(boards);
+      totalBoards += boards;
       const started = entry.value?.started;
       if (started !== null && started !== undefined && (latestStart === null || started > latestStart)) latestStart = started;
     });
-    return { count: recent.length, totalBoards, averageBoards: totalBoards / recent.length, latestStart };
+    return { count: recent.length, totalBoards, averageBoards: totalBoards / recent.length, latestStart, boardCounts };
   }
 
   async function evaluateRecommendationCandidate(entry, data, run) {
@@ -871,17 +887,32 @@
     }
     const history = await boardHistoryForClub(entry, matchIndex, settings.historyCutoffSeconds, run);
     if (history.averageBoards === null) return { eligible: false, reason: `No matches started during the last ${settings.historyDays} days` };
-    if (history.averageBoards < settings.minimumBoards) return { eligible: false, reason: `Average ${history.averageBoards.toFixed(1)} boards is below the ${settings.minimumBoards} threshold` };
+    const qualifyingMatchCount = history.boardCounts.filter(boards => boards >= settings.minimumBoards).length;
+    if (settings.criterionMode === "minimum_matches") {
+      if (qualifyingMatchCount < settings.minimumMatchCount) {
+        return { eligible: false, reason: `${qualifyingMatchCount} match${qualifyingMatchCount === 1 ? "" : "es"} reached ${settings.minimumBoards} boards; ${settings.minimumMatchCount} required` };
+      }
+    } else if (history.averageBoards < settings.minimumBoards) {
+      return { eligible: false, reason: `Average ${history.averageBoards.toFixed(1)} boards is below the ${settings.minimumBoards} threshold` };
+    }
     return { eligible: true, recommendation: {
       slug: entry.slug, url: String(profile?.url || entry.url), name: String(profile?.name || entry.fallbackName),
-      averageBoards: history.averageBoards, matchCount: history.count, totalBoards: history.totalBoards,
+      criterionMode: settings.criterionMode, minimumBoards: settings.minimumBoards, minimumMatchCount: settings.minimumMatchCount,
+      qualifyingMatchCount, averageBoards: history.averageBoards, matchCount: history.count, totalBoards: history.totalBoards,
       latestStart: history.latestStart, rotationIndex: entry.sourceIndex + 1
     }};
   }
 
+  function recommendationHistorySummary(item) {
+    if (item?.criterionMode === "minimum_matches") {
+      return `${item.qualifyingMatchCount} match${item.qualifyingMatchCount === 1 ? "" : "es"} with at least ${item.minimumBoards} boards (minimum ${item.minimumMatchCount}) across ${item.matchCount} recent matches`;
+    }
+    return `average ${item.averageBoards.toFixed(1)} boards across ${item.matchCount} match${item.matchCount === 1 ? "" : "es"}`;
+  }
+
   function recommendationPlainText() {
     return (recommendationRuntime.recommendation?.recommendations || []).map((item, index) =>
-      `${index + 1}. ${item.name} — ${item.url} — average ${item.averageBoards.toFixed(1)} boards across ${item.matchCount} match${item.matchCount === 1 ? "" : "es"}`
+      `${index + 1}. ${item.name} — ${item.url} — ${recommendationHistorySummary(item)}`
     ).join("\n");
   }
 
@@ -904,6 +935,7 @@
           </div>
           <div class="p2k-cla-recommendation-meta">
             <span><strong>Slug:</strong> ${item.slug}</span><span><strong>Average boards:</strong> ${item.averageBoards.toFixed(1)}</span>
+            ${item.criterionMode === "minimum_matches" ? `<span><strong>Qualifying matches:</strong> ${item.qualifyingMatchCount} ≥ ${item.minimumBoards} boards</span><span><strong>Minimum required:</strong> ${item.minimumMatchCount}</span>` : ""}
             <span><strong>Matches measured:</strong> ${item.matchCount}</span><span><strong>Total boards:</strong> ${item.totalBoards}</span>
             <span><strong>Latest measured start:</strong> ${formatRecommendationDate(item.latestStart)}</span><span><strong>${data.mode === "rematch" ? "History position" : "Original list position"}:</strong> ${item.rotationIndex}</span>
             ${data.mode === "rematch" ? `<span><strong>Rematch source:</strong> ${item.sourceMatchName || item.sourceMatchId || "Finished match"}</span>` : ""}
@@ -939,8 +971,11 @@
       recommendationElement("p2kLastChallenge").value = "";
       recommendationElement("p2kOldestRematch").value = "";
       recommendationElement("p2kExclusionDays").value = "30";
+      recommendationElement("p2kBoardCriterionMode").value = "average";
       recommendationElement("p2kMinimumBoards").value = "5";
+      recommendationElement("p2kMinimumMatchCount").value = "5";
       recommendationElement("p2kBoardHistoryDays").value = "90";
+      syncBoardCriterionControls();
     }
     recommendationElement("p2kRecommendationDetails").value = "";
     recommendationElement("p2kRecommendationCutoff").textContent = "";
@@ -1000,7 +1035,7 @@
         data.relationships = buildP2KRelationshipIndex(p2kMatches, data.settings.exclusionCutoffSeconds);
         data.relationships.unresolved.forEach(message => data.detailRows.push(`Promote to King\tWARNING\t${message}`));
       }
-      recommendationElement("p2kRecommendationCutoff").textContent = `${data.mode === "rematch" ? "Rematch candidates use finished opponents from the selected match onward. " : ""}P2K challenge exclusion cutoff: ${formatRecommendationDate(data.settings.exclusionCutoffSeconds)}. Board-average history cutoff: ${formatRecommendationDate(data.settings.historyCutoffSeconds)}.`;
+      recommendationElement("p2kRecommendationCutoff").textContent = `${data.mode === "rematch" ? "Rematch candidates use finished opponents from the selected match onward. " : ""}P2K challenge exclusion cutoff: ${formatRecommendationDate(data.settings.exclusionCutoffSeconds)}. Board-history cutoff: ${formatRecommendationDate(data.settings.historyCutoffSeconds)}.`;
       while (added < targetCount && data.evaluated.size < data.entries.length) {
         await waitRecommendation(run);
         const wanted = Math.max(1, targetCount - added);
@@ -1063,7 +1098,7 @@
             data.detailRows.push(`${entry.url}\tERROR\t${described?.message || row.error?.message || row.error}`);
           } else if (row.result?.eligible) {
             data.recommendations.push({ ...row.result.recommendation, sourceMatchId: entry.sourceMatchId, sourceMatchName: entry.sourceMatchName, sourceMatchStart: entry.sourceMatchStart, highlightBatchId }); added += 1;
-            data.detailRows.push(`${entry.url}\tRECOMMENDED\tAverage ${row.result.recommendation.averageBoards.toFixed(1)} boards across ${row.result.recommendation.matchCount} recent matches`);
+            data.detailRows.push(`${entry.url}\tRECOMMENDED\t${recommendationHistorySummary(row.result.recommendation)}`);
           } else data.detailRows.push(`${entry.url}\tSKIPPED\t${row.result?.reason || "Not eligible"}`);
         }
         recommendationElement("p2kRecommendationMatches").textContent = String(data.recommendations.length);
@@ -1100,7 +1135,8 @@
     recommendationElement("p2kLastChallenge").addEventListener("input", invalidate);
     recommendationElement("p2kOldestRematch").addEventListener("input", invalidate);
     document.querySelectorAll("[data-recommendation-mode]").forEach(button => button.addEventListener("click", () => applyRecommendationMode(button.dataset.recommendationMode)));
-    ["p2kExclusionDays","p2kMinimumBoards","p2kBoardHistoryDays"].forEach(id => recommendationElement(id).addEventListener("change", invalidate));
+    recommendationElement("p2kBoardCriterionMode").addEventListener("change", () => { syncBoardCriterionControls(); invalidate(); });
+    ["p2kExclusionDays","p2kMinimumBoards","p2kMinimumMatchCount","p2kBoardHistoryDays"].forEach(id => recommendationElement(id).addEventListener("change", invalidate));
     file.addEventListener("change", async () => {
       const selected = file.files?.[0];
       recommendationElement("p2kRecommendationFileName").textContent = selected?.name || "No file selected";
@@ -1127,9 +1163,10 @@
     recommendationElement("p2kRecommendationDownload").addEventListener("click", () => {
       const records = recommendationRuntime.recommendation?.recommendations || [];
       downloadCSV("challenge-recommendations.csv",
-        ["recommendation","club_name","club_slug","club_url","average_boards","matches_measured","total_boards","latest_measured_start","list_position"],
-        records.map((item,index) => [index+1,item.name,item.slug,item.url,item.averageBoards.toFixed(2),item.matchCount,item.totalBoards,formatRecommendationDate(item.latestStart),item.rotationIndex]));
+        ["recommendation","club_name","club_slug","club_url","criterion_mode","minimum_boards","minimum_matches_required","qualifying_matches","average_boards","matches_measured","total_boards","latest_measured_start","list_position"],
+        records.map((item,index) => [index+1,item.name,item.slug,item.url,item.criterionMode||"average",item.minimumBoards??"",item.criterionMode==="minimum_matches"?item.minimumMatchCount:"",item.criterionMode==="minimum_matches"?item.qualifyingMatchCount:"",item.averageBoards.toFixed(2),item.matchCount,item.totalBoards,formatRecommendationDate(item.latestStart),item.rotationIndex]));
     });
+    syncBoardCriterionControls();
     applyRecommendationMode("new", { reset: false });
     updateRecommendationControls();
   }
