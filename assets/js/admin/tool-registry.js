@@ -51,10 +51,8 @@ Object.entries(extra).forEach(([key,value])=>{if(value!=null&&String(value)!==""
 return url.href;
 }
 function standaloneToolHref(route,{classic=false}={}) {
-const url=new URL(route,location.href);
-applyOAuthContext(url);
-if(!url.searchParams.has("release"))url.searchParams.set("release",String(config.version||"2.10.6.11"));
-if(classic)url.searchParams.set("ui","v1");
+const url=preservedURL(route,{classic});
+["page","view","adminCategory","adminDetail","adminDetailTab","adminTool","adminContext","adminToolTab","assistant","assistantFilter"].forEach(key=>url.searchParams.delete(key));
 return url.href;
 }
 function toolHref(tool) {
