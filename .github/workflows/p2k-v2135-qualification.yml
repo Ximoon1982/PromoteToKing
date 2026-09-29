@@ -51,6 +51,9 @@ jobs:
           node --check assets/js/pages/challenge-list-assistant.js
           node --check assets/js/shared/events-showcase-core.js
           node --check assets/js/events-showcase-line-v2122.js
+          bash -n tools/release/v2135/build-universal-2.13x.sh
+          bash -n tools/release/v2135/install-promote-to-king-v2.13.5-universal.sh.in
+          python -m py_compile tools/release/v2135/canonical-hash.py tools/release/v2135/stamp-runtime-cache-key.py
           php -l server/trophy-gallery/src/TrophyGalleryStore.php
           php -l server/events-showcase/public/embed.php
           php -l server/events-showcase/public/embed-card.php
@@ -62,6 +65,15 @@ jobs:
           python -m pytest -q tests/test_v2132_rating_cap_backfill.py
           node tests/test_v2132_backfill_payload.js
           P2K_TEST_DB_HOST=127.0.0.1 P2K_TEST_DB_PORT=3306 P2K_TEST_DB_USER=root P2K_TEST_DB_PASS=root php tests/test_v2132_rating_cap_backfill.php
+      - name: Universal 2.13.x installer baseline gate
+        run: bash tests/test_v2135_universal_installer.sh
+      - name: Build v2.13.5 universal incremental installer
+        run: |
+          bash tools/release/v2135/build-universal-2.13x.sh "$RUNNER_TEMP/v2135-qual"
+          unzip -t "$RUNNER_TEMP/v2135-qual/PromoteToKing_v2.13.5_INCREMENTAL_FROM_2.13.x.zip"
+          test -s "$RUNNER_TEMP/v2135-qual/PromoteToKing_v2.13.5_INCREMENTAL_FROM_2.13.x/ASSET_CACHE_KEY.txt"
+          test -s "$RUNNER_TEMP/v2135-qual/PromoteToKing_v2.13.5_INCREMENTAL_FROM_2.13.x/BASELINES.tsv"
+          sha256sum "$RUNNER_TEMP/v2135-qual/PromoteToKing_v2.13.5_INCREMENTAL_FROM_2.13.x.zip"
       - name: Trophy admin mount-race browser gate
         run: python tests/browser_gate_trophy_admin_mount_race_v2133.py
       - name: Focused Trophy Gallery v2.13.3 browser lifecycle
