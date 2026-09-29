@@ -30,6 +30,8 @@ ok(tools.includes('classicAdminTab: "management"'), "Tracked match data must dee
 ok(tools.includes('function publicPageHref(page, extra = {})'), "Clean public-page routing helper missing");
 
 ok(trophy.includes("function cardMarkup(r)"), "Canonical Trophy card markup helper missing");
+ok(trophy.includes("function bindCards(host){$('[data-open]',host).forEach"), "Canonical Trophy Gallery must bind every card");
+ok(trophy.includes('for(const row of $(".p2k-trophy-meta>div",base))'), "Canonical Trophy modal cleanup must inspect every metadata row");
 ok(trophy.includes("function mountPreview(host,record)"), "Canonical Trophy preview mount missing");
 ok(trophy.includes("openModal(record);normalizePublicModal()"), "Preview card must use the canonical Gallery modal");
 ok(admin.includes("api.mountPreview(host,previewRecord(form))"), "Admin Preview must use canonical Gallery renderer");
