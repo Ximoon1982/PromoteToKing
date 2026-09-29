@@ -10,7 +10,12 @@ const tools = read("assets/js/admin/tool-registry.js");
 const trophy = read("assets/js/admin/trophy-gallery-poc.js");
 const admin = read("assets/js/admin/trophy-gallery-admin-v2121.js");
 
-ok(read("VERSION").trim() === "2.13.5", "VERSION must be 2.13.5");
+{
+  const parts = read("VERSION").trim().split(".").map(Number);
+  const atLeast2135 = parts.length === 3 && parts.every(Number.isFinite) &&
+    (parts[0] > 2 || (parts[0] === 2 && (parts[1] > 13 || (parts[1] === 13 && parts[2] >= 5))));
+  ok(atLeast2135, "v2.13.5 feature contract requires VERSION >= 2.13.5");
+}
 
 ok(html.includes('id="p2kBoardCriterionMode"'), "Board-history criterion selector missing");
 ok(html.includes('<option value="average">Average boards</option>'), "Average criterion missing");
