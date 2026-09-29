@@ -11,9 +11,9 @@ CANON="$ROOT/tools/release/v2135/canonical-hash.py"
 STAMPER="$ROOT/tools/release/v2135/stamp-runtime-cache-key.py"
 EARLIEST="9c2f08e3f59945ae983f30d6b214f10140dbd345"
 HEAD="$(git -C "$ROOT" rev-parse HEAD)"
-BUILD_ID="v2135-trophy-admin-performance-widget-hydration"
+BUILD_ID="v2135-trophy-preview-challenge-criteria-misc-routes"
 
-[[ "$(cat "$ROOT/VERSION")" == "2.13.4" ]] || { echo 'VERSION must be 2.13.4' >&2; exit 1; }
+[[ "$(cat "$ROOT/VERSION")" == "2.13.5" ]] || { echo 'VERSION must be 2.13.5' >&2; exit 1; }
 git -C "$ROOT" merge-base --is-ancestor "$EARLIEST" "$HEAD" || { echo "HEAD must descend from qualified v2.13.0 $EARLIEST" >&2; exit 1; }
 
 FILES=(
@@ -59,10 +59,10 @@ for path in "${FILES[@]}"; do
   cp -p "$ROOT/$path" "$DIR/payload/$path"
 done
 
-CACHE_KEY="$(python3 "$ROOT/tools/release/static_asset_cache_key.py" key --version 2.13.4 --source-head "$HEAD" --build-id "$BUILD_ID")"
-python3 "$ROOT/tools/release/static_asset_cache_key.py" stamp --root "$DIR/payload" --version 2.13.4 --source-head "$HEAD" --build-id "$BUILD_ID" >/dev/null
+CACHE_KEY="$(python3 "$ROOT/tools/release/static_asset_cache_key.py" key --version 2.13.5 --source-head "$HEAD" --build-id "$BUILD_ID")"
+python3 "$ROOT/tools/release/static_asset_cache_key.py" stamp --root "$DIR/payload" --version 2.13.5 --source-head "$HEAD" --build-id "$BUILD_ID" >/dev/null
 python3 "$STAMPER" "$DIR/payload" "$CACHE_KEY"
-python3 "$ROOT/tools/release/static_asset_cache_key.py" verify --root "$DIR/payload" --version 2.13.4 --source-head "$HEAD" --build-id "$BUILD_ID" >/dev/null
+python3 "$ROOT/tools/release/static_asset_cache_key.py" verify --root "$DIR/payload" --version 2.13.5 --source-head "$HEAD" --build-id "$BUILD_ID" >/dev/null
 
 grep -Fq "const TROPHY_RUNTIME_KEY = \"$CACHE_KEY\";" "$DIR/payload/assets/js/admin/tool-registry.js"
 grep -Fq "assets/js/pages/recruit-match.js?v=$CACHE_KEY" "$DIR/payload/assets/js/pages/recruit-match-v2121-bootstrap.js"
@@ -199,9 +199,9 @@ Qualified source HEAD: $HEAD
 Static asset cache key: $CACHE_KEY
 Supported installed versions: 2.13.0, 2.13.1, 2.13.2, 2.13.3, 2.13.4, 2.13.5.
 
-This is a cumulative 2.13.x -> 2.13.4 installer. It retains all qualified v2.13.3
-corrections, the Trophy Gallery administration load-performance increment, and the
-Events Showcase display-time friendly-match Need/logo hydration correction.
+This is a cumulative 2.13.x -> 2.13.5 installer. It retains all qualified v2.13.4
+corrections and adds the canonical Trophy vignette/modal admin Preview, the Challenge
+Assistant average/minimum-match board-history criterion, and corrected Misc tool routes.
 It preserves config, data, storage and CRON.
 
 Install:
