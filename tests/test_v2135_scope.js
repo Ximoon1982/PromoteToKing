@@ -22,11 +22,13 @@ ok(challenge.includes('qualifyingMatchCount < settings.minimumMatchCount'), "Min
 ok(challenge.includes('recommendationElement("p2kBoardCriterionMode").value = "average"'), "Average mode must remain the default");
 ok(challenge.includes("window.P2K_API_CLIENT.processPriority"), "Shared API scheduler must remain in use");
 
-ok(tools.includes('title: "Recruitment confidence"') && tools.includes('route: "find"'), "Recruitment confidence must open Match Assistant");
+ok(tools.includes('title: "Recruitment confidence"') && tools.includes('route: "recruit"'), "Recruitment confidence must open Recruitment Assistant");
 ok(tools.includes('title: "Opponent maintenance"') && tools.includes('path: "TeamPointsAdmin.html?tab=opponents"'), "Opponent maintenance route incorrect");
 ok(tools.includes('title: "Achievement challenges"') && tools.includes('publicPage: "dashboard"'), "Achievement challenges must open personalized home");
 ok(tools.includes('title: "Personalized authenticated home"') && tools.includes('publicPage: "dashboard"'), "Personalized home route incorrect");
 ok(tools.includes('classicAdminTab: "management"'), "Tracked match data must deep-link to management");
+ok(tools.includes('function standaloneToolHref(route,{classic=false}={})'), "Clean standalone routing helper missing");
+ok(tools.includes('new URL(standaloneToolHref("index.html",{classic:true}))'), "Tracked match data must use clean classic routing");
 ok(tools.includes('function publicPageHref(page, extra = {})'), "Clean public-page routing helper missing");
 
 ok(trophy.includes("function cardMarkup(r)"), "Canonical Trophy card markup helper missing");
