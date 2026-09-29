@@ -85,7 +85,9 @@ grep -Fq 'function mountPreview(host,record)' "$DIR/payload/assets/js/admin/trop
 grep -Fq 'value="minimum_matches"' "$DIR/payload/ChallengeListAssistant.html"
 grep -Fq 'qualifyingMatchCount < settings.minimumMatchCount' "$DIR/payload/assets/js/pages/challenge-list-assistant.js"
 grep -Fq 'title: "Recruitment confidence"' "$DIR/payload/assets/js/admin/tool-registry.js"
-grep -Fq 'route: "find"' "$DIR/payload/assets/js/admin/tool-registry.js"
+grep -Fq 'route: "recruit"' "$DIR/payload/assets/js/admin/tool-registry.js"
+grep -Fq 'function standaloneToolHref(route,{classic=false}={})' "$DIR/payload/assets/js/admin/tool-registry.js"
+grep -Fq 'classicAdminTab: "management"' "$DIR/payload/assets/js/admin/tool-registry.js"
 
 cp "$CANON" "$DIR/canonical-hash.py"
 chmod +x "$DIR/canonical-hash.py"
@@ -145,6 +147,7 @@ REFS_2134=(
   debfcdfe2e828a5db95ba773d4bbb47ff1deb303
 )
 REFS_2135=(
+  f1549dae110ac95b98e15db7d1350ff1dd0e8088
   "$HEAD"
 )
 
