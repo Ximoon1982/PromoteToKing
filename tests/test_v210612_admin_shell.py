@@ -5,6 +5,8 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 HTML = (ROOT / "ui-v2.html").read_text(encoding="utf-8")
 JS = (ROOT / "assets/js/pages/dashboard-v2.js").read_text(encoding="utf-8")
+TOOLS_JS = (ROOT / "assets/js/admin/tool-registry.js").read_text(encoding="utf-8")
+ADMIN_SHELL_JS = (ROOT / "assets/js/admin/admin-shell.js").read_text(encoding="utf-8")
 CSS = (ROOT / "assets/css/dashboard-v2.css").read_text(encoding="utf-8")
 
 PUBLIC_SECTION_HASHES = {
@@ -12,7 +14,7 @@ PUBLIC_SECTION_HASHES = {
     "hallOfFamePage": "1e2fcbad5df9e82da416f1a318dcd451fbc5500c577cf2466a714c5c6e576ba9",
     "teamInsightsPage": "955a1faf96000cec4cd795dd2e11527ec2810e712c4af1ed29364876ae7387ad",
 }
-TOOLS_BLOCK_HASH = "3459e4f1006163a21aef0635894729205e0674bcc9bda3f0d85c170474f7cb51"
+TOOLS_BLOCK_HASH = "869c132179fd36805bdb05ff616dd4c1c5fb60ca8a28fc893522cc6df764f1da"
 
 
 def section_by_id(source: str, element_id: str) -> str:
@@ -65,11 +67,16 @@ def test_admin_shell_six_tabs_and_agreed_cards():
 
 
 def test_existing_admin_tool_catalogue_is_unchanged_and_complete():
-    block = tools_block(JS)
+    block = tools_block(TOOLS_JS)
     assert hashlib.sha256(block.encode("utf-8")).hexdigest() == TOOLS_BLOCK_HASH
     assert block.count("{ category:") == 36
-    assert "tools.forEach(tool =>" in JS
-    assert 'id="adminToolGrid"' in JS
+    assert "tools.forEach(tool =>" in TOOLS_JS
+    assert 'id="adminToolGrid"' in ADMIN_SHELL_JS
+    assert 'title: "Recruitment confidence"' in block and 'route: "find"' in block
+    assert 'title: "Opponent maintenance"' in block and 'path: "TeamPointsAdmin.html?tab=opponents"' in block
+    assert 'title: "Achievement challenges"' in block and 'publicPage: "dashboard"' in block
+    assert 'title: "Personalized authenticated home"' in block and 'publicPage: "dashboard"' in block
+    assert 'classicAdminTab: "management"' in block
 
 
 def test_deep_links_reuse_existing_tools():
