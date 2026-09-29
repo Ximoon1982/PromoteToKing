@@ -6,7 +6,8 @@ def read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 def test_v2134_release_identity():
-    assert read("VERSION").strip() in {"2.13.4","2.13.5"}
+    version = tuple(int(part) for part in read("VERSION").strip().split("."))
+    assert version >= (2, 13, 4)
 
 def test_admin_overview_metrics_are_deferred_while_detail_is_active():
     shell = read("assets/js/admin/admin-shell.js")
