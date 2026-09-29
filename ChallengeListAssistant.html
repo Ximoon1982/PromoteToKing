@@ -189,11 +189,23 @@ TCMAC" spellcheck="false"></textarea>
 <div class="p2k-cla-number-row"><input class="p2k-cla-number-input" id="p2kExclusionDays" min="0" step="1" type="number" value="30"/><span>days</span></div>
 </div>
 <div class="p2k-cla-field">
-<label class="p2k-cla-label" for="p2kMinimumBoards">Minimum average boards</label>
-<div class="p2k-cla-number-row"><input class="p2k-cla-number-input" id="p2kMinimumBoards" min="0" step="0.1" type="number" value="5"/><span>boards</span></div>
+<label class="p2k-cla-label" for="p2kBoardCriterionMode">Board-history criterion</label>
+<select class="p2k-cla-text-input" id="p2kBoardCriterionMode">
+<option value="average">Average boards</option>
+<option value="minimum_matches">Minimum number of matches</option>
+</select>
+<div class="p2k-cla-help">Choose whether recent activity must meet an average board size or a minimum count of sufficiently large matches.</div>
 </div>
 <div class="p2k-cla-field">
-<label class="p2k-cla-label" for="p2kBoardHistoryDays">Board-average history</label>
+<label class="p2k-cla-label" for="p2kMinimumBoards" id="p2kMinimumBoardsLabel">Minimum average boards</label>
+<div class="p2k-cla-number-row"><input class="p2k-cla-number-input" id="p2kMinimumBoards" min="0" step="0.1" type="number" value="5"/><span>boards</span></div>
+</div>
+<div class="p2k-cla-field" id="p2kMinimumMatchCountField" hidden>
+<label class="p2k-cla-label" for="p2kMinimumMatchCount">Minimum number of matches</label>
+<div class="p2k-cla-number-row"><input class="p2k-cla-number-input" id="p2kMinimumMatchCount" min="1" step="1" type="number" value="5"/><span>matches</span></div>
+</div>
+<div class="p2k-cla-field">
+<label class="p2k-cla-label" for="p2kBoardHistoryDays">Board history</label>
 <div class="p2k-cla-number-row"><input class="p2k-cla-number-input" id="p2kBoardHistoryDays" min="1" step="1" type="number" value="90"/><span>days</span></div>
 </div>
 </div>
