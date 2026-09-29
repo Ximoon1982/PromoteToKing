@@ -767,6 +767,8 @@
     const matchField = recommendationElement("p2kMinimumMatchCountField");
     const boardsLabel = recommendationElement("p2kMinimumBoardsLabel");
     if (matchField) matchField.hidden = mode !== "minimum_matches";
+    const boardsInput = recommendationElement("p2kMinimumBoards");
+    if (boardsInput) boardsInput.step = mode === "minimum_matches" ? "1" : "0.1";
     if (boardsLabel) boardsLabel.textContent = mode === "minimum_matches" ? "Minimum boards per qualifying match" : "Minimum average boards";
   }
 
@@ -774,7 +776,9 @@
     const exclusionDays = recommendationNumber(recommendationElement("p2kExclusionDays"), { minimum: 0, integer: true, label: "P2K opponent exclusion" });
     const criterionMode = boardCriterionMode();
     const minimumBoards = recommendationNumber(recommendationElement("p2kMinimumBoards"), { minimum: 0, label: criterionMode === "minimum_matches" ? "Minimum boards per qualifying match" : "Minimum average boards" });
-    const minimumMatchCount = recommendationNumber(recommendationElement("p2kMinimumMatchCount"), { minimum: 1, integer: true, label: "Minimum number of matches" });
+    const minimumMatchCount = criterionMode === "minimum_matches"
+      ? recommendationNumber(recommendationElement("p2kMinimumMatchCount"), { minimum: 1, integer: true, label: "Minimum number of matches" })
+      : Math.max(1, Math.floor(Number(recommendationElement("p2kMinimumMatchCount")?.value) || 1));
     const historyDays = recommendationNumber(recommendationElement("p2kBoardHistoryDays"), { minimum: 1, integer: true, label: "Board history" });
     const nowSeconds = Date.now() / 1000;
     return {
