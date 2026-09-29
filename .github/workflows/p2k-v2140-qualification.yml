@@ -47,6 +47,9 @@ jobs:
           php -l server/release-control/src/ReleaseControlState.php
           php -l server/release-control/config/config.example.php
           php -l tests/php_v2140_release_control_harness.php
+          bash -n tools/release/v2140/build-universal-2.13x.sh
+          bash -n tools/release/v2140/install-promote-to-king-v2.14.0-universal.sh.in
+          python -m py_compile tools/release/v2140/canonical-hash.py tools/release/v2140/stamp-runtime-cache-key.py
           python -m pytest -q tests/test_v2140_release_control.py
           php tests/php_v2140_release_control_harness.php
           node --check assets/js/admin/admin-shell.js
@@ -58,6 +61,15 @@ jobs:
           python -m pytest -q tests/test_v2133_trophy_admin_contract.py
           python -m pytest -q tests/test_v2134_trophy_admin_performance.py
           python tests/test_events_showcase_contract.py
+      - name: Universal 2.13.x to 2.14.0 installer baseline gate
+        run: bash tests/test_v2140_universal_installer.sh
+      - name: Build v2.14.0 cumulative incremental installer
+        run: |
+          bash tools/release/v2140/build-universal-2.13x.sh "$RUNNER_TEMP/v2140-qual"
+          unzip -t "$RUNNER_TEMP/v2140-qual/PromoteToKing_v2.14.0_INCREMENTAL_FROM_2.13.x.zip"
+          test -s "$RUNNER_TEMP/v2140-qual/PromoteToKing_v2.14.0_INCREMENTAL_FROM_2.13.x/ASSET_CACHE_KEY.txt"
+          test -s "$RUNNER_TEMP/v2140-qual/PromoteToKing_v2.14.0_INCREMENTAL_FROM_2.13.x/BASELINES.tsv"
+          sha256sum "$RUNNER_TEMP/v2140-qual/PromoteToKing_v2.14.0_INCREMENTAL_FROM_2.13.x.zip"
       - name: Trophy admin mount-race browser gate
         run: python tests/browser_gate_trophy_admin_mount_race_v2133.py
       - name: Focused Trophy Gallery v2.13.3 browser lifecycle
