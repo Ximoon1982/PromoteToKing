@@ -68,6 +68,8 @@ def test_preview_router_recovers_original_uri_after_apache_internal_rewrite():
     assert "__p2k_preview_path" in ROUTER
     assert "p2k_preview_transport($_SERVER)" in ROUTER
     assert "p2k_preview_original_uri($_SERVER)" in ROUTER
+    assert "unset($_GET['__p2k_preview_path'])" in ROUTER
+    assert "$_SERVER['QUERY_STRING'] = (string)$transport['query'];" in ROUTER
     assert "THE_REQUEST" in ROUTER
     assert "P2K_PREVIEW_ORIGINAL_PATH" in ROUTER
     assert "RewriteRule ^(.*)$ PreviewRouter.php?__p2k_preview_path=$1 [END,QSA,B]" in HTACCESS
