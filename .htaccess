@@ -18,7 +18,7 @@ DirectoryIndex index.html index.php
   # candidate, and preview tree on every request. Recovery/shared paths and OAuth
   # callback remain on the stable direct-root control plane.
   RewriteCond %{HTTP:Cookie} "(^|;[[:space:]]*)P2KRC_PREVIEW=" [NC]
-  RewriteCond %{REQUEST_URI} !^/(?:ReleaseControl\.php|PreviewRouter\.php|server/release-control(?:/|$)|auth/callback(?:\.php)?$|data(?:/|$)|logs(?:/|$)|storage(?:/|$)) [NC]
+  RewriteCond %{REQUEST_URI} !^/(?:ReleaseControl\.php|PreviewRouter\.php|server/release-control(?:/|$)|server/team-points/public/(?:oauth|session)\.php$|auth/callback(?:\.php)?$|data(?:/|$)|logs(?:/|$)|storage(?:/|$)) [NC]
   RewriteRule ^(?!PreviewRouter\.php$)(.*)$ /PreviewRouter.php [L]
 
   # Backward-compatible internal routing for old slashless API URLs.
