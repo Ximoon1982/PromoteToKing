@@ -78,6 +78,7 @@ def test_preview_router_is_cookie_gated_and_keeps_recovery_shared_paths_out():
     assert "PreviewRouter.php" in HTACCESS
     assert "server/release-control" in HTACCESS
     assert "auth/callback" in HTACCESS
+    assert "server/team-points/public/(?:oauth|session)\\.php" in HTACCESS
     assert "data" in HTACCESS and "logs" in HTACCESS and "storage" in HTACCESS
     assert "ReleaseSlotPolicy::isReleaseOwnedPath" in ROUTER
     assert "X-P2K-Candidate-Preview" in ROUTER
