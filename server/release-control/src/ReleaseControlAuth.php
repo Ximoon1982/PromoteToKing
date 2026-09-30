@@ -87,6 +87,9 @@ final class ReleaseControlAuth
         if ($returnTo === '' || !str_starts_with($returnTo, '/') || str_starts_with($returnTo, '//')) {
             $returnTo = '/ReleaseControl.php';
         }
+        if ($returnTo === '/ReleaseControl.php') {
+            return '/server/team-points/public/oauth.php?action=login&return=' . rawurlencode('/ReleaseControl.php');
+        }
         return '/server/team-points/public/oauth.php?action=login&return=' . rawurlencode($returnTo);
     }
 
