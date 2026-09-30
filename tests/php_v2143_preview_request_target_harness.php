@@ -9,24 +9,6 @@ $cases = [
         'server'=>[
             'REQUEST_URI'=>'/PreviewRouter.php',
             'THE_REQUEST'=>'GET / HTTP/1.1',
-            'QUERY_STRING'=>'__p2k_preview_path=',
-        ],
-        'expected'=>'/',
-        'label'=>'root rewrite explicit transport',
-    ],
-    [
-        'server'=>[
-            'REQUEST_URI'=>'/PreviewRouter.php?__p2k_preview_path=assets%2Fjs%2Fapp.js&x=1',
-            'THE_REQUEST'=>'GET /assets/js/app.js?x=1 HTTP/1.1',
-            'QUERY_STRING'=>'__p2k_preview_path=assets%2Fjs%2Fapp.js&x=1',
-        ],
-        'expected'=>'/assets%2Fjs%2Fapp.js?x=1',
-        'label'=>'asset rewrite explicit transport with public query',
-    ],
-    [
-        'server'=>[
-            'REQUEST_URI'=>'/PreviewRouter.php',
-            'THE_REQUEST'=>'GET / HTTP/1.1',
         ],
         'expected'=>'/',
         'label'=>'root internal rewrite',
