@@ -36,6 +36,14 @@ def test_v2143_identity_and_control_plane_contract():
     assert "'candidate_cron' => false" in STATE
 
 
+def test_preview_enable_uses_prebuilt_tree_and_is_not_a_heavy_web_operation():
+    assert "describeExisting($releaseId)" in SESSION
+    assert "Candidate preview tree is not prepared" in SESSION
+    assert "->prepare($releaseId)" not in SESSION
+    assert "Preview tree" in PAGE
+    assert "previewTreeReady" in PAGE
+
+
 def test_preview_cookie_is_signed_identity_bound_and_http_only():
     assert "P2KRC_PREVIEW" in SESSION
     assert "hash_hmac('sha256'" in SESSION
@@ -54,6 +62,13 @@ def test_preview_control_uses_authenticated_csrf():
     assert 'name="csrf"' in PAGE
     assert 'name="action" value="enable-preview"' in PAGE
     assert 'name="action" value="disable-preview"' in PAGE
+
+
+def test_preview_router_recovers_original_uri_after_apache_internal_rewrite():
+    assert "THE_REQUEST" in ROUTER
+    assert "P2K_PREVIEW_ORIGINAL_PATH" in ROUTER
+    assert "p2k_preview_original_uri($_SERVER)" in ROUTER
+    assert "RewriteRule ^(.*)$ PreviewRouter.php [END,E=P2K_PREVIEW_ORIGINAL_PATH:$1]" in HTACCESS
 
 
 def test_preview_router_is_cookie_gated_and_keeps_recovery_shared_paths_out():

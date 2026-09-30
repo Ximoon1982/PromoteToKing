@@ -22,7 +22,10 @@ final class ReleasePreviewSession
         $releaseId = trim((string)($state['candidate_release'] ?? ''));
         if ($releaseId === '') throw new \RuntimeException('No candidate release is registered.');
 
-        $tree = (new ReleasePreviewTree($this->root, $this->runtimeOverride))->prepare($releaseId);
+        $tree = (new ReleasePreviewTree($this->root, $this->runtimeOverride))->describeExisting($releaseId);
+        if (!is_array($tree)) {
+            throw new \RuntimeException('Candidate preview tree is not prepared. Re-run the candidate-preview bootstrap.');
+        }
         $expires = time() + self::TTL_SECONDS;
         $payload = ['u'=>$username,'r'=>$releaseId,'e'=>$expires];
         $encoded = $this->b64url(json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));

@@ -57,10 +57,12 @@ jobs:
           php -l server/release-control/src/ReleasePreviewSession.php
           php -l server/release-control/tools/materialize-current-slot.php
           php -l server/release-control/tools/install-candidate.php
+          php -l server/release-control/tools/prepare-preview.php
           php -l server/release-control/tools/verify-slot.php
           php -l tests/php_v2140_release_control_harness.php
           php -l tests/php_v2141_release_slots_harness.php
           php -l tests/php_v2143_candidate_preview_harness.php
+          php -l tests/php_v2143_preview_request_target_harness.php
           bash -n tools/release/v2143/build-universal-2.13x.sh
           bash -n tools/release/v2143/prepare-candidate-preview-v2.14.3.sh
           bash -n tools/release/v2143/install-promote-to-king-v2.14.3-universal.sh.in
@@ -70,6 +72,7 @@ jobs:
           php tests/php_v2141_release_slots_harness.php
           php tests/php_v2142_candidate_install_harness.php
           php tests/php_v2143_candidate_preview_harness.php
+          php tests/php_v2143_preview_request_target_harness.php
           python server/release-control/tools/release-slot-paths.py HEAD > "$RUNNER_TEMP/v2143-slot-paths.txt"
           grep -Fxq VERSION "$RUNNER_TEMP/v2143-slot-paths.txt"
           grep -Fxq ui-v2.html "$RUNNER_TEMP/v2143-slot-paths.txt"

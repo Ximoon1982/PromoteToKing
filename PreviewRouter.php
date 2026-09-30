@@ -7,6 +7,36 @@ use P2K\ReleaseControl\ReleaseControlAuth;
 use P2K\ReleaseControl\ReleasePreviewSession;
 use P2K\ReleaseControl\ReleaseSlotPolicy;
 
+/**
+ * Return the browser's original request target even if Apache/FastCGI updates
+ * REQUEST_URI after internally rewriting the request to PreviewRouter.php.
+ *
+ * Apache THE_REQUEST is the original HTTP request line and is not rewritten by
+ * mod_rewrite. The rewrite environment value is a secondary transport. A true
+ * direct request for PreviewRouter.php therefore remains distinguishable.
+ */
+function p2k_preview_original_uri(array $server): string
+{
+    $theRequest = trim((string)($server['THE_REQUEST'] ?? ''));
+    if ($theRequest !== '' && preg_match('~^[A-Z]+\\s+(\\S+)\\s+HTTP/[0-9.]+$~iD', $theRequest, $m)) {
+        return (string)$m[1];
+    }
+
+    foreach (['P2K_PREVIEW_ORIGINAL_PATH', 'REDIRECT_P2K_PREVIEW_ORIGINAL_PATH'] as $key) {
+        if (array_key_exists($key, $server)) {
+            $path = '/' . ltrim((string)$server[$key], '/');
+            $query = trim((string)($server['QUERY_STRING'] ?? ''));
+            return $path . ($query !== '' ? '?' . $query : '');
+        }
+    }
+
+    return (string)($server['REQUEST_URI'] ?? '/');
+}
+
+if (defined('P2K_PREVIEW_ROUTER_HELPER_ONLY') && P2K_PREVIEW_ROUTER_HELPER_ONLY === true) {
+    return;
+}
+
 $root = __DIR__;
 $auth = new ReleaseControlAuth($root);
 $username = $auth->currentUsername();
@@ -15,7 +45,7 @@ $status = $username !== '' && $auth->isSuperAdmin($username)
     ? $preview->status($username)
     : ['enabled'=>false,'reason'=>'unauthorized'];
 
-$originalUri = (string)($_SERVER['REQUEST_URI'] ?? '/');
+$originalUri = p2k_preview_original_uri($_SERVER);
 $pathPart = (string)(parse_url($originalUri, PHP_URL_PATH) ?? '/');
 if ($pathPart === '/PreviewRouter.php' || $pathPart === 'PreviewRouter.php') {
     http_response_code(404);

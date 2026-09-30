@@ -68,6 +68,7 @@ FILES=(
   server/release-control/src/ReleasePreviewSession.php
   server/release-control/tools/materialize-current-slot.php
   server/release-control/tools/install-candidate.php
+  server/release-control/tools/prepare-preview.php
   server/release-control/tools/verify-slot.php
   server/release-control/tools/release-slot-paths.py
   server/release-control/README.md
@@ -102,6 +103,7 @@ PHP_FILES=(
   server/release-control/src/ReleasePreviewSession.php
   server/release-control/tools/materialize-current-slot.php
   server/release-control/tools/install-candidate.php
+  server/release-control/tools/prepare-preview.php
   server/release-control/tools/verify-slot.php
 )
 

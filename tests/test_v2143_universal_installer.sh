@@ -48,7 +48,7 @@ FILES=(
   server/release-control/src/ReleaseCandidateInstaller.php
   server/release-control/src/ReleasePreviewTree.php server/release-control/src/ReleasePreviewSession.php
   server/release-control/tools/materialize-current-slot.php server/release-control/tools/install-candidate.php
-  server/release-control/tools/verify-slot.php
+  server/release-control/tools/prepare-preview.php server/release-control/tools/verify-slot.php
   server/release-control/tools/release-slot-paths.py server/release-control/README.md
 )
 
@@ -156,6 +156,10 @@ grep -Fxq ui-v2.html "$PKGDIR/CANDIDATE_OVERLAY_PATHS.txt"
 grep -Fq "PHP_SAPI !== 'cli'" "$OUT/$PKG/payload/server/release-control/tools/install-candidate.php"
 test -x "$PKGDIR/prepare-candidate-preview-v2.14.3.sh"
 bash -n "$PKGDIR/prepare-candidate-preview-v2.14.3.sh"
+grep -Fq -- '--replace-candidate' "$PKGDIR/prepare-candidate-preview-v2.14.3.sh"
+grep -Fq 'prepare-preview.php' "$PKGDIR/prepare-candidate-preview-v2.14.3.sh"
+grep -Fq 'p2k-v2143-candidate-$$.json' "$PKGDIR/prepare-candidate-preview-v2.14.3.sh"
+grep -Fq 'p2k-v2143-preview-$$.json' "$PKGDIR/prepare-candidate-preview-v2.14.3.sh"
 
 PREVIEW_ROOT="$TMP/preview-root"
 mkdir -p "$PREVIEW_ROOT"
@@ -168,6 +172,18 @@ python3 "$PREVIEW_ROOT/server/release-control/tools/release-slot-paths.py" --roo
 php "$PREVIEW_ROOT/server/release-control/tools/materialize-current-slot.php" --root="$PREVIEW_ROOT" --version="2.14.2" --source-head="9257577544d8ee7d54a9d23152073f340fe90ed1" --cache-key="$BASE_KEY" --paths="$TMP/public-v2142-paths.txt" >/dev/null
 PUBLIC_VERSION_SHA="$(sha256sum "$PREVIEW_ROOT/VERSION" | awk '{print $1}')"
 PUBLIC_UI_SHA="$(sha256sum "$PREVIEW_ROOT/ui-v2.html" | awk '{print $1}')"
+mkdir -p "$PREVIEW_ROOT/data/runtime-v280/release-control"
+cat > "$PREVIEW_ROOT/data/runtime-v280/release-control/state.json" <<'JSON'
+{
+  "schema_version": 1,
+  "mode": "direct-root",
+  "public_release": "2.14.2 (direct root)",
+  "previous_public_release": null,
+  "candidate_release": "2.14.3-b7526eb705d0",
+  "updated_at": "2026-09-30T11:54:26+00:00",
+  "updated_by": "ximoon"
+}
+JSON
 bash "$PKGDIR/prepare-candidate-preview-v2.14.3.sh" "$PREVIEW_ROOT" ximoon >/dev/null
 [[ "$(sha256sum "$PREVIEW_ROOT/VERSION" | awk '{print $1}')" == "$PUBLIC_VERSION_SHA" ]]
 [[ "$(sha256sum "$PREVIEW_ROOT/ui-v2.html" | awk '{print $1}')" == "$PUBLIC_UI_SHA" ]]
@@ -175,5 +191,11 @@ bash "$PKGDIR/prepare-candidate-preview-v2.14.3.sh" "$PREVIEW_ROOT" ximoon >/dev
 grep -Fq 'v2.14.3 · Super Admin candidate preview' "$PREVIEW_ROOT/ReleaseControl.php"
 grep -Fq 'P2KRC_PREVIEW' "$PREVIEW_ROOT/.htaccess"
 grep -Fq '"candidate_release": "2.14.3-' "$PREVIEW_ROOT/data/runtime-v280/release-control/state.json"
+CANDIDATE_ID="$(python3 - "$PREVIEW_ROOT/data/runtime-v280/release-control/state.json" <<'PY'
+import json,sys
+print(json.load(open(sys.argv[1]))["candidate_release"])
+PY
+)"
+test -s "$PREVIEW_ROOT/data/runtime-v280/release-control/previews/$CANDIDATE_ID/meta/preview.json"
 
 echo "v2.14.3 cumulative installer and candidate-preview bootstrap gate passed"

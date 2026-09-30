@@ -68,6 +68,7 @@ FILES=(
   server/release-control/src/ReleasePreviewSession.php
   server/release-control/tools/materialize-current-slot.php
   server/release-control/tools/install-candidate.php
+  server/release-control/tools/prepare-preview.php
   server/release-control/tools/verify-slot.php
   server/release-control/tools/release-slot-paths.py
   server/release-control/README.md
@@ -123,6 +124,7 @@ grep -Fq "read_and_close" "$DIR/payload/server/release-control/src/ReleaseContro
 grep -Fq "hardlink_snapshot_isolation" "$DIR/payload/server/release-control/src/ReleaseSlotFilesystemProbe.php"
 grep -Fq "'routing_enabled'=>false" "$DIR/payload/server/release-control/src/ReleaseCandidateInstaller.php"
 grep -Fq "PHP_SAPI !== 'cli'" "$DIR/payload/server/release-control/tools/install-candidate.php"
+grep -Fq "PHP_SAPI !== 'cli'" "$DIR/payload/server/release-control/tools/prepare-preview.php"
 grep -Fq 'RECOVERY_PREFIXES = ("server/release-control/",)' "$DIR/payload/server/release-control/tools/release-slot-paths.py"
 
 cp "$CANON" "$DIR/canonical-hash.py"

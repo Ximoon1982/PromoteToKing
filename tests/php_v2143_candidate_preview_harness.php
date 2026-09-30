@@ -80,6 +80,8 @@ if (($candidate['integrity_status'] ?? '') !== 'valid' || empty($candidate['cand
 if (!empty($candidate['routing_enabled'])) throw new RuntimeException('candidate unexpectedly public-routable');
 
 $_COOKIE = [];
+$prepared = (new \P2K\ReleaseControl\ReleasePreviewTree($root, $runtime))->prepare((string)$candidate['release_id']);
+if (empty($prepared['valid'])) throw new RuntimeException('preview tree preparation failed');
 $preview = new ReleasePreviewSession($root, $runtime);
 $status = $preview->enable('ximoon');
 if (empty($status['enabled'])) throw new RuntimeException('preview enable failed');

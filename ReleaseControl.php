@@ -6,6 +6,7 @@ require_once __DIR__ . '/server/release-control/src/bootstrap.php';
 use P2K\ReleaseControl\ReleaseControlAuth;
 use P2K\ReleaseControl\ReleaseControlState;
 use P2K\ReleaseControl\ReleasePreviewSession;
+use P2K\ReleaseControl\ReleasePreviewTree;
 
 $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
 if (!in_array($method, ['GET','POST'], true)) {
@@ -83,6 +84,11 @@ if ($method === 'POST' && $authorized) {
 
 $snapshot = $authorized ? (new ReleaseControlState(__DIR__))->snapshot() : null;
 $previewStatus = $authorized ? $previewSession->status($username) : ['enabled'=>false,'reason'=>'unauthorized'];
+$previewTree = null;
+if ($authorized && is_array($snapshot) && !empty($snapshot['candidate_release'])) {
+    $previewTree = (new ReleasePreviewTree(__DIR__))->describeExisting((string)$snapshot['candidate_release']);
+}
+$previewTreeReady = is_array($previewTree);
 $csrfToken = $authorized ? $auth->currentCsrfToken() : '';
 $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
 $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
@@ -143,6 +149,7 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
         <dt>Candidate</dt><dd><?= rc_h($snapshot['candidate_release'] ?? 'none') ?></dd>
         <dt>Candidate registered</dt><dd><?= rc_h($snapshot['candidate_registered_at'] ?? 'not registered') ?></dd>
         <dt>Candidate by</dt><dd><?= rc_h($snapshot['candidate_registered_by'] ?? '—') ?></dd>
+        <dt>Preview tree</dt><dd><?= $previewTreeReady ? 'prepared' : 'not prepared' ?></dd>
         <dt>My preview</dt><dd><?= !empty($previewStatus['enabled']) ? 'enabled · ' . rc_h($previewStatus['release_id'] ?? '') : 'disabled' ?></dd>
         <dt>Slot routing</dt><dd><?= !empty($snapshot['release_slots_enabled']) ? 'enabled' : 'disabled (direct-root)' ?></dd>
         <dt>Stored slots</dt><dd><?= rc_h($snapshot['slot_storage']['slot_count'] ?? 0) ?></dd>
@@ -234,7 +241,7 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
       <h2>Deployment controls</h2>
       <p class="small">Personal candidate preview is available only to this authenticated Super Admin session. Writes remain blocked; public promotion and rollback are still disabled.</p>
       <div class="actions">
-        <?php if (is_array($candidate) && $csrfToken !== ''): ?>
+        <?php if (is_array($candidate) && $csrfToken !== '' && $previewTreeReady): ?>
           <?php if (!empty($previewStatus['enabled'])): ?>
             <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="disable-preview"><button class="button" type="submit">Stop preview</button></form>
             <a class="button primary" href="/">Open candidate site</a>
@@ -243,6 +250,7 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
           <?php endif; ?>
         <?php else: ?>
           <span class="button disabled">Preview candidate</span>
+          <?php if (is_array($candidate) && !$previewTreeReady): ?><span class="small">Preview tree is not prepared. Re-run the v2.14.3 candidate-preview bootstrap.</span><?php endif; ?>
         <?php endif; ?>
         <span class="button disabled">Promote candidate</span><span class="button disabled">Rollback</span>
       </div>

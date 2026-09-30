@@ -51,6 +51,7 @@ INFRA_FILES=(
   server/release-control/src/ReleasePreviewSession.php
   server/release-control/tools/materialize-current-slot.php
   server/release-control/tools/install-candidate.php
+  server/release-control/tools/prepare-preview.php
   server/release-control/tools/verify-slot.php
   server/release-control/tools/release-slot-paths.py
   server/release-control/README.md
@@ -74,6 +75,7 @@ PHP_INFRA=(
   server/release-control/src/ReleasePreviewSession.php
   server/release-control/tools/materialize-current-slot.php
   server/release-control/tools/install-candidate.php
+  server/release-control/tools/prepare-preview.php
   server/release-control/tools/verify-slot.php
 )
 
@@ -131,12 +133,17 @@ after_ui="$(sha256sum "$ROOT/ui-v2.html" | awk '{print $1}')"
 [[ "$before_ui" == "$after_ui" ]] || fail "Preview bootstrap changed public ui-v2.html"
 [[ "$(tr -d '\r\n' < "$ROOT/VERSION")" == "2.14.2" ]] || fail "Public VERSION changed during preview bootstrap"
 
-"$PHP_BIN" "$ROOT/server/release-control/tools/install-candidate.php"   --root="$ROOT"   --package="$SELF_DIR"   --actor="$ACTOR" >/tmp/p2k-v2143-candidate-$$.json   || fail "Candidate installation/registration failed"
+"$PHP_BIN" "$ROOT/server/release-control/tools/install-candidate.php"   --root="$ROOT"   --package="$SELF_DIR"   --actor="$ACTOR"   --replace-candidate >/tmp/p2k-v2143-candidate-$$.json   || fail "Candidate installation/registration failed"
 
 grep -Fq '"ok": true' /tmp/p2k-v2143-candidate-$$.json || fail "Candidate installer did not report success"
 grep -Fq '"release_id": "2.14.3-' /tmp/p2k-v2143-candidate-$$.json || fail "Candidate release identity was not registered"
 cat /tmp/p2k-v2143-candidate-$$.json
 rm -f /tmp/p2k-v2143-candidate-$$.json
+
+"$PHP_BIN" "$ROOT/server/release-control/tools/prepare-preview.php"   --root="$ROOT" >/tmp/p2k-v2143-preview-$$.json   || fail "Candidate preview-tree preparation failed"
+grep -Fq '"ok": true' /tmp/p2k-v2143-preview-$$.json || fail "Preview-tree preparer did not report success"
+cat /tmp/p2k-v2143-preview-$$.json
+rm -f /tmp/p2k-v2143-preview-$$.json
 
 trap - ERR INT TERM HUP
 printf '\nSUCCESS: v2.14.3 preview infrastructure is active; public application remains v2.14.2.\n'

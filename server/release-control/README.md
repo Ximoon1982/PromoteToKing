@@ -23,9 +23,13 @@ against the qualified public v2.14.2 installation. It:
    `PreviewRouter.php`, and `server/release-control/**`;
 5. verifies public `VERSION` and `ui-v2.html` did not change;
 6. installs v2.14.3 as a sealed dormant candidate slot;
-7. registers that candidate in protected release-control state.
+7. registers that candidate in protected release-control state;
+8. prebuilds and verifies the runtime preview tree from the CLI.
 
-The public application therefore remains v2.14.2.
+The public application therefore remains v2.14.2. The browser's **Preview candidate for me**
+action performs no slot hashing or tree construction; it only validates the prebuilt tree
+and writes the signed, authenticated preview cookie. This keeps preview activation fast
+and avoids shared-hosting request timeouts.
 
 ### Preview session
 
