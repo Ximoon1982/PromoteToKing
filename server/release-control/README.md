@@ -1,82 +1,99 @@
 # Promote to King release-control recovery plane
 
-## v2.14.2 scope: candidate installation
+## v2.14.3 scope: Super Admin-only candidate preview
 
-v2.14.2 adds a true candidate-installation path while **keeping public serving in direct-root mode**.
-The fixed recovery page remains `/ReleaseControl.php`, server-rendered and independent from UI v1/UI v2 application shells.
+v2.14.3 adds authenticated personal preview of one registered candidate while the
+public site remains in direct-root mode. The stable control plane remains outside
+switchable release slots.
 
-### Candidate package contract
+### Production transition from v2.14.2
 
-A candidate package is an extracted P2K incremental package containing:
+The recommended production path is **not** the direct-root v2.14.3 installer.
 
-- `CANDIDATE_RELEASE.json` — exact target version, source commit, cache/build identity, qualification workflow name, accepted public build identities, and the SHA-256 identity of the candidate payload manifest.
-- `CANDIDATE_PAYLOAD.sha256` — hashes only release-owned overlay files. Recovery-plane and shared mutable files are deliberately excluded.
-- `CANDIDATE_REMOVED_PATHS.txt` — optional explicit release-owned removals.
-- `payload/` — the verified candidate overlay.
+Run the packaged:
 
-The normal cumulative installer remains usable for direct-root upgrades. Candidate installation is a separate operation and never runs the normal activation section.
+`prepare-candidate-preview-v2.14.3.sh`
 
-### Candidate installation algorithm
+against the qualified public v2.14.2 installation. It:
 
-`server/release-control/tools/install-candidate.php` is CLI-only.
+1. verifies the exact public v2.14.2 build identity;
+2. verifies the complete v2.14.3 package payload;
+3. backs up the current stable recovery/preview infrastructure;
+4. atomically updates only `.htaccess`, `ReleaseControl.php`,
+   `PreviewRouter.php`, and `server/release-control/**`;
+5. verifies public `VERSION` and `ui-v2.html` did not change;
+6. installs v2.14.3 as a sealed dormant candidate slot;
+7. registers that candidate in protected release-control state.
 
-It:
+The public application therefore remains v2.14.2.
 
-1. validates the candidate package and every candidate-overlay hash;
-2. compares the package's accepted-public-build list with the exact live VERSION/build identity;
-3. requires the matching sealed current public release slot and full-verifies it;
-4. constructs the candidate tree from that immutable base slot;
-5. hard-links unchanged release-owned files when the proven filesystem strategy allows it;
-6. copies changed/new files from the candidate payload;
-7. applies explicit removals;
-8. seals and full-verifies the resulting slot;
-9. atomically registers only `candidate_release` metadata in protected release-control state.
+### Preview session
 
-Direct-root public files are not changed.
+`/ReleaseControl.php` exposes **Preview candidate for me** only to an authenticated
+Release Control Super Admin.
 
-Re-installing the exact same candidate is idempotent. Registering a different candidate while one is already selected requires the explicit `--replace-candidate` option; the existing slot is never overwritten.
+The preview session is:
 
-### State behavior
+- bound to the authenticated username;
+- stored in a Secure, HttpOnly, SameSite=Lax cookie;
+- signed with a server-side HMAC secret kept under protected runtime storage;
+- bound to the currently registered candidate release;
+- time-limited;
+- revalidated by `PreviewRouter.php` on every routed request.
 
-Candidate registration initializes schema-1 state when needed, but keeps:
+The cookie is only a routing hint. Its presence alone never grants preview access.
 
-```json
-{
-  "schema_version": 1,
-  "mode": "direct-root",
-  "public_release": "2.14.2 (direct root)",
-  "candidate_release": "2.14.3-<source-short>"
-}
-```
+### Preview tree
 
-Public routing therefore remains unchanged. State writes use a lock, a private temporary file, and same-directory atomic rename.
+The candidate slot remains sealed. Enabling preview creates a separate runtime preview
+tree under protected release-control storage.
 
-### Recovery and shared-state boundary
-
-Release slots continue to exclude:
+Candidate application files are hard-linked from the verified candidate slot when
+possible. Shared mutable production paths are attached only to the preview tree:
 
 - `data/**`
 - `logs/**`
 - `storage/**`
-- host-local `*.local.*` and `.env*`
+- host-local `.env*` files
+- host-local `*.local.*` configuration files
+
+The candidate slot itself is not modified.
+
+### Stable recovery infrastructure
+
+Beginning with slot policy version 2, these paths are outside switchable release slots:
+
+- root `.htaccess`
 - `ReleaseControl.php`
+- `PreviewRouter.php`
 - `server/release-control/**`
 
-The recovery plane itself is never part of a switchable candidate slot and must remain outside any switchable application slot.
+Historical policy-1 slots remain valid and are inspected using the policy version
+recorded in their own sealed metadata.
 
-### Still intentionally disabled in v2.14.2
+### Routing boundary
 
-- per-Super-Admin candidate preview;
-- public release pointer switching;
-- promotion;
+Only requests with a valid Super Admin preview session are internally routed through
+`PreviewRouter.php`. Recovery paths, OAuth callback traffic, and directly requested
+shared storage paths stay outside candidate routing.
+
+CRON/background jobs do not carry the browser preview cookie and therefore continue
+to execute the public release.
+
+### Write boundary in v2.14.3
+
+Candidate preview accepts only GET and HEAD requests. POST, PUT, PATCH, DELETE and
+other methods are rejected with `CANDIDATE_PREVIEW_WRITE_BLOCKED`.
+
+This is deliberate. v2.14.4 is reserved for explicit side-effect isolation and the
+policy for candidate writes/background behavior.
+
+### Still disabled in v2.14.3
+
+- public release-slot routing;
+- candidate promotion;
 - rollback;
-- public slot routing;
-- candidate/background CRON execution.
+- candidate CRON/background execution;
+- candidate browser writes.
 
-Candidate installation only prepares and registers a verified dormant release.
-
-## Filesystem model retained from v2.14.1
-
-The production-host probe records cross-root hard-link support, hard-link snapshot isolation under atomic replacement, symlink availability and atomic rename support. Hard links are selected only when the host proved the required behavior; otherwise candidate assembly falls back to copies. Symlinks are never used as release snapshots.
-
-Hard links share an inode. P2K therefore continues to treat installed release files as immutable and uses staged atomic replacement for direct-root upgrades rather than editing release-owned files in place.
+The public release remains v2.14.2 until a later promotion increment.
