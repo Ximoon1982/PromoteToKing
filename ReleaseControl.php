@@ -29,6 +29,19 @@ function rc_status_class(string $status): string
     return in_array($status, ['ok', 'info', 'warning', 'error'], true) ? $status : 'info';
 }
 
+function rc_bytes(int $bytes): string
+{
+    $bytes = max(0, $bytes);
+    if ($bytes < 1024) return $bytes . ' B';
+    $units = ['KiB', 'MiB', 'GiB', 'TiB'];
+    $value = $bytes / 1024;
+    foreach ($units as $unit) {
+        if ($value < 1024 || $unit === 'TiB') return number_format($value, $value >= 100 ? 0 : ($value >= 10 ? 1 : 2)) . ' ' . $unit;
+        $value /= 1024;
+    }
+    return $bytes . ' B';
+}
+
 $auth = new ReleaseControlAuth(__DIR__);
 $username = $auth->currentUsername();
 $authorized = $username !== '' && $auth->isSuperAdmin($username);
@@ -53,7 +66,7 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
 <main class="wrap">
   <header class="head">
     <div><div class="eyebrow">Recovery plane</div><h1>Release Control</h1><p>Standalone release diagnostics · fixed URL <code>/ReleaseControl.php</code></p></div>
-    <div class="badge">v2.14.0 foundation · read-only</div>
+    <div class="badge">v2.14.1 · release-slot foundation · read-only</div>
   </header>
 
 <?php if ($username === ''): ?>
@@ -70,7 +83,7 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
     <p class="small">Allowlist source: <?= rc_h($auth->allowlistSource()) ?></p>
   </section>
 <?php else: ?>
-  <section class="notice"><strong>No deployment behavior changes in v2.14.0.</strong> Candidate installation, personal preview, promotion and rollback are intentionally disabled. This increment establishes and validates the independent recovery/control plane before it is allowed to mutate production state.</section>
+  <section class="notice"><strong>Public serving is still direct-root.</strong> v2.14.1 creates sealed release snapshots and validates the host filesystem, but it does not route users through a slot and does not enable candidate preview, promotion or rollback.</section>
 
   <div class="grid">
     <section class="card">
@@ -91,7 +104,8 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
         <dt>State file</dt><dd><?= rc_h($snapshot['state_status']) ?></dd>
         <dt>Previous public</dt><dd><?= rc_h($snapshot['previous_public_release'] ?? 'not recorded') ?></dd>
         <dt>Candidate</dt><dd><?= rc_h($snapshot['candidate_release'] ?? 'none') ?></dd>
-        <dt>Release slots</dt><dd><?= !empty($snapshot['release_slots_enabled']) ? 'enabled' : 'not enabled' ?></dd>
+        <dt>Slot routing</dt><dd><?= !empty($snapshot['release_slots_enabled']) ? 'enabled' : 'disabled (direct-root)' ?></dd>
+        <dt>Stored slots</dt><dd><?= rc_h($snapshot['slot_storage']['slot_count'] ?? 0) ?></dd>
       </dl>
     </section>
 
@@ -115,8 +129,54 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
     </section>
 
     <section class="card">
+      <h2>Release-slot filesystem</h2>
+      <?php $fs = $snapshot['slot_storage']['filesystem_capabilities'] ?? null; ?>
+      <dl class="meta">
+        <dt>Slot storage</dt><dd><?= rc_h($snapshot['slot_storage']['display_path']) ?></dd>
+        <dt>Selected strategy</dt><dd><?= rc_h(is_array($fs) ? ($fs['selected_strategy'] ?? 'unknown') : 'not probed') ?></dd>
+        <dt>Hard links</dt><dd><?= is_array($fs) ? (!empty($fs['hardlink_supported']) ? 'supported' : 'not available') : 'not probed' ?></dd>
+        <dt>Symlinks</dt><dd><?= is_array($fs) ? (!empty($fs['symlink_supported']) ? 'supported; not used for snapshots' : 'not available') : 'not probed' ?></dd>
+        <dt>Atomic rename</dt><dd><?= is_array($fs) ? (!empty($fs['atomic_rename_supported']) ? 'supported' : 'not available') : 'not probed' ?></dd>
+      </dl>
+    </section>
+
+    <section class="card full">
+      <h2>Installed release slots</h2>
+      <?php $slots = $snapshot['slot_storage']['slots'] ?? []; ?>
+      <?php if ($slots === []): ?>
+        <p class="small">No slot has been materialized yet. The v2.14.1 installer creates the pre-upgrade snapshot before changing production and the v2.14.1 snapshot after successful activation.</p>
+      <?php else: ?>
+        <div class="checks">
+          <?php foreach ($slots as $slot): $valid = ($slot['integrity_status'] ?? '') === 'valid'; ?>
+            <div class="check <?= $valid ? 'ok' : 'error' ?>">
+              <i class="dot" aria-hidden="true"></i>
+              <strong><?= rc_h($slot['release_id']) ?></strong>
+              <span>
+                <?= $valid ? 'valid' : 'INVALID' ?> ·
+                <?= rc_h($slot['strategy'] ?: 'unknown') ?> ·
+                <?= rc_h($slot['file_count']) ?> files ·
+                <?= rc_h(rc_bytes((int)$slot['logical_bytes'])) ?> logical ·
+                <?= rc_h(rc_bytes((int)$slot['additional_bytes_at_creation'])) ?> additional at creation ·
+                <?= rc_h($slot['hardlinked_files']) ?> hard-linked / <?= rc_h($slot['copied_files']) ?> copied
+                <?php if (!$valid && !empty($slot['errors'])): ?> · <?= rc_h(implode('; ', $slot['errors'])) ?><?php endif; ?>
+              </span>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+    </section>
+
+    <section class="card">
+      <h2>Shared mutable paths</h2>
+      <p class="small">Kept outside immutable slots by contract:</p>
+      <ul class="small">
+        <?php foreach (($snapshot['slot_storage']['shared_paths_external'] ?? []) as $shared): ?><li><?= rc_h($shared) ?></li><?php endforeach; ?>
+      </ul>
+    </section>
+
+    <section class="card">
       <h2>Deployment controls</h2>
-      <p class="small">Reserved for later v2.14.x increments after release slots and atomic state transitions are independently qualified.</p>
+      <p class="small">Still reserved for later v2.14.x increments. Slot existence alone never changes public routing.</p>
       <div class="actions"><span class="button disabled">Preview candidate</span><span class="button disabled">Promote candidate</span><span class="button disabled">Rollback</span></div>
     </section>
 
@@ -126,7 +186,8 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
         <dt>Authenticated as</dt><dd>@<?= rc_h($username) ?></dd>
         <dt>Allowlist source</dt><dd><?= rc_h($auth->allowlistSource()) ?></dd>
         <dt>Application dependency</dt><dd>None on UI v1/UI v2 shell assets or JavaScript</dd>
-        <dt>Mutation capability</dt><dd>Disabled in v2.14.0</dd>
+        <dt>Public slot routing</dt><dd>Disabled in v2.14.1</dd>
+        <dt>State mutation</dt><dd>Disabled in v2.14.1</dd>
       </dl>
       <div class="actions"><a class="button" href="/">Open public site</a></div>
     </section>
