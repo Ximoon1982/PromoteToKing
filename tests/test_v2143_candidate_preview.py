@@ -27,6 +27,7 @@ def test_v2143_identity_and_control_plane_contract():
     assert "Public serving is still direct-root" in PAGE
     assert "Preview candidate for me" in PAGE
     assert "Stop preview" in PAGE
+    assert 'href="/index.html">Open candidate site</a>' in PAGE
     assert "Promote candidate" in PAGE
     assert "Rollback" in PAGE
     assert "'personal_preview' => true" in STATE
@@ -87,6 +88,8 @@ def test_preview_router_is_cookie_gated_and_keeps_recovery_shared_paths_out():
     assert "['GET','HEAD']" in ROUTER
     assert "P2K_TP_CONFIG" in ROUTER
     assert "p2k-candidate-preview-banner" in ROUTER
+    assert "X-P2K-Preview-Error" in ROUTER
+    assert "candidate-file-missing" in ROUTER
 
 
 def test_preview_tree_uses_candidate_files_and_only_explicit_shared_links():
