@@ -24,7 +24,7 @@ file_put_contents($root . '/index.html', "old-index\n");
 file_put_contents($root . '/assets/app.js', "shared-unchanged\n");
 file_put_contents($root . '/data/secret.json', '{"do_not_copy":true}');
 
-$paths = ['.htaccess', 'VERSION', 'ui-v2.html', 'index.html', 'assets/app.js'];
+$paths = ['VERSION', 'ui-v2.html', 'index.html', 'assets/app.js'];
 $materializer = new ReleaseSlotMaterializer($root, $runtime);
 $old = $materializer->materialize($paths, '2.14.0', '123456789abcdef123456789abcdef123456789a');
 if (($old['integrity_status'] ?? '') !== 'valid') throw new RuntimeException('old slot invalid');
@@ -63,7 +63,8 @@ try {
 }
 if (!$badRejected) throw new RuntimeException('shared path was not rejected');
 
-if (!ReleaseSlotPolicy::isReleaseOwnedPath('.htaccess')) throw new RuntimeException('root dotfile rejected');
+if (ReleaseSlotPolicy::isReleaseOwnedPath('.htaccess')) throw new RuntimeException('stable recovery .htaccess admitted into current slot policy');
+if (!ReleaseSlotPolicy::isReleaseOwnedPathForVersion('.htaccess', 1)) throw new RuntimeException('legacy slot policy no longer recognizes historical .htaccess');
 if (ReleaseSlotPolicy::normalizeRelativePath('.htaccess') !== '.htaccess') throw new RuntimeException('root dotfile normalization changed its name');
 if (ReleaseSlotPolicy::normalizeRelativePath('./VERSION') !== 'VERSION') throw new RuntimeException('explicit relative prefix normalization failed');
 if (ReleaseSlotPolicy::normalizeRelativePath('../VERSION') !== '') throw new RuntimeException('parent traversal was accepted');

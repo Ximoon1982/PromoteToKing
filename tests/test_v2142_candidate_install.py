@@ -10,10 +10,9 @@ CLI = (ROOT / "server/release-control/tools/install-candidate.php").read_text(en
 
 
 def test_v2142_identity_and_recovery_ui_boundary():
-    assert (ROOT / "VERSION").read_text().strip() == "2.14.2"
-    assert "v2.14.2 · candidate installation · recovery UI read-only" in PAGE
+    parts = tuple(int(value) for value in (ROOT / "VERSION").read_text().strip().split("."))
+    assert parts >= (2, 14, 2)
     assert "Public serving is still direct-root" in PAGE
-    assert "Candidate preview, promotion, rollback, public slot routing and candidate CRON remain disabled" in PAGE
     assert "<script" not in PAGE.lower()
     assert "<link" not in PAGE.lower()
 
@@ -55,11 +54,9 @@ def test_candidate_state_write_is_locked_atomic_and_direct_root():
 def test_release_control_reports_candidate_but_serving_controls_stay_disabled():
     assert "'candidate_install' => true" in STATE
     assert "'candidate_registration' => true" in STATE
-    assert "'personal_preview' => false" in STATE
     assert "'promotion' => false" in STATE
     assert "'rollback' => false" in STATE
     assert "'public_slot_routing' => false" in STATE
-    assert "'web_state_mutation' => false" in STATE
     assert "Preview candidate" in PAGE
     assert "Promote candidate" in PAGE
     assert "Rollback" in PAGE

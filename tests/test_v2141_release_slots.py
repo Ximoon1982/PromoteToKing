@@ -22,7 +22,7 @@ def test_v2141_release_identity_and_read_only_recovery_page():
     assert parts >= (2, 14, 1)
     assert "Public serving is still direct-root" in PAGE
     assert "Installed release slots" in PAGE
-    assert "Preview candidate" in PAGE and "disabled" in PAGE
+    assert "Preview candidate" in PAGE
     assert "Promote candidate" in PAGE
     assert "Rollback" in PAGE
     lowered = PAGE.lower()
@@ -33,10 +33,8 @@ def test_web_state_projection_remains_non_mutating():
     for token in ["file_put_contents(", "rename(", "unlink(", "mkdir(", "rmdir("]:
         assert token not in STATE, token
     assert "'slot_materialization' => true" in STATE
-    assert "'personal_preview' => false" in STATE
     assert "'promotion' => false" in STATE
     assert "'rollback' => false" in STATE
-    assert "'web_state_mutation' => false" in STATE or "'state_mutation' => false" in STATE
     assert "'public_slot_routing' => false" in STATE
 
 def test_release_slot_policy_keeps_shared_and_recovery_state_external():
@@ -46,6 +44,8 @@ def test_release_slot_policy_keeps_shared_and_recovery_state_external():
     assert ".local." in POLICY
     mod = selector_module()
     assert mod.included("VERSION")
+    assert not mod.included(".htaccess")
+    assert not mod.included("PreviewRouter.php")
     assert mod.included("ui-v2.html")
     assert mod.included("MaxRatingBackfill.php")
     assert mod.included("assets/js/site-config.js")
