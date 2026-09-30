@@ -244,7 +244,7 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
         <?php if (is_array($candidate) && $csrfToken !== '' && $previewTreeReady): ?>
           <?php if (!empty($previewStatus['enabled'])): ?>
             <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="disable-preview"><button class="button" type="submit">Stop preview</button></form>
-            <a class="button primary" href="/">Open candidate site</a>
+            <a class="button primary" href="/index.html">Open candidate site</a>
           <?php else: ?>
             <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="enable-preview"><button class="button primary" type="submit">Preview candidate for me</button></form>
           <?php endif; ?>
