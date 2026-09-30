@@ -8,9 +8,10 @@ README = (ROOT / "server/release-control/README.md").read_text(encoding="utf-8")
 
 
 def test_release_identity_and_fixed_recovery_url():
-    assert (ROOT / "VERSION").read_text().strip() == "2.14.0"
+    parts = [int(value) for value in (ROOT / "VERSION").read_text().strip().split(".")]
+    assert tuple(parts) >= (2, 14, 0)
     assert "fixed URL <code>/ReleaseControl.php</code>" in PAGE
-    assert "v2.14.0 foundation · read-only" in PAGE
+    assert "read-only" in PAGE
 
 
 def test_recovery_page_is_shell_independent_and_no_store():
@@ -33,7 +34,9 @@ def test_v2140_recovery_plane_is_read_only():
     assert "'promotion' => false" in STATE
     assert "'rollback' => false" in STATE
     assert "'state_mutation' => false" in STATE
-    assert "Candidate installation, personal preview, promotion and rollback are intentionally disabled" in PAGE
+    assert "Preview candidate" in PAGE
+    assert "Promote candidate" in PAGE
+    assert "Rollback" in PAGE
 
 
 def test_recovery_auth_is_server_side_and_read_only():
@@ -50,5 +53,5 @@ def test_recovery_auth_is_server_side_and_read_only():
 def test_state_contract_and_recovery_boundary_are_documented():
     assert "schema_version" in README
     assert '"mode": "direct-root"' in README
-    assert "v2.14.0 does not create this file" in README
+    assert "public serving in direct-root mode" in README
     assert "must remain outside any switchable application slot" in README
