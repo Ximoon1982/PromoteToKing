@@ -60,14 +60,11 @@ if (defined('P2K_PREVIEW_ROUTER_HELPER_ONLY') && P2K_PREVIEW_ROUTER_HELPER_ONLY 
 
 $root = __DIR__;
 $auth = new ReleaseControlAuth($root);
-$username = $auth->currentUsername();
 $preview = new ReleasePreviewSession($root);
-$status = $username !== '' && $auth->isSuperAdmin($username)
-    ? $preview->status($username)
-    : ['enabled'=>false,'reason'=>'unauthorized'];
-
 $originalUri = p2k_preview_original_uri($_SERVER);
 $pathPart = (string)(parse_url($originalUri, PHP_URL_PATH) ?? '/');
+$method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+
 if ($pathPart === '/PreviewRouter.php' || $pathPart === 'PreviewRouter.php') {
     http_response_code(404);
     header('Content-Type: text/plain; charset=utf-8');
@@ -75,9 +72,41 @@ if ($pathPart === '/PreviewRouter.php' || $pathPart === 'PreviewRouter.php') {
     exit('P2K preview routing error: direct-router-request');
 }
 
+$username = $auth->currentUsername();
+if ($username === '' && !empty($_COOKIE[ReleasePreviewSession::COOKIE])) {
+    if (in_array($method, ['GET','HEAD'], true)) {
+        $query = [];
+        $rawQuery = (string)(parse_url($originalUri, PHP_URL_QUERY) ?? '');
+        if ($rawQuery !== '') parse_str($rawQuery, $query);
+        if (strtolower(trim((string)($query['oauth_result'] ?? ''))) === 'fail') {
+            header('Cache-Control: no-store');
+            header('Location: /ReleaseControl.php?oauth_result=fail', true, 302);
+            exit;
+        }
+        header('Cache-Control: no-store');
+        header('Location: ' . $auth->loginUrl($originalUri !== '' ? $originalUri : '/'), true, 302);
+        exit;
+    }
+    http_response_code(401);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode([
+        'ok'=>false,
+        'error'=>[
+            'code'=>'CANDIDATE_PREVIEW_REAUTH_REQUIRED',
+            'message'=>'Re-authenticate with Chess.com before continuing this candidate preview.',
+        ],
+    ], JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+$status = $username !== '' && $auth->isSuperAdmin($username)
+    ? $preview->status($username)
+    : ['enabled'=>false,'reason'=>'unauthorized'];
+
 if (empty($status['enabled'])) {
     $preview->clearInvalidCookie();
-    if (in_array(strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')), ['GET','HEAD'], true)) {
+    if (in_array($method, ['GET','HEAD'], true)) {
         header('Cache-Control: no-store');
         header('Location: ' . ($originalUri !== '' ? $originalUri : '/'), true, 302);
         exit;
@@ -86,8 +115,6 @@ if (empty($status['enabled'])) {
     header('Content-Type: text/plain; charset=utf-8');
     exit('Candidate preview session is no longer valid. Reload the page to return to the public release.');
 }
-
-$method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
 if (!in_array($method, ['GET','HEAD'], true)) {
     http_response_code(409);
     header('Content-Type: application/json; charset=utf-8');
