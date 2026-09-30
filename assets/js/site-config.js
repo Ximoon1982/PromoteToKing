@@ -59,9 +59,9 @@
       recordLeagueMatchEndpoint: existing.serverStorage?.recordLeagueMatchEndpoint || "api/record-league-match/",
       diagnosticsEndpoint: existing.serverStorage?.diagnosticsEndpoint || "api/diagnostics/",
       trafficAnalyticsEndpoint: existing.serverStorage?.trafficAnalyticsEndpoint || "api/traffic/",
-      teamPointsEndpoint: existing.serverStorage?.teamPointsEndpoint || "server/team-points/public/api.php",
-      teamPointsSessionEndpoint: existing.serverStorage?.teamPointsSessionEndpoint || "server/team-points/public/session.php",
-      teamPointsPublicEndpoint: existing.serverStorage?.teamPointsPublicEndpoint || "server/team-points/public/public.php",
+      teamPointsEndpoint: existing.serverStorage?.teamPointsEndpoint || "/server/team-points/public/api.php",
+      teamPointsSessionEndpoint: existing.serverStorage?.teamPointsSessionEndpoint || "/server/team-points/public/session.php",
+      teamPointsPublicEndpoint: existing.serverStorage?.teamPointsPublicEndpoint || "/server/team-points/public/public.php",
       opportunisticObservationEndpoint: existing.serverStorage?.opportunisticObservationEndpoint || "server/team-points/public/observe.php",
       acamrPlanEndpoint: existing.serverStorage?.acamrPlanEndpoint || "server/team-points/public/acamr-plan.php",
       recruitmentAdminEndpoint: existing.serverStorage?.recruitmentAdminEndpoint || "server/team-points/public/recruitment-admin.php"
