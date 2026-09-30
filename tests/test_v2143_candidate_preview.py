@@ -9,7 +9,10 @@ TREE = (ROOT / "server/release-control/src/ReleasePreviewTree.php").read_text(en
 STATE = (ROOT / "server/release-control/src/ReleaseControlState.php").read_text(encoding="utf-8")
 AUTH = (ROOT / "server/release-control/src/ReleaseControlAuth.php").read_text(encoding="utf-8")
 HTACCESS = (ROOT / ".htaccess").read_text(encoding="utf-8")
-POLICY = (ROOT / "server/release-control/src/ReleaseSlotPolicy.php").read_text(encoding="utf-8")\nREAL_OAUTH = (ROOT / "assets/js/shared/real-oauth.js").read_text(encoding="utf-8")\nSITE_CONFIG = (ROOT / "assets/js/site-config.js").read_text(encoding="utf-8")\nTP_CLIENT = (ROOT / "assets/js/shared/team-points-client.js").read_text(encoding="utf-8")
+POLICY = (ROOT / "server/release-control/src/ReleaseSlotPolicy.php").read_text(encoding="utf-8")
+REAL_OAUTH = (ROOT / "assets/js/shared/real-oauth.js").read_text(encoding="utf-8")
+SITE_CONFIG = (ROOT / "assets/js/site-config.js").read_text(encoding="utf-8")
+TP_CLIENT = (ROOT / "assets/js/shared/team-points-client.js").read_text(encoding="utf-8")
 SELECTOR_PATH = ROOT / "server/release-control/tools/release-slot-paths.py"
 
 
