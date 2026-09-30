@@ -8,4 +8,7 @@ require_once __DIR__ . '/ReleaseSlotPolicy.php';
 require_once __DIR__ . '/ReleaseSlotFilesystemProbe.php';
 require_once __DIR__ . '/ReleaseSlotStore.php';
 require_once __DIR__ . '/ReleaseSlotMaterializer.php';
+require_once __DIR__ . '/ReleaseCandidatePackage.php';
+require_once __DIR__ . '/ReleaseStateStore.php';
+require_once __DIR__ . '/ReleaseCandidateInstaller.php';
 require_once __DIR__ . '/ReleaseControlState.php';

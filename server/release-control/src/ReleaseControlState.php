@@ -27,6 +27,13 @@ final class ReleaseControlState
         $mode = (string)($state['mode'] ?? 'direct-root');
         if (!in_array($mode, ['direct-root', 'slots'], true)) $mode = 'invalid';
         $invalidSlots = array_values(array_filter($slots, static fn(array $slot): bool => ($slot['integrity_status'] ?? '') !== 'valid'));
+        $candidateId = trim((string)($state['candidate_release'] ?? ''));
+        $candidateSlot = null;
+        if ($candidateId !== '') {
+            foreach ($slots as $slot) {
+                if (($slot['release_id'] ?? '') === $candidateId) { $candidateSlot = $slot; break; }
+            }
+        }
 
         return [
             'schema_version' => self::STATE_SCHEMA,
@@ -35,6 +42,11 @@ final class ReleaseControlState
             'public_release' => $state['public_release'] ?? ($version !== '' ? $version . ' (direct root)' : null),
             'previous_public_release' => $state['previous_public_release'] ?? null,
             'candidate_release' => $state['candidate_release'] ?? null,
+            'candidate_registered_at' => $state['candidate_registered_at'] ?? null,
+            'candidate_registered_by' => $state['candidate_registered_by'] ?? null,
+            'candidate_build_id' => $state['candidate_build_id'] ?? null,
+            'candidate_qualification_workflow' => $state['candidate_qualification_workflow'] ?? null,
+            'candidate_slot' => $candidateSlot,
             'updated_at' => $state['updated_at'] ?? null,
             'updated_by' => $state['updated_by'] ?? null,
             'state_file_present' => is_file($statePath),
@@ -57,14 +69,16 @@ final class ReleaseControlState
                 'shared_paths_external' => ReleaseSlotPolicy::sharedPathDescriptions(),
             ],
             'build_identity' => $identity,
-            'health' => $this->health($version, $mode, $stateStatus, $identity, $runtime, $slots, $filesystem),
+            'health' => $this->health($version, $mode, $stateStatus, $identity, $runtime, $slots, $filesystem, $candidateId, $candidateSlot),
             'capabilities' => [
                 'slot_materialization' => true,
-                'candidate_install' => false,
+                'candidate_install' => true,
+                'candidate_registration' => true,
                 'personal_preview' => false,
                 'promotion' => false,
                 'rollback' => false,
-                'state_mutation' => false,
+                'state_mutation' => true,
+                'web_state_mutation' => false,
                 'public_slot_routing' => false,
             ],
         ];
@@ -118,7 +132,7 @@ final class ReleaseControlState
         ];
     }
 
-    private function health(string $version, string $mode, string $stateStatus, array $identity, string $runtime, array $slots, ?array $filesystem): array
+    private function health(string $version, string $mode, string $stateStatus, array $identity, string $runtime, array $slots, ?array $filesystem, string $candidateId, ?array $candidateSlot): array
     {
         $checks = [];
         $checks[] = ['status'=>$version !== '' ? 'ok' : 'error','label'=>'Installed VERSION','detail'=>$version !== '' ? $version : 'VERSION file is missing or unreadable.'];
@@ -133,7 +147,7 @@ final class ReleaseControlState
             'status'=>$mode === 'direct-root' ? 'ok' : ($mode === 'slots' ? 'info' : 'warning'),
             'label'=>'Routing mode',
             'detail'=>$mode === 'direct-root'
-                ? 'Direct-root serving remains active; v2.14.1 does not route public traffic through release slots.'
+                ? 'Direct-root serving remains active; v2.14.2 does not route public traffic through release slots.'
                 : ($mode === 'slots' ? 'Release-slot routing is declared by state.' : 'Release state contains an unsupported routing mode.'),
         ];
         $checks[] = [
@@ -144,7 +158,7 @@ final class ReleaseControlState
                 : 'No stamped build identity was found; this is expected in an unstamped source checkout.',
         ];
         if ($filesystem === null) {
-            $checks[] = ['status'=>'warning','label'=>'Release-slot filesystem probe','detail'=>'No filesystem capability record exists yet. Installing v2.14.1 should create it before changing production files.'];
+            $checks[] = ['status'=>'warning','label'=>'Release-slot filesystem probe','detail'=>'No filesystem capability record exists yet. Installing v2.14.2 should preserve/create it before changing production files.'];
         } else {
             $strategy = (string)($filesystem['selected_strategy'] ?? 'unknown');
             $checks[] = [
@@ -162,6 +176,21 @@ final class ReleaseControlState
             'label'=>'Installed release slots',
             'detail'=>$slots === [] ? 'No release slot has been materialized yet.' : (count($slots) . ' slot(s) discovered; ' . count($invalid) . ' invalid.'),
         ];
+        if ($candidateId !== '') {
+            $candidateValid = is_array($candidateSlot)
+                && ($candidateSlot['integrity_status'] ?? '') === 'valid'
+                && !empty($candidateSlot['candidate'])
+                && empty($candidateSlot['routing_enabled']);
+            $checks[] = [
+                'status'=>$candidateValid ? 'ok' : 'error',
+                'label'=>'Registered candidate',
+                'detail'=>$candidateValid
+                    ? $candidateId . ' is sealed, valid and not routed.'
+                    : $candidateId . ' is registered but its candidate slot is missing, invalid or unexpectedly routable.',
+            ];
+        } else {
+            $checks[] = ['status'=>'info','label'=>'Registered candidate','detail'=>'No candidate is registered.'];
+        }
         return $checks;
     }
 

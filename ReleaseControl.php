@@ -66,7 +66,7 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
 <main class="wrap">
   <header class="head">
     <div><div class="eyebrow">Recovery plane</div><h1>Release Control</h1><p>Standalone release diagnostics · fixed URL <code>/ReleaseControl.php</code></p></div>
-    <div class="badge">v2.14.1 · release-slot foundation · read-only</div>
+    <div class="badge">v2.14.2 · candidate installation · recovery UI read-only</div>
   </header>
 
 <?php if ($username === ''): ?>
@@ -83,7 +83,7 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
     <p class="small">Allowlist source: <?= rc_h($auth->allowlistSource()) ?></p>
   </section>
 <?php else: ?>
-  <section class="notice"><strong>Public serving is still direct-root.</strong> v2.14.1 creates sealed release snapshots and validates the host filesystem, but it does not route users through a slot and does not enable candidate preview, promotion or rollback.</section>
+  <section class="notice"><strong>Public serving is still direct-root.</strong> v2.14.2 can install and register a verified candidate release into an immutable slot through the CLI, without changing public files. Candidate preview, promotion, rollback, public slot routing and candidate CRON remain disabled.</section>
 
   <div class="grid">
     <section class="card">
@@ -104,6 +104,8 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
         <dt>State file</dt><dd><?= rc_h($snapshot['state_status']) ?></dd>
         <dt>Previous public</dt><dd><?= rc_h($snapshot['previous_public_release'] ?? 'not recorded') ?></dd>
         <dt>Candidate</dt><dd><?= rc_h($snapshot['candidate_release'] ?? 'none') ?></dd>
+        <dt>Candidate registered</dt><dd><?= rc_h($snapshot['candidate_registered_at'] ?? 'not registered') ?></dd>
+        <dt>Candidate by</dt><dd><?= rc_h($snapshot['candidate_registered_by'] ?? '—') ?></dd>
         <dt>Slot routing</dt><dd><?= !empty($snapshot['release_slots_enabled']) ? 'enabled' : 'disabled (direct-root)' ?></dd>
         <dt>Stored slots</dt><dd><?= rc_h($snapshot['slot_storage']['slot_count'] ?? 0) ?></dd>
       </dl>
@@ -175,8 +177,24 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
     </section>
 
     <section class="card">
+      <h2>Candidate installation</h2>
+      <?php $candidate = $snapshot['candidate_slot'] ?? null; ?>
+      <?php if (is_array($candidate)): ?>
+        <dl class="meta">
+          <dt>Release</dt><dd><?= rc_h($candidate['release_id'] ?? 'unknown') ?></dd>
+          <dt>Integrity</dt><dd><?= rc_h($candidate['integrity_status'] ?? 'unknown') ?></dd>
+          <dt>Build ID</dt><dd><?= rc_h($candidate['build_id'] ?? 'unknown') ?></dd>
+          <dt>Base release</dt><dd><?= rc_h($candidate['base_release_id'] ?? 'unknown') ?></dd>
+          <dt>Routing</dt><dd><?= !empty($candidate['routing_enabled']) ? 'UNEXPECTEDLY ENABLED' : 'disabled' ?></dd>
+        </dl>
+      <?php else: ?>
+        <p class="small">No candidate is registered. v2.14.2 candidate installation is intentionally CLI-only; the recovery webpage remains non-mutating.</p>
+      <?php endif; ?>
+    </section>
+
+    <section class="card">
       <h2>Deployment controls</h2>
-      <p class="small">Still reserved for later v2.14.x increments. Slot existence alone never changes public routing.</p>
+      <p class="small">Candidate installation/registration exists in v2.14.2, but serving controls remain reserved for later increments.</p>
       <div class="actions"><span class="button disabled">Preview candidate</span><span class="button disabled">Promote candidate</span><span class="button disabled">Rollback</span></div>
     </section>
 
@@ -186,8 +204,9 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
         <dt>Authenticated as</dt><dd>@<?= rc_h($username) ?></dd>
         <dt>Allowlist source</dt><dd><?= rc_h($auth->allowlistSource()) ?></dd>
         <dt>Application dependency</dt><dd>None on UI v1/UI v2 shell assets or JavaScript</dd>
-        <dt>Public slot routing</dt><dd>Disabled in v2.14.1</dd>
-        <dt>State mutation</dt><dd>Disabled in v2.14.1</dd>
+        <dt>Candidate install</dt><dd>Enabled through verified CLI package installation</dd>
+        <dt>Public slot routing</dt><dd>Disabled in v2.14.2</dd>
+        <dt>Web state mutation</dt><dd>Disabled in v2.14.2</dd>
       </dl>
       <div class="actions"><a class="button" href="/">Open public site</a></div>
     </section>

@@ -1,65 +1,82 @@
 # Promote to King release-control recovery plane
 
-## v2.14.1 scope: release-slot foundation
+## v2.14.2 scope: candidate installation
 
-v2.14.1 adds immutable release-slot storage while **keeping public serving in direct-root mode**.
-The fixed recovery page remains `/ReleaseControl.php`; it is server-rendered and has no dependency on UI v1, UI v2, dashboard JavaScript, or normal CSS bundles.
+v2.14.2 adds a true candidate-installation path while **keeping public serving in direct-root mode**.
+The fixed recovery page remains `/ReleaseControl.php`, server-rendered and independent from UI v1/UI v2 application shells.
 
-### Installer behavior
+### Candidate package contract
 
-The installer first performs the normal no-write cumulative preflight. Before changing production it probes the production filesystem for cross-root hard links, hard-link snapshot isolation after atomic source replacement, symlink support, and atomic rename support. It then seals a snapshot of the currently installed immutable application tree. After the v2.14.1 overlay has been activated and fully verified, it seals a second snapshot for v2.14.1.
+A candidate package is an extracted P2K incremental package containing:
 
-The default protected slot location is:
+- `CANDIDATE_RELEASE.json` — exact target version, source commit, cache/build identity, qualification workflow name, accepted public build identities, and the SHA-256 identity of the candidate payload manifest.
+- `CANDIDATE_PAYLOAD.sha256` — hashes only release-owned overlay files. Recovery-plane and shared mutable files are deliberately excluded.
+- `CANDIDATE_REMOVED_PATHS.txt` — optional explicit release-owned removals.
+- `payload/` — the verified candidate overlay.
 
-`data/runtime-v280/release-control/releases/<version>-<source-short>/`
+The normal cumulative installer remains usable for direct-root upgrades. Candidate installation is a separate operation and never runs the normal activation section.
 
-or the configured Team Points runtime directory when `storage.runtime_dir` is set.
+### Candidate installation algorithm
 
-Each slot contains `app/` plus a protected `meta/` directory with a SHA-256 manifest, exact build identity and a seal marker.
+`server/release-control/tools/install-candidate.php` is CLI-only.
 
-### Disk and filesystem model
+It:
 
-When the host proves that cross-root hard links and atomic replacement are safe, unchanged files are hard-linked instead of copied. A later atomic replacement of a live file gives production a new inode while an older slot retains the previous inode. This preserves rollback material without duplicating unchanged file contents at creation time.
+1. validates the candidate package and every candidate-overlay hash;
+2. compares the package's accepted-public-build list with the exact live VERSION/build identity;
+3. requires the matching sealed current public release slot and full-verifies it;
+4. constructs the candidate tree from that immutable base slot;
+5. hard-links unchanged release-owned files when the proven filesystem strategy allows it;
+6. copies changed/new files from the candidate payload;
+7. applies explicit removals;
+8. seals and full-verifies the resulting slot;
+9. atomically registers only `candidate_release` metadata in protected release-control state.
 
-If hard links are unavailable or fail the safety probe, v2.14.1 falls back to copies. Symlink support is recorded for diagnostics but symlinks are not used as immutable snapshots because they would follow future direct-root replacements.
+Direct-root public files are not changed.
 
-### Shared mutable state
+Re-installing the exact same candidate is idempotent. Registering a different candidate while one is already selected requires the explicit `--replace-candidate` option; the existing slot is never overwritten.
 
-Slots deliberately exclude `data/**`, `logs/**`, `storage/**`, host-local `*.local.*` / `.env*` configuration, and the recovery plane itself (`ReleaseControl.php` plus `server/release-control/**`).
+### State behavior
 
-### Immutability and validation
-
-Slots are assembled in a temporary directory and published only through a same-directory atomic rename. Existing slots are never overwritten. Re-running the installer accepts an existing slot only after full hash verification and identity matching. The Release Control page performs lightweight manifest/structure validation; full verification is available through the CLI-only `server/release-control/tools/verify-slot.php` tool.
-
-### Still intentionally disabled in v2.14.1
-
-Candidate installation, per-Super-Admin preview, public release pointer switching, promotion, rollback, and slot-based CRON execution remain disabled. Slot existence alone never changes what users receive.
-
-
-## Recovery state contract retained from v2.14.0
-
-The protected recovery-state file remains:
-
-`data/runtime-v280/release-control/state.json`
-
-(or the configured Team Points runtime directory) and continues to use schema 1:
+Candidate registration initializes schema-1 state when needed, but keeps:
 
 ```json
 {
   "schema_version": 1,
   "mode": "direct-root",
-  "public_release": null,
-  "previous_public_release": null,
-  "candidate_release": null,
-  "updated_at": null,
-  "updated_by": null
+  "public_release": "2.14.2 (direct root)",
+  "candidate_release": "2.14.3-<source-short>"
 }
 ```
 
-v2.14.1 does not create or mutate that state file merely to materialize release slots. Public routing therefore remains unchanged.
+Public routing therefore remains unchanged. State writes use a lock, a private temporary file, and same-directory atomic rename.
 
-## Recovery-plane boundary
+### Recovery and shared-state boundary
 
-`ReleaseControl.php`, `server/release-control/**`, and the protected release-control state must remain outside any switchable application slot. Future promotion must never replace the recovery plane itself.
+Release slots continue to exclude:
 
-Hard-link safety in v2.14.1 specifically means snapshot isolation under P2K's atomic-replacement update model. Hard links still share an inode, so an in-place write through either hard-link path would affect both names; P2K release activation must therefore continue to stage and atomically replace files rather than edit release-owned files in place.
+- `data/**`
+- `logs/**`
+- `storage/**`
+- host-local `*.local.*` and `.env*`
+- `ReleaseControl.php`
+- `server/release-control/**`
+
+The recovery plane itself is never part of a switchable candidate slot.
+
+### Still intentionally disabled in v2.14.2
+
+- per-Super-Admin candidate preview;
+- public release pointer switching;
+- promotion;
+- rollback;
+- public slot routing;
+- candidate/background CRON execution.
+
+Candidate installation only prepares and registers a verified dormant release.
+
+## Filesystem model retained from v2.14.1
+
+The production-host probe records cross-root hard-link support, hard-link snapshot isolation under atomic replacement, symlink availability and atomic rename support. Hard links are selected only when the host proved the required behavior; otherwise candidate assembly falls back to copies. Symlinks are never used as release snapshots.
+
+Hard links share an inode. P2K therefore continues to treat installed release files as immutable and uses staged atomic replacement for direct-root upgrades rather than editing release-owned files in place.
