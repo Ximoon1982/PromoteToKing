@@ -6,7 +6,7 @@ import os
 from pathlib import Path, PurePosixPath
 import subprocess
 
-ROOT_FILES = {".htaccess", "VERSION", "site-manifest.json"}
+ROOT_FILES = {"VERSION", "site-manifest.json"}
 ROOT_PAGES = set(
     "AnalyzeMatch.html AnalyzeMatchModal.html AnalyzeMatches.htm "
     "ChallengeListAssistant.html ClubIntelligence.html DataReconciliation.html "
@@ -35,7 +35,7 @@ MUTABLE_SEGMENTS = {
     "backup", "backups", "cache", "caches", "data", "log", "logs", "processed",
     "quarantine", "runtime", "sessions", "storage", "tmp", "upload", "uploads",
 }
-RECOVERY_EXACT = {"ReleaseControl.php"}
+RECOVERY_EXACT = {".htaccess", "ReleaseControl.php", "PreviewRouter.php"}
 RECOVERY_PREFIXES = ("server/release-control/",)
 ROOT_RUNTIME_PREFIXES = ("cron-", "weekly-backup-")
 

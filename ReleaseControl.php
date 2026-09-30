@@ -5,10 +5,12 @@ require_once __DIR__ . '/server/release-control/src/bootstrap.php';
 
 use P2K\ReleaseControl\ReleaseControlAuth;
 use P2K\ReleaseControl\ReleaseControlState;
+use P2K\ReleaseControl\ReleasePreviewSession;
 
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+$method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+if (!in_array($method, ['GET','POST'], true)) {
     http_response_code(405);
-    header('Allow: GET');
+    header('Allow: GET, POST');
     exit('Method not allowed');
 }
 
@@ -45,12 +47,45 @@ function rc_bytes(int $bytes): string
 $auth = new ReleaseControlAuth(__DIR__);
 $username = $auth->currentUsername();
 $authorized = $username !== '' && $auth->isSuperAdmin($username);
+$previewSession = new ReleasePreviewSession(__DIR__);
+$actionError = '';
 
 if ($username === '') http_response_code(401);
 elseif (!$authorized) http_response_code(403);
 
+if ($method === 'POST' && $authorized) {
+    $providedCsrf = trim((string)($_POST['csrf'] ?? ''));
+    $expectedCsrf = $auth->currentCsrfToken();
+    if ($providedCsrf === '' || $expectedCsrf === '' || !hash_equals($expectedCsrf, $providedCsrf)) {
+        http_response_code(403);
+        $actionError = 'Release Control request validation failed. Reload this page and try again.';
+    } else {
+        try {
+            $action = strtolower(trim((string)($_POST['action'] ?? '')));
+            if ($action === 'enable-preview') {
+                $previewSession->enable($username);
+                header('Location: /ReleaseControl.php?preview_result=enabled', true, 303);
+                exit;
+            }
+            if ($action === 'disable-preview') {
+                $previewSession->disable();
+                header('Location: /ReleaseControl.php?preview_result=disabled', true, 303);
+                exit;
+            }
+            http_response_code(400);
+            $actionError = 'Unknown Release Control action.';
+        } catch (Throwable $e) {
+            http_response_code(409);
+            $actionError = $e->getMessage();
+        }
+    }
+}
+
 $snapshot = $authorized ? (new ReleaseControlState(__DIR__))->snapshot() : null;
+$previewStatus = $authorized ? $previewSession->status($username) : ['enabled'=>false,'reason'=>'unauthorized'];
+$csrfToken = $authorized ? $auth->currentCsrfToken() : '';
 $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
+$previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -59,14 +94,14 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
 <meta name="color-scheme" content="dark">
 <title>Promote to King · Release Control</title>
 <style>
-:root{color-scheme:dark;--bg:#0e0d0c;--panel:#1a1815;--panel2:#211e19;--text:#f5ead9;--muted:#a99f92;--gold:#f3bd55;--line:#ffffff18;--ok:#8fd18a;--info:#8ab6ee;--warning:#e7bd68;--error:#ef8c82}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#211a12 0,#0e0d0c 44%);color:var(--text);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}.wrap{max-width:980px;margin:0 auto;padding:28px 18px 56px}.head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.eyebrow{text-transform:uppercase;letter-spacing:.11em;font-size:11px;color:var(--gold);font-weight:800}.head h1{margin:4px 0 3px;font-size:29px}.head p{margin:0;color:var(--muted)}.badge{border:1px solid #f3bd5544;background:#f3bd5510;color:#ffd88c;border-radius:999px;padding:7px 11px;font-size:12px;white-space:nowrap}.notice,.card{background:linear-gradient(145deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:15px}.notice{padding:14px 16px;margin-bottom:14px}.notice strong{color:#ffd88c}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{padding:18px}.card.full{grid-column:1/-1}.card h2{font-size:16px;margin:0 0 12px;color:#ffe1a4}.meta{display:grid;grid-template-columns:180px 1fr;gap:7px 14px;margin:0}.meta dt{color:var(--muted)}.meta dd{margin:0;overflow-wrap:anywhere}.checks{display:grid;gap:8px}.check{display:grid;grid-template-columns:10px 180px 1fr;gap:10px;align-items:start;padding:9px 0;border-top:1px solid var(--line)}.check:first-child{border-top:0}.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;background:var(--info)}.check.ok .dot{background:var(--ok)}.check.warning .dot{background:var(--warning)}.check.error .dot{background:var(--error)}.check strong{font-size:14px}.check span{color:var(--muted)}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:15px}.button{display:inline-block;text-decoration:none;border:1px solid #ffffff24;border-radius:9px;padding:9px 13px;background:#2a251e;color:var(--text);font-weight:700}.button.primary{background:var(--gold);border-color:var(--gold);color:#1a140b}.disabled{opacity:.45}.small{font-size:12px;color:var(--muted)}code{color:#ffd88c}@media(max-width:700px){.grid{grid-template-columns:1fr}.head{display:block}.badge{display:inline-block;margin-top:10px}.meta{grid-template-columns:1fr}.meta dd{margin-bottom:7px}.check{grid-template-columns:10px 1fr}.check span{grid-column:2}}
+:root{color-scheme:dark;--bg:#0e0d0c;--panel:#1a1815;--panel2:#211e19;--text:#f5ead9;--muted:#a99f92;--gold:#f3bd55;--line:#ffffff18;--ok:#8fd18a;--info:#8ab6ee;--warning:#e7bd68;--error:#ef8c82}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#211a12 0,#0e0d0c 44%);color:var(--text);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}.wrap{max-width:980px;margin:0 auto;padding:28px 18px 56px}.head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.eyebrow{text-transform:uppercase;letter-spacing:.11em;font-size:11px;color:var(--gold);font-weight:800}.head h1{margin:4px 0 3px;font-size:29px}.head p{margin:0;color:var(--muted)}.badge{border:1px solid #f3bd5544;background:#f3bd5510;color:#ffd88c;border-radius:999px;padding:7px 11px;font-size:12px;white-space:nowrap}.notice,.card{background:linear-gradient(145deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:15px}.notice{padding:14px 16px;margin-bottom:14px}.notice strong{color:#ffd88c}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{padding:18px}.card.full{grid-column:1/-1}.card h2{font-size:16px;margin:0 0 12px;color:#ffe1a4}.meta{display:grid;grid-template-columns:180px 1fr;gap:7px 14px;margin:0}.meta dt{color:var(--muted)}.meta dd{margin:0;overflow-wrap:anywhere}.checks{display:grid;gap:8px}.check{display:grid;grid-template-columns:10px 180px 1fr;gap:10px;align-items:start;padding:9px 0;border-top:1px solid var(--line)}.check:first-child{border-top:0}.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;background:var(--info)}.check.ok .dot{background:var(--ok)}.check.warning .dot{background:var(--warning)}.check.error .dot{background:var(--error)}.check strong{font-size:14px}.check span{color:var(--muted)}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:15px}.button{display:inline-block;text-decoration:none;border:1px solid #ffffff24;border-radius:9px;padding:9px 13px;background:#2a251e;color:var(--text);font:700 15px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer}.button.primary{background:var(--gold);border-color:var(--gold);color:#1a140b}.disabled{opacity:.45}.small{font-size:12px;color:var(--muted)}code{color:#ffd88c}@media(max-width:700px){.grid{grid-template-columns:1fr}.head{display:block}.badge{display:inline-block;margin-top:10px}.meta{grid-template-columns:1fr}.meta dd{margin-bottom:7px}.check{grid-template-columns:10px 1fr}.check span{grid-column:2}}
 </style>
 </head>
 <body>
 <main class="wrap">
   <header class="head">
     <div><div class="eyebrow">Recovery plane</div><h1>Release Control</h1><p>Standalone release diagnostics · fixed URL <code>/ReleaseControl.php</code></p></div>
-    <div class="badge">v2.14.2 · candidate installation · recovery UI read-only</div>
+    <div class="badge">v2.14.3 · Super Admin candidate preview</div>
   </header>
 
 <?php if ($username === ''): ?>
@@ -83,7 +118,9 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
     <p class="small">Allowlist source: <?= rc_h($auth->allowlistSource()) ?></p>
   </section>
 <?php else: ?>
-  <section class="notice"><strong>Public serving is still direct-root.</strong> v2.14.2 can install and register a verified candidate release into an immutable slot through the CLI, without changing public files. Candidate preview, promotion, rollback, public slot routing and candidate CRON remain disabled.</section>
+  <section class="notice"><strong>Public serving is still direct-root.</strong> v2.14.3 can route only this authenticated Super Admin browser session to the registered candidate. Everyone else, OAuth callback traffic and all CRON/background execution remain on the public release. Candidate preview is read-only in this increment: non-GET/HEAD requests are blocked.</section>
+  <?php if ($actionError !== ''): ?><section class="notice"><strong>Preview action failed.</strong> <?= rc_h($actionError) ?></section><?php endif; ?>
+  <?php if ($previewResult === 'enabled'): ?><section class="notice"><strong>Candidate preview enabled for this browser session.</strong> Open the public site from the control below to browse the candidate.</section><?php elseif ($previewResult === 'disabled'): ?><section class="notice"><strong>Candidate preview disabled.</strong> This browser is back on the public release.</section><?php endif; ?>
 
   <div class="grid">
     <section class="card">
@@ -106,6 +143,7 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
         <dt>Candidate</dt><dd><?= rc_h($snapshot['candidate_release'] ?? 'none') ?></dd>
         <dt>Candidate registered</dt><dd><?= rc_h($snapshot['candidate_registered_at'] ?? 'not registered') ?></dd>
         <dt>Candidate by</dt><dd><?= rc_h($snapshot['candidate_registered_by'] ?? '—') ?></dd>
+        <dt>My preview</dt><dd><?= !empty($previewStatus['enabled']) ? 'enabled · ' . rc_h($previewStatus['release_id'] ?? '') : 'disabled' ?></dd>
         <dt>Slot routing</dt><dd><?= !empty($snapshot['release_slots_enabled']) ? 'enabled' : 'disabled (direct-root)' ?></dd>
         <dt>Stored slots</dt><dd><?= rc_h($snapshot['slot_storage']['slot_count'] ?? 0) ?></dd>
       </dl>
@@ -146,7 +184,7 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
       <h2>Installed release slots</h2>
       <?php $slots = $snapshot['slot_storage']['slots'] ?? []; ?>
       <?php if ($slots === []): ?>
-        <p class="small">No slot has been materialized yet. The v2.14.1 installer creates the pre-upgrade snapshot before changing production and the v2.14.1 snapshot after successful activation.</p>
+        <p class="small">No release slot has been materialized yet.</p>
       <?php else: ?>
         <div class="checks">
           <?php foreach ($slots as $slot): $valid = ($slot['integrity_status'] ?? '') === 'valid'; ?>
@@ -188,14 +226,26 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
           <dt>Routing</dt><dd><?= !empty($candidate['routing_enabled']) ? 'UNEXPECTEDLY ENABLED' : 'disabled' ?></dd>
         </dl>
       <?php else: ?>
-        <p class="small">No candidate is registered. v2.14.2 candidate installation is intentionally CLI-only; the recovery webpage remains non-mutating.</p>
+        <p class="small">No candidate is registered. Install and register a qualified candidate package before enabling personal preview.</p>
       <?php endif; ?>
     </section>
 
     <section class="card">
       <h2>Deployment controls</h2>
-      <p class="small">Candidate installation/registration exists in v2.14.2, but serving controls remain reserved for later increments.</p>
-      <div class="actions"><span class="button disabled">Preview candidate</span><span class="button disabled">Promote candidate</span><span class="button disabled">Rollback</span></div>
+      <p class="small">Personal candidate preview is available only to this authenticated Super Admin session. Writes remain blocked; public promotion and rollback are still disabled.</p>
+      <div class="actions">
+        <?php if (is_array($candidate) && $csrfToken !== ''): ?>
+          <?php if (!empty($previewStatus['enabled'])): ?>
+            <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="disable-preview"><button class="button" type="submit">Stop preview</button></form>
+            <a class="button primary" href="/">Open candidate site</a>
+          <?php else: ?>
+            <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="enable-preview"><button class="button primary" type="submit">Preview candidate for me</button></form>
+          <?php endif; ?>
+        <?php else: ?>
+          <span class="button disabled">Preview candidate</span>
+        <?php endif; ?>
+        <span class="button disabled">Promote candidate</span><span class="button disabled">Rollback</span>
+      </div>
     </section>
 
     <section class="card full">
@@ -205,8 +255,10 @@ $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
         <dt>Allowlist source</dt><dd><?= rc_h($auth->allowlistSource()) ?></dd>
         <dt>Application dependency</dt><dd>None on UI v1/UI v2 shell assets or JavaScript</dd>
         <dt>Candidate install</dt><dd>Enabled through verified CLI package installation</dd>
-        <dt>Public slot routing</dt><dd>Disabled in v2.14.2</dd>
-        <dt>Web state mutation</dt><dd>Disabled in v2.14.2</dd>
+        <dt>Personal preview</dt><dd>Enabled for authenticated Super Admin session only</dd>
+        <dt>Preview writes</dt><dd>Blocked until v2.14.4</dd>
+        <dt>Public slot routing</dt><dd>Disabled in v2.14.3</dd>
+        <dt>Promotion / rollback</dt><dd>Disabled in v2.14.3</dd>
       </dl>
       <div class="actions"><a class="button" href="/">Open public site</a></div>
     </section>

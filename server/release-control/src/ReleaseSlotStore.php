@@ -101,6 +101,7 @@ final class ReleaseSlotStore
             }
         }
 
+        $slotPolicyVersion = max(1, (int)($meta['policy_version'] ?? 1));
         $manifestDigest = is_file($manifestPath) ? hash_file('sha256', $manifestPath) : '';
         $expectedDigest = strtolower(trim((string)($meta['manifest_sha256'] ?? '')));
         if ($expectedDigest !== '' && $manifestDigest !== '' && !hash_equals($expectedDigest, $manifestDigest)) {
@@ -121,7 +122,7 @@ final class ReleaseSlotStore
                 if (count($parts) !== 4) { $errors[] = 'manifest row has invalid shape'; continue; }
                 [$sha, $bytesRaw, $method, $path] = $parts;
                 $path = ReleaseSlotPolicy::normalizeRelativePath($path);
-                if ($path === '' || !ReleaseSlotPolicy::isReleaseOwnedPath($path)) {
+                if ($path === '' || !ReleaseSlotPolicy::isReleaseOwnedPathForVersion($path, $slotPolicyVersion)) {
                     $sharedViolations++;
                     continue;
                 }
@@ -161,6 +162,7 @@ final class ReleaseSlotStore
             'source_head_short' => (string)($meta['source_head_short'] ?? ''),
             'cache_key' => (string)($meta['cache_key'] ?? ''),
             'created_at' => (string)($meta['created_at'] ?? ''),
+            'policy_version' => $slotPolicyVersion,
             'strategy' => (string)($meta['strategy'] ?? ''),
             'file_count' => $fileCount,
             'logical_bytes' => $logicalBytes,
@@ -191,6 +193,7 @@ final class ReleaseSlotStore
             'source_head_short' => '',
             'cache_key' => '',
             'created_at' => '',
+            'policy_version' => 0,
             'strategy' => '',
             'file_count' => 0,
             'logical_bytes' => 0,

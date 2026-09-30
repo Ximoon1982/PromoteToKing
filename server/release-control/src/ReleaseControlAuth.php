@@ -56,6 +56,24 @@ final class ReleaseControlAuth
         return ['ximoon'];
     }
 
+    public function currentCsrfToken(): string
+    {
+        if (!empty($_COOKIE['P2KTPSESSID'])) {
+            $data = $this->readSession('P2KTPSESSID', null);
+            $token = trim((string)($data['p2k_tp_csrf'] ?? ''));
+            if ($token !== '') return $token;
+        }
+        if (!empty($_COOKIE['P2KOAUTH'])) {
+            $dir = $this->oauthSessionDirectory();
+            if ($dir !== '' && is_dir($dir)) {
+                $data = $this->readSession('P2KOAUTH', $dir);
+                $token = trim((string)($data['oauth_csrf'] ?? ''));
+                if ($token !== '') return $token;
+            }
+        }
+        return '';
+    }
+
     public function allowlistSource(): string
     {
         if (trim((string)(getenv('P2K_RELEASE_CONTROL_ADMINS') ?: '')) !== '') return 'environment';

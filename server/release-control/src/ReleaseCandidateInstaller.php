@@ -74,7 +74,9 @@ final class ReleaseCandidateInstaller
         $overlay = $package->overlay();
         $removed = $package->removed();
         $targetPaths = [];
-        foreach (array_keys($baseManifest) as $path) if (!isset($removed[$path])) $targetPaths[$path] = true;
+        foreach (array_keys($baseManifest) as $path) {
+            if (ReleaseSlotPolicy::isReleaseOwnedPath($path) && !isset($removed[$path])) $targetPaths[$path] = true;
+        }
         foreach (array_keys($overlay) as $path) $targetPaths[$path] = true;
         foreach (array_keys($removed) as $path) unset($targetPaths[$path]);
         if (!isset($targetPaths['VERSION'])) throw new \RuntimeException('Candidate target does not contain VERSION.');

@@ -74,12 +74,14 @@ final class ReleaseControlState
                 'slot_materialization' => true,
                 'candidate_install' => true,
                 'candidate_registration' => true,
-                'personal_preview' => false,
+                'personal_preview' => true,
                 'promotion' => false,
                 'rollback' => false,
                 'state_mutation' => true,
-                'web_state_mutation' => false,
+                'web_state_mutation' => true,
+                'web_state_mutation_scope' => 'preview-session-only',
                 'public_slot_routing' => false,
+                'candidate_cron' => false,
             ],
         ];
     }
@@ -147,7 +149,7 @@ final class ReleaseControlState
             'status'=>$mode === 'direct-root' ? 'ok' : ($mode === 'slots' ? 'info' : 'warning'),
             'label'=>'Routing mode',
             'detail'=>$mode === 'direct-root'
-                ? 'Direct-root serving remains active; v2.14.2 does not route public traffic through release slots.'
+                ? 'Direct-root serving remains active; v2.14.3 does not route public traffic through release slots.'
                 : ($mode === 'slots' ? 'Release-slot routing is declared by state.' : 'Release state contains an unsupported routing mode.'),
         ];
         $checks[] = [
@@ -158,7 +160,7 @@ final class ReleaseControlState
                 : 'No stamped build identity was found; this is expected in an unstamped source checkout.',
         ];
         if ($filesystem === null) {
-            $checks[] = ['status'=>'warning','label'=>'Release-slot filesystem probe','detail'=>'No filesystem capability record exists yet. Installing v2.14.2 should preserve/create it before changing production files.'];
+            $checks[] = ['status'=>'warning','label'=>'Release-slot filesystem probe','detail'=>'No filesystem capability record exists yet. Installing v2.14.3 should preserve/create it before changing production files.'];
         } else {
             $strategy = (string)($filesystem['selected_strategy'] ?? 'unknown');
             $checks[] = [
