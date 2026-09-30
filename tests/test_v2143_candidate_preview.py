@@ -65,10 +65,12 @@ def test_preview_control_uses_authenticated_csrf():
 
 
 def test_preview_router_recovers_original_uri_after_apache_internal_rewrite():
+    assert "__p2k_preview_path" in ROUTER
+    assert "p2k_preview_transport($_SERVER)" in ROUTER
+    assert "p2k_preview_original_uri($_SERVER)" in ROUTER
     assert "THE_REQUEST" in ROUTER
     assert "P2K_PREVIEW_ORIGINAL_PATH" in ROUTER
-    assert "p2k_preview_original_uri($_SERVER)" in ROUTER
-    assert "RewriteRule ^(.*)$ PreviewRouter.php [END,E=P2K_PREVIEW_ORIGINAL_PATH:$1]" in HTACCESS
+    assert "RewriteRule ^(.*)$ PreviewRouter.php?__p2k_preview_path=$1 [END,QSA,B]" in HTACCESS
 
 
 def test_preview_router_is_cookie_gated_and_keeps_recovery_shared_paths_out():
