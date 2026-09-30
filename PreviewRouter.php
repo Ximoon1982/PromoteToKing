@@ -81,7 +81,9 @@ if ($transport['path'] !== null) {
 }
 if ($pathPart === '/PreviewRouter.php' || $pathPart === 'PreviewRouter.php') {
     http_response_code(404);
-    exit('Not found');
+    header('Content-Type: text/plain; charset=utf-8');
+    header('X-P2K-Preview-Error: direct-router-request');
+    exit('P2K preview routing error: direct-router-request');
 }
 
 if (empty($status['enabled'])) {
@@ -119,7 +121,9 @@ if (str_ends_with($relative, '/')) $relative .= 'index.html';
 $relative = ReleaseSlotPolicy::normalizeRelativePath($relative);
 if ($relative === '' || !ReleaseSlotPolicy::isReleaseOwnedPath($relative)) {
     http_response_code(404);
-    exit('Not found');
+    header('Content-Type: text/plain; charset=utf-8');
+    header('X-P2K-Preview-Error: path-not-release-owned');
+    exit('P2K preview routing error: path-not-release-owned; path=' . $relative);
 }
 
 $appRoot = (string)($status['preview_tree']['app_root'] ?? '');
@@ -135,7 +139,9 @@ if (is_dir($file)) {
 }
 if (!is_file($file) || is_link($file)) {
     http_response_code(404);
-    exit('Not found');
+    header('Content-Type: text/plain; charset=utf-8');
+    header('X-P2K-Preview-Error: candidate-file-missing');
+    exit('P2K preview routing error: candidate-file-missing; path=' . $relative);
 }
 
 $releaseId = (string)($status['release_id'] ?? '');
@@ -156,7 +162,9 @@ if ($extension === 'php') {
     }
     if (!$allowed) {
         http_response_code(404);
-        exit('Not found');
+        header('Content-Type: text/plain; charset=utf-8');
+        header('X-P2K-Preview-Error: php-path-not-allowed');
+        exit('P2K preview routing error: php-path-not-allowed; path=' . $relative);
     }
 
     putenv('P2K_PREVIEW_ACTIVE=1');
