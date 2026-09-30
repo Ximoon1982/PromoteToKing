@@ -60,6 +60,6 @@ v2.14.1 does not create or mutate that state file merely to materialize release 
 
 ## Recovery-plane boundary
 
-`ReleaseControl.php`, `server/release-control/**`, and the protected release-control state remain outside every switchable application slot. Future promotion must never replace the recovery plane itself.
+`ReleaseControl.php`, `server/release-control/**`, and the protected release-control state must remain outside any switchable application slot. Future promotion must never replace the recovery plane itself.
 
 Hard-link safety in v2.14.1 specifically means snapshot isolation under P2K's atomic-replacement update model. Hard links still share an inode, so an in-place write through either hard-link path would affect both names; P2K release activation must therefore continue to stage and atomically replace files rather than edit release-owned files in place.
