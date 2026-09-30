@@ -80,7 +80,7 @@ def test_preview_reauthentication_preserves_signed_intent_until_identity_returns
 
 
 def test_preview_auth_endpoints_are_site_root_absolute():
-    assert 'new URL("/server/team-points/public/oauth.php", window.location.origin)' in REAL_OAUTH
+    assert 'new URL("/server/team-points/public/oauth.php", window.location.href)' in REAL_OAUTH
     assert '"/server/team-points/public/session.php"' in SITE_CONFIG
     assert '"/server/team-points/public/session.php"' in TP_CLIENT
 
