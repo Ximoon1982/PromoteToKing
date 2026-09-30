@@ -17,13 +17,14 @@ $runtime = $tmp . '/runtime';
 @mkdir($root . '/assets', 0700, true);
 @mkdir($root . '/data', 0700, true);
 @mkdir($runtime, 0700, true);
+file_put_contents($root . '/.htaccess', "Options -Indexes\n");
 file_put_contents($root . '/VERSION', "2.14.0\n");
 file_put_contents($root . '/ui-v2.html', '<script src="x.js?v=p2k-2.14.0-123456789abc-0123456789abcdef"></script>');
 file_put_contents($root . '/index.html', "old-index\n");
 file_put_contents($root . '/assets/app.js', "shared-unchanged\n");
 file_put_contents($root . '/data/secret.json', '{"do_not_copy":true}');
 
-$paths = ['VERSION', 'ui-v2.html', 'index.html', 'assets/app.js'];
+$paths = ['.htaccess', 'VERSION', 'ui-v2.html', 'index.html', 'assets/app.js'];
 $materializer = new ReleaseSlotMaterializer($root, $runtime);
 $old = $materializer->materialize($paths, '2.14.0', '123456789abcdef123456789abcdef123456789a');
 if (($old['integrity_status'] ?? '') !== 'valid') throw new RuntimeException('old slot invalid');
@@ -62,6 +63,11 @@ try {
 }
 if (!$badRejected) throw new RuntimeException('shared path was not rejected');
 
+if (!ReleaseSlotPolicy::isReleaseOwnedPath('.htaccess')) throw new RuntimeException('root dotfile rejected');
+if (ReleaseSlotPolicy::normalizeRelativePath('.htaccess') !== '.htaccess') throw new RuntimeException('root dotfile normalization changed its name');
+if (ReleaseSlotPolicy::normalizeRelativePath('./VERSION') !== 'VERSION') throw new RuntimeException('explicit relative prefix normalization failed');
+if (ReleaseSlotPolicy::normalizeRelativePath('../VERSION') !== '') throw new RuntimeException('parent traversal was accepted');
+if (ReleaseSlotPolicy::normalizeRelativePath('/VERSION') !== '') throw new RuntimeException('absolute path was accepted');
 if (!ReleaseSlotPolicy::isReleaseOwnedPath('assets/app.js')) throw new RuntimeException('owned path rejected');
 if (ReleaseSlotPolicy::isReleaseOwnedPath('ReleaseControl.php')) throw new RuntimeException('recovery page admitted into slot');
 if (ReleaseSlotPolicy::isReleaseOwnedPath('server/release-control/src/bootstrap.php')) throw new RuntimeException('recovery plane admitted into slot');
