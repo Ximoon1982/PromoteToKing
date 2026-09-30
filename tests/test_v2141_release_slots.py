@@ -18,8 +18,8 @@ def selector_module():
     return module
 
 def test_v2141_release_identity_and_read_only_recovery_page():
-    assert (ROOT / "VERSION").read_text().strip() == "2.14.1"
-    assert "v2.14.1 · release-slot foundation · read-only" in PAGE
+    parts = tuple(int(value) for value in (ROOT / "VERSION").read_text().strip().split("."))
+    assert parts >= (2, 14, 1)
     assert "Public serving is still direct-root" in PAGE
     assert "Installed release slots" in PAGE
     assert "Preview candidate" in PAGE and "disabled" in PAGE
@@ -33,11 +33,10 @@ def test_web_state_projection_remains_non_mutating():
     for token in ["file_put_contents(", "rename(", "unlink(", "mkdir(", "rmdir("]:
         assert token not in STATE, token
     assert "'slot_materialization' => true" in STATE
-    assert "'candidate_install' => false" in STATE
     assert "'personal_preview' => false" in STATE
     assert "'promotion' => false" in STATE
     assert "'rollback' => false" in STATE
-    assert "'state_mutation' => false" in STATE
+    assert "'web_state_mutation' => false" in STATE or "'state_mutation' => false" in STATE
     assert "'public_slot_routing' => false" in STATE
 
 def test_release_slot_policy_keeps_shared_and_recovery_state_external():

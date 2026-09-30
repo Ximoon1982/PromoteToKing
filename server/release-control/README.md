@@ -62,7 +62,7 @@ Release slots continue to exclude:
 - `ReleaseControl.php`
 - `server/release-control/**`
 
-The recovery plane itself is never part of a switchable candidate slot.
+The recovery plane itself is never part of a switchable candidate slot and must remain outside any switchable application slot.
 
 ### Still intentionally disabled in v2.14.2
 

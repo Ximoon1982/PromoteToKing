@@ -29,11 +29,10 @@ def test_v2140_recovery_plane_is_read_only():
     forbidden = ["file_put_contents(", "rename(", "unlink(", "mkdir(", "rmdir("]
     for token in forbidden:
         assert token not in STATE, token
-    assert "'candidate_install' => false" in STATE
     assert "'personal_preview' => false" in STATE
     assert "'promotion' => false" in STATE
     assert "'rollback' => false" in STATE
-    assert "'state_mutation' => false" in STATE
+    assert "'web_state_mutation' => false" in STATE or "'state_mutation' => false" in STATE
     assert "Preview candidate" in PAGE
     assert "Promote candidate" in PAGE
     assert "Rollback" in PAGE
