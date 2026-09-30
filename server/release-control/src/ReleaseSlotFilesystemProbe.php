@@ -77,6 +77,11 @@ final class ReleaseSlotFilesystemProbe
                 'runtime_device' => $runtimeDevice,
                 'same_device' => $sameDevice,
                 'hardlink_supported' => $hardlinkCrossRoot,
+                'hardlink_atomic_replace_isolation' => $snapshotIsolation,
+                // Hard links share an inode, so an in-place write through either path
+                // is never isolated. Release slots are safe only because P2K upgrades
+                // replace live files atomically instead of editing them in place.
+                'hardlink_inplace_isolation' => false,
                 'hardlink_snapshot_isolation' => $snapshotIsolation,
                 'symlink_supported' => $symlinkSupported,
                 'symlink_snapshot_safe' => false,
