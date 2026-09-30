@@ -15,7 +15,7 @@
   })();
   if (requestedSimulatedOAuth) return;
 
-  const ENDPOINT = new URL("server/team-points/public/oauth.php", window.location.href).href;
+  const ENDPOINT = new URL("/server/team-points/public/oauth.php", window.location.origin).href;
   const subscribers = new Set();
   let readyResolve = null;
   let readySettled = false;
