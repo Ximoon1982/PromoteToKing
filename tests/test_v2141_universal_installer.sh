@@ -118,7 +118,7 @@ if P2K_INSTALL_PREFLIGHT_ONLY=1 bash "$INSTALLER" "$FUTURE" >/dev/null 2>&1; the
   exit 1
 fi
 
-grep -Fq 'tmp="$dst.p2k-v2141-$.tmp"' "$INSTALLER" || { echo "Installer PID suffix contract missing" >&2; exit 1; }
+grep -Fq 'tmp="$dst.p2k-v2141-$$.tmp"' "$INSTALLER" || { echo "Installer PID suffix contract missing" >&2; exit 1; }
 grep -Fq 'Materializing protected pre-upgrade release slot' "$INSTALLER" || { echo "Pre-upgrade slot materialization contract missing" >&2; exit 1; }
 grep -Fq 'Materializing verified v2.14.1 release slot' "$INSTALLER" || { echo "Target slot materialization contract missing" >&2; exit 1; }
 grep -Fq 'server/release-control/tools/release-slot-paths.py' "$INSTALLER" || { echo "Slot path selector contract missing" >&2; exit 1; }
