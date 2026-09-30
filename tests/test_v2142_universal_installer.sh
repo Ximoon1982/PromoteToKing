@@ -8,7 +8,7 @@ PKG="PromoteToKing_v2.14.2_INCREMENTAL_FROM_2.13.x"
 
 bash "$ROOT/tools/release/v2142/build-universal-2.13x.sh" "$OUT" >/dev/null
 INSTALLER="$OUT/$PKG/install-promote-to-king-v2.14.2.sh"
-grep -Fq 'Supported installed versions: 2.13.0, 2.13.1, 2.13.2, 2.13.3, 2.13.4, 2.13.5, 2.14.0, 2.14.2.' "$OUT/$PKG/README_INSTALL.txt"
+grep -Fq 'Supported installed versions: 2.13.0, 2.13.1, 2.13.2, 2.13.3, 2.13.4, 2.13.5, 2.14.0, 2.14.1, 2.14.2.' "$OUT/$PKG/README_INSTALL.txt"
 grep -Fq 'CLI-only candidate package validation' "$OUT/$PKG/README_INSTALL.txt"
 grep -Fq 'Candidate preview, promotion, rollback, public slot' "$OUT/$PKG/README_INSTALL.txt"
 if find "$OUT/$PKG" -type f \( -name '*.pyc' -o -name '*.pyo' \) -print -quit | grep -q .; then
