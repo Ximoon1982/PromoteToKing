@@ -15,7 +15,7 @@ ROOT_PAGES = set(
     "Opponents.html OpponentsDemo.html RecruitMatch.html RecruitmentAdmin.html "
     "RecruitmentDemandPlanner.html TaskControl.html TaskLogs.html TeamInsights.html "
     "TeamPointsAdmin.html TeamPointsMigration.html TournamentAchievementBadgesDemo.html "
-    "TournamentManagement.html Tournaments.html UIv2RepresentativeDemo.html index.html ui-v2.html".split()
+    "TournamentManagement.html Tournaments.html UIv2RepresentativeDemo.html OAuthTest.php index.html ui-v2.html".split()
 )
 IMMUTABLE_ROOTS = {
     "api", "artwork", "artwork-masters", "assets", "auth", "config", "resources",
@@ -37,6 +37,7 @@ MUTABLE_SEGMENTS = {
 }
 RECOVERY_EXACT = {"ReleaseControl.php"}
 RECOVERY_PREFIXES = ("server/release-control/",)
+ROOT_RUNTIME_PREFIXES = ("cron-", "weekly-backup-")
 
 def included(relative_path: str) -> bool:
     relative_path = relative_path.replace("\\", "/").lstrip("./")
@@ -46,6 +47,8 @@ def included(relative_path: str) -> bool:
         return False
     path = PurePosixPath(relative_path)
     if relative_path in ROOT_FILES | ROOT_PAGES:
+        return True
+    if "/" not in relative_path and relative_path.endswith(".sh") and relative_path.startswith(ROOT_RUNTIME_PREFIXES):
         return True
     if relative_path in PRESERVED_EXACT_PATHS:
         return False
