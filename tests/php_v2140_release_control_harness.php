@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/server/release-control/src/ReleaseSlotPolicy.php';
+require_once dirname(__DIR__) . '/server/release-control/src/ReleaseSlotStore.php';
 require_once dirname(__DIR__) . '/server/release-control/src/ReleaseControlState.php';
 
 use P2K\ReleaseControl\ReleaseControlState;
