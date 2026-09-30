@@ -9,7 +9,7 @@ TREE = (ROOT / "server/release-control/src/ReleasePreviewTree.php").read_text(en
 STATE = (ROOT / "server/release-control/src/ReleaseControlState.php").read_text(encoding="utf-8")
 AUTH = (ROOT / "server/release-control/src/ReleaseControlAuth.php").read_text(encoding="utf-8")
 HTACCESS = (ROOT / ".htaccess").read_text(encoding="utf-8")
-POLICY = (ROOT / "server/release-control/src/ReleaseSlotPolicy.php").read_text(encoding="utf-8")
+POLICY = (ROOT / "server/release-control/src/ReleaseSlotPolicy.php").read_text(encoding="utf-8")\nREAL_OAUTH = (ROOT / "assets/js/shared/real-oauth.js").read_text(encoding="utf-8")\nSITE_CONFIG = (ROOT / "assets/js/site-config.js").read_text(encoding="utf-8")\nTP_CLIENT = (ROOT / "assets/js/shared/team-points-client.js").read_text(encoding="utf-8")
 SELECTOR_PATH = ROOT / "server/release-control/tools/release-slot-paths.py"
 
 
@@ -74,6 +74,12 @@ def test_preview_reauthentication_preserves_signed_intent_until_identity_returns
     assert "clearInvalidCookie" not in reauth_block
     assert "identity_mismatch" in SESSION
     assert "candidate_changed" in SESSION
+
+
+def test_preview_auth_endpoints_are_site_root_absolute():
+    assert 'new URL("/server/team-points/public/oauth.php", window.location.origin)' in REAL_OAUTH
+    assert '"/server/team-points/public/session.php"' in SITE_CONFIG
+    assert '"/server/team-points/public/session.php"' in TP_CLIENT
 
 
 def test_preview_router_recovers_original_uri_after_apache_internal_rewrite():
