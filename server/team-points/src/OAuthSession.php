@@ -442,9 +442,11 @@ final class OAuthSession
         ];
         if(is_array($_SESSION['oauth_user']??null))$_SESSION['oauth_user']['expires_at']=$expiresAt;
         unset($_SESSION['oauth_refresh_retry_at']);
-        // Rotate the opaque browser credential whenever server-side OAuth
-        // credentials are renewed. CSRF state remains bound to the new session id.
-        session_regenerate_id(true);
+        // Keep the already-authenticated browser session id stable during routine
+        // token refresh. A dashboard reload can issue several concurrent session
+        // probes; rotating and deleting the session here lets stale in-flight probes
+        // recreate an empty session and overwrite the fresh cookie. Session fixation
+        // protection remains at the OAuth callback, where authentication first occurs.
     }
 
     private static function scope(array $cfg): string
