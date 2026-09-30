@@ -53,8 +53,6 @@ def included(relative_path: str) -> bool:
         return False
     if any(part.lower() in MUTABLE_SEGMENTS for part in path.parts[1:]):
         return False
-    if "config" in (part.lower() for part in path.parts):
-        return path.name == ".htaccess" or ".example." in path.name
     lowered = path.name.lower()
     if ".local." in lowered and ".example." not in lowered:
         return False
