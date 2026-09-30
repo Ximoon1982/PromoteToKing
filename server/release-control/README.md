@@ -34,3 +34,32 @@ Slots are assembled in a temporary directory and published only through a same-d
 ### Still intentionally disabled in v2.14.1
 
 Candidate installation, per-Super-Admin preview, public release pointer switching, promotion, rollback, and slot-based CRON execution remain disabled. Slot existence alone never changes what users receive.
+
+
+## Recovery state contract retained from v2.14.0
+
+The protected recovery-state file remains:
+
+`data/runtime-v280/release-control/state.json`
+
+(or the configured Team Points runtime directory) and continues to use schema 1:
+
+```json
+{
+  "schema_version": 1,
+  "mode": "direct-root",
+  "public_release": null,
+  "previous_public_release": null,
+  "candidate_release": null,
+  "updated_at": null,
+  "updated_by": null
+}
+```
+
+v2.14.1 does not create or mutate that state file merely to materialize release slots. Public routing therefore remains unchanged.
+
+## Recovery-plane boundary
+
+`ReleaseControl.php`, `server/release-control/**`, and the protected release-control state remain outside every switchable application slot. Future promotion must never replace the recovery plane itself.
+
+Hard-link safety in v2.14.1 specifically means snapshot isolation under P2K's atomic-replacement update model. Hard links still share an inode, so an in-place write through either hard-link path would affect both names; P2K release activation must therefore continue to stage and atomically replace files rather than edit release-owned files in place.
