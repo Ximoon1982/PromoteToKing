@@ -108,7 +108,9 @@ final class ReleasePreviewTree
                 'shared_links'=>$sharedLinks,
                 'public_root'=>rtrim($this->root, '/\\'),
             ];
-            file_put_contents($metaPath, json_encode($meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n", LOCK_EX);
+            if (file_put_contents($metaDir . '/preview.json', json_encode($meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n", LOCK_EX) === false) {
+                throw new \RuntimeException('Unable to write candidate preview metadata.');
+            }
             $this->sealDirectories($tmp);
 
             if (is_dir($target)) {
