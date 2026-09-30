@@ -2,7 +2,11 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+cleanup(){
+  find "$TMP" -type d -exec chmod u+w {} + 2>/dev/null || true
+  rm -rf "$TMP" || true
+}
+trap cleanup EXIT
 OUT="$TMP/build"
 PKG="PromoteToKing_v2.14.3_INCREMENTAL_FROM_2.13.x"
 
