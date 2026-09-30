@@ -81,9 +81,13 @@ final class ReleaseControlAuth
         return 'release default';
     }
 
-    public function loginUrl(): string
+    public function loginUrl(string $returnTo = '/ReleaseControl.php'): string
     {
-        return '/server/team-points/public/oauth.php?action=login&return=' . rawurlencode('/ReleaseControl.php');
+        $returnTo = trim($returnTo);
+        if ($returnTo === '' || !str_starts_with($returnTo, '/') || str_starts_with($returnTo, '//')) {
+            $returnTo = '/ReleaseControl.php';
+        }
+        return '/server/team-points/public/oauth.php?action=login&return=' . rawurlencode($returnTo);
     }
 
     private function teamPointsAdminUsername(): string
