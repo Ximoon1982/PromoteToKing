@@ -16,13 +16,22 @@ def test_seven_day_login_keeps_cookie_and_csrf_security_contract():
     assert "hash_equals($expected,$value)" in source
 
 
-def test_refresh_rotates_session_id_and_never_exposes_tokens():
+def test_refresh_keeps_authenticated_session_stable_and_never_exposes_tokens():
     source = (ROOT / 'server/team-points/src/OAuthSession.php').read_text(encoding='utf-8')
     refresh_start = source.index('private static function refreshAccessToken')
     refresh_end = source.index('private static function scope', refresh_start)
     refresh = source[refresh_start:refresh_end]
     assert "'grant_type'=>'refresh_token'" in refresh
-    assert "session_regenerate_id(true)" in refresh
+    assert "session_regenerate_id(" not in refresh
+    assert "stale in-flight probes" in refresh
+
+    callback_start = source.index('public static function handleCallback()')
+    callback_end = source.index('public static function logout', callback_start)
+    assert "session_regenerate_id(true)" in source[callback_start:callback_end]
+    logout_start = source.index('public static function logout')
+    logout_end = source.index('public static function batch', logout_start)
+    assert "session_regenerate_id(true)" in source[logout_start:logout_end]
+
     info_start = source.index('public static function sessionInfo()')
     info_end = source.index('public static function authenticatedUsername', info_start)
     info = source[info_start:info_end]
