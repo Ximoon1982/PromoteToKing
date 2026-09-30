@@ -22,8 +22,9 @@ final class ReleaseSlotPolicy
     {
         $path = str_replace('\\', '/', trim($path));
         $path = preg_replace('~/+~', '/', $path) ?? $path;
-        $path = ltrim($path, './');
         if ($path === '' || str_starts_with($path, '/') || str_contains($path, "\0")) return '';
+        while (str_starts_with($path, './')) $path = substr($path, 2);
+        if ($path === '') return '';
         $parts = explode('/', $path);
         foreach ($parts as $part) {
             if ($part === '' || $part === '.' || $part === '..' || str_contains($part, "\n") || str_contains($part, "\r") || str_contains($part, "\t")) {
