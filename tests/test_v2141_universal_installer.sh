@@ -8,6 +8,17 @@ PKG="PromoteToKing_v2.14.1_INCREMENTAL_FROM_2.13.x"
 
 bash "$ROOT/tools/release/v2141/build-universal-2.13x.sh" "$OUT" >/dev/null
 INSTALLER="$OUT/$PKG/install-promote-to-king-v2.14.1.sh"
+grep -Fq 'Supported installed versions: 2.13.0, 2.13.1, 2.13.2, 2.13.3, 2.13.4, 2.13.5, 2.14.0, 2.14.1.' "$OUT/$PKG/README_INSTALL.txt"
+grep -Fq 'Before activation it snapshots the current direct-root' "$OUT/$PKG/README_INSTALL.txt"
+grep -Fq 'after target verification it snapshots v2.14.1' "$OUT/$PKG/README_INSTALL.txt"
+if find "$OUT/$PKG" -type f \( -name '*.pyc' -o -name '*.pyo' \) -print -quit | grep -q .; then
+  echo "v2.14.1 package contains Python bytecode" >&2
+  exit 1
+fi
+if find "$OUT/$PKG" -type d -name '__pycache__' -print -quit | grep -q .; then
+  echo "v2.14.1 package contains __pycache__" >&2
+  exit 1
+fi
 
 FILES=(
   VERSION ReleaseControl.php ui-v2.html trophies/index.html RecruitMatch.html ChallengeListAssistant.html MaxRatingBackfill.php
