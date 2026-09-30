@@ -53,7 +53,12 @@ def test_oauth_cookie_and_server_session_use_seven_day_sliding_retention_and_ref
     refresh = block(oauth, 'private static function refreshAccessToken', 'private static function scope')
     assert "'grant_type'=>'refresh_token'" in refresh
     assert "'refresh_token'=>$refreshToken" in refresh
-    assert "session_regenerate_id(true)" in refresh
+    assert "session_regenerate_id(" not in refresh
+    assert "stale in-flight probes" in refresh
+    callback = block(oauth, 'public static function handleCallback()', 'public static function logout')
+    assert "session_regenerate_id(true)" in callback
+    logout = block(oauth, 'public static function logout', 'public static function batch')
+    assert "session_regenerate_id(true)" in logout
     assert "$_SESSION['oauth_user']['expires_at']=$expiresAt" in refresh
     # Browser-facing profile/session payload may expose expiry metadata, never the Bearer credential.
     info = block(oauth, 'public static function sessionInfo()', 'public static function login')
