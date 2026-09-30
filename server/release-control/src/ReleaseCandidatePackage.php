@@ -76,7 +76,8 @@ final class ReleaseCandidatePackage
         $removed = [];
         $removedPath = $base . '/CANDIDATE_REMOVED_PATHS.txt';
         if (is_file($removedPath)) {
-            $raw = preg_split('/\r?\n/', trim((string)file_get_contents($removedPath))) ?: [];
+            $removedRaw = trim((string)file_get_contents($removedPath));
+            $raw = $removedRaw === '' ? [] : (preg_split('/\r?\n/', $removedRaw) ?: []);
             foreach ($raw as $entry) {
                 $path = ReleaseSlotPolicy::normalizeRelativePath(trim((string)$entry));
                 if ($path === '' || !ReleaseSlotPolicy::isReleaseOwnedPath($path)) {

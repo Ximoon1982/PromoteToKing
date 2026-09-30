@@ -113,7 +113,7 @@ grep -Fq "'rollback' => false" "$DIR/payload/server/release-control/src/ReleaseC
 grep -Fq "'public_slot_routing' => false" "$DIR/payload/server/release-control/src/ReleaseControlState.php"
 grep -Fq "read_and_close" "$DIR/payload/server/release-control/src/ReleaseControlAuth.php"
 grep -Fq "hardlink_snapshot_isolation" "$DIR/payload/server/release-control/src/ReleaseSlotFilesystemProbe.php"
-grep -Fq "routing_enabled' => false" "$DIR/payload/server/release-control/src/ReleaseCandidateInstaller.php"
+grep -Fq "'routing_enabled'=>false" "$DIR/payload/server/release-control/src/ReleaseCandidateInstaller.php"
 grep -Fq "PHP_SAPI !== 'cli'" "$DIR/payload/server/release-control/tools/install-candidate.php"
 grep -Fq 'RECOVERY_PREFIXES = ("server/release-control/",)' "$DIR/payload/server/release-control/tools/release-slot-paths.py"
 
