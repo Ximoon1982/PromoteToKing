@@ -229,13 +229,15 @@ cat > "$DIR/README_INSTALL.txt" <<TXT
 Promote to King v2.14.1 cumulative incremental installer
 Qualified source HEAD: $HEAD
 Static asset cache key: $CACHE_KEY
-Supported installed versions: 2.13.0, 2.13.1, 2.13.2, 2.13.3, 2.13.4, 2.13.5, 2.14.0.
+Supported installed versions: 2.13.0, 2.13.1, 2.13.2, 2.13.3, 2.13.4, 2.13.5, 2.14.0, 2.14.1.
 
-This is a cumulative 2.13.x -> 2.14.1 installer. It retains the qualified v2.14.0
-recovery plane and adds sealed release-slot materialization plus host filesystem
-capability diagnostics. Public serving remains direct-root; candidate preview,
-promotion, rollback and public slot routing stay disabled. Protected config,
-data, storage and CRON remain shared and are not copied into release slots.
+This is a cumulative 2.13.x/2.14.0 -> 2.14.1 installer. It retains the qualified
+v2.14.0 recovery plane and adds sealed release-slot snapshots plus host filesystem
+capability diagnostics. Before activation it snapshots the current direct-root
+release; after target verification it snapshots v2.14.1. Public serving remains
+direct-root; candidate preview, promotion, rollback and public slot routing stay
+disabled. Protected config, data, storage, CRON and recovery infrastructure remain
+shared and are not copied into application release slots.
 
 Install:
   cd ~/PromoteToKing
@@ -256,6 +258,11 @@ if grep -q '@@' "$DIR/install-promote-to-king-v2.14.1.sh"; then
 fi
 bash -n "$DIR/install-promote-to-king-v2.14.1.sh"
 python3 -m py_compile "$DIR/canonical-hash.py"
+rm -rf "$DIR/__pycache__"
+if find "$DIR" -type f \( -name '*.pyc' -o -name '*.pyo' \) -print -quit | grep -q .; then
+  echo 'Python bytecode leaked into release package' >&2
+  exit 1
+fi
 rm -f "$ZIP"
 ( cd "$OUT" && zip -X -qr "$PKG.zip" "$PKG" )
 unzip -t "$ZIP" >/dev/null
