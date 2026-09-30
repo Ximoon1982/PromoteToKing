@@ -118,3 +118,4 @@ The protected release state remains schema 1 and keeps public serving in direct-
 ```
 
 The recovery control plane must remain outside any switchable application slot.
+\n- During personal preview, `/auth/callback`, `server/team-points/public/oauth.php`, and `server/team-points/public/session.php` remain on the public authentication plane so read-only candidate browsing can reuse the established server-side identity.\n
