@@ -65,6 +65,17 @@ def test_preview_control_uses_authenticated_csrf():
     assert 'name="action" value="disable-preview"' in PAGE
 
 
+def test_preview_reauthentication_preserves_signed_intent_until_identity_returns():
+    assert "public function loginUrl(string $returnTo = '/ReleaseControl.php')" in AUTH
+    assert "!empty($_COOKIE[ReleasePreviewSession::COOKIE])" in ROUTER
+    assert "$auth->loginUrl($originalUri" in ROUTER
+    assert "CANDIDATE_PREVIEW_REAUTH_REQUIRED" in ROUTER
+    reauth_block = ROUTER.split("if ($username === '' && !empty($_COOKIE[ReleasePreviewSession::COOKIE]))", 1)[1].split("$status =", 1)[0]
+    assert "clearInvalidCookie" not in reauth_block
+    assert "identity_mismatch" in SESSION
+    assert "candidate_changed" in SESSION
+
+
 def test_preview_router_recovers_original_uri_after_apache_internal_rewrite():
     assert "p2k_preview_original_uri($_SERVER)" in ROUTER
     assert "THE_REQUEST" in ROUTER
