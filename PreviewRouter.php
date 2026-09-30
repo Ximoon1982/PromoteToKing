@@ -38,12 +38,6 @@ function p2k_preview_transport(array $server): array
 
 function p2k_preview_original_uri(array $server): string
 {
-    $transport = p2k_preview_transport($server);
-    if ($transport['path'] !== null) {
-        $path = '/' . ltrim((string)$transport['path'], '/');
-        return $path . ($transport['query'] !== '' ? '?' . $transport['query'] : '');
-    }
-
     $theRequest = trim((string)($server['THE_REQUEST'] ?? ''));
     if ($theRequest !== '' && preg_match('~^[A-Z]+\\s+(\\S+)\\s+HTTP/[0-9.]+$~iD', $theRequest, $m)) {
         return (string)$m[1];
@@ -72,13 +66,8 @@ $status = $username !== '' && $auth->isSuperAdmin($username)
     ? $preview->status($username)
     : ['enabled'=>false,'reason'=>'unauthorized'];
 
-$transport = p2k_preview_transport($_SERVER);
 $originalUri = p2k_preview_original_uri($_SERVER);
 $pathPart = (string)(parse_url($originalUri, PHP_URL_PATH) ?? '/');
-if ($transport['path'] !== null) {
-    $_SERVER['QUERY_STRING'] = (string)$transport['query'];
-    unset($_GET['__p2k_preview_path']);
-}
 if ($pathPart === '/PreviewRouter.php' || $pathPart === 'PreviewRouter.php') {
     http_response_code(404);
     header('Content-Type: text/plain; charset=utf-8');
