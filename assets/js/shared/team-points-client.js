@@ -4,9 +4,9 @@
 
   const config = window.P2K_SITE_CONFIG || {};
   const storage = config.serverStorage || {};
-  const apiEndpoint = storage.teamPointsEndpoint || "server/team-points/public/api.php";
-  const sessionEndpoint = storage.teamPointsSessionEndpoint || "server/team-points/public/session.php";
-  const publicEndpoint = storage.teamPointsPublicEndpoint || "server/team-points/public/public.php";
+  const apiEndpoint = storage.teamPointsEndpoint || "/server/team-points/public/api.php";
+  const sessionEndpoint = storage.teamPointsSessionEndpoint || "/server/team-points/public/session.php";
+  const publicEndpoint = storage.teamPointsPublicEndpoint || "/server/team-points/public/public.php";
   const state = { csrf: "", username: "", connecting: null, connectedAt: 0, lastError: "" };
   const CONNECT_TIMEOUT_MS = 35000;
   const REQUEST_TIMEOUT_MS = 30000;
