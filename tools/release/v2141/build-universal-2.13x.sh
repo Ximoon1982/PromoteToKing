@@ -231,10 +231,11 @@ Qualified source HEAD: $HEAD
 Static asset cache key: $CACHE_KEY
 Supported installed versions: 2.13.0, 2.13.1, 2.13.2, 2.13.3, 2.13.4, 2.13.5, 2.14.0.
 
-This is a cumulative 2.13.x -> 2.14.0 installer. It retains the qualified v2.13.5
-runtime and introduces the standalone read-only Release Control recovery plane.
-It does not enable release slots, candidate preview, promotion, rollback, or any
-public routing change. Protected config, data, storage and CRON are preserved.
+This is a cumulative 2.13.x -> 2.14.1 installer. It retains the qualified v2.14.0
+recovery plane and adds sealed release-slot materialization plus host filesystem
+capability diagnostics. Public serving remains direct-root; candidate preview,
+promotion, rollback and public slot routing stay disabled. Protected config,
+data, storage and CRON remain shared and are not copied into release slots.
 
 Install:
   cd ~/PromoteToKing
