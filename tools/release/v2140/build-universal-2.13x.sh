@@ -216,10 +216,10 @@ Qualified source HEAD: $HEAD
 Static asset cache key: $CACHE_KEY
 Supported installed versions: 2.13.0, 2.13.1, 2.13.2, 2.13.3, 2.13.4, 2.13.5, 2.14.0.
 
-This is a cumulative 2.13.x -> 2.13.5 installer. It retains all qualified v2.13.4
-corrections and adds the canonical Trophy vignette/modal admin Preview, the Challenge
-Assistant average/minimum-match board-history criterion, and corrected Misc tool routes.
-It preserves config, data, storage and CRON.
+This is a cumulative 2.13.x -> 2.14.0 installer. It retains the qualified v2.13.5
+runtime and introduces the standalone read-only Release Control recovery plane.
+It does not enable release slots, candidate preview, promotion, rollback, or any
+public routing change. Protected config, data, storage and CRON are preserved.
 
 Install:
   cd ~/PromoteToKing
