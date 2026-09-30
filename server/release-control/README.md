@@ -97,3 +97,20 @@ policy for candidate writes/background behavior.
 - candidate browser writes.
 
 The public release remains v2.14.2 until a later promotion increment.
+
+
+## State contract retained from v2.14.0
+
+The protected release state remains schema 1 and keeps public serving in direct-root mode:
+
+```json
+{
+  "schema_version": 1,
+  "mode": "direct-root",
+  "public_release": "2.14.2 (direct root)",
+  "previous_public_release": null,
+  "candidate_release": "2.14.3-<source-short>"
+}
+```
+
+The recovery control plane must remain outside any switchable application slot.
