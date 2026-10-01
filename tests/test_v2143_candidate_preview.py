@@ -107,10 +107,13 @@ def test_preview_auth_endpoints_are_site_root_absolute():
 def test_candidate_html_carries_preview_safe_auth_bootstrap():
     assert "previewAuthBootstrap" in AUTH
     assert "adminBootstrapAssertion" in AUTH
+    assert "'team_points'=>$teamPoints" in AUTH
     assert "p2k-preview-auth-bootstrap" in ROUTER
     assert "base64_encode" in ROUTER
     assert "oauth_access" not in ROUTER
+    assert "__p2k_preview=" in ROUTER
     assert 'meta[name="p2k-preview-auth-bootstrap"]' in REAL_OAUTH
+    assert 'meta[name="p2k-preview-auth-bootstrap"]' in TP_CLIENT
     assert "window.setTimeout(() => { void refreshSession(); }, 30_000)" in REAL_OAUTH
 
 
