@@ -64,8 +64,27 @@ def test_preview_control_uses_authenticated_csrf():
     assert "currentCsrfToken" in AUTH
     assert "hash_equals($expectedCsrf, $providedCsrf)" in PAGE
     assert 'name="csrf"' in PAGE
+    assert 'name="preview_user"' in PAGE
     assert 'name="action" value="enable-preview"' in PAGE
     assert 'name="action" value="disable-preview"' in PAGE
+
+
+def test_release_control_reuses_refreshable_oauth_identity_without_full_login():
+    assert "refreshOAuthSession" in AUTH
+    assert "'grant_type'=>'refresh_token'" in AUTH
+    assert "oauth_refresh_retry_at" in AUTH
+    assert "server/team-points/config/oauth.local.php" in AUTH
+    assert "PromoteToKing-ReleaseControl/2.14.3" in AUTH
+    assert "server/team-points/src/bootstrap.php" not in AUTH
+
+
+def test_explicit_enable_intent_survives_real_reauthentication():
+    assert "P2KRC_PREVIEW_PENDING" in SESSION
+    assert "beginPendingEnable" in SESSION
+    assert "consumePendingEnable" in SESSION
+    assert "resume_preview=1" in PAGE
+    assert "$previewSession->enable($username)" in PAGE
+    assert "$auth->loginUrl('/ReleaseControl.php?resume_preview=1')" in PAGE
 
 
 def test_preview_reauthentication_preserves_signed_intent_until_identity_returns():
