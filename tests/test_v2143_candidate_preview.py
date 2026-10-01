@@ -1,5 +1,6 @@
 from pathlib import Path
 import importlib.util
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE = (ROOT / "ReleaseControl.php").read_text(encoding="utf-8")
@@ -134,6 +135,30 @@ def test_preview_router_is_cookie_gated_and_keeps_recovery_shared_paths_out():
     assert "p2k-candidate-preview-banner" in ROUTER
     assert "X-P2K-Preview-Error" in ROUTER
     assert "candidate-file-missing" in ROUTER
+
+
+def test_preview_scope_does_not_capture_sibling_projects():
+    scope_line = next(
+        line.strip() for line in HTACCESS.splitlines()
+        if "artwork-masters" in line and "RewriteCond %{REQUEST_URI}" in line
+    )
+    prefix = "RewriteCond %{REQUEST_URI} "
+    assert scope_line.startswith(prefix) and scope_line.endswith(" [NC]")
+    pattern = scope_line[len(prefix):-len(" [NC]")]
+    compiled = re.compile(pattern, re.IGNORECASE)
+
+    for uri in [
+        "/", "/ui-v2.html", "/assets/js/site-config.js", "/api/foo/index.php",
+        "/server/team-points/public/api.php", "/trophies/example.png",
+    ]:
+        assert compiled.search(uri), uri
+
+    for uri in [
+        "/ClubWarsLive/", "/ClubWarsLive/index.php", "/TGP/Widget/",
+        "/PlayerDiscovery/", "/GalacticConflict/", "/DailyMatchAtlas/",
+        "/ReleaseControl.php", "/data/runtime-v280/state.json",
+    ]:
+        assert not compiled.search(uri), uri
 
 
 def test_preview_tree_uses_candidate_files_and_only_explicit_shared_links():
