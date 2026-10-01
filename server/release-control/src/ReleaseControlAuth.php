@@ -94,6 +94,110 @@ final class ReleaseControlAuth
         return '/server/team-points/public/oauth.php?action=login&return=' . rawurlencode($returnTo);
     }
 
+    /** Return the browser-safe OAuth status used by the candidate preview.
+     *  Access and refresh tokens never leave the server.
+     *
+     *  @return array<string,mixed>
+     */
+    public function oauthSessionStatus(): array
+    {
+        $cfg = $this->oauthConfig();
+        $enabled = trim((string)($cfg['name'] ?? '')) !== ''
+            && trim((string)($cfg['client_id'] ?? '')) !== ''
+            && trim((string)($cfg['redirect_url'] ?? '')) !== '';
+
+        $empty = static fn(string $csrf = ''): array => [
+            'ok'=>true,
+            'enabled'=>$enabled,
+            'authenticated'=>false,
+            'real_oauth'=>false,
+            'oauth_verified'=>false,
+            'profile'=>null,
+            'expires_at'=>null,
+            'csrf'=>$csrf,
+            'admin_bootstrap'=>'',
+        ];
+
+        $cookieId = trim((string)($_COOKIE['P2KOAUTH'] ?? ''));
+        if ($cookieId === '') return $empty();
+
+        $dir = $this->oauthSessionDirectory();
+        if ($dir === '' || !is_dir($dir)) return $empty();
+
+        $data = $this->readSession('P2KOAUTH', $dir);
+        $access = is_array($data['oauth_access'] ?? null) ? $data['oauth_access'] : [];
+        $user = is_array($data['oauth_user'] ?? null) ? $data['oauth_user'] : [];
+        $profile = is_array($data['oauth_profile'] ?? null) ? $data['oauth_profile'] : [];
+        $claims = is_array($data['oauth_claims'] ?? null) ? $data['oauth_claims'] : [];
+        $csrf = trim((string)($data['oauth_csrf'] ?? ''));
+        $token = trim((string)($access['access_token'] ?? ''));
+        $expires = (int)($access['expires_at'] ?? 0);
+        $username = strtolower(trim((string)($user['username'] ?? $profile['username'] ?? $claims['preferred_username'] ?? $claims['username'] ?? '')));
+
+        $now = time();
+        $refreshToken = trim((string)($access['refresh_token'] ?? ''));
+        $retryAt = (int)($data['oauth_refresh_retry_at'] ?? 0);
+        if ($refreshToken !== '' && ($expires <= 0 || $expires <= $now + 300) && $retryAt <= $now) {
+            $refreshed = $this->refreshOAuthSession($dir);
+            if (is_array($refreshed)) {
+                $data = $refreshed;
+                $access = is_array($data['oauth_access'] ?? null) ? $data['oauth_access'] : [];
+                $user = is_array($data['oauth_user'] ?? null) ? $data['oauth_user'] : [];
+                $profile = is_array($data['oauth_profile'] ?? null) ? $data['oauth_profile'] : [];
+                $claims = is_array($data['oauth_claims'] ?? null) ? $data['oauth_claims'] : [];
+                $csrf = trim((string)($data['oauth_csrf'] ?? ''));
+                $token = trim((string)($access['access_token'] ?? ''));
+                $expires = (int)($access['expires_at'] ?? 0);
+                $username = strtolower(trim((string)($user['username'] ?? $profile['username'] ?? $claims['preferred_username'] ?? $claims['username'] ?? '')));
+            }
+        }
+
+        if ($token === '' || ($expires > 0 && $expires <= time() + 5)
+            || !preg_match('/^[a-z0-9_-]{1,80}$/', $username)) {
+            return $empty($csrf);
+        }
+
+        $this->touchOAuthCookie($cookieId);
+        $profileUrl = trim((string)($profile['url'] ?? $claims['profile'] ?? ''));
+        if ($profileUrl === '') $profileUrl = 'https://www.chess.com/member/' . rawurlencode($username);
+        $publicProfile = [
+            'version'=>2,
+            'authMode'=>'real-oauth',
+            'realOAuth'=>true,
+            'oauthVerified'=>true,
+            'username'=>$username,
+            'avatar'=>trim((string)($profile['avatar'] ?? $claims['picture'] ?? '')),
+            'profileURL'=>$profileUrl,
+            'playerId'=>$profile['player_id'] ?? (isset($claims['user_id']) ? (int)$claims['user_id'] : null),
+            'title'=>(string)($profile['title'] ?? ''),
+            'name'=>(string)($profile['name'] ?? ''),
+            'status'=>(string)($profile['status'] ?? ''),
+            'location'=>(string)($profile['location'] ?? ''),
+            'followers'=>$profile['followers'] ?? null,
+            'joined'=>$profile['joined'] ?? null,
+            'lastOnline'=>$profile['last_online'] ?? null,
+            'country'=>(string)($claims['country'] ?? ''),
+            'countryCode'=>(string)($claims['country_code'] ?? $profile['country'] ?? ''),
+            'membership'=>(string)($claims['membership'] ?? ''),
+            'locale'=>(string)($claims['locale'] ?? ''),
+            'zoneinfo'=>(string)($claims['zoneinfo'] ?? ''),
+            'subject'=>(string)($user['subject'] ?? $claims['sub'] ?? ''),
+            'expiresAt'=>(int)($user['expires_at'] ?? $expires),
+        ];
+
+        return [
+            'ok'=>true,
+            'enabled'=>$enabled,
+            'authenticated'=>true,
+            'real_oauth'=>true,
+            'oauth_verified'=>true,
+            'profile'=>$publicProfile,
+            'expires_at'=>(int)($user['expires_at'] ?? $expires),
+            'csrf'=>$csrf,
+            'admin_bootstrap'=>$this->adminBootstrapAssertion($username, (int)($user['expires_at'] ?? $expires)),
+        ];
+    }
+
     private function teamPointsAdminUsername(): string
     {
         if (empty($_COOKIE['P2KTPSESSID'])) return '';
@@ -223,7 +327,9 @@ final class ReleaseControlAuth
         $file = is_file($path) ? require $path : [];
         if (!is_array($file)) $file = [];
         return [
+            'name'=>trim((string)(getenv('P2K_OAUTH_APP_NAME') ?: ($file['name'] ?? ''))),
             'client_id'=>trim((string)(getenv('P2K_OAUTH_CLIENT_ID') ?: ($file['client_id'] ?? ''))),
+            'redirect_url'=>trim((string)(getenv('P2K_OAUTH_REDIRECT_URL') ?: ($file['redirect_url'] ?? ''))),
             'token_url'=>trim((string)(getenv('P2K_OAUTH_TOKEN_URL') ?: ($file['token_url'] ?? 'https://oauth.chess.com/token'))),
         ];
     }
@@ -280,6 +386,66 @@ final class ReleaseControlAuth
         if (!is_array($decoded)) throw new \RuntimeException('OAuth refresh returned invalid JSON.');
         if ($status < 200 || $status >= 300) throw new \RuntimeException('OAuth refresh was rejected.');
         return $decoded;
+    }
+
+    private function adminBootstrapAssertion(string $username, int $oauthExpiresAt): string
+    {
+        $username = strtolower(trim($username));
+        $key = $this->adminBootstrapKey();
+        if ($key === '' || !preg_match('/^[a-z0-9_-]{1,80}$/', $username)) return '';
+        $now = time();
+        $expires = $now + 60;
+        if ($oauthExpiresAt > 0) $expires = min($expires, $oauthExpiresAt);
+        if ($expires <= $now) return '';
+        $payload = $this->b64url((string)json_encode([
+            'v'=>1,
+            'aud'=>'p2k-team-points-admin',
+            'u'=>$username,
+            'iat'=>$now,
+            'exp'=>$expires,
+        ], JSON_UNESCAPED_SLASHES));
+        if ($payload === '') return '';
+        return $payload . '.' . $this->b64url(hash_hmac('sha256', $payload, $key, true));
+    }
+
+    private function adminBootstrapKey(): string
+    {
+        $path = $this->root . '/server/team-points/config/config.local.php';
+        if (!is_file($path)) return '';
+        try {
+            $config = require $path;
+        } catch (\Throwable) {
+            return '';
+        }
+        if (!is_array($config)) return '';
+        $app = is_array($config['app'] ?? null) ? $config['app'] : [];
+        foreach (['admin_token', 'cron_token'] as $field) {
+            $token = trim((string)($app[$field] ?? ''));
+            if ($token !== '' && !str_starts_with($token, 'CHANGE_')) {
+                return hash('sha256', "p2k-oauth-admin-bootstrap-v1\0" . $token, true);
+            }
+        }
+        return '';
+    }
+
+    private function touchOAuthCookie(string $id): void
+    {
+        if ($id === '') return;
+        $secure = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
+            || strtolower(trim(explode(',', (string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0] ?? '')) === 'https';
+        setcookie('P2KOAUTH', $id, [
+            'expires'=>time()+604800,
+            'path'=>'/',
+            'secure'=>$secure,
+            'httponly'=>true,
+            'samesite'=>'Lax',
+        ]);
+        $_COOKIE['P2KOAUTH'] = $id;
+    }
+
+    private function b64url(string $raw): string
+    {
+        return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
     }
 
     /** @return array<string,mixed> */
