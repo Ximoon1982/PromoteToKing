@@ -224,7 +224,7 @@ if ($body === false) {
 if (in_array($extension, ['html','htm'], true)) {
     $assetKey = rawurlencode($releaseId);
     $rewritten = preg_replace_callback(
-        '~\\b(src|href)=(["\\'])(?!https?:|//|data:|#)([^"\\']+\\.(?:js|css|png|jpe?g|gif|webp|svg|ico|woff2?|ttf)(?:\\?[^"\\']*)?)\\2~i',
+        "~\\b(src|href)=([\"'])(?!https?:|//|data:|#)([^\"']+\\.(?:js|css|png|jpe?g|gif|webp|svg|ico|woff2?|ttf)(?:\\?[^\"']*)?)\\2~i",
         static function (array $match) use ($assetKey): string {
             $url = $match[3];
             $separator = str_contains($url, '?') ? '&amp;' : '?';
