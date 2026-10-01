@@ -222,6 +222,18 @@ if ($body === false) {
     exit('Unable to read candidate preview file.');
 }
 if (in_array($extension, ['html','htm'], true)) {
+    $assetKey = rawurlencode($releaseId);
+    $rewritten = preg_replace_callback(
+        '~\\b(src|href)=(["\\'])(?!https?:|//|data:|#)([^"\\']+\\.(?:js|css|png|jpe?g|gif|webp|svg|ico|woff2?|ttf)(?:\\?[^"\\']*)?)\\2~i',
+        static function (array $match) use ($assetKey): string {
+            $url = $match[3];
+            $separator = str_contains($url, '?') ? '&amp;' : '?';
+            return $match[1] . '=' . $match[2] . $url . $separator . '__p2k_preview=' . $assetKey . $match[2];
+        },
+        $body
+    );
+    if (is_string($rewritten)) $body = $rewritten;
+
     $bootstrap = $auth->previewAuthBootstrap($username);
     if (is_array($bootstrap)) {
         $encoded = base64_encode((string)json_encode($bootstrap, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
