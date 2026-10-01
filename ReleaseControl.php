@@ -50,9 +50,39 @@ $username = $auth->currentUsername();
 $authorized = $username !== '' && $auth->isSuperAdmin($username);
 $previewSession = new ReleasePreviewSession(__DIR__);
 $actionError = '';
+$action = strtolower(trim((string)($_POST['action'] ?? '')));
+
+if ($method === 'POST' && !$authorized && $username === '' && $action === 'enable-preview') {
+    $providedCsrf = trim((string)($_POST['csrf'] ?? ''));
+    $expectedCsrf = $auth->currentCsrfToken();
+    $usernameHint = strtolower(trim((string)($_POST['preview_user'] ?? '')));
+    if ($providedCsrf !== '' && $expectedCsrf !== '' && hash_equals($expectedCsrf, $providedCsrf)
+        && preg_match('/^[a-z0-9_-]{1,80}$/', $usernameHint) && $auth->isSuperAdmin($usernameHint)) {
+        try {
+            $previewSession->beginPendingEnable($usernameHint);
+            header('Location: ' . $auth->loginUrl('/ReleaseControl.php?resume_preview=1'), true, 303);
+            exit;
+        } catch (Throwable $e) {
+            http_response_code(409);
+            $actionError = $e->getMessage();
+        }
+    }
+}
 
 if ($username === '') http_response_code(401);
 elseif (!$authorized) http_response_code(403);
+
+if ($method === 'GET' && $authorized && (string)($_GET['resume_preview'] ?? '') === '1'
+    && $previewSession->consumePendingEnable($username)) {
+    try {
+        $previewSession->enable($username);
+        header('Location: /ReleaseControl.php?preview_result=enabled', true, 303);
+        exit;
+    } catch (Throwable $e) {
+        http_response_code(409);
+        $actionError = $e->getMessage();
+    }
+}
 
 if ($method === 'POST' && $authorized) {
     $providedCsrf = trim((string)($_POST['csrf'] ?? ''));
@@ -62,7 +92,6 @@ if ($method === 'POST' && $authorized) {
         $actionError = 'Release Control request validation failed. Reload this page and try again.';
     } else {
         try {
-            $action = strtolower(trim((string)($_POST['action'] ?? '')));
             if ($action === 'enable-preview') {
                 $previewSession->enable($username);
                 header('Location: /ReleaseControl.php?preview_result=enabled', true, 303);
@@ -246,7 +275,7 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
             <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="disable-preview"><button class="button" type="submit">Stop preview</button></form>
             <a class="button primary" href="/index.html">Open candidate site</a>
           <?php else: ?>
-            <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="enable-preview"><button class="button primary" type="submit">Preview candidate for me</button></form>
+            <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="preview_user" value="<?= rc_h($username) ?>"><input type="hidden" name="action" value="enable-preview"><button class="button primary" type="submit">Preview candidate for me</button></form>
           <?php endif; ?>
         <?php else: ?>
           <span class="button disabled">Preview candidate</span>
