@@ -6,7 +6,9 @@ namespace P2K\ReleaseControl;
 final class ReleasePreviewSession
 {
     public const COOKIE = 'P2KRC_PREVIEW';
+    public const PENDING_COOKIE = 'P2KRC_PREVIEW_PENDING';
     private const TTL_SECONDS = 28800;
+    private const PENDING_TTL_SECONDS = 600;
 
     public function __construct(
         private readonly string $root,
@@ -82,6 +84,47 @@ final class ReleasePreviewSession
         return ['enabled'=>true,'release_id'=>$releaseId,'expires_at'=>$expires,'reason'=>'ok','preview_tree'=>$tree];
     }
 
+    public function beginPendingEnable(string $usernameHint): void
+    {
+        $usernameHint = strtolower(trim($usernameHint));
+        if (!preg_match('/^[a-z0-9_-]{1,80}$/', $usernameHint)) {
+            throw new \RuntimeException('Preview identity hint is unavailable.');
+        }
+        $expires = time() + self::PENDING_TTL_SECONDS;
+        $payload = ['a'=>'enable-preview','u'=>$usernameHint,'e'=>$expires];
+        $encoded = $this->b64url(json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+        $signature = $this->b64url(hash_hmac('sha256', $encoded, $this->secret(true), true));
+        $this->setNamedCookie(self::PENDING_COOKIE, $encoded . '.' . $signature, $expires);
+    }
+
+    public function consumePendingEnable(string $username): bool
+    {
+        $username = strtolower(trim($username));
+        $raw = trim((string)($_COOKIE[self::PENDING_COOKIE] ?? ''));
+        $this->setNamedCookie(self::PENDING_COOKIE, '', time() - 3600);
+        unset($_COOKIE[self::PENDING_COOKIE]);
+        if ($username === '' || $raw === '') return false;
+
+        $parts = explode('.', $raw, 2);
+        if (count($parts) !== 2) return false;
+        [$encoded, $signature] = $parts;
+        $secret = $this->secret(false);
+        if ($secret === '') return false;
+        $expected = $this->b64url(hash_hmac('sha256', $encoded, $secret, true));
+        if (!hash_equals($expected, $signature)) return false;
+        $decoded = $this->unb64url($encoded);
+        if ($decoded === '') return false;
+        try {
+            $payload = json_decode($decoded, true, 16, JSON_THROW_ON_ERROR);
+        } catch (\Throwable) {
+            return false;
+        }
+        if (!is_array($payload)) return false;
+        if ((string)($payload['a'] ?? '') !== 'enable-preview') return false;
+        if ((int)($payload['e'] ?? 0) <= time()) return false;
+        return hash_equals($username, strtolower(trim((string)($payload['u'] ?? ''))));
+    }
+
     public function clearInvalidCookie(): void
     {
         if (!empty($_COOKIE[self::COOKIE])) $this->disable();
@@ -110,14 +153,20 @@ final class ReleasePreviewSession
 
     private function setCookie(string $value, int $expires): void
     {
-        setcookie(self::COOKIE, $value, [
+        $this->setNamedCookie(self::COOKIE, $value, $expires);
+        if ($value !== '') $_COOKIE[self::COOKIE] = $value;
+    }
+
+    private function setNamedCookie(string $name, string $value, int $expires): void
+    {
+        setcookie($name, $value, [
             'expires'=>$expires,
             'path'=>'/',
             'secure'=>true,
             'httponly'=>true,
             'samesite'=>'Lax',
         ]);
-        if ($value !== '') $_COOKIE[self::COOKIE] = $value;
+        if ($value !== '') $_COOKIE[$name] = $value;
     }
 
     private function b64url(string $raw): string
