@@ -7,28 +7,7 @@
   const apiEndpoint = storage.teamPointsEndpoint || "/server/team-points/public/api.php";
   const sessionEndpoint = storage.teamPointsSessionEndpoint || "/server/team-points/public/session.php";
   const publicEndpoint = storage.teamPointsPublicEndpoint || "/server/team-points/public/public.php";
-
-  function previewAdminSession() {
-    if (typeof document === "undefined") return null;
-    const encoded = String(document.querySelector?.('meta[name="p2k-preview-auth-bootstrap"]')?.content || "").trim();
-    if (!encoded) return null;
-    try {
-      const binary = atob(encoded);
-      const raw = new TextDecoder().decode(Uint8Array.from(binary, ch => ch.charCodeAt(0)));
-      const payload = JSON.parse(raw);
-      const tp = payload?.team_points;
-      const username = String(tp?.username || "").trim().toLowerCase();
-      const csrf = String(tp?.csrf || "").trim();
-      const expiresAt = Number(tp?.expires_at || 0);
-      if (!username || !csrf || !Number.isFinite(expiresAt) || expiresAt * 1000 <= Date.now()) return null;
-      return { username, csrf };
-    } catch (_) {
-      return null;
-    }
-  }
-
-  const previewAdmin = previewAdminSession();
-  const state = { csrf: previewAdmin?.csrf || "", username: previewAdmin?.username || "", connecting: null, connectedAt: previewAdmin ? Date.now() : 0, lastError: "" };
+  const state = { csrf: "", username: "", connecting: null, connectedAt: 0, lastError: "" };
   const CONNECT_TIMEOUT_MS = 35000;
   const REQUEST_TIMEOUT_MS = 30000;
 
