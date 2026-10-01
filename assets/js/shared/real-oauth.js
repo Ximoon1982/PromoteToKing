@@ -33,14 +33,14 @@
   let renderQueued = false;
   let observer = null;
   let apiInstalled = false;
-  let previewBootstrapUsed = false;
 
   function previewAuthBootstrap() {
     const meta = document.querySelector?.('meta[name="p2k-preview-auth-bootstrap"]');
     const encoded = String(meta?.content || "").trim();
     if (!encoded) return null;
     try {
-      const raw = atob(encoded);
+      const binary = atob(encoded);
+      const raw = new TextDecoder().decode(Uint8Array.from(binary, ch => ch.charCodeAt(0)));
       const payload = JSON.parse(raw);
       const normalized = normalizeSession(payload?.profile || (payload?.username ? { username: payload.username } : null));
       const nextCsrf = String(payload?.csrf || "").trim();
@@ -104,7 +104,6 @@
       adminBootstrap = preview.adminBootstrap;
       adminBootstrapReceivedAt = Date.now();
       sessionStatusUnavailable = false;
-      previewBootstrapUsed = true;
       syncApiMode();
       notify();
       queueRender();
@@ -123,7 +122,6 @@
 
   async function refreshSession(attempt = 0) {
     let terminalAttempt = true;
-    previewBootstrapUsed = false;
     try {
       const response = await fetch(`${ENDPOINT}?action=session`, { credentials: "same-origin", cache: "no-store", headers: { Accept: "application/json" } });
       const payload = await response.json();
