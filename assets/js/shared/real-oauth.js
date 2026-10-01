@@ -34,24 +34,6 @@
   let observer = null;
   let apiInstalled = false;
 
-  function previewAuthBootstrap() {
-    const meta = document.querySelector?.('meta[name="p2k-preview-auth-bootstrap"]');
-    const encoded = String(meta?.content || "").trim();
-    if (!encoded) return null;
-    try {
-      const binary = atob(encoded);
-      const raw = new TextDecoder().decode(Uint8Array.from(binary, ch => ch.charCodeAt(0)));
-      const payload = JSON.parse(raw);
-      const normalized = normalizeSession(payload?.profile || (payload?.username ? { username: payload.username } : null));
-      const nextCsrf = String(payload?.csrf || "").trim();
-      const nextBootstrap = String(payload?.admin_bootstrap || "").trim();
-      if (!normalized || !nextCsrf || !nextBootstrap) return null;
-      return { session: normalized, csrf: nextCsrf, adminBootstrap: nextBootstrap };
-    } catch (_) {
-      return null;
-    }
-  }
-
   const api = Object.freeze({
     enabled: true,
     mode: "real-oauth",
@@ -97,21 +79,7 @@
 
   function initialize() {
     activateSurface();
-    const preview = previewAuthBootstrap();
-    if (preview) {
-      session = preview.session;
-      csrf = preview.csrf;
-      adminBootstrap = preview.adminBootstrap;
-      adminBootstrapReceivedAt = Date.now();
-      sessionStatusUnavailable = false;
-      syncApiMode();
-      notify();
-      queueRender();
-      if (!readySettled) { readySettled = true; readyResolve?.({ ...session }); }
-      window.setTimeout(() => { void refreshSession(); }, 30_000);
-    } else {
-      void refreshSession();
-    }
+    refreshSession();
     window.addEventListener?.("online", () => {
       if (!sessionStatusUnavailable) return;
       clearSessionRecovery();
