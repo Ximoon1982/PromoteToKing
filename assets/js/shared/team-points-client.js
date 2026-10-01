@@ -9,6 +9,7 @@
   const publicEndpoint = storage.teamPointsPublicEndpoint || "/server/team-points/public/public.php";
 
   function previewAdminSession() {
+    if (typeof document === "undefined") return null;
     const encoded = String(document.querySelector?.('meta[name="p2k-preview-auth-bootstrap"]')?.content || "").trim();
     if (!encoded) return null;
     try {
