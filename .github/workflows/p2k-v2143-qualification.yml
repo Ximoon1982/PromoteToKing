@@ -68,6 +68,7 @@ jobs:
           bash -n tools/release/v2143/install-promote-to-king-v2.14.3-universal.sh.in
           python -m py_compile tools/release/v2143/canonical-hash.py tools/release/v2143/stamp-runtime-cache-key.py server/release-control/tools/release-slot-paths.py
           python -m pytest -q tests/test_v2140_release_control.py tests/test_v2141_release_slots.py tests/test_v2142_candidate_install.py tests/test_v2143_candidate_preview.py
+          node tests/test_v2143_preview_auth_bootstrap_runtime.js
           php tests/php_v2140_release_control_harness.php
           php tests/php_v2141_release_slots_harness.php
           php tests/php_v2142_candidate_install_harness.php
