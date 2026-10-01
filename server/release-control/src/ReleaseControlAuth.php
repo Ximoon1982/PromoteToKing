@@ -94,6 +94,93 @@ final class ReleaseControlAuth
         return '/server/team-points/public/oauth.php?action=login&return=' . rawurlencode($returnTo);
     }
 
+    /** @return array<string,mixed>|null */
+    public function previewAuthBootstrap(string $expectedUsername): ?array
+    {
+        $expectedUsername = strtolower(trim($expectedUsername));
+        if (!preg_match('/^[a-z0-9_-]{1,80}$/', $expectedUsername)) return null;
+
+        // Force the same refreshable OAuth validation used by Release Control even
+        // when a still-valid P2KTPSESSID allowed currentUsername() to return early.
+        $oauthUsername = $this->oauthUsername();
+        if ($oauthUsername === '' || !hash_equals($expectedUsername, $oauthUsername)) return null;
+
+        $dir = $this->oauthSessionDirectory();
+        if ($dir === '' || !is_dir($dir)) return null;
+        $data = $this->readSession('P2KOAUTH', $dir);
+        $csrf = trim((string)($data['oauth_csrf'] ?? ''));
+        $user = is_array($data['oauth_user'] ?? null) ? $data['oauth_user'] : [];
+        $profile = is_array($data['oauth_profile'] ?? null) ? $data['oauth_profile'] : [];
+        $claims = is_array($data['oauth_claims'] ?? null) ? $data['oauth_claims'] : [];
+        $oauthExpiresAt = (int)($user['expires_at'] ?? 0);
+        $assertion = $this->adminBootstrapAssertion($expectedUsername, $oauthExpiresAt);
+        if ($csrf === '' || $assertion === '') return null;
+
+        $profileUrl = trim((string)($profile['url'] ?? $claims['profile'] ?? ''));
+        if ($profileUrl === '') $profileUrl = 'https://www.chess.com/member/' . rawurlencode($expectedUsername);
+        return [
+            'username'=>$expectedUsername,
+            'csrf'=>$csrf,
+            'admin_bootstrap'=>$assertion,
+            'profile'=>[
+                'username'=>$expectedUsername,
+                'avatar'=>trim((string)($profile['avatar'] ?? $claims['picture'] ?? '')),
+                'profileURL'=>$profileUrl,
+                'name'=>trim((string)($profile['name'] ?? '')),
+                'title'=>trim((string)($profile['title'] ?? '')),
+                'status'=>trim((string)($profile['status'] ?? '')),
+                'location'=>trim((string)($profile['location'] ?? '')),
+                'countryCode'=>trim((string)($claims['country_code'] ?? $profile['country'] ?? '')),
+                'followers'=>isset($profile['followers']) ? (int)$profile['followers'] : null,
+                'joined'=>isset($profile['joined']) ? (int)$profile['joined'] : null,
+                'lastOnline'=>isset($profile['last_online']) ? (int)$profile['last_online'] : null,
+                'realOAuth'=>true,
+                'oauthVerified'=>true,
+                'authMode'=>'real-oauth',
+            ],
+        ];
+    }
+
+    private function adminBootstrapAssertion(string $username, int $oauthExpiresAt): string
+    {
+        $key = $this->adminBootstrapKey();
+        if ($key === '') return '';
+        $now = time();
+        $expires = $now + 60;
+        if ($oauthExpiresAt > 0) $expires = min($expires, $oauthExpiresAt);
+        if ($expires <= $now) return '';
+        $payload = $this->b64url((string)json_encode([
+            'v'=>1,'aud'=>'p2k-team-points-admin','u'=>$username,'iat'=>$now,'exp'=>$expires,
+        ], JSON_UNESCAPED_SLASHES));
+        if ($payload === '') return '';
+        return $payload . '.' . $this->b64url(hash_hmac('sha256', $payload, $key, true));
+    }
+
+    private function adminBootstrapKey(): string
+    {
+        $path = $this->root . '/server/team-points/config/config.local.php';
+        if (!is_file($path)) return '';
+        try {
+            $config = require $path;
+        } catch (\Throwable) {
+            return '';
+        }
+        if (!is_array($config)) return '';
+        $app = is_array($config['app'] ?? null) ? $config['app'] : [];
+        foreach (['admin_token','cron_token'] as $field) {
+            $token = trim((string)($app[$field] ?? ''));
+            if ($token !== '' && !str_starts_with($token, 'CHANGE_')) {
+                return hash('sha256', "p2k-oauth-admin-bootstrap-v1\0" . $token, true);
+            }
+        }
+        return '';
+    }
+
+    private function b64url(string $raw): string
+    {
+        return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
+    }
+
     private function teamPointsAdminUsername(): string
     {
         if (empty($_COOKIE['P2KTPSESSID'])) return '';
