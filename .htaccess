@@ -25,7 +25,7 @@ DirectoryIndex index.html index.php
   RewriteCond %{HTTP:Cookie} "(^|;[[:space:]]*)P2KRC_PREVIEW=" [NC]
   RewriteCond %{REQUEST_URI} ^/server/team-points/public/oauth\.php$ [NC]
   RewriteCond %{QUERY_STRING} (^|&)action=session(&|$) [NC]
-  RewriteRule ^server/team-points/public/oauth\.php$ /PreviewRouter.php [L]
+  RewriteRule ^server/team-points/public/oauth\.php$ /server/release-control/public/preview-oauth-session.php [L]
 
   RewriteCond %{HTTP:Cookie} "(^|;[[:space:]]*)P2KRC_PREVIEW=" [NC]
   RewriteCond %{REQUEST_URI} !^/(?:ReleaseControl\.php|PreviewRouter\.php|server/release-control(?:/|$)|server/team-points/public/(?:oauth|session)\.php$|auth/callback(?:\.php)?$|data(?:/|$)|logs(?:/|$)|storage(?:/|$)) [NC]
