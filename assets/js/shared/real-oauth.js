@@ -33,6 +33,24 @@
   let renderQueued = false;
   let observer = null;
   let apiInstalled = false;
+  let previewBootstrapUsed = false;
+
+  function previewAuthBootstrap() {
+    const meta = document.querySelector?.('meta[name="p2k-preview-auth-bootstrap"]');
+    const encoded = String(meta?.content || "").trim();
+    if (!encoded) return null;
+    try {
+      const raw = atob(encoded);
+      const payload = JSON.parse(raw);
+      const normalized = normalizeSession(payload?.profile || (payload?.username ? { username: payload.username } : null));
+      const nextCsrf = String(payload?.csrf || "").trim();
+      const nextBootstrap = String(payload?.admin_bootstrap || "").trim();
+      if (!normalized || !nextCsrf || !nextBootstrap) return null;
+      return { session: normalized, csrf: nextCsrf, adminBootstrap: nextBootstrap };
+    } catch (_) {
+      return null;
+    }
+  }
 
   const api = Object.freeze({
     enabled: true,
@@ -79,7 +97,22 @@
 
   function initialize() {
     activateSurface();
-    refreshSession();
+    const preview = previewAuthBootstrap();
+    if (preview) {
+      session = preview.session;
+      csrf = preview.csrf;
+      adminBootstrap = preview.adminBootstrap;
+      adminBootstrapReceivedAt = Date.now();
+      sessionStatusUnavailable = false;
+      previewBootstrapUsed = true;
+      syncApiMode();
+      notify();
+      queueRender();
+      if (!readySettled) { readySettled = true; readyResolve?.({ ...session }); }
+      window.setTimeout(() => { void refreshSession(); }, 30_000);
+    } else {
+      void refreshSession();
+    }
     window.addEventListener?.("online", () => {
       if (!sessionStatusUnavailable) return;
       clearSessionRecovery();
@@ -90,6 +123,7 @@
 
   async function refreshSession(attempt = 0) {
     let terminalAttempt = true;
+    previewBootstrapUsed = false;
     try {
       const response = await fetch(`${ENDPOINT}?action=session`, { credentials: "same-origin", cache: "no-store", headers: { Accept: "application/json" } });
       const payload = await response.json();
