@@ -145,8 +145,11 @@ final class ReleaseControlAuth
     {
         if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
         $originalPath = (string)session_save_path();
+        $originalName = (string)session_name();
+        $originalId = (string)session_id();
         @session_save_path($savePath);
         session_name('P2KOAUTH');
+        session_id(trim((string)($_COOKIE['P2KOAUTH'] ?? '')));
         $ok = @session_start();
         if (!$ok) {
             @session_save_path($originalPath);
@@ -195,6 +198,8 @@ final class ReleaseControlAuth
         } finally {
             $id = session_id();
             session_write_close();
+            session_name($originalName);
+            session_id($originalId);
             @session_save_path($originalPath);
             if ($id !== '') {
                 $secure = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
@@ -281,12 +286,25 @@ final class ReleaseControlAuth
     private function readSession(string $name, ?string $savePath): array
     {
         if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+
+        // Manual inspection must be runtime-isolated. PHP keeps session_name() and
+        // session_id() after read_and_close, so without restoring both, a later
+        // namespace (notably candidate P2KOAUTH after inspecting P2KTPSESSID)
+        // can accidentally inherit the previous session id and open the wrong file.
         $originalPath = (string)session_save_path();
+        $originalName = (string)session_name();
+        $originalId = (string)session_id();
+
         if ($savePath !== null) @session_save_path($savePath);
         session_name($name);
+        session_id(trim((string)($_COOKIE[$name] ?? '')));
         $ok = @session_start(['read_and_close' => true]);
         $data = $ok && is_array($_SESSION ?? null) ? $_SESSION : [];
         $_SESSION = [];
+
+        // Restore the PHP session runtime exactly as it was before inspection.
+        session_name($originalName);
+        session_id($originalId);
         if ($savePath !== null) @session_save_path($originalPath);
         return $data;
     }
