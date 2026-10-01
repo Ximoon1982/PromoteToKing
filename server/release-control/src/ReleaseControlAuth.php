@@ -116,12 +116,24 @@ final class ReleaseControlAuth
         $assertion = $this->adminBootstrapAssertion($expectedUsername, $oauthExpiresAt);
         if ($csrf === '' || $assertion === '') return null;
 
+        $teamPoints = null;
+        if (!empty($_COOKIE['P2KTPSESSID'])) {
+            $tp = $this->readSession('P2KTPSESSID', null);
+            $tpUsername = strtolower(trim((string)($tp['p2k_tp_admin_username'] ?? '')));
+            $tpCsrf = trim((string)($tp['p2k_tp_csrf'] ?? ''));
+            $tpExpires = (int)($tp['p2k_tp_expires'] ?? 0);
+            if ($tpUsername !== '' && $tpCsrf !== '' && $tpExpires > time() && hash_equals($expectedUsername, $tpUsername)) {
+                $teamPoints = ['username'=>$tpUsername, 'csrf'=>$tpCsrf, 'expires_at'=>$tpExpires];
+            }
+        }
+
         $profileUrl = trim((string)($profile['url'] ?? $claims['profile'] ?? ''));
         if ($profileUrl === '') $profileUrl = 'https://www.chess.com/member/' . rawurlencode($expectedUsername);
         return [
             'username'=>$expectedUsername,
             'csrf'=>$csrf,
             'admin_bootstrap'=>$assertion,
+            'team_points'=>$teamPoints,
             'profile'=>[
                 'username'=>$expectedUsername,
                 'avatar'=>trim((string)($profile['avatar'] ?? $claims['picture'] ?? '')),
