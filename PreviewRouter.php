@@ -222,26 +222,6 @@ if ($body === false) {
     exit('Unable to read candidate preview file.');
 }
 if (in_array($extension, ['html','htm'], true)) {
-    $assetKey = rawurlencode($releaseId);
-    $rewritten = preg_replace_callback(
-        "~\\b(src|href)=([\"'])(?!https?:|//|data:|#)([^\"']+\\.(?:js|css|png|jpe?g|gif|webp|svg|ico|woff2?|ttf)(?:\\?[^\"']*)?)\\2~i",
-        static function (array $match) use ($assetKey): string {
-            $url = $match[3];
-            $separator = str_contains($url, '?') ? '&amp;' : '?';
-            return $match[1] . '=' . $match[2] . $url . $separator . '__p2k_preview=' . $assetKey . $match[2];
-        },
-        $body
-    );
-    if (is_string($rewritten)) $body = $rewritten;
-
-    $bootstrap = $auth->previewAuthBootstrap($username);
-    if (is_array($bootstrap)) {
-        $encoded = base64_encode((string)json_encode($bootstrap, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
-        $meta = '<meta name="p2k-preview-auth-bootstrap" content="' . htmlspecialchars($encoded, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">';
-        $headPos = stripos($body, '</head>');
-        $body = $headPos === false ? $meta . $body : substr($body, 0, $headPos) . $meta . substr($body, $headPos);
-    }
-
     $label = htmlspecialchars('Candidate preview · ' . $releaseId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $banner = '<div id="p2k-candidate-preview-banner" style="position:fixed;z-index:2147483647;top:0;left:50%;transform:translateX(-50%);padding:5px 12px;border-radius:0 0 8px 8px;background:#f3bd55;color:#17110a;font:700 12px/1.3 system-ui,sans-serif;box-shadow:0 2px 10px #0008">' . $label . '</div>';
     $pos = stripos($body, '</body>');
