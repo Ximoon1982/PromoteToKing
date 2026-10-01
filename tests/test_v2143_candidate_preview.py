@@ -88,6 +88,20 @@ def test_explicit_enable_intent_survives_real_reauthentication():
     assert "$auth->loginUrl('/ReleaseControl.php?resume_preview=1')" in PAGE
 
 
+def test_preview_oauth_session_status_uses_recovery_plane_not_candidate_php():
+    assert (ROOT / "server/release-control/public/preview-oauth-session.php").is_file()
+    assert "oauthSessionStatus" in AUTH
+    assert "adminBootstrapAssertion" in AUTH
+    assert "SECRET_ACCESS_TOKEN" not in AUTH
+    assert "/server/release-control/public/preview-oauth-session.php" in HTACCESS
+    special = HTACCESS.index("%{QUERY_STRING} (^|&)action=session(&|$)")
+    broad_exclusion = HTACCESS.index("server/team-points/public/(?:oauth|session)\\.php")
+    segment = HTACCESS[special:broad_exclusion]
+    assert "/PreviewRouter.php" not in segment
+    assert "action=login" not in segment
+    assert "action=logout" not in segment
+
+
 def test_preview_reauthentication_preserves_signed_intent_until_identity_returns():
     assert "public function loginUrl(string $returnTo = '/ReleaseControl.php')" in AUTH
     assert "!empty($_COOKIE[ReleasePreviewSession::COOKIE])" in ROUTER
@@ -120,7 +134,7 @@ def test_preview_router_is_cookie_gated_and_keeps_recovery_shared_paths_out():
     assert "auth/callback" in HTACCESS
     assert "server/team-points/public/(?:oauth|session)\\.php" in HTACCESS
     assert "%{QUERY_STRING} (^|&)action=session(&|$)" in HTACCESS
-    assert "RewriteRule ^server/team-points/public/oauth\\.php$ /PreviewRouter.php [L]" in HTACCESS
+    assert "RewriteRule ^server/team-points/public/oauth\\.php$ /server/release-control/public/preview-oauth-session.php [L]" in HTACCESS
     special = HTACCESS.index("%{QUERY_STRING} (^|&)action=session(&|$)")
     broad_exclusion = HTACCESS.index("server/team-points/public/(?:oauth|session)\\.php")
     assert special < broad_exclusion
