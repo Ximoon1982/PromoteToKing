@@ -17,6 +17,16 @@ DirectoryIndex index.html index.php
   # PreviewRouter.php re-validates its HMAC, authenticated identity, registered
   # candidate, and preview tree on every request. Recovery/shared paths and OAuth
   # callback remain on the stable direct-root control plane.
+  #
+  # One narrow exception: while preview is active, the read-only OAuth session
+  # status probe is served by the candidate OAuthSession implementation. This lets
+  # candidate reloads use the candidate's race-safe token refresh behavior without
+  # moving OAuth login, callback, logout, batch traffic, or public users off 2.14.2.
+  RewriteCond %{HTTP:Cookie} "(^|;[[:space:]]*)P2KRC_PREVIEW=" [NC]
+  RewriteCond %{REQUEST_URI} ^/server/team-points/public/oauth\.php$ [NC]
+  RewriteCond %{QUERY_STRING} (^|&)action=session(&|$) [NC]
+  RewriteRule ^server/team-points/public/oauth\.php$ /PreviewRouter.php [L]
+
   RewriteCond %{HTTP:Cookie} "(^|;[[:space:]]*)P2KRC_PREVIEW=" [NC]
   RewriteCond %{REQUEST_URI} !^/(?:ReleaseControl\.php|PreviewRouter\.php|server/release-control(?:/|$)|server/team-points/public/(?:oauth|session)\.php$|auth/callback(?:\.php)?$|data(?:/|$)|logs(?:/|$)|storage(?:/|$)) [NC]
   RewriteRule ^(?!PreviewRouter\.php$)(.*)$ /PreviewRouter.php [L]
