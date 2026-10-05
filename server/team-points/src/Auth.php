@@ -54,7 +54,7 @@ final class Auth
 
     public static function createAdminSession(string $username): string
     {
-        self::startSession();
+        self::startSession(true);
         session_regenerate_id(true);
         $csrf = bin2hex(random_bytes(24));
         $_SESSION[self::SESSION_USERNAME] = strtolower(trim($username));
@@ -128,13 +128,32 @@ final class Auth
 
     private static function refreshAdminSession(): void
     {
+        if (PreviewIsolation::active()) return;
         $_SESSION[self::SESSION_EXPIRES] = time() + self::sessionLifetime();
     }
 
-    private static function startSession(): void
+    private static function startSession(bool $writable = false): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) return;
         $secure = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off') || (string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+        if (PreviewIsolation::active()) {
+            if (!$writable && empty($_COOKIE['P2KTPPREVIEWSESSID'])) {
+                $_SESSION = [];
+                return;
+            }
+            @session_save_path(PreviewIsolation::sessionDirectory('admin'));
+            session_name('P2KTPPREVIEWSESSID');
+            session_set_cookie_params([
+                'lifetime' => 0,
+                'path' => '/',
+                'secure' => $secure,
+                'httponly' => true,
+                'samesite' => 'Strict',
+            ]);
+            $ok = $writable ? @session_start() : @session_start(['read_and_close'=>true]);
+            if (!$ok) throw new ApiException('The isolated candidate-preview administrator session is unavailable.', 503, 'PREVIEW_SESSION_UNAVAILABLE');
+            return;
+        }
         session_name('P2KTPSESSID');
         session_set_cookie_params([
             'lifetime' => 0,
@@ -148,6 +167,10 @@ final class Auth
 
     private static function clearSession(): void
     {
+        if (PreviewIsolation::active()) {
+            unset($_SESSION[self::SESSION_USERNAME], $_SESSION[self::SESSION_CSRF], $_SESSION[self::SESSION_EXPIRES]);
+            return;
+        }
         if (session_status() !== PHP_SESSION_ACTIVE) return;
         unset($_SESSION[self::SESSION_USERNAME], $_SESSION[self::SESSION_CSRF], $_SESSION[self::SESSION_EXPIRES]);
     }
