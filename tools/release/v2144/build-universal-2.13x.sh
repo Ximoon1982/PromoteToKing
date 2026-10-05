@@ -13,7 +13,7 @@ EARLIEST="9c2f08e3f59945ae983f30d6b214f10140dbd345"
 HEAD="$(git -C "$ROOT" rev-parse HEAD)"
 BUILD_ID="v2144-side-effect-isolated-candidate-preview"
 
-[[ "$(cat "$ROOT/VERSION")" == "2.14.3" ]] || { echo 'VERSION must be 2.14.3' >&2; exit 1; }
+[[ "$(cat "$ROOT/VERSION")" == "2.14.4" ]] || { echo 'VERSION must be 2.14.4' >&2; exit 1; }
 git -C "$ROOT" merge-base --is-ancestor "$EARLIEST" "$HEAD" || { echo "HEAD must descend from qualified v2.13.0 $EARLIEST" >&2; exit 1; }
 
 FILES=(
@@ -101,10 +101,10 @@ for path in "${FILES[@]}"; do
   cp -p "$ROOT/$path" "$DIR/payload/$path"
 done
 
-CACHE_KEY="$(python3 "$ROOT/tools/release/static_asset_cache_key.py" key --version 2.14.3 --source-head "$HEAD" --build-id "$BUILD_ID")"
-python3 "$ROOT/tools/release/static_asset_cache_key.py" stamp --root "$DIR/payload" --version 2.14.3 --source-head "$HEAD" --build-id "$BUILD_ID" >/dev/null
+CACHE_KEY="$(python3 "$ROOT/tools/release/static_asset_cache_key.py" key --version 2.14.4 --source-head "$HEAD" --build-id "$BUILD_ID")"
+python3 "$ROOT/tools/release/static_asset_cache_key.py" stamp --root "$DIR/payload" --version 2.14.4 --source-head "$HEAD" --build-id "$BUILD_ID" >/dev/null
 python3 "$STAMPER" "$DIR/payload" "$CACHE_KEY"
-python3 "$ROOT/tools/release/static_asset_cache_key.py" verify --root "$DIR/payload" --version 2.14.3 --source-head "$HEAD" --build-id "$BUILD_ID" >/dev/null
+python3 "$ROOT/tools/release/static_asset_cache_key.py" verify --root "$DIR/payload" --version 2.14.4 --source-head "$HEAD" --build-id "$BUILD_ID" >/dev/null
 
 grep -Fq "const TROPHY_RUNTIME_KEY = \"$CACHE_KEY\";" "$DIR/payload/assets/js/admin/tool-registry.js"
 grep -Fq "assets/js/pages/recruit-match.js?v=$CACHE_KEY" "$DIR/payload/assets/js/pages/recruit-match-v2121-bootstrap.js"
@@ -325,7 +325,7 @@ import json,sys
 out,head,cache_key,build_id,manifest_sha=sys.argv[1:]
 payload={
   "schema_version":1,
-  "version":"2.14.3",
+  "version":"2.14.4",
   "source_head":head,
   "cache_key":cache_key,
   "build_id":build_id,
