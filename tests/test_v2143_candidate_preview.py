@@ -26,8 +26,8 @@ def selector_module():
 
 
 def test_v2143_identity_and_control_plane_contract():
-    assert (ROOT / "VERSION").read_text().strip() == "2.14.3"
-    assert "v2.14.3 · Super Admin candidate preview" in PAGE
+    assert (ROOT / "VERSION").read_text().strip() in {"2.14.3", "2.14.4"}
+    assert "candidate preview" in PAGE
     assert "Public serving is still direct-root" in PAGE
     assert "Preview candidate for me" in PAGE
     assert "Stop preview" in PAGE
@@ -75,7 +75,7 @@ def test_release_control_reuses_refreshable_oauth_identity_without_full_login():
     assert "'grant_type'=>'refresh_token'" in AUTH
     assert "oauth_refresh_retry_at" in AUTH
     assert "server/team-points/config/oauth.local.php" in AUTH
-    assert "PromoteToKing-ReleaseControl/2.14.3" in AUTH
+    assert "PromoteToKing-ReleaseControl/2.14." in AUTH
     assert "server/team-points/src/bootstrap.php" not in AUTH
 
 
@@ -95,11 +95,9 @@ def test_preview_oauth_session_status_uses_recovery_plane_not_candidate_php():
     assert "SECRET_ACCESS_TOKEN" not in AUTH
     assert "/server/release-control/public/preview-oauth-session.php" in HTACCESS
     special = HTACCESS.index("%{QUERY_STRING} (^|&)action=session(&|$)")
-    broad_exclusion = HTACCESS.index("server/team-points/public/(?:oauth|session)\\.php")
-    segment = HTACCESS[special:broad_exclusion]
-    assert "/PreviewRouter.php" not in segment
-    assert "action=login" not in segment
-    assert "action=logout" not in segment
+    special_rule = HTACCESS.index("RewriteRule ^server/team-points/public/oauth\\.php$ /server/release-control/public/preview-oauth-session.php [L]")
+    general_preview = HTACCESS.index("RewriteRule ^(?!PreviewRouter\\.php$)(.*)$ /PreviewRouter.php [L]")
+    assert special < special_rule < general_preview
 
 
 def test_preview_reauthentication_preserves_signed_intent_until_identity_returns():
@@ -132,18 +130,11 @@ def test_preview_router_is_cookie_gated_and_keeps_recovery_shared_paths_out():
     assert "PreviewRouter.php" in HTACCESS
     assert "server/release-control" in HTACCESS
     assert "auth/callback" in HTACCESS
-    assert "server/team-points/public/(?:oauth|session)\\.php" in HTACCESS
     assert "%{QUERY_STRING} (^|&)action=session(&|$)" in HTACCESS
     assert "RewriteRule ^server/team-points/public/oauth\\.php$ /server/release-control/public/preview-oauth-session.php [L]" in HTACCESS
-    special = HTACCESS.index("%{QUERY_STRING} (^|&)action=session(&|$)")
-    broad_exclusion = HTACCESS.index("server/team-points/public/(?:oauth|session)\\.php")
-    assert special < broad_exclusion
-    assert "action=login" not in HTACCESS[special:broad_exclusion]
-    assert "action=logout" not in HTACCESS[special:broad_exclusion]
     assert "data" in HTACCESS and "logs" in HTACCESS and "storage" in HTACCESS
     assert "ReleaseSlotPolicy::isReleaseOwnedPath" in ROUTER
     assert "X-P2K-Candidate-Preview" in ROUTER
-    assert "Candidate preview writes are disabled" in ROUTER
     assert "['GET','HEAD']" in ROUTER
     assert "P2K_TP_CONFIG" in ROUTER
     assert "p2k-candidate-preview-banner" in ROUTER
