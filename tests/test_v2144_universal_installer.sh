@@ -171,7 +171,16 @@ for path in \
   server/team-points/public/arenas-insights-export.php \
   server/team-points/public/arenas-insights.php \
   server/team-points/src/LiveRanksService.php \
-  server/team-points/src/OAuthSession.php; do
+  server/team-points/src/OAuthSession.php \
+  api/_common.php \
+  api/router.php \
+  server/shared/TaskRegistry.php \
+  server/team-points/public/session.php \
+  server/team-points/src/Auth.php \
+  server/team-points/src/Database.php \
+  server/team-points/src/PreviewIsolation.php \
+  server/team-points/src/bootstrap.php \
+  server/team-points-green/src/GreenConfig.php; do
   grep -Fxq "$path" "$PKGDIR/CANDIDATE_OVERLAY_PATHS.txt" || { echo "Candidate overlay missing $path" >&2; exit 1; }
   test -f "$PKGDIR/payload/$path" || { echo "Candidate payload missing $path" >&2; exit 1; }
 done
