@@ -28,7 +28,7 @@ if (!in_array($method, ['GET', 'HEAD'], true)) {
 
 try {
     $root = dirname(__DIR__, 3);
-    $payload = (new ReleaseControlAuth($root))->oauthSessionStatus();
+    $payload = (new ReleaseControlAuth($root))->oauthSessionStatus(false);
     if ($method !== 'HEAD') {
         echo json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
     }
