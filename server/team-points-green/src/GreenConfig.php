@@ -83,7 +83,7 @@ final class GreenConfig
             PDO::ATTR_EMULATE_PREPARES=>false,
             PDO::ATTR_TIMEOUT=>max(2,(int)($db['connect_timeout_seconds'] ?? 5)),
         ]);
-        if (class_exists(\\P2K\\TeamPoints\\PreviewIsolation::class)) \\P2K\\TeamPoints\\PreviewIsolation::enforceReadOnlyPdo($pdo);
+        if (class_exists(\P2K\TeamPoints\PreviewIsolation::class)) \P2K\TeamPoints\PreviewIsolation::enforceReadOnlyPdo($pdo);
         return $pdo;
     }
 
