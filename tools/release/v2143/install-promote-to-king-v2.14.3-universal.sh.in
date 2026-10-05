@@ -38,12 +38,21 @@ FILES=(
   assets/js/pages/recruit-match-v2121-bootstrap.js
   assets/js/pages/recruit-match.js
   assets/js/pages/challenge-list-assistant.js
+  assets/js/dashboard/insights-controller.js
+  assets/js/pages/dashboard-insights.js
+  assets/js/shared/real-oauth.js
+  assets/js/shared/team-points-client.js
+  assets/js/site-config.js
   assets/js/shared/events-showcase-core.js
   assets/js/events-showcase-line-v2122.js
   server/events-showcase/public/embed.php
   server/events-showcase/public/embed-card.php
   server/team-points/sql/analytics-schema.sql
+  server/team-points/public/arenas-insights-export.php
+  server/team-points/public/arenas-insights.php
+  server/team-points/src/LiveRanksService.php
   server/team-points/src/McaResultsCronService.php
+  server/team-points/src/OAuthSession.php
   server/team-points/src/Repository.php
   server/team-points-green/sql/core-schema.sql
   server/team-points-green/src/GreenCompatibility.php
@@ -54,6 +63,7 @@ FILES=(
   server/trophy-gallery/src/TrophyGalleryStore.php
   server/release-control/config/.htaccess
   server/release-control/config/config.example.php
+  server/release-control/public/preview-oauth-session.php
   server/release-control/src/bootstrap.php
   server/release-control/src/ReleaseControlAuth.php
   server/release-control/src/ReleaseControlState.php
@@ -78,7 +88,11 @@ PHP_FILES=(
   ReleaseControl.php
   PreviewRouter.php
   MaxRatingBackfill.php
+  server/team-points/public/arenas-insights-export.php
+  server/team-points/public/arenas-insights.php
+  server/team-points/src/LiveRanksService.php
   server/team-points/src/McaResultsCronService.php
+  server/team-points/src/OAuthSession.php
   server/team-points/src/Repository.php
   server/team-points-green/src/GreenCompatibility.php
   server/team-points-green/src/GreenRepository.php
@@ -89,6 +103,7 @@ PHP_FILES=(
   server/events-showcase/public/embed.php
   server/events-showcase/public/embed-card.php
   server/release-control/config/config.example.php
+  server/release-control/public/preview-oauth-session.php
   server/release-control/src/bootstrap.php
   server/release-control/src/ReleaseControlAuth.php
   server/release-control/src/ReleaseControlState.php
