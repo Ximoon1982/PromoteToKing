@@ -79,6 +79,7 @@ final class Database
         ] as $statement) {
             try { $pdo->exec($statement); } catch (\Throwable) { /* compatibility only */ }
         }
+        PreviewIsolation::enforceReadOnlyPdo($pdo);
         self::$connections[$name] = $pdo;
         return $pdo;
     }
