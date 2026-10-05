@@ -27,10 +27,11 @@ final class PreviewIsolation
     {
         if (!self::active()) throw new RuntimeException('Preview sandbox requested outside candidate preview.');
         $path=rtrim(trim((string)(getenv('P2K_PREVIEW_SANDBOX') ?: ($_SERVER['P2K_PREVIEW_SANDBOX'] ?? ''))),'/\\');
-        $siteRoot=str_replace('\\','/',dirname(__DIR__,3));
+        $publicRoot=rtrim(trim((string)(getenv('P2K_PREVIEW_PUBLIC_ROOT') ?: ($_SERVER['P2K_PREVIEW_PUBLIC_ROOT'] ?? ''))),'/\\');
         $normalized=str_replace('\\','/',$path);
-        $prefix=rtrim($siteRoot,'/').'/data/runtime-v280/release-control/preview-sandboxes/';
-        if($path===''||!str_starts_with($normalized,$prefix)) throw new RuntimeException('Candidate preview sandbox is unavailable or outside the protected preview root.');
+        $rootNormalized=rtrim(str_replace('\\','/',$publicRoot),'/');
+        $prefix=$rootNormalized.'/data/runtime-v280/release-control/preview-sandboxes/';
+        if($path===''||$publicRoot===''||!str_starts_with($normalized,$prefix)) throw new RuntimeException('Candidate preview sandbox is unavailable or outside the protected preview root.');
         return $path;
     }
 
