@@ -38,6 +38,8 @@ def test_v2144_identity_and_capabilities():
 
 def test_preview_context_redirects_runtime_cache_logs_and_uploads():
     assert "P2K_PREVIEW_SANDBOX" in ISOLATION
+    assert "P2K_PREVIEW_PUBLIC_ROOT" in ISOLATION
+    assert "P2K_PREVIEW_PUBLIC_ROOT" in ROUTER
     assert "release-control/preview-sandboxes/" in ISOLATION
     for fragment in [
         "$storage['runtime_dir']=$runtime",
@@ -100,6 +102,8 @@ def test_preview_auth_requests_are_routed_through_isolation_except_session_statu
     assert "RewriteRule ^server/team-points/public/oauth\\.php$ /server/release-control/public/preview-oauth-session.php [L]" in HTACCESS
     general = next(line for line in HTACCESS.splitlines() if "auth/callback" in line and "RewriteCond %{REQUEST_URI}" in line)
     assert "server/team-points/public/(?:oauth|session)" not in general
+    assert "action=login(&|$)" in HTACCESS
+    assert "RewriteRule ^server/team-points/public/oauth\\.php$ - [L]" in HTACCESS
     assert "$relative === 'server/team-points/public/oauth.php'" in ROUTER
     assert "CANDIDATE_PREVIEW_SIDE_EFFECT_BLOCKED" in ROUTER
     assert "$previewSessionBootstrap = $relative === 'server/team-points/public/session.php' && $method === 'POST';" in ROUTER
