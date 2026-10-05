@@ -865,15 +865,18 @@ final class LiveRanksService
         if ($section === 'summary') return ['summary' => $summary];
         if ($section === 'trend') return ['trend' => $trend];
 
-        $leaderOptions = $options;
-        if (trim((string)($leaderOptions['filter'] ?? '')) === '') $leaderOptions['filter'] = $section === 'leaders' ? 'current' : 'all';
-        $leaders = $this->arenaInsightsLeaders($arenas, $resultsByFile, $leaderOptions);
-        if ($section === 'leaders') return ['leaders' => $leaders, 'filters' => [
-            'filter'=>(string)$leaderOptions['filter'],
-            'activity_status'=>(string)($leaderOptions['activity_status'] ?? ''),
-            'start'=>(string)($leaderOptions['start'] ?? ''),
-            'end'=>(string)($leaderOptions['end'] ?? ''),
-        ]];
+        if ($section === 'leaders') {
+            $leaderOptions = $options;
+            if (trim((string)($leaderOptions['filter'] ?? '')) === '') $leaderOptions['filter'] = 'current';
+            $leaders = $this->arenaInsightsLeaders($arenas, $resultsByFile, $leaderOptions);
+            return ['leaders' => $leaders, 'filters' => [
+                'filter'=>(string)$leaderOptions['filter'],
+                'activity_status'=>(string)($leaderOptions['activity_status'] ?? ''),
+                'start'=>(string)($leaderOptions['start'] ?? ''),
+                'end'=>(string)($leaderOptions['end'] ?? ''),
+            ]];
+        }
+        $leaders = $this->arenaInsightsAllTimeLeaders($arenas);
         $records = $this->arenaInsightsRecords($leaders, $arenas);
         if ($section === 'records') return ['records' => $records];
 
@@ -972,6 +975,19 @@ final class LiveRanksService
         foreach($trend as $row){$participations+=(int)$row['p2k_players'];if((int)($row['best_rank']??0)===1)$victories++;$podiums+=(int)$row['podium_count'];$top10+=(int)$row['top10_count'];if($row['best_rank']!==null)$best=$best===null?(int)$row['best_rank']:min($best,(int)$row['best_rank']);}
         $arenas=count($trend);
         return ['arenas'=>$arenas,'participations'=>$participations,'unique_players'=>(int)$uniqueQ->fetchColumn(),'victories'=>$victories,'podiums'=>$podiums,'top10_finishes'=>$top10,'best_finish'=>$best,'average_p2k_players'=>$arenas>0?round($participations/$arenas,1):0.0];
+    }
+
+    private function arenaInsightsAllTimeLeaders(array $arenas): array
+    {
+        $latestIndex=count($arenas)-1;$fileIndex=[];foreach($arenas as $index=>$arena)$fileIndex[(string)$arena['source_name']]=$index;
+        $q=$this->pdo->prepare("SELECT username,username_key,total_points,arena_count,total_games,total_wins,total_draws,total_losses,best_rank,first_place_count,top3_count,top10_count,current_member,account_state,source_files_json FROM p2k_lr_players WHERE club_slug=? ORDER BY total_points DESC,username_key ASC");$q->execute([$this->clubSlug]);$rows=[];
+        foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){
+            $indexes=[];foreach(\p2k_tp_json_decode((string)($row['source_files_json']??'[]')) as $name)if(isset($fileIndex[(string)$name]))$indexes[]=$fileIndex[(string)$name];$indexes=array_values(array_unique($indexes));sort($indexes,SORT_NUMERIC);
+            $longest=0;$current=0;$run=0;$previous=null;foreach($indexes as $idx){$run=($previous!==null&&$idx===$previous+1)?$run+1:1;$longest=max($longest,$run);$previous=$idx;}if($indexes!==[]&&end($indexes)===$latestIndex)$current=$run;
+            $points=(float)$row['total_points'];$rank=$this->rankFor($points);
+            $rows[]=['username'=>(string)$row['username'],'username_key'=>(string)$row['username_key'],'arenas'=>(int)$row['arena_count'],'wins'=>(int)$row['first_place_count'],'podiums'=>(int)$row['top3_count'],'top10s'=>(int)$row['top10_count'],'points'=>$points,'games'=>$row['total_games']===null?null:(int)$row['total_games'],'game_wins'=>$row['total_wins']===null?null:(int)$row['total_wins'],'draws'=>$row['total_draws']===null?null:(int)$row['total_draws'],'losses'=>$row['total_losses']===null?null:(int)$row['total_losses'],'best_finish'=>$row['best_rank']===null?null:(int)$row['best_rank'],'live_rank_key'=>$rank['key']??'unranked','live_rank_name'=>$rank['name']??'Unranked','current_member'=>(bool)$row['current_member'],'account_state'=>(string)$row['account_state'],'longest_participation_streak'=>$longest,'current_participation_streak'=>$current];
+        }
+        return $rows;
     }
 
     private function arenaInsightsLeaders(array $arenas, array $resultsByFile, array $options = []): array
