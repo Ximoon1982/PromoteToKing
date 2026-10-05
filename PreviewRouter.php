@@ -222,12 +222,14 @@ if ($extension === 'php') {
     putenv('P2K_PREVIEW_ACTIVE=1');
     putenv('P2K_PREVIEW_RELEASE=' . $releaseId);
     putenv('P2K_PREVIEW_USERNAME=' . strtolower($username));
+    putenv('P2K_PREVIEW_PUBLIC_ROOT=' . $root);
     putenv('P2K_PREVIEW_SANDBOX=' . $sandbox);
     $sharedConfig = $root . '/server/team-points/config/config.local.php';
     if (is_file($sharedConfig)) putenv('P2K_TP_CONFIG=' . $sharedConfig);
     $_SERVER['P2K_PREVIEW_ACTIVE'] = '1';
     $_SERVER['P2K_PREVIEW_RELEASE'] = $releaseId;
     $_SERVER['P2K_PREVIEW_USERNAME'] = strtolower($username);
+    $_SERVER['P2K_PREVIEW_PUBLIC_ROOT'] = $root;
     $_SERVER['P2K_PREVIEW_SANDBOX'] = $sandbox;
     $_SERVER['REQUEST_URI'] = $originalUri;
     $_SERVER['SCRIPT_FILENAME'] = $file;
