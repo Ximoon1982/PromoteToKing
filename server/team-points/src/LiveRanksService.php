@@ -865,8 +865,15 @@ final class LiveRanksService
         if ($section === 'summary') return ['summary' => $summary];
         if ($section === 'trend') return ['trend' => $trend];
 
-        $leaders = $this->arenaInsightsLeaders($arenas);
-        if ($section === 'leaders') return ['leaders' => $leaders];
+        $leaderOptions = $options;
+        if (trim((string)($leaderOptions['filter'] ?? '')) === '') $leaderOptions['filter'] = $section === 'leaders' ? 'current' : 'all';
+        $leaders = $this->arenaInsightsLeaders($arenas, $resultsByFile, $leaderOptions);
+        if ($section === 'leaders') return ['leaders' => $leaders, 'filters' => [
+            'filter'=>(string)$leaderOptions['filter'],
+            'activity_status'=>(string)($leaderOptions['activity_status'] ?? ''),
+            'start'=>(string)($leaderOptions['start'] ?? ''),
+            'end'=>(string)($leaderOptions['end'] ?? ''),
+        ]];
         $records = $this->arenaInsightsRecords($leaders, $arenas);
         if ($section === 'records') return ['records' => $records];
 
@@ -967,17 +974,66 @@ final class LiveRanksService
         return ['arenas'=>$arenas,'participations'=>$participations,'unique_players'=>(int)$uniqueQ->fetchColumn(),'victories'=>$victories,'podiums'=>$podiums,'top10_finishes'=>$top10,'best_finish'=>$best,'average_p2k_players'=>$arenas>0?round($participations/$arenas,1):0.0];
     }
 
-    private function arenaInsightsLeaders(array $arenas): array
+    private function arenaInsightsLeaders(array $arenas, array $resultsByFile, array $options = []): array
     {
-        $latestIndex=count($arenas)-1;$fileIndex=[];foreach($arenas as $index=>$arena)$fileIndex[(string)$arena['source_name']]=$index;
-        $q=$this->pdo->prepare("SELECT username,username_key,total_points,arena_count,total_games,total_wins,total_draws,total_losses,best_rank,first_place_count,top3_count,top10_count,current_member,account_state,source_files_json FROM p2k_lr_players WHERE club_slug=? ORDER BY total_points DESC,username_key ASC");$q->execute([$this->clubSlug]);$rows=[];
-        foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){
-            $indexes=[];foreach(\p2k_tp_json_decode((string)($row['source_files_json']??'[]')) as $name)if(isset($fileIndex[(string)$name]))$indexes[]=$fileIndex[(string)$name];$indexes=array_values(array_unique($indexes));sort($indexes,SORT_NUMERIC);
-            $longest=0;$current=0;$run=0;$previous=null;foreach($indexes as $idx){$run=($previous!==null&&$idx===$previous+1)?$run+1:1;$longest=max($longest,$run);$previous=$idx;}if($indexes!==[]&&end($indexes)===$latestIndex)$current=$run;
-            $points=(float)$row['total_points'];$rank=$this->rankFor($points);
-            $rows[]=['username'=>(string)$row['username'],'username_key'=>(string)$row['username_key'],'arenas'=>(int)$row['arena_count'],'wins'=>(int)$row['first_place_count'],'podiums'=>(int)$row['top3_count'],'top10s'=>(int)$row['top10_count'],'points'=>$points,'games'=>$row['total_games']===null?null:(int)$row['total_games'],'game_wins'=>$row['total_wins']===null?null:(int)$row['total_wins'],'draws'=>$row['total_draws']===null?null:(int)$row['total_draws'],'losses'=>$row['total_losses']===null?null:(int)$row['total_losses'],'best_finish'=>$row['best_rank']===null?null:(int)$row['best_rank'],'live_rank_key'=>$rank['key']??'unranked','live_rank_name'=>$rank['name']??'Unranked','current_member'=>(bool)$row['current_member'],'account_state'=>(string)$row['account_state'],'longest_participation_streak'=>$longest,'current_participation_streak'=>$current];
+        $start=trim((string)($options['start']??''));$end=trim((string)($options['end']??''));
+        foreach([$start,$end] as $value){if($value==='')continue;$date=\DateTimeImmutable::createFromFormat('!Y-m-d',$value,new \DateTimeZone('UTC'));if(!$date||$date->format('Y-m-d')!==$value)throw new ApiException('Invalid Arena leader date.',400,'INVALID_DATE');}
+        if($start!==''&&$end!==''&&$start>$end)throw new ApiException('The Arena leader start date must not be after the end date.',400,'INVALID_DATE_RANGE');
+
+        $selected=array_values(array_filter($arenas,static function(array $arena)use($start,$end):bool{
+            $date=trim((string)($arena['event_date']??''));
+            if($date==='')return $start===''&&$end==='';
+            if($start!==''&&$date<$start)return false;
+            if($end!==''&&$date>$end)return false;
+            return true;
+        }));
+
+        $memberOptions=[
+            '_unpaged'=>true,
+            'page'=>1,
+            'page_size'=>100,
+            'search'=>(string)($options['search']??''),
+            'filter'=>(string)($options['filter']??'current'),
+            'activity_status'=>(string)($options['activity_status']??''),
+            'start'=>$start,
+            'end'=>$end,
+            'sort'=>'username',
+            'direction'=>'asc',
+        ];
+        $memberPayload=$this->repository->publicMemberInsights($this->clubSlug,$memberOptions);
+        $eligible=[];foreach(($memberPayload['rows']??[]) as $row){$key=(string)($row['username_key']??'');if($key!=='')$eligible[$key]=$row;}
+        if($eligible===[]||$selected===[])return [];
+
+        $accountState=[];$aq=$this->pdo->prepare('SELECT username_key,account_state FROM p2k_lr_players WHERE club_slug=?');$aq->execute([$this->clubSlug]);foreach($aq->fetchAll(PDO::FETCH_ASSOC)?:[] as $row)$accountState[(string)$row['username_key']]=(string)$row['account_state'];
+
+        $rows=[];$latestIndex=count($selected)-1;
+        foreach($selected as $index=>$arena){
+            $fileId=(int)$arena['file_id'];
+            foreach(($resultsByFile[$fileId]??[]) as $key=>$player){
+                $key=(string)$key;if(!isset($eligible[$key]))continue;
+                if(!isset($rows[$key]))$rows[$key]=[
+                    'username'=>(string)($eligible[$key]['username']??$player['username']??$key),
+                    'username_key'=>$key,'arenas'=>0,'wins'=>0,'podiums'=>0,'top10s'=>0,'points'=>0.0,
+                    'games'=>0,'game_wins'=>0,'draws'=>0,'losses'=>0,'best_finish'=>null,
+                    'current_member'=>!empty($eligible[$key]['current_member']),
+                    'activity_status'=>(string)($eligible[$key]['activity_status']??'unknown'),
+                    'current_matches'=>(int)($eligible[$key]['current_matches']??0),
+                    'first_seen_at'=>$eligible[$key]['first_seen_at']??null,
+                    'account_state'=>$accountState[$key]??'unknown',
+                    '_has_games'=>false,'_indexes'=>[],
+                ];
+                $row=&$rows[$key];$row['arenas']++;$row['_indexes'][]=$index;$row['points']=round((float)$row['points']+(float)($player['points']??0),2);
+                $rank=$player['rank']===null?null:(int)$player['rank'];
+                if($rank!==null&&$rank>0){if($rank===1)$row['wins']++;if($rank<=3)$row['podiums']++;if($rank<=10)$row['top10s']++;$row['best_finish']=$row['best_finish']===null?$rank:min((int)$row['best_finish'],$rank);}
+                foreach(['games'=>'games','wins'=>'game_wins','draws'=>'draws','losses'=>'losses'] as $source=>$target){if($player[$source]!==null){$row['_has_games']=true;$row[$target]+=(int)$player[$source];}}
+                unset($row);
+            }
         }
-        return $rows;
+
+        $out=[];foreach($rows as $key=>$row){$indexes=array_values(array_unique(array_map('intval',$row['_indexes'])));sort($indexes,SORT_NUMERIC);$longest=0;$run=0;$previous=null;foreach($indexes as $idx){$run=($previous!==null&&$idx===$previous+1)?$run+1:1;$longest=max($longest,$run);$previous=$idx;}$current=($indexes!==[]&&end($indexes)===$latestIndex)?$run:0;$rank=$this->rankFor((float)$row['points']);$hasGames=!empty($row['_has_games']);unset($row['_indexes'],$row['_has_games']);if(!$hasGames){$row['games']=null;$row['game_wins']=null;$row['draws']=null;$row['losses']=null;}$row['live_rank_key']=$rank['key']??'unranked';$row['live_rank_name']=$rank['name']??'Unranked';$row['longest_participation_streak']=$longest;$row['current_participation_streak']=$current;$out[]=$row;}
+        $sort=strtolower(trim((string)($options['sort']??'points')));$valid=['username','arenas','wins','podiums','top10s','points','game_wins','draws','losses','best_finish','live_rank_name'];if(!in_array($sort,$valid,true))$sort='points';$direction=strtolower((string)($options['direction']??'desc'))==='asc'?1:-1;
+        usort($out,static function(array $a,array $b)use($sort,$direction):int{$av=$a[$sort]??null;$bv=$b[$sort]??null;if($sort==='best_finish'){if($av===null&&$bv!==null)return 1;if($bv===null&&$av!==null)return -1;$cmp=(int)$av<=>(int)$bv;return $direction*$cmp;}if($av===null&&$bv!==null)return 1;if($bv===null&&$av!==null)return -1;$cmp=is_numeric($av)&&is_numeric($bv)?((float)$av<=>(float)$bv):strcasecmp((string)$av,(string)$bv);if($cmp===0)$cmp=strcasecmp((string)$a['username'],(string)$b['username']);return $direction*$cmp;});
+        return $out;
     }
 
     private function arenaInsightsRecords(array $leaders,array $arenas): array
