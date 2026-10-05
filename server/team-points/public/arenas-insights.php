@@ -17,6 +17,10 @@ try {
         'sort' => (string)($_GET['sort'] ?? 'event_date'),
         'direction' => (string)($_GET['direction'] ?? 'desc'),
         'file_id' => (int)($_GET['file_id'] ?? 0),
+        'filter' => (string)($_GET['filter'] ?? ''),
+        'activity_status' => (string)($_GET['activity_status'] ?? ''),
+        'start' => (string)($_GET['start'] ?? ''),
+        'end' => (string)($_GET['end'] ?? ''),
     ];
     $generation = $repository->publicReadGenerationToken($club, false, true);
     $cache = new ResponseCache(is_array($config['storage'] ?? null) ? $config['storage'] : []);
