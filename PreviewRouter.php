@@ -72,7 +72,7 @@ if ($pathPart === '/PreviewRouter.php' || $pathPart === 'PreviewRouter.php') {
     exit('P2K preview routing error: direct-router-request');
 }
 
-$username = $auth->currentUsername();
+$username = $auth->currentUsername(false);
 if ($username === '' && !empty($_COOKIE[ReleasePreviewSession::COOKIE])) {
     if (in_array($method, ['GET','HEAD'], true)) {
         $query = [];
@@ -115,21 +115,6 @@ if (empty($status['enabled'])) {
     header('Content-Type: text/plain; charset=utf-8');
     exit('Candidate preview session is no longer valid. Reload the page to return to the public release.');
 }
-if (!in_array($method, ['GET','HEAD'], true)) {
-    http_response_code(409);
-    header('Content-Type: application/json; charset=utf-8');
-    header('Cache-Control: no-store');
-    echo json_encode([
-        'ok'=>false,
-        'error'=>[
-            'code'=>'CANDIDATE_PREVIEW_WRITE_BLOCKED',
-            'message'=>'Candidate preview writes are disabled until the side-effect-isolation increment.',
-        ],
-        'candidate_release'=>$status['release_id'] ?? null,
-    ], JSON_UNESCAPED_SLASHES);
-    exit;
-}
-
 $decoded = rawurldecode($pathPart);
 $relative = ltrim($decoded, '/');
 if ($relative === '') $relative = 'index.html';
@@ -140,6 +125,54 @@ if ($relative === '' || !ReleaseSlotPolicy::isReleaseOwnedPath($relative)) {
     header('Content-Type: text/plain; charset=utf-8');
     header('X-P2K-Preview-Error: path-not-release-owned');
     exit('P2K preview routing error: path-not-release-owned; path=' . $relative);
+}
+
+$previewSessionBootstrap = $relative === 'server/team-points/public/session.php' && $method === 'POST';
+$blockedSideEffectPaths = [
+    'api/track-upcoming-league-matches/index.php',
+    'server/team-points/public/consistency-repair.php',
+    'server/team-points/public/cron.php',
+    'server/team-points/public/cron-club.php',
+    'server/team-points/public/cron-player.php',
+    'server/team-points/public/data-reconciliation.php',
+    'server/team-points/public/database-repair.php',
+    'server/team-points/public/fair-play-maintenance.php',
+    'server/team-points/public/fresh-init.php',
+    'server/team-points/public/install.php',
+    'server/team-points/public/match-detail-refresh.php',
+    'server/team-points/public/observe.php',
+    'server/team-points/public/seed-import.php',
+];
+if ($relative === 'server/team-points/public/oauth.php' || in_array($relative, $blockedSideEffectPaths, true)) {
+    http_response_code(409);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode([
+        'ok'=>false,
+        'error'=>[
+            'code'=>'CANDIDATE_PREVIEW_SIDE_EFFECT_BLOCKED',
+            'message'=>$relative === 'server/team-points/public/oauth.php'
+                ? 'Candidate preview OAuth mutations are disabled. Re-authenticate through Release Control if needed.'
+                : 'This endpoint is disabled in candidate preview because it performs maintenance, background work, ingestion, repair or schema/state mutation.',
+        ],
+        'path'=>$relative,
+        'candidate_release'=>$status['release_id'] ?? null,
+    ], JSON_UNESCAPED_SLASHES);
+    exit;
+}
+if (!in_array($method, ['GET','HEAD'], true) && !$previewSessionBootstrap) {
+    http_response_code(409);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode([
+        'ok'=>false,
+        'error'=>[
+            'code'=>'CANDIDATE_PREVIEW_WRITE_BLOCKED',
+            'message'=>'Candidate preview only permits GET/HEAD plus its isolated administrator-session bootstrap.',
+        ],
+        'candidate_release'=>$status['release_id'] ?? null,
+    ], JSON_UNESCAPED_SLASHES);
+    exit;
 }
 
 $appRoot = (string)($status['preview_tree']['app_root'] ?? '');
@@ -183,12 +216,19 @@ if ($extension === 'php') {
         exit('P2K preview routing error: php-path-not-allowed; path=' . $relative);
     }
 
+    $safeRelease = preg_replace('/[^A-Za-z0-9._-]+/', '-', $releaseId) ?: 'candidate';
+    $safeUser = preg_replace('/[^a-z0-9_-]+/', '-', strtolower($username)) ?: 'super-admin';
+    $sandbox = $root . '/data/runtime-v280/release-control/preview-sandboxes/' . $safeRelease . '/' . $safeUser;
     putenv('P2K_PREVIEW_ACTIVE=1');
     putenv('P2K_PREVIEW_RELEASE=' . $releaseId);
+    putenv('P2K_PREVIEW_USERNAME=' . strtolower($username));
+    putenv('P2K_PREVIEW_SANDBOX=' . $sandbox);
     $sharedConfig = $root . '/server/team-points/config/config.local.php';
     if (is_file($sharedConfig)) putenv('P2K_TP_CONFIG=' . $sharedConfig);
     $_SERVER['P2K_PREVIEW_ACTIVE'] = '1';
     $_SERVER['P2K_PREVIEW_RELEASE'] = $releaseId;
+    $_SERVER['P2K_PREVIEW_USERNAME'] = strtolower($username);
+    $_SERVER['P2K_PREVIEW_SANDBOX'] = $sandbox;
     $_SERVER['REQUEST_URI'] = $originalUri;
     $_SERVER['SCRIPT_FILENAME'] = $file;
     chdir(dirname($file));
@@ -222,7 +262,7 @@ if ($body === false) {
     exit('Unable to read candidate preview file.');
 }
 if (in_array($extension, ['html','htm'], true)) {
-    $label = htmlspecialchars('Candidate preview · ' . $releaseId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $label = htmlspecialchars('Candidate preview · isolated read-only · ' . $releaseId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $banner = '<div id="p2k-candidate-preview-banner" style="position:fixed;z-index:2147483647;top:0;left:50%;transform:translateX(-50%);padding:5px 12px;border-radius:0 0 8px 8px;background:#f3bd55;color:#17110a;font:700 12px/1.3 system-ui,sans-serif;box-shadow:0 2px 10px #0008">' . $label . '</div>';
     $pos = stripos($body, '</body>');
     $body = $pos === false ? $banner . $body : substr($body, 0, $pos) . $banner . substr($body, $pos);
