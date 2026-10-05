@@ -28,7 +28,7 @@ DirectoryIndex index.html index.php
   RewriteRule ^server/team-points/public/oauth\.php$ /server/release-control/public/preview-oauth-session.php [L]
 
   RewriteCond %{HTTP:Cookie} "(^|;[[:space:]]*)P2KRC_PREVIEW=" [NC]
-  RewriteCond %{REQUEST_URI} !^/(?:ReleaseControl\.php|PreviewRouter\.php|server/release-control(?:/|$)|server/team-points/public/(?:oauth|session)\.php$|auth/callback(?:\.php)?$|data(?:/|$)|logs(?:/|$)|storage(?:/|$)) [NC]
+  RewriteCond %{REQUEST_URI} !^/(?:ReleaseControl\.php|PreviewRouter\.php|server/release-control(?:/|$)|auth/callback(?:\.php)?$|data(?:/|$)|logs(?:/|$)|storage(?:/|$)) [NC]
   # Only paths selected by the P2K release-slot surface may enter preview.
   # Sibling projects hosted below the same web root must remain public.
   RewriteCond %{REQUEST_URI} ^/(?:$|(?:api|artwork|artwork-masters|assets|auth|config|resources|server|trophies)(?:/|$)|(?:VERSION|site-manifest\.json|AnalyzeMatch\.html|AnalyzeMatchModal\.html|AnalyzeMatches\.htm|ChallengeListAssistant\.html|ClubIntelligence\.html|DataReconciliation\.html|FindMatch\.htm|InsightsHealth\.html|LeagueSeasonCenter\.html|LiveRanks\.html|LiveRanksDemo\.html|MatchCreationAnalyzer\.htm|MaxRatingBackfill\.php|MigrationInstaller\.html|Opponents\.html|OpponentsDemo\.html|RecruitMatch\.html|RecruitmentAdmin\.html|RecruitmentDemandPlanner\.html|TaskControl\.html|TaskLogs\.html|TeamInsights\.html|TeamPointsAdmin\.html|TeamPointsMigration\.html|TournamentAchievementBadgesDemo\.html|TournamentManagement\.html|Tournaments\.html|UIv2RepresentativeDemo\.html|OAuthTest\.php|index\.html|ui-v2\.html)$) [NC]
