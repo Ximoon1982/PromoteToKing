@@ -220,7 +220,7 @@ try {
             if ($method === 'GET') {
                 $test = root_dir().'/data/.write-test';
                 $writable = false;
-                if (!\\P2K\\TeamPoints\\PreviewIsolation::active()) {
+                if (!\P2K\TeamPoints\PreviewIsolation::active()) {
                     $writable = @file_put_contents($test, 'ok') !== false;
                     if ($writable) @unlink($test);
                 }
