@@ -77,12 +77,14 @@ final class GreenConfig
         $host=(string)$db['host']; $port=max(1,(int)($db['port'] ?? 3306)); $name=(string)$db['name'];
         $charset=(string)($db['charset'] ?? 'utf8mb4');
         $dsn="mysql:host={$host};port={$port};dbname={$name};charset={$charset}";
-        return new PDO($dsn,(string)$db['user'],(string)($db['password'] ?? ''),[
+        $pdo = new PDO($dsn,(string)$db['user'],(string)($db['password'] ?? ''),[
             PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES=>false,
             PDO::ATTR_TIMEOUT=>max(2,(int)($db['connect_timeout_seconds'] ?? 5)),
         ]);
+        if (class_exists(\\P2K\\TeamPoints\\PreviewIsolation::class)) \\P2K\\TeamPoints\\PreviewIsolation::enforceReadOnlyPdo($pdo);
+        return $pdo;
     }
 
     public static function core(): PDO { $c=self::load(); return self::pdo((array)($c['databases']['core'] ?? [])); }
