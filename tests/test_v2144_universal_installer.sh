@@ -118,7 +118,8 @@ preflight_ref 2.13.5 a1cafe7167752c3660a90bd941eeaa276ffb03b7 0
 preflight_ref 2.14.0 92cc618e02fe6d0eaeefedf67fad887f16902e92 0
 preflight_ref 2.14.1 9a46ee7a6f8972071289357d0dc23ccd5eb1fab9 0
 preflight_ref 2.14.2 9257577544d8ee7d54a9d23152073f340fe90ed1 0
-preflight_ref 2.14.3 "$(git -C "$ROOT" rev-parse HEAD)" 0
+preflight_ref 2.14.3 2826f1fb512e5bdc8961c197218bae21339ea234 0
+preflight_ref 2.14.4 "$(git -C "$ROOT" rev-parse HEAD)" 0
 
 DRIFT="$TMP/drift"
 materialize_ref cba52fd96ad196cb95321d3a607f99c53f4a2283 "$DRIFT"
@@ -202,7 +203,7 @@ cat > "$PREVIEW_ROOT/data/runtime-v280/release-control/state.json" <<'JSON'
   "mode": "direct-root",
   "public_release": "2.14.2 (direct root)",
   "previous_public_release": null,
-  "candidate_release": "2.14.3-b7526eb705d0",
+  "candidate_release": "2.14.4-b7526eb705d0",
   "updated_at": "2026-09-30T11:54:26+00:00",
   "updated_by": "ximoon"
 }
@@ -211,11 +212,11 @@ bash "$PKGDIR/prepare-candidate-preview-v2.14.4.sh" "$PREVIEW_ROOT" ximoon >/dev
 [[ "$(sha256sum "$PREVIEW_ROOT/VERSION" | awk '{print $1}')" == "$PUBLIC_VERSION_SHA" ]]
 [[ "$(sha256sum "$PREVIEW_ROOT/ui-v2.html" | awk '{print $1}')" == "$PUBLIC_UI_SHA" ]]
 [[ "$(tr -d '\r\n' < "$PREVIEW_ROOT/VERSION")" == "2.14.2" ]]
-grep -Fq 'v2.14.4 · Super Admin candidate preview' "$PREVIEW_ROOT/ReleaseControl.php"
+grep -Fq 'v2.14.4 · Side-effect-isolated candidate preview' "$PREVIEW_ROOT/ReleaseControl.php"
 grep -Fq 'P2KRC_PREVIEW' "$PREVIEW_ROOT/.htaccess"
 test -f "$PREVIEW_ROOT/server/release-control/public/preview-oauth-session.php"
 grep -Fq 'oauthSessionStatus' "$PREVIEW_ROOT/server/release-control/public/preview-oauth-session.php"
-grep -Fq '"candidate_release": "2.14.3-' "$PREVIEW_ROOT/data/runtime-v280/release-control/state.json"
+grep -Fq '"candidate_release": "2.14.4-' "$PREVIEW_ROOT/data/runtime-v280/release-control/state.json"
 CANDIDATE_ID="$(python3 - "$PREVIEW_ROOT/data/runtime-v280/release-control/state.json" <<'PY'
 import json,sys
 print(json.load(open(sys.argv[1]))["candidate_release"])
