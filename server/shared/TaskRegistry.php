@@ -44,6 +44,7 @@ final class TaskRegistry
 
     public function __construct(private readonly PDO $pdo)
     {
+        if (class_exists(\\P2K\\TeamPoints\\PreviewIsolation::class) && \\P2K\\TeamPoints\\PreviewIsolation::active()) return;
         self::ensureSchema($pdo);
         $this->ensureDefaults();
     }
