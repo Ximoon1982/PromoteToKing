@@ -12,7 +12,7 @@ PKG="PromoteToKing_v2.14.4_INCREMENTAL_FROM_2.13.x"
 
 bash "$ROOT/tools/release/v2144/build-universal-2.13x.sh" "$OUT" >/dev/null
 INSTALLER="$OUT/$PKG/install-promote-to-king-v2.14.4.sh"
-grep -Fq 'Supported installed versions: 2.13.0, 2.13.1, 2.13.2, 2.13.3, 2.13.4, 2.13.5, 2.14.0, 2.14.1, 2.14.2, 2.14.3.' "$OUT/$PKG/README_INSTALL.txt"
+grep -Fq 'Supported installed versions: 2.13.0, 2.13.1, 2.13.2, 2.13.3, 2.13.4, 2.13.5, 2.14.0, 2.14.1, 2.14.2, 2.14.3, 2.14.4.' "$OUT/$PKG/README_INSTALL.txt"
 grep -Fq 'Super Admin-only candidate preview' "$OUT/$PKG/README_INSTALL.txt"
 grep -Fq 'prepare-candidate-preview-v2.14.4.sh' "$OUT/$PKG/README_INSTALL.txt"
 if find "$OUT/$PKG" -type f \( -name '*.pyc' -o -name '*.pyo' \) -print -quit | grep -q .; then
@@ -26,6 +26,9 @@ fi
 
 FILES=(
   .htaccess VERSION ReleaseControl.php PreviewRouter.php ui-v2.html trophies/index.html RecruitMatch.html ChallengeListAssistant.html MaxRatingBackfill.php
+  api/_common.php api/router.php server/shared/TaskRegistry.php
+  server/team-points/public/session.php server/team-points/src/Auth.php server/team-points/src/Database.php
+  server/team-points/src/PreviewIsolation.php server/team-points/src/bootstrap.php server/team-points-green/src/GreenConfig.php
   assets/js/admin/admin-shell.js assets/js/admin/tool-registry.js
   assets/js/admin/trophy-gallery-admin-v2121.js assets/js/admin/trophy-gallery-admin-view-v2121.js
   assets/js/admin/trophy-gallery-engraver-v2121.js assets/js/admin/trophy-gallery-poc.js
