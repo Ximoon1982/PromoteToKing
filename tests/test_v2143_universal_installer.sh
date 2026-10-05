@@ -31,16 +31,21 @@ FILES=(
   assets/js/admin/trophy-gallery-engraver-v2121.js assets/js/admin/trophy-gallery-poc.js
   assets/js/admin/trophy-gallery-r5fix3.8.js assets/trophy-gallery/trophy-gallery-r5fix3.8.css
   assets/trophy-gallery/engraving/editor-v2121.html assets/js/pages/recruit-match-v2121-bootstrap.js
-  assets/js/pages/recruit-match.js assets/js/pages/challenge-list-assistant.js server/team-points/sql/analytics-schema.sql
+  assets/js/pages/recruit-match.js assets/js/pages/challenge-list-assistant.js
+  assets/js/dashboard/insights-controller.js assets/js/pages/dashboard-insights.js
+  assets/js/shared/real-oauth.js assets/js/shared/team-points-client.js assets/js/site-config.js
+  server/team-points/sql/analytics-schema.sql
   assets/js/shared/events-showcase-core.js assets/js/events-showcase-line-v2122.js
   server/events-showcase/public/embed.php server/events-showcase/public/embed-card.php
-  server/team-points/src/McaResultsCronService.php server/team-points/src/Repository.php
+  server/team-points/public/arenas-insights-export.php server/team-points/public/arenas-insights.php
+  server/team-points/src/LiveRanksService.php server/team-points/src/McaResultsCronService.php
+  server/team-points/src/OAuthSession.php server/team-points/src/Repository.php
   server/team-points-green/sql/core-schema.sql server/team-points-green/src/GreenCompatibility.php
   server/team-points-green/src/GreenRepository.php server/team-points-green/public/max-rating-backfill.php
   server/team-points-green/tools/converge-v2.13.1.php server/team-points-green/tools/converge-v2.13.2.php
   server/trophy-gallery/src/TrophyGalleryStore.php
   server/release-control/config/.htaccess server/release-control/config/config.example.php
-  server/release-control/src/bootstrap.php server/release-control/src/ReleaseControlAuth.php
+  server/release-control/public/preview-oauth-session.php server/release-control/src/bootstrap.php server/release-control/src/ReleaseControlAuth.php
   server/release-control/src/ReleaseControlState.php
   server/release-control/src/ReleaseSlotPolicy.php server/release-control/src/ReleaseSlotFilesystemProbe.php
   server/release-control/src/ReleaseSlotStore.php server/release-control/src/ReleaseSlotMaterializer.php
@@ -153,6 +158,21 @@ grep -Fxq ui-v2.html "$PKGDIR/CANDIDATE_OVERLAY_PATHS.txt"
 ! grep -Fq 'ReleaseControl.php' "$PKGDIR/CANDIDATE_OVERLAY_PATHS.txt"
 ! grep -Fq 'PreviewRouter.php' "$PKGDIR/CANDIDATE_OVERLAY_PATHS.txt"
 ! grep -Fq 'server/release-control/' "$PKGDIR/CANDIDATE_OVERLAY_PATHS.txt"
+for path in \
+  assets/js/dashboard/insights-controller.js \
+  assets/js/pages/dashboard-insights.js \
+  assets/js/shared/real-oauth.js \
+  assets/js/shared/team-points-client.js \
+  assets/js/site-config.js \
+  server/team-points/public/arenas-insights-export.php \
+  server/team-points/public/arenas-insights.php \
+  server/team-points/src/LiveRanksService.php \
+  server/team-points/src/OAuthSession.php; do
+  grep -Fxq "$path" "$PKGDIR/CANDIDATE_OVERLAY_PATHS.txt" || { echo "Candidate overlay missing $path" >&2; exit 1; }
+  test -f "$PKGDIR/payload/$path" || { echo "Candidate payload missing $path" >&2; exit 1; }
+done
+test -f "$PKGDIR/payload/server/release-control/public/preview-oauth-session.php"
+! grep -Fxq 'server/release-control/public/preview-oauth-session.php' "$PKGDIR/CANDIDATE_OVERLAY_PATHS.txt"
 grep -Fq "PHP_SAPI !== 'cli'" "$OUT/$PKG/payload/server/release-control/tools/install-candidate.php"
 test -x "$PKGDIR/prepare-candidate-preview-v2.14.3.sh"
 bash -n "$PKGDIR/prepare-candidate-preview-v2.14.3.sh"
@@ -190,6 +210,8 @@ bash "$PKGDIR/prepare-candidate-preview-v2.14.3.sh" "$PREVIEW_ROOT" ximoon >/dev
 [[ "$(tr -d '\r\n' < "$PREVIEW_ROOT/VERSION")" == "2.14.2" ]]
 grep -Fq 'v2.14.3 · Super Admin candidate preview' "$PREVIEW_ROOT/ReleaseControl.php"
 grep -Fq 'P2KRC_PREVIEW' "$PREVIEW_ROOT/.htaccess"
+test -f "$PREVIEW_ROOT/server/release-control/public/preview-oauth-session.php"
+grep -Fq 'oauthSessionStatus' "$PREVIEW_ROOT/server/release-control/public/preview-oauth-session.php"
 grep -Fq '"candidate_release": "2.14.3-' "$PREVIEW_ROOT/data/runtime-v280/release-control/state.json"
 CANDIDATE_ID="$(python3 - "$PREVIEW_ROOT/data/runtime-v280/release-control/state.json" <<'PY'
 import json,sys
