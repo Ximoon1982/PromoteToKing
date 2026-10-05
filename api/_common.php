@@ -88,6 +88,7 @@ function read_json_file(string $path, array $default = []): array {
     return is_array($value) ? $value : $default;
 }
 function atomic_json(string $path, array $value, bool $backup = false): void {
+    if (\\P2K\\TeamPoints\\PreviewIsolation::active()) $path = \\P2K\\TeamPoints\\PreviewIsolation::mapWritablePath($path, root_dir());
     $dir = dirname($path);
     if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) throw new RuntimeException('Unable to create storage directory.');
     $tmp = tempnam($dir, '.'.basename($path).'.');
@@ -104,6 +105,7 @@ function atomic_json(string $path, array $value, bool $backup = false): void {
     }
 }
 function append_jsonl(string $dir, array $entry): void {
+    if (\\P2K\\TeamPoints\\PreviewIsolation::active()) $dir = \\P2K\\TeamPoints\\PreviewIsolation::mapWritablePath($dir, root_dir());
     if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) throw new RuntimeException('Unable to create log directory.');
     $line = json_encode($entry, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     if ($line === false || file_put_contents($dir.'/'.gmdate('Y-m-d').'.jsonl', $line."\n", FILE_APPEND | LOCK_EX) === false) {
@@ -246,6 +248,10 @@ function migrate_legacy_tracking(): array {
     static $result = null;
     if (is_array($result)) return $result;
     $result = migration_empty();
+    if (\\P2K\\TeamPoints\\PreviewIsolation::active()) {
+        $result['previewReadOnly'] = true;
+        return $result;
+    }
     $newRegistryPath = follow_registry_path();
     $registry = registry_from_path($newRegistryPath);
     $registryBackup = registry_from_path($newRegistryPath . '.bak');
@@ -1100,7 +1106,7 @@ function task_logs_response(): array {
 function tracked_records(): array {
     migrate_legacy_tracking();
     $registry = read_follow_registry();
-    $expiredAfterStart = expire_started_tracking($registry);
+    $expiredAfterStart = \\P2K\\TeamPoints\\PreviewIsolation::active() ? 0 : expire_started_tracking($registry);
     if ($expiredAfterStart > 0) $registry = read_follow_registry();
     $ids = array_fill_keys(array_map('strval', array_keys($registry['matches'])), true);
     if (is_dir(history_root())) {
