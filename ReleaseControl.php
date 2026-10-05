@@ -136,7 +136,7 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
 <main class="wrap">
   <header class="head">
     <div><div class="eyebrow">Recovery plane</div><h1>Release Control</h1><p>Standalone release diagnostics · fixed URL <code>/ReleaseControl.php</code></p></div>
-    <div class="badge">v2.14.3 · Super Admin candidate preview</div>
+    <div class="badge">v2.14.4 · Side-effect-isolated candidate preview</div>
   </header>
 
 <?php if ($username === ''): ?>
@@ -153,7 +153,7 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
     <p class="small">Allowlist source: <?= rc_h($auth->allowlistSource()) ?></p>
   </section>
 <?php else: ?>
-  <section class="notice"><strong>Public serving is still direct-root.</strong> v2.14.3 can route only this authenticated Super Admin browser session to the registered candidate. Everyone else, OAuth callback traffic and all CRON/background execution remain on the public release. Candidate preview is read-only in this increment: non-GET/HEAD requests are blocked.</section>
+  <section class="notice"><strong>Public serving is still direct-root.</strong> v2.14.4 can route only this authenticated Super Admin browser session to the registered candidate. Everyone else, OAuth callback traffic and all CRON/background execution remain on the public release. Candidate database sessions are forced read-only; runtime/cache/log/session writes are isolated in a protected preview sandbox; maintenance and background endpoints remain blocked.</section>
   <?php if ($actionError !== ''): ?><section class="notice"><strong>Preview action failed.</strong> <?= rc_h($actionError) ?></section><?php endif; ?>
   <?php if ($previewResult === 'enabled'): ?><section class="notice"><strong>Candidate preview enabled for this browser session.</strong> Open the public site from the control below to browse the candidate.</section><?php elseif ($previewResult === 'disabled'): ?><section class="notice"><strong>Candidate preview disabled.</strong> This browser is back on the public release.</section><?php endif; ?>
 
@@ -268,7 +268,7 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
 
     <section class="card">
       <h2>Deployment controls</h2>
-      <p class="small">Personal candidate preview is available only to this authenticated Super Admin session. Writes remain blocked; public promotion and rollback are still disabled.</p>
+      <p class="small">Personal candidate preview is available only to this authenticated Super Admin session. The isolated administrator-session bootstrap is allowed inside the preview sandbox; application/data mutations, maintenance/background execution, public promotion and rollback remain disabled.</p>
       <div class="actions">
         <?php if (is_array($candidate) && $csrfToken !== '' && $previewTreeReady): ?>
           <?php if (!empty($previewStatus['enabled'])): ?>
@@ -279,7 +279,7 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
           <?php endif; ?>
         <?php else: ?>
           <span class="button disabled">Preview candidate</span>
-          <?php if (is_array($candidate) && !$previewTreeReady): ?><span class="small">Preview tree is not prepared. Re-run the v2.14.3 candidate-preview bootstrap.</span><?php endif; ?>
+          <?php if (is_array($candidate) && !$previewTreeReady): ?><span class="small">Preview tree is not prepared. Re-run the v2.14.4 candidate-preview bootstrap.</span><?php endif; ?>
         <?php endif; ?>
         <span class="button disabled">Promote candidate</span><span class="button disabled">Rollback</span>
       </div>
@@ -293,9 +293,9 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
         <dt>Application dependency</dt><dd>None on UI v1/UI v2 shell assets or JavaScript</dd>
         <dt>Candidate install</dt><dd>Enabled through verified CLI package installation</dd>
         <dt>Personal preview</dt><dd>Enabled for authenticated Super Admin session only</dd>
-        <dt>Preview writes</dt><dd>Blocked until v2.14.4</dd>
-        <dt>Public slot routing</dt><dd>Disabled in v2.14.3</dd>
-        <dt>Promotion / rollback</dt><dd>Disabled in v2.14.3</dd>
+        <dt>Preview side effects</dt><dd>Isolated: read-only DB sessions + protected preview runtime/session sandbox</dd>
+        <dt>Public slot routing</dt><dd>Disabled in v2.14.4</dd>
+        <dt>Promotion / rollback</dt><dd>Disabled in v2.14.4</dd>
       </dl>
       <div class="actions"><a class="button" href="/">Open public site</a></div>
     </section>
