@@ -45,8 +45,8 @@ function p2k_tp_config(): array
         throw new RuntimeException('The Team Points configuration file must return an array.');
     }
 
-    if (\\P2K\\TeamPoints\\PreviewIsolation::active()) {
-        $loaded = \\P2K\\TeamPoints\\PreviewIsolation::applyConfig($loaded);
+    if (\P2K\TeamPoints\PreviewIsolation::active()) {
+        $loaded = \P2K\TeamPoints\PreviewIsolation::applyConfig($loaded);
     }
 
     $config = $loaded;
