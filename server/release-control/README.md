@@ -57,8 +57,9 @@ explicitly rejects OAuth mutations and known maintenance/background/repair/inges
 endpoints, including Team Points CRON and match-tracking CRON. Other POST/PUT/PATCH/
 DELETE requests remain rejected.
 
-The public OAuth callback and the recovery-plane read-only OAuth status endpoint stay
-outside the candidate runtime.
+The public OAuth login/callback flow and the recovery-plane read-only OAuth status endpoint stay
+outside the candidate runtime. Candidate logout/batch OAuth actions are not allowed through the
+preview runtime.
 
 ### Legacy API protection
 
@@ -102,7 +103,7 @@ The public release remains v2.14.2 until the later promotion increment.
 
 ## State contract retained from v2.14.0
 
-The protected release state remains schema 1 and direct-root:
+The protected release state remains schema 1, with public serving in direct-root mode:
 
 ```json
 {
