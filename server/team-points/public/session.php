@@ -8,6 +8,7 @@ use P2K\TeamPoints\Auth;
 use P2K\TeamPoints\Database;
 use P2K\TeamPoints\Http;
 use P2K\TeamPoints\OAuthSession;
+use P2K\TeamPoints\PreviewIsolation;
 use P2K\TeamPoints\Repository;
 use P2K\Shared\SharedChessGateway;
 use P2K\Shared\TaskRegistry;
@@ -29,6 +30,9 @@ try {
     }
     // Compatibility fallback for callers that still have a directly recoverable
     // P2KOAUTH server session. This path is no longer required for normal reloads.
+    if ($username === '' && PreviewIsolation::active()) {
+        throw new ApiException('Candidate preview requires the short-lived recovery-plane bootstrap assertion; production OAuth sessions are never opened for mutation by preview code.', 401, 'PREVIEW_BOOTSTRAP_REQUIRED');
+    }
     if ($username === '') $username = OAuthSession::authenticatedUsername(true);
     if ($username === '' || !preg_match('/^[a-z0-9_-]{1,80}$/i', $username)) {
         throw new ApiException('Log in with Chess.com OAuth before opening an administrator session.', 401, 'OAUTH_SESSION_REQUIRED');
