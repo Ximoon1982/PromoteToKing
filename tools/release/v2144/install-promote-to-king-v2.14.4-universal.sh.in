@@ -320,7 +320,7 @@ for path in "${FILES[@]}"; do
   [[ -n "$expected" && "$got" == "$expected" ]] || abort_after_activation "Target hash mismatch after activation: $path"
   printf '  %s: OK\n' "$path"
 done
-[[ "$(tr -d '\r\n' < "$ROOT/VERSION")" == "2.14.3" ]] || abort_after_activation "VERSION did not converge to 2.14.3"
+[[ "$(tr -d '\r\n' < "$ROOT/VERSION")" == "2.14.4" ]] || abort_after_activation "VERSION did not converge to 2.14.4"
 
 grep -Fq "?v=$CACHE_KEY" "$ROOT/ui-v2.html" || abort_after_activation "ui-v2 cache key was not activated"
 grep -Fq "?v=$CACHE_KEY" "$ROOT/RecruitMatch.html" || abort_after_activation "RecruitMatch cache key was not activated"
@@ -341,7 +341,7 @@ grep -Fq 'CANDIDATE_PREVIEW_WRITE_BLOCKED' "$ROOT/PreviewRouter.php" || abort_af
 grep -Fq "PHP_SAPI !== 'cli'" "$ROOT/server/release-control/tools/install-candidate.php" || abort_after_activation "Candidate installer must remain CLI-only"
 
 printf 'Materializing verified v2.14.4 release slot...\n'
-TARGET_SLOT_RESULT="$("$PYTHON_BIN" "$ROOT/server/release-control/tools/release-slot-paths.py" --root "$ROOT" | "$PHP_BIN" "$ROOT/server/release-control/tools/materialize-current-slot.php" --root="$ROOT" --version="2.14.3" --source-head="$SOURCE_HEAD" --cache-key="$CACHE_KEY" --paths=-)" \
+TARGET_SLOT_RESULT="$("$PYTHON_BIN" "$ROOT/server/release-control/tools/release-slot-paths.py" --root "$ROOT" | "$PHP_BIN" "$ROOT/server/release-control/tools/materialize-current-slot.php" --root="$ROOT" --version="2.14.4" --source-head="$SOURCE_HEAD" --cache-key="$CACHE_KEY" --paths=-)" \
   || abort_after_activation "Unable to materialize the verified v2.14.4 release slot"
 printf '%s\n' "$TARGET_SLOT_RESULT"
 
