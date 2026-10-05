@@ -219,8 +219,11 @@ try {
         case 'diagnostics':
             if ($method === 'GET') {
                 $test = root_dir().'/data/.write-test';
-                $writable = @file_put_contents($test, 'ok') !== false;
-                if ($writable) @unlink($test);
+                $writable = false;
+                if (!\\P2K\\TeamPoints\\PreviewIsolation::active()) {
+                    $writable = @file_put_contents($test, 'ok') !== false;
+                    if ($writable) @unlink($test);
+                }
                 $config = read_json_file(root_dir().'/data/server-config.json', []);
                 $migration = migrate_legacy_tracking();
                 $registry = read_follow_registry();
