@@ -18,11 +18,11 @@ final class ReleaseControlAuth
     {
     }
 
-    public function currentUsername(): string
+    public function currentUsername(bool $allowMutation = true): string
     {
         $username = $this->teamPointsAdminUsername();
         if ($username !== '') return $username;
-        return $this->oauthUsername();
+        return $this->oauthUsername($allowMutation);
     }
 
     public function isSuperAdmin(string $username): bool
@@ -99,7 +99,7 @@ final class ReleaseControlAuth
      *
      *  @return array<string,mixed>
      */
-    public function oauthSessionStatus(): array
+    public function oauthSessionStatus(bool $allowMutation = true): array
     {
         $cfg = $this->oauthConfig();
         $enabled = trim((string)($cfg['name'] ?? '')) !== ''
@@ -137,7 +137,7 @@ final class ReleaseControlAuth
         $now = time();
         $refreshToken = trim((string)($access['refresh_token'] ?? ''));
         $retryAt = (int)($data['oauth_refresh_retry_at'] ?? 0);
-        if ($refreshToken !== '' && ($expires <= 0 || $expires <= $now + 300) && $retryAt <= $now) {
+        if ($allowMutation && $refreshToken !== '' && ($expires <= 0 || $expires <= $now + 300) && $retryAt <= $now) {
             $refreshed = $this->refreshOAuthSession($dir);
             if (is_array($refreshed)) {
                 $data = $refreshed;
@@ -157,7 +157,7 @@ final class ReleaseControlAuth
             return $empty($csrf);
         }
 
-        $this->touchOAuthCookie($cookieId);
+        if ($allowMutation) $this->touchOAuthCookie($cookieId);
         $profileUrl = trim((string)($profile['url'] ?? $claims['profile'] ?? ''));
         if ($profileUrl === '') $profileUrl = 'https://www.chess.com/member/' . rawurlencode($username);
         $publicProfile = [
@@ -209,7 +209,7 @@ final class ReleaseControlAuth
         return preg_match('/^[a-z0-9_-]{1,80}$/', $username) ? $username : '';
     }
 
-    private function oauthUsername(): string
+    private function oauthUsername(bool $allowMutation): string
     {
         if (empty($_COOKIE['P2KOAUTH'])) return '';
         $dir = $this->oauthSessionDirectory();
@@ -227,7 +227,7 @@ final class ReleaseControlAuth
         $now = time();
         $refreshToken = trim((string)($access['refresh_token'] ?? ''));
         $retryAt = (int)($data['oauth_refresh_retry_at'] ?? 0);
-        if ($refreshToken !== '' && ($expires <= 0 || $expires <= $now + 300) && $retryAt <= $now) {
+        if ($allowMutation && $refreshToken !== '' && ($expires <= 0 || $expires <= $now + 300) && $retryAt <= $now) {
             $refreshed = $this->refreshOAuthSession($dir);
             if (is_array($refreshed)) {
                 $data = $refreshed;
