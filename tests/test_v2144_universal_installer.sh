@@ -8,19 +8,19 @@ cleanup(){
 }
 trap cleanup EXIT
 OUT="$TMP/build"
-PKG="PromoteToKing_v2.14.3_INCREMENTAL_FROM_2.13.x"
+PKG="PromoteToKing_v2.14.4_INCREMENTAL_FROM_2.13.x"
 
-bash "$ROOT/tools/release/v2143/build-universal-2.13x.sh" "$OUT" >/dev/null
-INSTALLER="$OUT/$PKG/install-promote-to-king-v2.14.3.sh"
+bash "$ROOT/tools/release/v2144/build-universal-2.13x.sh" "$OUT" >/dev/null
+INSTALLER="$OUT/$PKG/install-promote-to-king-v2.14.4.sh"
 grep -Fq 'Supported installed versions: 2.13.0, 2.13.1, 2.13.2, 2.13.3, 2.13.4, 2.13.5, 2.14.0, 2.14.1, 2.14.2, 2.14.3.' "$OUT/$PKG/README_INSTALL.txt"
 grep -Fq 'Super Admin-only candidate preview' "$OUT/$PKG/README_INSTALL.txt"
-grep -Fq 'prepare-candidate-preview-v2.14.3.sh' "$OUT/$PKG/README_INSTALL.txt"
+grep -Fq 'prepare-candidate-preview-v2.14.4.sh' "$OUT/$PKG/README_INSTALL.txt"
 if find "$OUT/$PKG" -type f \( -name '*.pyc' -o -name '*.pyo' \) -print -quit | grep -q .; then
-  echo "v2.14.3 package contains Python bytecode" >&2
+  echo "v2.14.4 package contains Python bytecode" >&2
   exit 1
 fi
 if find "$OUT/$PKG" -type d -name '__pycache__' -print -quit | grep -q .; then
-  echo "v2.14.3 package contains __pycache__" >&2
+  echo "v2.14.4 package contains __pycache__" >&2
   exit 1
 fi
 
@@ -133,17 +133,17 @@ if P2K_INSTALL_PREFLIGHT_ONLY=1 bash "$INSTALLER" "$FUTURE" >/dev/null 2>&1; the
   exit 1
 fi
 
-grep -Fq 'tmp="$dst.p2k-v2143-$$.tmp"' "$INSTALLER" || { echo "Installer PID suffix contract missing" >&2; exit 1; }
+grep -Fq 'tmp="$dst.p2k-v2144-$$.tmp"' "$INSTALLER" || { echo "Installer PID suffix contract missing" >&2; exit 1; }
 grep -Fq 'Materializing protected pre-upgrade release slot' "$INSTALLER" || { echo "Pre-upgrade slot materialization contract missing" >&2; exit 1; }
-grep -Fq 'Materializing verified v2.14.3 release slot' "$INSTALLER" || { echo "Target slot materialization contract missing" >&2; exit 1; }
+grep -Fq 'Materializing verified v2.14.4 release slot' "$INSTALLER" || { echo "Target slot materialization contract missing" >&2; exit 1; }
 grep -Fq 'server/release-control/tools/release-slot-paths.py' "$INSTALLER" || { echo "Slot path selector contract missing" >&2; exit 1; }
 python3 - "$INSTALLER" <<'PY'
 from pathlib import Path
 import sys
 text=Path(sys.argv[1]).read_text()
 pre=text.index("Materializing protected pre-upgrade release slot")
-activate=text.index("Activating cumulative v2.14.3 runtime files")
-target=text.index("Materializing verified v2.14.3 release slot")
+activate=text.index("Activating cumulative v2.14.4 runtime files")
+target=text.index("Materializing verified v2.14.4 release slot")
 assert pre < activate < target
 PY
 PKGDIR="$OUT/$PKG"
@@ -174,12 +174,12 @@ done
 test -f "$PKGDIR/payload/server/release-control/public/preview-oauth-session.php"
 ! grep -Fxq 'server/release-control/public/preview-oauth-session.php' "$PKGDIR/CANDIDATE_OVERLAY_PATHS.txt"
 grep -Fq "PHP_SAPI !== 'cli'" "$OUT/$PKG/payload/server/release-control/tools/install-candidate.php"
-test -x "$PKGDIR/prepare-candidate-preview-v2.14.3.sh"
-bash -n "$PKGDIR/prepare-candidate-preview-v2.14.3.sh"
-grep -Fq -- '--replace-candidate' "$PKGDIR/prepare-candidate-preview-v2.14.3.sh"
-grep -Fq 'prepare-preview.php' "$PKGDIR/prepare-candidate-preview-v2.14.3.sh"
-grep -Fq 'p2k-v2143-candidate-$$.json' "$PKGDIR/prepare-candidate-preview-v2.14.3.sh"
-grep -Fq 'p2k-v2143-preview-$$.json' "$PKGDIR/prepare-candidate-preview-v2.14.3.sh"
+test -x "$PKGDIR/prepare-candidate-preview-v2.14.4.sh"
+bash -n "$PKGDIR/prepare-candidate-preview-v2.14.4.sh"
+grep -Fq -- '--replace-candidate' "$PKGDIR/prepare-candidate-preview-v2.14.4.sh"
+grep -Fq 'prepare-preview.php' "$PKGDIR/prepare-candidate-preview-v2.14.4.sh"
+grep -Fq 'p2k-v2144-candidate-$$.json' "$PKGDIR/prepare-candidate-preview-v2.14.4.sh"
+grep -Fq 'p2k-v2144-preview-$$.json' "$PKGDIR/prepare-candidate-preview-v2.14.4.sh"
 
 PREVIEW_ROOT="$TMP/preview-root"
 mkdir -p "$PREVIEW_ROOT"
@@ -204,11 +204,11 @@ cat > "$PREVIEW_ROOT/data/runtime-v280/release-control/state.json" <<'JSON'
   "updated_by": "ximoon"
 }
 JSON
-bash "$PKGDIR/prepare-candidate-preview-v2.14.3.sh" "$PREVIEW_ROOT" ximoon >/dev/null
+bash "$PKGDIR/prepare-candidate-preview-v2.14.4.sh" "$PREVIEW_ROOT" ximoon >/dev/null
 [[ "$(sha256sum "$PREVIEW_ROOT/VERSION" | awk '{print $1}')" == "$PUBLIC_VERSION_SHA" ]]
 [[ "$(sha256sum "$PREVIEW_ROOT/ui-v2.html" | awk '{print $1}')" == "$PUBLIC_UI_SHA" ]]
 [[ "$(tr -d '\r\n' < "$PREVIEW_ROOT/VERSION")" == "2.14.2" ]]
-grep -Fq 'v2.14.3 · Super Admin candidate preview' "$PREVIEW_ROOT/ReleaseControl.php"
+grep -Fq 'v2.14.4 · Super Admin candidate preview' "$PREVIEW_ROOT/ReleaseControl.php"
 grep -Fq 'P2KRC_PREVIEW' "$PREVIEW_ROOT/.htaccess"
 test -f "$PREVIEW_ROOT/server/release-control/public/preview-oauth-session.php"
 grep -Fq 'oauthSessionStatus' "$PREVIEW_ROOT/server/release-control/public/preview-oauth-session.php"
@@ -220,4 +220,4 @@ PY
 )"
 test -s "$PREVIEW_ROOT/data/runtime-v280/release-control/previews/$CANDIDATE_ID/meta/preview.json"
 
-echo "v2.14.3 cumulative installer and candidate-preview bootstrap gate passed"
+echo "v2.14.4 cumulative installer and candidate-preview bootstrap gate passed"
