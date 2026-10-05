@@ -75,6 +75,10 @@ final class ReleaseControlState
                 'candidate_install' => true,
                 'candidate_registration' => true,
                 'personal_preview' => true,
+                'candidate_side_effect_isolation' => true,
+                'candidate_database_mode' => 'read-only',
+                'candidate_runtime_sandbox' => true,
+                'candidate_session_sandbox' => true,
                 'promotion' => false,
                 'rollback' => false,
                 'state_mutation' => true,
@@ -149,7 +153,7 @@ final class ReleaseControlState
             'status'=>$mode === 'direct-root' ? 'ok' : ($mode === 'slots' ? 'info' : 'warning'),
             'label'=>'Routing mode',
             'detail'=>$mode === 'direct-root'
-                ? 'Direct-root serving remains active; v2.14.3 does not route public traffic through release slots.'
+                ? 'Direct-root serving remains active; v2.14.4 does not route public traffic through release slots.'
                 : ($mode === 'slots' ? 'Release-slot routing is declared by state.' : 'Release state contains an unsupported routing mode.'),
         ];
         $checks[] = [
@@ -160,7 +164,7 @@ final class ReleaseControlState
                 : 'No stamped build identity was found; this is expected in an unstamped source checkout.',
         ];
         if ($filesystem === null) {
-            $checks[] = ['status'=>'warning','label'=>'Release-slot filesystem probe','detail'=>'No filesystem capability record exists yet. Installing v2.14.3 should preserve/create it before changing production files.'];
+            $checks[] = ['status'=>'warning','label'=>'Release-slot filesystem probe','detail'=>'No filesystem capability record exists yet. Installing v2.14.4 should preserve/create it before changing production files.'];
         } else {
             $strategy = (string)($filesystem['selected_strategy'] ?? 'unknown');
             $checks[] = [
