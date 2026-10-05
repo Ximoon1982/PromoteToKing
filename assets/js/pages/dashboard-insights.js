@@ -250,7 +250,7 @@ function membersTableColumns() {
       { key: "finished", label: "Finished", color: "#66d19e", decimals: 0 }
     ] });
     const averageRows=recent.filter(row=>row.average_boards!=null||row.average_boards_started!=null),now=new Date(),currentMonth=`${now.getUTCFullYear()}-${String(now.getUTCMonth()+1).padStart(2,"0")}`,currentIndex=averageRows.findIndex(row=>String(row.month)===currentMonth),elapsedBoundary=currentIndex>0?{key:String(averageRows[currentIndex-1].month),fraction:.5,label:"Ongoing month →"}:null;
-    renderNativeLine("matchesAverageBoardsChart", averageRows, { xKey:"month", futureBoundary:elapsedBoundary, series:[{key:"average_boards",label:"Finished in month",color:"#f6b73c",decimals:1},{key:"average_boards_started",label:"Started in month",color:"#4aa8d8",decimals:1}],tooltipExtra:row=>String(row.month)===currentMonth?"Ongoing month · values are incomplete":"" });
+    renderNativeLine("matchesAverageBoardsChart", averageRows, { xKey:"month", futureBoundary:elapsedBoundary, series:[{key:"average_boards",label:"Average boards / finished match",color:"#f6b73c",decimals:1},{key:"average_boards_started",label:"Average boards / started match",color:"#4aa8d8",decimals:1}],tooltipExtra:row=>String(row.month)===currentMonth?"Ongoing month · values are incomplete":"" });
     document.querySelectorAll('[data-chart-reset="matchesTrendChart"]').forEach(button => {
       button.onclick = () => byId("matchesTrendChart")?._p2kResetZoom?.();
     });
