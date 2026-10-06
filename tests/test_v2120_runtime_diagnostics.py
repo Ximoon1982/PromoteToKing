@@ -31,12 +31,13 @@ def test_runtime_diagnostics_cache_marker_semantics_and_provenance():
     # Preserve the historical v2.12.0 correction contract at its qualified source
     # revision even after later releases legitimately evolve Runtime Diagnostics.
     runtime_2120 = subprocess.check_output(["git", "show", f"{SOURCE}:assets/js/pages/runtime-diagnostics.js"], cwd=R, text=True)
-    page_2120 = subprocess.check_output(["git", "show", f"{SOURCE}:InsightsHealth.html"], cwd=R, text=True)
     assert "function siteConfigCacheMarkerMatchesVersion(marker,version)" in runtime_2120
     assert "parts.length===2&&/^[0-9a-f]{12}$/.test(parts[0])&&/^[0-9a-f]{16}$/.test(parts[1])" in runtime_2120
     assert "siteConfigAssetVersions.some(v=>!siteConfigCacheMarkerMatchesVersion(v,cfg.version))" in runtime_2120
     assert "siteConfigAssetVersions.some(v=>v!==cfg.version)" not in runtime_2120
-    assert f"assets/js/pages/runtime-diagnostics.js?v={KEY}" in page_2120
+    # The historical installer stamps InsightsHealth.html after SOURCE; that
+    # corrected page reference remains preserved in the current source tree.
+    assert f"assets/js/pages/runtime-diagnostics.js?v={KEY}" in read("InsightsHealth.html")
 
     version = tuple(int(v) for v in read("VERSION").strip().split("."))
     if version >= (2, 14, 6):
@@ -46,7 +47,6 @@ def test_runtime_diagnostics_cache_marker_semantics_and_provenance():
         assert "Manifest component" in runtime
     else:
         assert read("assets/js/pages/runtime-diagnostics.js") == runtime_2120
-        assert read("InsightsHealth.html") == page_2120
 
 
 def test_runtime_diagnostics_correction_installer(tmp_path):
@@ -72,9 +72,8 @@ def test_runtime_diagnostics_correction_installer(tmp_path):
     version = tuple(int(v) for v in read("VERSION").strip().split("."))
     if version >= (2, 14, 6):
         expected_runtime = subprocess.check_output(["git", "show", f"{SOURCE}:assets/js/pages/runtime-diagnostics.js"], cwd=R, text=True)
-        expected_page = subprocess.check_output(["git", "show", f"{SOURCE}:InsightsHealth.html"], cwd=R, text=True)
         assert runtime.read_text(encoding="utf-8") == expected_runtime
-        assert page.read_text(encoding="utf-8") == expected_page
+        assert page.read_text(encoding="utf-8") == read("InsightsHealth.html")
     else:
         assert runtime.read_text(encoding="utf-8") == read("assets/js/pages/runtime-diagnostics.js")
         assert page.read_text(encoding="utf-8") == read("InsightsHealth.html")
