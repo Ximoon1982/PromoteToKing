@@ -54,6 +54,17 @@ function p2k_preview_original_uri(array $server): string
     return (string)($server['REQUEST_URI'] ?? '/');
 }
 
+function p2k_preview_relative_path(string $pathPart): string
+{
+    $decoded = rawurldecode($pathPart);
+    $relative = ltrim($decoded, '/');
+    if ($relative === '') $relative = 'index.html';
+    if (str_ends_with($relative, '/')) {
+        $relative .= preg_match('~^api/[^/]+/$~D', $relative) ? 'index.php' : 'index.html';
+    }
+    return ReleaseSlotPolicy::normalizeRelativePath($relative);
+}
+
 if (defined('P2K_PREVIEW_ROUTER_HELPER_ONLY') && P2K_PREVIEW_ROUTER_HELPER_ONLY === true) {
     return;
 }
@@ -115,13 +126,7 @@ if (empty($status['enabled'])) {
     header('Content-Type: text/plain; charset=utf-8');
     exit('Candidate preview session is no longer valid. Reload the page to return to the public release.');
 }
-$decoded = rawurldecode($pathPart);
-$relative = ltrim($decoded, '/');
-if ($relative === '') $relative = 'index.html';
-if (str_ends_with($relative, '/')) {
-    $relative .= preg_match('~^api/[^/]+/$~D', $relative) ? 'index.php' : 'index.html';
-}
-$relative = ReleaseSlotPolicy::normalizeRelativePath($relative);
+$relative = p2k_preview_relative_path($pathPart);
 if ($relative === '' || !ReleaseSlotPolicy::isReleaseOwnedPath($relative)) {
     http_response_code(404);
     header('Content-Type: text/plain; charset=utf-8');
