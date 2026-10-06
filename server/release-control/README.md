@@ -55,6 +55,12 @@ Promotion performs all expensive work before changing public traffic and commits
 The final state-file rename is the public switch. No application files are copied over
 the live root during promotion.
 
+Release slots may use hard links when the host probe proves atomic-replacement snapshot
+isolation. Consequently, all supported P2K deployment tooling replaces release-owned
+root files with temp-file + rename; it must never edit those files in place after slots
+exist. The filesystem capability record explicitly reports that hard-link in-place
+isolation is false.
+
 ### Atomic rollback
 
 Rollback verifies both the current and previous public slots/runtime trees, then performs
