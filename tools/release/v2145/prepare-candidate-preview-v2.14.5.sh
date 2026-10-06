@@ -76,6 +76,8 @@ PHP_INFRA=(
   server/release-control/src/ReleaseSlotMaterializer.php
   server/release-control/src/ReleaseCandidatePackage.php
   server/release-control/src/ReleaseStateStore.php
+  server/release-control/src/ReleaseRuntimeTree.php
+  server/release-control/src/ReleaseDeploymentManager.php
   server/release-control/src/ReleaseCandidateInstaller.php
   server/release-control/src/ReleasePreviewTree.php
   server/release-control/src/ReleasePreviewSession.php
