@@ -133,7 +133,7 @@ grep -Fq 'title: "Recruitment confidence"' "$DIR/payload/assets/js/admin/tool-re
 grep -Fq 'route: "recruit"' "$DIR/payload/assets/js/admin/tool-registry.js"
 grep -Fq 'function standaloneToolHref(route,{classic=false}={})' "$DIR/payload/assets/js/admin/tool-registry.js"
 grep -Fq 'classicAdminTab: "management"' "$DIR/payload/assets/js/admin/tool-registry.js"
-grep -Fq 'v2.14.5 · Side-effect-isolated candidate preview' "$DIR/payload/ReleaseControl.php"
+grep -Fq 'v2.14.5 · Atomic promotion and rollback' "$DIR/payload/ReleaseControl.php"
 grep -Fq "'candidate_install' => true" "$DIR/payload/server/release-control/src/ReleaseControlState.php"
 grep -Fq "'personal_preview' => true" "$DIR/payload/server/release-control/src/ReleaseControlState.php"
 grep -Fq "'promotion'=>$candidateValid && $publicValid" "$DIR/payload/server/release-control/src/ReleaseControlState.php"
