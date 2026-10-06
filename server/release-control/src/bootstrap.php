@@ -16,3 +16,4 @@ require_once __DIR__ . '/ReleaseCandidateInstaller.php';
 require_once __DIR__ . '/ReleasePreviewTree.php';
 require_once __DIR__ . '/ReleasePreviewSession.php';
 require_once __DIR__ . '/ReleaseControlState.php';
+require_once __DIR__ . '/ReleaseVersionManager.php';

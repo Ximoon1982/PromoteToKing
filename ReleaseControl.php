@@ -8,6 +8,7 @@ use P2K\ReleaseControl\ReleaseControlState;
 use P2K\ReleaseControl\ReleaseDeploymentManager;
 use P2K\ReleaseControl\ReleasePreviewSession;
 use P2K\ReleaseControl\ReleasePreviewTree;
+use P2K\ReleaseControl\ReleaseVersionManager;
 
 $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
 if (!in_array($method, ['GET','POST'], true)) {
@@ -50,6 +51,7 @@ $auth = new ReleaseControlAuth(__DIR__);
 $username = $auth->currentUsername();
 $authorized = $username !== '' && $auth->isSuperAdmin($username);
 $previewSession = new ReleasePreviewSession(__DIR__);
+$releaseManager = new ReleaseVersionManager(__DIR__);
 $actionError = '';
 $action = strtolower(trim((string)($_POST['action'] ?? '')));
 
@@ -119,6 +121,15 @@ if ($method === 'POST' && $authorized) {
                 header('Location: /ReleaseControl.php?deployment_result=rolled-back', true, 303);
                 exit;
             }
+            if ($action === 'delete-release') {
+                if ((string)($_POST['confirm'] ?? '') !== 'yes') {
+                    throw new RuntimeException('Release deletion confirmation is required.');
+                }
+                $releaseId = trim((string)($_POST['release_id'] ?? ''));
+                $releaseManager->deleteRelease($releaseId, $username);
+                header('Location: /ReleaseControl.php?cleanup_result=deleted&release_id=' . rawurlencode($releaseId) . '#release-management', true, 303);
+                exit;
+            }
             http_response_code(400);
             $actionError = 'Unknown Release Control action.';
         } catch (Throwable $e) {
@@ -139,6 +150,15 @@ $csrfToken = $authorized ? $auth->controlCsrfToken($username) : '';
 $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
 $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
 $deploymentResult = strtolower(trim((string)($_GET['deployment_result'] ?? '')));
+$cleanupResult = strtolower(trim((string)($_GET['cleanup_result'] ?? '')));
+$cleanupResultRelease = trim((string)($_GET['release_id'] ?? ''));
+$releaseInventory = $authorized ? $releaseManager->inventory() : null;
+$cleanupPreviewId = trim((string)($_GET['cleanup_preview'] ?? ''));
+$cleanupPreview = null;
+if ($authorized && $cleanupPreviewId !== '') {
+    try { $cleanupPreview = $releaseManager->describeRelease($cleanupPreviewId); }
+    catch (Throwable) { $cleanupPreview = null; }
+}
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -179,6 +199,7 @@ $deploymentResult = strtolower(trim((string)($_GET['deployment_result'] ?? '')))
   <?php if ($actionError !== ''): ?><section class="notice"><strong>Release action failed.</strong> <?= rc_h($actionError) ?></section><?php endif; ?>
   <?php if ($previewResult === 'enabled'): ?><section class="notice"><strong>Candidate preview enabled for this browser session.</strong> Open the site from the control below to browse the candidate.</section><?php elseif ($previewResult === 'disabled'): ?><section class="notice"><strong>Candidate preview disabled.</strong> This browser is back on the public release.</section><?php endif; ?>
   <?php if ($deploymentResult === 'promoted'): ?><section class="notice"><strong>Candidate promoted atomically.</strong> Public traffic now resolves from the promoted release; the former public release is retained as the rollback target.</section><?php elseif ($deploymentResult === 'rolled-back'): ?><section class="notice"><strong>Rollback completed atomically.</strong> The previous public release is serving again, and the rolled-back release is registered as the candidate for verification or re-promotion.</section><?php endif; ?>
+  <?php if ($cleanupResult === 'deleted'): ?><section class="notice"><strong>Obsolete release removed.</strong> <?= rc_h($cleanupResultRelease) ?> and its release-control-owned preview/runtime artifacts were deleted.</section><?php endif; ?>
 
   <div class="grid">
     <section class="card">
@@ -268,6 +289,69 @@ $deploymentResult = strtolower(trim((string)($_GET['deployment_result'] ?? '')))
       <?php endif; ?>
     </section>
 
+    <section class="card full" id="release-management">
+      <h2>Release/version management</h2>
+      <p class="small">Only release-control-owned immutable slots, candidate previews and routed runtime trees are managed here. Shared <code>data/</code>, <code>logs/</code>, <code>storage/</code>, the physical recovery root and unrelated projects are outside cleanup scope.</p>
+      <?php $rmTotals = is_array($releaseInventory) ? ($releaseInventory['totals'] ?? []) : []; ?>
+      <dl class="meta">
+        <dt>Managed releases</dt><dd><?= rc_h($rmTotals['managed_release_count'] ?? 0) ?></dd>
+        <dt>Protected</dt><dd><?= rc_h($rmTotals['protected_count'] ?? 0) ?></dd>
+        <dt>Removable</dt><dd><?= rc_h($rmTotals['removable_count'] ?? 0) ?></dd>
+        <dt>Removable entries</dt><dd><?= rc_h($rmTotals['removable_inode_entries'] ?? 0) ?> files/directories</dd>
+        <dt>Apparent size</dt><dd><?= rc_h(rc_bytes((int)($rmTotals['removable_apparent_bytes'] ?? 0))) ?></dd>
+        <dt>Estimated reclaimable disk</dt><dd><?= rc_h(rc_bytes((int)($rmTotals['estimated_reclaimable_bytes'] ?? 0))) ?> <span class="small">(hard-link aware estimate)</span></dd>
+      </dl>
+      <?php $managedReleases = is_array($releaseInventory) ? ($releaseInventory['releases'] ?? []) : []; ?>
+      <?php if ($managedReleases === []): ?>
+        <p class="small">No release-control-managed release artifacts were found.</p>
+      <?php else: ?>
+        <div class="checks">
+          <?php foreach ($managedReleases as $release): $stats = $release['stats'] ?? []; $roles = $release['roles'] ?? []; ?>
+            <div class="check <?= !empty($release['protected']) ? 'ok' : (!empty($release['cleanup_ready']) ? 'warning' : 'error') ?>">
+              <i class="dot" aria-hidden="true"></i>
+              <strong><?= rc_h($release['release_id'] ?? 'unknown') ?></strong>
+              <span>
+                <?= $roles !== [] ? 'PROTECTED · ' . rc_h(implode(' + ', $roles)) : 'obsolete / unreferenced' ?> ·
+                <?= rc_h(implode(' + ', $release['artifacts'] ?? [])) ?> ·
+                <?= rc_h($stats['inode_entries'] ?? 0) ?> entries ·
+                <?= rc_h(rc_bytes((int)($stats['apparent_bytes'] ?? 0))) ?> apparent ·
+                <?= rc_h(rc_bytes((int)($stats['estimated_reclaimable_bytes'] ?? 0))) ?> estimated reclaimable
+                <?php if (!empty($stats['hardlink_preserved_bytes'])): ?> · <?= rc_h(rc_bytes((int)$stats['hardlink_preserved_bytes'])) ?> still shared by hard links<?php endif; ?>
+                <?php if (empty($release['protected']) && !empty($release['cleanup_ready'])): ?>
+                  · <a class="button" href="/ReleaseControl.php?cleanup_preview=<?= rawurlencode((string)$release['release_id']) ?>#release-management">Preview deletion</a>
+                <?php elseif (!empty($stats['scan_errors'])): ?>
+                  · scan blocked: <?= rc_h(implode('; ', $stats['scan_errors'])) ?>
+                <?php endif; ?>
+              </span>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+
+      <?php if (is_array($cleanupPreview)): $cpStats = $cleanupPreview['stats'] ?? []; ?>
+        <div class="notice" style="margin-top:14px">
+          <strong>Deletion preview — nothing has been deleted yet.</strong>
+          <p><?= rc_h($cleanupPreview['release_id'] ?? '') ?> · <?= rc_h(implode(' + ', $cleanupPreview['artifacts'] ?? [])) ?> · <?= rc_h($cpStats['inode_entries'] ?? 0) ?> entries · <?= rc_h(rc_bytes((int)($cpStats['estimated_reclaimable_bytes'] ?? 0))) ?> estimated reclaimable.</p>
+          <?php if (!empty($cleanupPreview['protected'])): ?>
+            <p>Deletion is blocked because this release is protected as <?= rc_h(implode(', ', $cleanupPreview['roles'] ?? [])) ?>.</p>
+          <?php elseif (empty($cleanupPreview['cleanup_ready'])): ?>
+            <p>Deletion is blocked because the managed artifact scan did not complete safely.</p>
+          <?php else: ?>
+            <p class="small">This removes only the immutable slot and any derived preview/runtime tree for this release ID. Shared mutable data and the physical P2K root are not touched.</p>
+            <form method="post" action="/ReleaseControl.php">
+              <input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>">
+              <input type="hidden" name="action" value="delete-release">
+              <input type="hidden" name="release_id" value="<?= rc_h($cleanupPreview['release_id'] ?? '') ?>">
+              <label class="small"><input type="checkbox" name="confirm" value="yes" required> Confirm permanent deletion of this obsolete managed release</label>
+              <button class="button" type="submit">Delete obsolete release</button>
+            </form>
+          <?php endif; ?>
+        </div>
+      <?php elseif ($cleanupPreviewId !== ''): ?>
+        <p class="small">Requested cleanup preview is unavailable or invalid.</p>
+      <?php endif; ?>
+    </section>
+
     <section class="card">
       <h2>Shared mutable paths</h2>
       <p class="small">Kept outside immutable slots by contract:</p>
@@ -305,7 +389,7 @@ $deploymentResult = strtolower(trim((string)($_GET['deployment_result'] ?? '')))
           <?php endif; ?>
         <?php else: ?>
           <span class="button disabled">Preview candidate</span>
-          <?php if (is_array($candidate) && !$previewTreeReady): ?><span class="small">Preview tree is not prepared. Re-run the v2.14.5 candidate-preview bootstrap.</span><?php endif; ?>
+          <?php if (is_array($candidate) && !$previewTreeReady): ?><span class="small">Preview tree is not prepared. Re-run the current candidate-preview bootstrap.</span><?php endif; ?>
         <?php endif; ?>
 
         <?php if (!empty($snapshot['capabilities']['promotion']) && is_array($candidate) && $csrfToken !== ''): ?>

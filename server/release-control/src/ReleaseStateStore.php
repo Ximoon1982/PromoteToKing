@@ -176,6 +176,12 @@ final class ReleaseStateStore
         });
     }
 
+    /** Execute a release maintenance operation under the same lock as state transitions. */
+    public function withExclusiveLock(callable $callback): array
+    {
+        return $this->withLock($callback);
+    }
+
     public function read(): array
     {
         $path = $this->path();
