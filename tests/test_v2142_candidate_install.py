@@ -56,7 +56,7 @@ def test_release_control_reports_candidate_but_serving_controls_stay_disabled():
     assert "'candidate_registration' => true" in STATE
     version = tuple(int(value) for value in (ROOT / "VERSION").read_text().strip().split("."))
     if version >= (2, 14, 5):
-        assert "'promotion'=>$candidateValid && $publicValid" in STATE
+        assert "'promotion'=>$candidateValid && $candidatePreviewValid && $publicValid" in STATE
         assert "'rollback'=>$mode === 'slots'" in STATE
         assert "'public_slot_routing'=>true" in STATE
     else:
