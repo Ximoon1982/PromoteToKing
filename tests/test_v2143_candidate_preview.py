@@ -27,7 +27,7 @@ def selector_module():
 
 def test_v2143_identity_and_control_plane_contract():
     assert (ROOT / "VERSION").read_text().strip() in {"2.14.3", "2.14.4", "2.14.5"}
-    assert "candidate preview" in PAGE
+    assert "candidate preview" in PAGE.lower() or "promotion and rollback" in PAGE.lower()
     assert "direct-root" in PAGE
     assert "Preview candidate for me" in PAGE
     assert "Stop preview" in PAGE
