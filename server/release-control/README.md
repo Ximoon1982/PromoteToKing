@@ -39,7 +39,7 @@ host-local configuration files. Runtime trees are published with atomic rename.
 
 ### Atomic promotion
 
-Promotion performs all expensive work before changing public traffic:
+Promotion performs all expensive work before changing public traffic and commits the switch with one atomic state-file replacement:
 
 1. verify the registered candidate slot with full hashes;
 2. verify the current public release slot with full hashes;
