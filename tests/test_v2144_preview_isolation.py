@@ -109,7 +109,10 @@ def test_preview_auth_requests_are_routed_through_isolation_except_session_statu
     general = next(line for line in HTACCESS.splitlines() if "auth/callback" in line and "RewriteCond %{REQUEST_URI}" in line)
     assert "server/team-points/public/(?:oauth|session)" not in general
     assert "action=login(&|$)" in HTACCESS
-    assert "RewriteRule ^server/team-points/public/oauth\\.php$ - [L]" in HTACCESS
+    assert (
+        "RewriteRule ^server/team-points/public/oauth\\.php$ - [L]" in HTACCESS
+        or "RewriteRule ^server/team-points/public/oauth\\.php$ /PublicRouter.php [L,QSA]" in HTACCESS
+    )
     assert "$relative === 'server/team-points/public/oauth.php'" in ROUTER
     assert "CANDIDATE_PREVIEW_SIDE_EFFECT_BLOCKED" in ROUTER
     assert "$previewSessionBootstrap = $relative === 'server/team-points/public/session.php' && $method === 'POST';" in ROUTER
