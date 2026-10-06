@@ -76,6 +76,15 @@ return `<article class="dashboard-admin-shell-card" data-admin-shell-card="${esc
   <footer class="dashboard-admin-shell-actions">${linkMarkup}</footer>
 </article>`;
 }
+function adminReleaseControlCard(){
+return `<article class="dashboard-admin-shell-card dashboard-admin-release-control-card" data-admin-release-control-card>
+  <header class="dashboard-admin-shell-card-head"><div><span class="dashboard-admin-shell-eyebrow">Maintenance</span><h3>Release Control</h3></div><span class="dashboard-admin-shell-status is-good">Recovery plane</span></header>
+  <p>Preview qualified candidates, promote the public release, roll back atomically and inspect release-slot integrity from the standalone recovery plane.</p>
+  <div class="dashboard-admin-shell-metrics"><div class="dashboard-admin-shell-metric"><span>Access</span><strong>Super Admin</strong><small>Fixed recovery URL</small></div></div>
+  <div class="dashboard-admin-shell-meta"><span><b>Mode</b><em>Standalone</em></span><span><b>Path</b><em>/ReleaseControl.php</em></span></div>
+  <footer class="dashboard-admin-shell-actions"><a class="dashboard-button" href="/ReleaseControl.php">Open Release Control</a></footer>
+</article>`;
+}
 function adminMemberLookupCard(){
 return `<article class="dashboard-admin-shell-card dashboard-admin-member-lookup-card" data-admin-member-lookup-card>
   <header class="dashboard-admin-shell-card-head"><div><span class="dashboard-admin-shell-eyebrow">Members</span><h3>Member lookup</h3></div><span class="dashboard-admin-shell-status is-good">Ready</span></header>
@@ -131,6 +140,7 @@ team: [
 ],
 opponents: [adminShellCard({key:"opponents",category:"opponents",eyebrow:"Opponents",title:"Opponent intelligence",description:"Recurring opponents, historical outcomes and opponent maintenance intelligence.",metrics:[{label:"Profiles",id:"adminShellOpponentProfiles"},{label:"Recent opponents",id:"adminShellOpponentRecent"},{label:"Review needed",id:"adminShellOpponentReview"}],source:"Club Intelligence · Green match history",links:[{label:"Open opponent intelligence",tab:"intelligence"},{label:"Challenge assistant",tab:"challenge",secondary:true}]})],
 maintenance: [
+  adminReleaseControlCard(),
   adminShellCard({key:"diagnostics",category:"maintenance",eyebrow:"Maintenance",title:"Diagnostics",description:"Runtime and API health with direct access to diagnostic details.",metrics:[{label:"Open anomalies",id:"adminShellDiagAnomalies"},{label:"Failed queue",id:"adminShellDiagFailed"},{label:"Unresolved boards",id:"adminShellDiagBoards"}],source:"Club Intelligence · runtime diagnostics",links:[{label:"Open diagnostics",tab:"health"},{label:"Data reconciliation",tab:"reconciliation",secondary:true}]}),
   adminShellCard({key:"tasks",category:"maintenance",eyebrow:"Maintenance",title:"Scheduled Task Control",description:"CRON-compatible task state, including the Green accelerator control.",metrics:[{label:"Queue pending",id:"adminShellTaskPending"},{label:"Queue failed",id:"adminShellTaskFailed"},{label:"Core generation",id:"adminShellTaskGeneration"}],source:"Task registry · Green state",links:[{label:"Scheduled tasks",detailTab:"control",toolTab:"scheduled"},{label:"Green Team Points",detailTab:"control",toolTab:"green",secondary:true}]}),
   adminShellCard({key:"logs",category:"maintenance",eyebrow:"Maintenance",title:"Logs",description:"Execution history for match, database and tournament scheduled tasks.",metrics:[{label:"Recent endpoint events",id:"adminShellLogEvents"},{label:"Telemetry days",id:"adminShellLogDays"}],source:"Task logs · runtime telemetry",links:[{label:"Open task logs",tab:"logs"}]}),
