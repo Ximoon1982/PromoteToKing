@@ -212,6 +212,33 @@ final class ReleaseCandidateInstaller
 
     private function currentPublicIdentity(): array
     {
+        $state = (new ReleaseStateStore($this->root, $this->runtimeOverride))->read();
+        $mode = (string)($state['mode'] ?? 'direct-root');
+        if ($mode === 'slots') {
+            $releaseId = trim((string)($state['public_release'] ?? ''));
+            if ($releaseId === '') throw new \RuntimeException('Release state does not identify the current public slot.');
+            $slot = $this->store->inspectSlot($releaseId, true);
+            $version = trim((string)($slot['version'] ?? ''));
+            $sourceHead = strtolower(trim((string)($slot['source_head'] ?? '')));
+            $cacheKey = trim((string)($slot['cache_key'] ?? ''));
+            if (($slot['integrity_status'] ?? '') !== 'valid'
+                || $version === ''
+                || !preg_match('/^[0-9a-f]{40}$/D', $sourceHead)
+                || $cacheKey === '') {
+                throw new \RuntimeException('Current public release-slot identity is invalid.');
+            }
+            return [
+                'version'=>$version,
+                'source_head'=>$sourceHead,
+                'source_head_short'=>substr($sourceHead, 0, 12),
+                'cache_key'=>$cacheKey,
+                'release_id'=>$releaseId,
+            ];
+        }
+        if ($mode !== 'direct-root') {
+            throw new \RuntimeException('Release-control serving mode is unsupported.');
+        }
+
         $versionPath = rtrim($this->root, '/\\') . '/VERSION';
         $uiPath = rtrim($this->root, '/\\') . '/ui-v2.html';
         if (!is_file($versionPath) || !is_file($uiPath)) {
@@ -231,7 +258,13 @@ final class ReleaseCandidateInstaller
         if (($slot['integrity_status'] ?? '') !== 'valid' || !preg_match('/^[0-9a-f]{40}$/D', $full) || !str_starts_with($full, $short)) {
             throw new \RuntimeException('Current public build does not have an exact verified release slot.');
         }
-        return ['version'=>$version, 'source_head'=>$full, 'source_head_short'=>$short, 'cache_key'=>$m[0]];
+        return [
+            'version'=>$version,
+            'source_head'=>$full,
+            'source_head_short'=>$short,
+            'cache_key'=>$m[0],
+            'release_id'=>$version . '-' . $short,
+        ];
     }
 
     private function readSlotManifest(string $releaseId): array
