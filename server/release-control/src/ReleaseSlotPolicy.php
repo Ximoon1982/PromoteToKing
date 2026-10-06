@@ -5,7 +5,7 @@ namespace P2K\ReleaseControl;
 
 final class ReleaseSlotPolicy
 {
-    public const POLICY_VERSION = 2;
+    public const POLICY_VERSION = 3;
 
     public static function sharedPathDescriptions(): array
     {
@@ -14,7 +14,7 @@ final class ReleaseSlotPolicy
             'logs/**',
             'storage/**',
             '**/*.local.* and **/.env* host-local configuration',
-            '.htaccess, ReleaseControl.php, PreviewRouter.php and server/release-control/** recovery plane',
+            '.htaccess, ReleaseControl.php, PreviewRouter.php, PublicRouter.php and server/release-control/** recovery/public-routing plane',
         ];
     }
 
@@ -46,6 +46,7 @@ final class ReleaseSlotPolicy
         $lower = strtolower($path);
         if ($lower === 'releasecontrol.php' || str_starts_with($lower, 'server/release-control/')) return false;
         if ($policyVersion >= 2 && in_array($lower, ['.htaccess', 'previewrouter.php'], true)) return false;
+        if ($policyVersion >= 3 && $lower === 'publicrouter.php') return false;
         foreach (['data/', 'logs/', 'storage/'] as $prefix) {
             if (str_starts_with($lower, $prefix)) return false;
         }
