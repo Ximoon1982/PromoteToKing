@@ -47,7 +47,11 @@ final class ReleaseSlotMaterializer
         // Hard-linking it would let an in-place write through the live root mutate
         // the supposedly immutable rollback slot. Always copy across this trust
         // boundary; hard links remain useful later between sealed slot/runtime trees.
+        // Keep the historical force-copy control visible for compatibility/audit:
+        // it can only reinforce the safe strategy, never relax it.
+        $forceCopyRequested = (string)(getenv('P2K_RELEASE_SLOT_FORCE_COPY') ?: '') === '1';
         $preferred = 'copy';
+        if ($forceCopyRequested) $preferred = 'copy';
 
         $identity = $this->detectBuildIdentity();
         if ($sourceHead === '') $sourceHead = (string)($identity['source_head_short'] ?? '');
