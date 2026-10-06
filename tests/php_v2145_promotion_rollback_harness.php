@@ -107,7 +107,9 @@ foreach ($rootBefore as $path => $hash) {
     if (hash_file('sha256', $root . '/' . $path) !== $hash) fail2145('promotion changed physical root: ' . $path);
 }
 
-file_put_contents($root . '/index.html', "physical-root-can-change-without-changing-routed-slot\n");
+$rootReplacement = $root . '/index.html.atomic-next';
+file_put_contents($rootReplacement, "physical-root-atomic-replacement\n");
+if (!rename($rootReplacement, $root . '/index.html')) fail2145('unable to atomically replace physical root test file');
 if ((string)file_get_contents($publicRuntime['app_root'] . '/index.html') !== "candidate-2145\n") fail2145('routed release depends on physical root content');
 
 $rolled = $manager->rollback('ximoon');
