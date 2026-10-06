@@ -12,8 +12,11 @@ final class Auth
     public static function requireAdmin(): void
     {
         self::enforceSameOrigin();
+        $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+        if (PreviewIsolation::adminReadAuthorized() && in_array($method, ['GET', 'HEAD', 'OPTIONS'], true)) {
+            return;
+        }
         if (self::validAdminSession()) {
-            $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
             if (!in_array($method, ['GET', 'HEAD', 'OPTIONS'], true)) {
                 $provided = self::header('X-P2K-CSRF');
                 $expected = (string)($_SESSION[self::SESSION_CSRF] ?? '');
