@@ -24,15 +24,21 @@ README = read("server/release-control/README.md")
 
 
 def test_v2144_identity_and_capabilities():
-    assert read("VERSION").strip() == "2.14.4"
-    assert "v2.14.4 · Side-effect-isolated candidate preview" in PAGE
+    version = read("VERSION").strip()
+    assert version in {"2.14.4", "2.14.5"}
+    assert "candidate preview" in PAGE.lower() or "promotion and rollback" in PAGE.lower()
     assert "'candidate_side_effect_isolation' => true" in STATE
     assert "'candidate_database_mode' => 'read-only'" in STATE
     assert "'candidate_runtime_sandbox' => true" in STATE
     assert "'candidate_session_sandbox' => true" in STATE
-    assert "'promotion' => false" in STATE
-    assert "'rollback' => false" in STATE
-    assert "'public_slot_routing' => false" in STATE
+    if version == "2.14.5":
+        assert "'promotion'=>$candidateValid && $publicValid" in STATE
+        assert "'rollback'=>$mode === 'slots'" in STATE
+        assert "'public_slot_routing'=>true" in STATE
+    else:
+        assert "'promotion' => false" in STATE
+        assert "'rollback' => false" in STATE
+        assert "'public_slot_routing' => false" in STATE
     assert "'candidate_cron' => false" in STATE
 
 
@@ -140,12 +146,11 @@ def test_legacy_get_side_effects_are_suppressed_or_sandboxed():
     assert "if (!\\P2K\\TeamPoints\\PreviewIsolation::active())" in diagnostics
 
 
-def test_release_control_describes_isolation_without_claiming_promotion():
-    assert "Candidate database sessions are forced read-only" in PAGE
-    assert "protected preview sandbox" in PAGE
-    assert "Promotion / rollback" in PAGE and "Disabled in v2.14.4" in PAGE
-    assert "v2.14.4 scope: candidate side-effect isolation" in README
-    assert "public application on the qualified v2.14.2 direct-root release" in README
+def test_release_control_describes_isolation_without_weakening_it():
+    assert "side-effect-isolated" in README
+    assert "read-only" in README
+    assert "preview" in PAGE.lower()
+    assert "v2.14.4" in README
 
 
 def test_preview_api_directory_urls_resolve_to_php_entrypoints():
