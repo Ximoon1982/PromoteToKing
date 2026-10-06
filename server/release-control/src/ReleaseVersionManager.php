@@ -343,7 +343,17 @@ final class ReleaseVersionManager
         }
         if (!is_dir($path)) return;
 
+        // Release/preview/runtime trees are sealed read-only. Make every managed
+        // directory writable before unlinking children; do not follow symlinks.
         @chmod($path, 0700);
+        $unseal = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+        foreach ($unseal as $item) {
+            if ($item->isDir() && !$item->isLink()) @chmod($item->getPathname(), 0700);
+        }
+
         $iterator = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS),
             \RecursiveIteratorIterator::CHILD_FIRST
@@ -351,7 +361,6 @@ final class ReleaseVersionManager
         foreach ($iterator as $item) {
             $itemPath = $item->getPathname();
             if ($item->isDir() && !$item->isLink()) {
-                @chmod($itemPath, 0700);
                 if (!@rmdir($itemPath) && is_dir($itemPath)) {
                     throw new \RuntimeException('Unable to remove managed release directory.');
                 }
