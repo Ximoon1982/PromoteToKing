@@ -35,7 +35,7 @@ def test_web_state_projection_remains_non_mutating():
     assert "'slot_materialization' => true" in STATE
     version = tuple(int(value) for value in (ROOT / "VERSION").read_text().strip().split("."))
     if version >= (2, 14, 5):
-        assert "'promotion'=>$candidateValid && $publicValid" in STATE
+        assert "'promotion'=>$candidateValid && $candidatePreviewValid && $publicValid" in STATE
         assert "'rollback'=>$mode === 'slots'" in STATE
         assert "'public_slot_routing'=>true" in STATE
     else:
