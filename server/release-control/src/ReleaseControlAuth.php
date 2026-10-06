@@ -353,7 +353,7 @@ final class ReleaseControlAuth
                 CURLOPT_HTTPHEADER=>[
                     'Accept: application/json',
                     'Content-Type: application/x-www-form-urlencoded',
-                    'User-Agent: PromoteToKing-ReleaseControl/2.14.4',
+                    'User-Agent: PromoteToKing-ReleaseControl/2.14.5',
                 ],
             ]);
             $response = curl_exec($ch);
@@ -367,7 +367,7 @@ final class ReleaseControlAuth
         } else {
             $context = stream_context_create(['http'=>[
                 'method'=>'POST',
-                'header'=>"Accept: application/json\r\nContent-Type: application/x-www-form-urlencoded\r\nUser-Agent: PromoteToKing-ReleaseControl/2.14.4\r\n",
+                'header'=>"Accept: application/json\r\nContent-Type: application/x-www-form-urlencoded\r\nUser-Agent: PromoteToKing-ReleaseControl/2.14.5\r\n",
                 'content'=>$body,
                 'timeout'=>20,
                 'ignore_errors'=>true,
