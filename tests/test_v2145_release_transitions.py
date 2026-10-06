@@ -118,7 +118,7 @@ def test_release_control_reports_active_public_and_transition_capabilities():
     assert "'public_slot_routing'=>true" in STATE
     assert "'public_slot_routing_active'=>$mode === 'slots'" in STATE
     assert "'public_cron_follows_release'=>true" in STATE
-    assert "'promotion'=>$candidateValid && $publicValid" in STATE
+    assert "'promotion'=>$candidateValid && $candidatePreviewValid && $publicValid" in STATE
     assert "'rollback'=>$mode === 'slots'" in STATE
     assert "Public VERSION" in PAGE
     assert "Physical root VERSION" in PAGE
