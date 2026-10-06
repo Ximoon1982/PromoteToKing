@@ -13,7 +13,7 @@ DirectoryIndex index.html index.php
   RewriteEngine On
   RewriteBase /
 
-  # v2.14.3 Super Admin candidate preview. The cookie is only a routing hint:
+  # v2.14.5 release routing. Candidate preview remains the first routing layer. The cookie is only a routing hint:
   # PreviewRouter.php re-validates its HMAC, authenticated identity, registered
   # candidate, and preview tree on every request. Recovery/shared paths and OAuth
   # callback remain on the stable direct-root control plane.
@@ -33,14 +33,21 @@ DirectoryIndex index.html index.php
   RewriteCond %{HTTP:Cookie} "(^|;[[:space:]]*)P2KRC_PREVIEW=" [NC]
   RewriteCond %{REQUEST_URI} ^/server/team-points/public/oauth\.php$ [NC]
   RewriteCond %{QUERY_STRING} (^|&)action=login(&|$) [NC]
-  RewriteRule ^server/team-points/public/oauth\.php$ - [L]
+  RewriteRule ^server/team-points/public/oauth\.php$ /PublicRouter.php [L,QSA]
 
   RewriteCond %{HTTP:Cookie} "(^|;[[:space:]]*)P2KRC_PREVIEW=" [NC]
-  RewriteCond %{REQUEST_URI} !^/(?:ReleaseControl\.php|PreviewRouter\.php|server/release-control(?:/|$)|auth/callback(?:\.php)?$|data(?:/|$)|logs(?:/|$)|storage(?:/|$)) [NC]
+  RewriteCond %{REQUEST_URI} !^/(?:ReleaseControl\.php|PreviewRouter\.php|PublicRouter\.php|server/release-control(?:/|$)|auth/callback(?:\.php)?$|data(?:/|$)|logs(?:/|$)|storage(?:/|$)) [NC]
   # Only paths selected by the P2K release-slot surface may enter preview.
   # Sibling projects hosted below the same web root must remain public.
   RewriteCond %{REQUEST_URI} ^/(?:$|(?:api|artwork|artwork-masters|assets|auth|config|resources|server|trophies)(?:/|$)|(?:VERSION|site-manifest\.json|AnalyzeMatch\.html|AnalyzeMatchModal\.html|AnalyzeMatches\.htm|ChallengeListAssistant\.html|ClubIntelligence\.html|DataReconciliation\.html|FindMatch\.htm|InsightsHealth\.html|LeagueSeasonCenter\.html|LiveRanks\.html|LiveRanksDemo\.html|MatchCreationAnalyzer\.htm|MaxRatingBackfill\.php|MigrationInstaller\.html|Opponents\.html|OpponentsDemo\.html|RecruitMatch\.html|RecruitmentAdmin\.html|RecruitmentDemandPlanner\.html|TaskControl\.html|TaskLogs\.html|TeamInsights\.html|TeamPointsAdmin\.html|TeamPointsMigration\.html|TournamentAchievementBadgesDemo\.html|TournamentManagement\.html|Tournaments\.html|UIv2RepresentativeDemo\.html|OAuthTest\.php|index\.html|ui-v2\.html)$) [NC]
   RewriteRule ^(?!PreviewRouter\.php$)(.*)$ /PreviewRouter.php [L]
+
+  # Stable public routing plane. In direct-root mode PublicRouter serves the
+  # existing root files. After promotion, the same URL surface resolves from the
+  # atomically selected immutable release runtime tree.
+  RewriteCond %{REQUEST_URI} !^/(?:ReleaseControl\.php|PreviewRouter\.php|PublicRouter\.php|server/release-control(?:/|$)|data(?:/|$)|logs(?:/|$)|storage(?:/|$)) [NC]
+  RewriteCond %{REQUEST_URI} ^/(?:$|(?:api|artwork|artwork-masters|assets|auth|config|resources|server|trophies)(?:/|$)|(?:VERSION|site-manifest\.json|AnalyzeMatch\.html|AnalyzeMatchModal\.html|AnalyzeMatches\.htm|ChallengeListAssistant\.html|ClubIntelligence\.html|DataReconciliation\.html|FindMatch\.htm|InsightsHealth\.html|LeagueSeasonCenter\.html|LiveRanks\.html|LiveRanksDemo\.html|MatchCreationAnalyzer\.htm|MaxRatingBackfill\.php|MigrationInstaller\.html|Opponents\.html|OpponentsDemo\.html|RecruitMatch\.html|RecruitmentAdmin\.html|RecruitmentDemandPlanner\.html|TaskControl\.html|TaskLogs\.html|TeamInsights\.html|TeamPointsAdmin\.html|TeamPointsMigration\.html|TournamentAchievementBadgesDemo\.html|TournamentManagement\.html|Tournaments\.html|UIv2RepresentativeDemo\.html|OAuthTest\.php|index\.html|ui-v2\.html)$) [NC]
+  RewriteRule ^(?!PublicRouter\.php$)(.*)$ /PublicRouter.php [L]
 
   # Backward-compatible internal routing for old slashless API URLs.
   RewriteRule ^api/(challenge-club-list|match-assistant-log|match-assistant-logs|track-upcoming-league-matches|match-history|tracked-match-data|scheduled-task-logs)$ api/index.php [END,QSA]
