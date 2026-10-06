@@ -249,6 +249,9 @@ REFS_2145=(
   2441efcd1d07bf3edc899982d0ed2a404e83c2d7
 )
 REFS_2146=(
+  ca61201cf2922936cf825152df47d096e0af5f41
+)
+REFS_2147=(
   "$HEAD"
 )
 
@@ -292,7 +295,8 @@ emit_baselines() {
   emit_baselines "2.14.3" REFS_2143
   emit_baselines "2.14.4" REFS_2144
   emit_baselines "2.14.5" REFS_2145
-  emit_baselines "2.14.7" REFS_2146
+  emit_baselines "2.14.6" REFS_2146
+  emit_baselines "2.14.7" REFS_2147
 } > "$DIR/BASELINES.tsv"
 
 python3 - "$DIR/install-promote-to-king-v2.14.7.sh" "$HEAD" "$CACHE_KEY" <<'PY'
