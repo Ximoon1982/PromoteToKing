@@ -71,6 +71,7 @@ if (ReleaseSlotPolicy::normalizeRelativePath('../VERSION') !== '') throw new Run
 if (ReleaseSlotPolicy::normalizeRelativePath('/VERSION') !== '') throw new RuntimeException('absolute path was accepted');
 if (!ReleaseSlotPolicy::isReleaseOwnedPath('assets/app.js')) throw new RuntimeException('owned path rejected');
 if (ReleaseSlotPolicy::isReleaseOwnedPath('ReleaseControl.php')) throw new RuntimeException('recovery page admitted into slot');
+if (ReleaseSlotPolicy::isReleaseOwnedPath('PublicRouter.php')) throw new RuntimeException('stable public router admitted into slot');
 if (ReleaseSlotPolicy::isReleaseOwnedPath('server/release-control/src/bootstrap.php')) throw new RuntimeException('recovery plane admitted into slot');
 if (ReleaseSlotPolicy::isReleaseOwnedPath('server/team-points/config/config.local.php')) throw new RuntimeException('host-local config admitted into slot');
 
