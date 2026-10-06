@@ -230,8 +230,8 @@ PYTHON_BIN="$(find_python)"
 PHP_VERSION="$("$PHP_BIN" -r 'echo PHP_VERSION;')"
 INSTALLED_VERSION="$(tr -d '\r\n' < "$ROOT/VERSION" 2>/dev/null || true)"
 case "$INSTALLED_VERSION" in
-  2.13.0|2.13.1|2.13.2|2.13.3|2.13.4|2.13.5|2.14.0|2.14.1|2.14.2|2.14.3|2.14.4|2.14.5) ;;
-  *) fail "Unsupported installed VERSION '$INSTALLED_VERSION'. This installer supports existing 2.13.0 through 2.14.5 installations only." ;;
+  2.13.0|2.13.1|2.13.2|2.13.3|2.13.4|2.13.5|2.14.0|2.14.1|2.14.2|2.14.3|2.14.4|2.14.5|2.14.6) ;;
+  *) fail "Unsupported installed VERSION '$INSTALLED_VERSION'. This installer supports existing 2.13.0 through 2.14.6 installations only." ;;
 esac
 
 printf 'Using PHP CLI: %s (%s)\n' "$PHP_BIN" "$PHP_VERSION"
