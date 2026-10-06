@@ -43,9 +43,11 @@ final class ReleaseSlotMaterializer
         if (empty($probe['atomic_rename_supported'])) {
             throw new \RuntimeException('Release slots require atomic rename support in protected runtime storage.');
         }
-        $preferred = (string)($probe['selected_strategy'] ?? 'copy');
-        if ((string)(getenv('P2K_RELEASE_SLOT_FORCE_COPY') ?: '') === '1') $preferred = 'copy';
-        if (!in_array($preferred, ['hardlink', 'copy'], true)) $preferred = 'copy';
+        // This materializer snapshots the mutable physical application root.
+        // Hard-linking it would let an in-place write through the live root mutate
+        // the supposedly immutable rollback slot. Always copy across this trust
+        // boundary; hard links remain useful later between sealed slot/runtime trees.
+        $preferred = 'copy';
 
         $identity = $this->detectBuildIdentity();
         if ($sourceHead === '') $sourceHead = (string)($identity['source_head_short'] ?? '');
