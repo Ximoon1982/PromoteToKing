@@ -218,9 +218,10 @@ try {
             break;
         case 'diagnostics':
             if ($method === 'GET') {
+                $previewActive = \P2K\TeamPoints\PreviewIsolation::active();
                 $test = root_dir().'/data/.write-test';
                 $writable = false;
-                if (!\P2K\TeamPoints\PreviewIsolation::active()) {
+                if (!$previewActive) {
                     $writable = @file_put_contents($test, 'ok') !== false;
                     if ($writable) @unlink($test);
                 }
@@ -239,19 +240,34 @@ try {
                     $tpConfig=\p2k_tp_config();$runtimeDir=rtrim((string)($tpConfig['storage']['runtime_dir']??root_dir().'/data/runtime-v280'),'/\\');
                     $repo=new \P2K\TeamPoints\Repository(\P2K\TeamPoints\Database::core(),\P2K\TeamPoints\Database::analytics());
                     $db=['available'=>true,'core_schema'=>(int)$repo->schemaVersion(),'analytics_schema'=>(int)$repo->analyticsSchemaVersion(),'installed'=>$repo->schemaInstalled()];
-                    foreach(['team-points-club','tournaments','team-points-player','match-tracking'] as $key){$path=$runtimeDir.'/cron-shell/last-'.$key.'.json';$cron[$key]=is_file($path)?read_json_file($path,[]):['status'=>'not_run'];}
+                    foreach(['team-points-club','tournaments','team-points-player','match-tracking'] as $key){
+                        if($previewActive){
+                            $cron[$key]=[
+                                'status'=>'preview_isolated',
+                                'message'=>'Candidate preview does not execute or report public CRON dispatcher state.',
+                            ];
+                            continue;
+                        }
+                        $path=$runtimeDir.'/cron-shell/last-'.$key.'.json';
+                        $cron[$key]=is_file($path)?read_json_file($path,[]):['status'=>'not_run'];
+                    }
                 }catch(Throwable $e){$db=['available'=>false,'error'=>$e->getMessage()];}
                 $warnings=[];
-                $versions=array_filter(['package'=>$packageVersion,'manifest'=>(string)($manifest['version']??''),'site_config'=>(string)($siteConfigVersion??'')],static fn($v)=>$v!=='');
-                if(count(array_unique(array_values($versions)))>1)$warnings[]='Release version markers disagree: '.json_encode($versions,JSON_UNESCAPED_SLASHES);
                 json_response(200, [
                     'ok' => true,
                     'backend' => 'PHP '.PHP_VERSION,
                     'php'=>['version'=>PHP_VERSION,'sapi'=>PHP_SAPI],
                     'writable' => $writable,
                     'release'=>[
-                        'package_version'=>$packageVersion?:null,'manifest_version'=>$manifest['version']??null,'manifest_schema'=>$manifest['schemaVersion']??null,
+                        'package_version'=>$packageVersion?:null,
+                        'identity_source'=>'VERSION + stamped build cache key',
+                        'manifest_version'=>$manifest['version']??null,'manifest_schema'=>$manifest['schemaVersion']??null,
                         'manifest_built_at'=>$manifest['builtAt']??null,'site_config_version'=>$siteConfigVersion,'site_config_built_at'=>$siteBuiltAt,'site_config_schema'=>$siteSchema,
+                        'component_versions_are_release_identity'=>false,
+                    ],
+                    'preview'=>[
+                        'active'=>$previewActive,
+                        'cron_context'=>$previewActive?'isolated_candidate_sandbox':'public_runtime',
                     ],
                     'database'=>$db,
                     'runtime_dir'=>$runtimeDir,
