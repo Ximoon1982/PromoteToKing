@@ -50,6 +50,11 @@ final class ReleaseDeploymentManager
             throw new \RuntimeException('Candidate is already the public release.');
         }
 
+        $preview = (new ReleasePreviewTree($this->root, $this->runtimeOverride))->describeExisting($candidateId);
+        if (!is_array($preview) || empty($preview['valid'])) {
+            throw new \RuntimeException('Promotion requires a prepared and verified candidate preview tree.');
+        }
+
         // Build and verify both routable trees before the pointer changes.
         $candidateRuntime = $this->runtimeTrees->prepare((string)$candidate['release_id']);
         $currentRuntime = $this->runtimeTrees->prepare((string)$current['release_id']);
