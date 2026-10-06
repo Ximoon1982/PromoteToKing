@@ -38,6 +38,7 @@ function p2k_public_relative_path(string $pathPart): string
 
 function p2k_public_php_allowed(string $relative): bool
 {
+    if (str_starts_with(strtolower($relative), 'server/release-control/')) return false;
     if (!str_contains($relative, '/')) {
         return in_array($relative, ['MaxRatingBackfill.php', 'OAuthTest.php'], true);
     }
