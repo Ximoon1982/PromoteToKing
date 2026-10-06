@@ -72,7 +72,13 @@ def test_v290_club_intelligence_traffic_and_sorting():
 def test_v290_runtime_diagnostics_restores_versions_models_and_cron():
     h=text('InsightsHealth.html'); js=text('assets/js/pages/runtime-diagnostics.js'); api=text('api/router.php')
     assert 'Runtime Diagnostics' in h and 'Copy sanitized snapshot' in h
-    assert 'modelVersions' in js and 'assetVersions' in js and 'contexts' in js
+    assert 'modelVersions' in js and 'contexts' in js
+    version = tuple(int(v) for v in text('VERSION').strip().split('.'))
+    if version >= (2, 14, 6):
+        assert 'Site-config component' in js and 'Manifest component' in js
+        assert 'preview isolated' in js
+    else:
+        assert 'assetVersions' in js
     for s in ['package_version','manifest_version','site_config_version','core_schema','analytics_schema']:
         assert s in api
     for key in ['team-points-club','tournaments','team-points-player','match-tracking']:
