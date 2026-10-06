@@ -21,3 +21,18 @@ def test_recovery_plane_csrf_is_identity_bound_and_session_independent():
     block = AUTH.split("public function controlCsrfToken", 1)[1].split("public function allowlistSource", 1)[0]
     assert "P2KTPSESSID" not in block
     assert "P2KOAUTH" not in block
+
+
+ADMIN_SHELL = (ROOT / "assets/js/admin/admin-shell.js").read_text(encoding="utf-8")
+
+
+def test_release_control_is_exposed_as_maintenance_card_without_embedding():
+    assert "function adminReleaseControlCard()" in ADMIN_SHELL
+    assert 'title:"Release Control"' not in ADMIN_SHELL  # card is standalone, not an iframe detail definition
+    assert "adminReleaseControlCard()," in ADMIN_SHELL
+    assert 'href="/ReleaseControl.php"' in ADMIN_SHELL
+    assert "/ReleaseControl.php" in ADMIN_SHELL
+    card = ADMIN_SHELL.split("function adminReleaseControlCard()", 1)[1].split("function adminMemberLookupCard()", 1)[0]
+    assert "iframe" not in card.lower()
+    assert "Recovery plane" in card
+    assert "Super Admin" in card
