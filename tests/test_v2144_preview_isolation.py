@@ -146,3 +146,20 @@ def test_release_control_describes_isolation_without_claiming_promotion():
     assert "Promotion / rollback" in PAGE and "Disabled in v2.14.4" in PAGE
     assert "v2.14.4 scope: candidate side-effect isolation" in README
     assert "public application on the qualified v2.14.2 direct-root release" in README
+
+
+def test_preview_api_directory_urls_resolve_to_php_entrypoints():
+    assert "function p2k_preview_relative_path" in ROUTER
+    assert "preg_match('~^api/[^/]+/$~D', $relative) ? 'index.php' : 'index.html'" in ROUTER
+    assert "$relative = p2k_preview_relative_path($pathPart);" in ROUTER
+
+
+def test_validated_preview_super_admin_can_read_admin_endpoints_without_public_session():
+    assert "P2K_PREVIEW_ADMIN_AUTHORIZED" in ROUTER
+    assert "P2K_PREVIEW_ADMIN_USERNAME" in ROUTER
+    assert "public static function adminReadAuthorized(): bool" in ISOLATION
+    assert "hash_equals(self::username(), $authorized)" in ISOLATION
+    require_admin = AUTH.split("public static function requireAdmin(): void", 1)[1].split("public static function requireCron", 1)[0]
+    assert "PreviewIsolation::adminReadAuthorized()" in require_admin
+    assert "['GET', 'HEAD', 'OPTIONS']" in require_admin
+    assert "return;" in require_admin
