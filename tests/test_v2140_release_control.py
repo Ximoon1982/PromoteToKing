@@ -31,7 +31,7 @@ def test_v2140_recovery_plane_is_read_only():
         assert token not in STATE, token
     version = tuple(int(value) for value in (ROOT / "VERSION").read_text().strip().split("."))
     if version >= (2, 14, 5):
-        assert "'promotion'=>$candidateValid && $publicValid" in STATE
+        assert "'promotion'=>$candidateValid && $candidatePreviewValid && $publicValid" in STATE
         assert "'rollback'=>$mode === 'slots'" in STATE
     else:
         assert "'promotion' => false" in STATE
