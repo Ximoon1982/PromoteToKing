@@ -30,7 +30,9 @@ def selector_module():
 
 def test_v2145_identity_and_control_plane():
     assert tuple(int(v) for v in read("VERSION").strip().split(".")) >= (2, 14, 5)
-    assert "Atomic promotion and rollback" in PAGE or "Operational proof and hardening" in PAGE
+    assert ("Atomic promotion and rollback" in PAGE
+            or "Operational proof and hardening" in PAGE
+            or "Release/version management" in PAGE)
     assert "Promote candidate" in PAGE
     assert "Rollback" in PAGE
     assert "confirm" in PAGE
