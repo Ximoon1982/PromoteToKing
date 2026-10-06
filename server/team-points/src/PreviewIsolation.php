@@ -23,6 +23,14 @@ final class PreviewIsolation
         return strtolower(trim((string)(getenv('P2K_PREVIEW_USERNAME') ?: ($_SERVER['P2K_PREVIEW_USERNAME'] ?? ''))));
     }
 
+    public static function adminReadAuthorized(): bool
+    {
+        if (!self::active()) return false;
+        $flag = trim((string)(getenv('P2K_PREVIEW_ADMIN_AUTHORIZED') ?: ($_SERVER['P2K_PREVIEW_ADMIN_AUTHORIZED'] ?? '')));
+        $authorized = strtolower(trim((string)(getenv('P2K_PREVIEW_ADMIN_USERNAME') ?: ($_SERVER['P2K_PREVIEW_ADMIN_USERNAME'] ?? ''))));
+        return $flag === '1' && $authorized !== '' && hash_equals(self::username(), $authorized);
+    }
+
     public static function sandboxRoot(): string
     {
         if (!self::active()) throw new RuntimeException('Preview sandbox requested outside candidate preview.');
