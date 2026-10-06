@@ -1,9 +1,11 @@
 # Promote to King release-control recovery plane
 
-## v2.14.5 scope: atomic promotion and rollback
+## v2.14.6 scope: operational proof and hardening
 
-v2.14.5 extends the side-effect-isolated candidate preview from v2.14.4 with a stable
-public routing plane and controlled public release transitions.
+v2.14.6 carries the v2.14.5 atomic promotion/rollback architecture through the full
+operational lifecycle proof and hardens the recovery-plane controls observed during
+live candidate testing. The routing architecture remains unchanged: release slots and
+runtime trees are still selected by one protected atomic state pointer.
 
 The physical Promote to King root remains the recovery baseline. Installing the v2.14.5
 candidate-preview infrastructure does **not** overwrite the public application tree:
@@ -99,8 +101,11 @@ cookies fail closed because their candidate id no longer matches protected state
 - Promote candidate
 - Rollback
 
-Promotion and rollback require the authenticated Release Control Super Admin session,
-the existing CSRF token, and an explicit confirmation checkbox.
+Promotion and rollback require the authenticated Release Control Super Admin identity,
+a dedicated recovery-plane CSRF token, and an explicit confirmation checkbox. The
+control token is independent of dashboard Team Points/OAuth application-session
+regeneration so an already-open Release Control form remains valid across application
+session refreshes.
 
 Release Control shows the physical root baseline, routed public VERSION/release, candidate,
 previous public rollback target, transition sequence, slot integrity and runtime readiness.
@@ -134,12 +139,24 @@ After promotion:
 After rollback, the old public slot is selected again and the rolled-back v2.14.5 slot
 becomes the registered candidate for verification/re-promotion.
 
-## Still deferred to v2.14.6
+## v2.14.6 operational proof
 
-v2.14.5 provides and qualifies the mechanics. v2.14.6 performs the complete production
-lifecycle proof:
+Qualification and production verification cover the complete lifecycle:
 
 `install candidate -> preview -> promote -> verify -> rollback -> verify -> re-promote`
+
+The proof also checks fail-closed behavior when candidate/rollback slot integrity is
+invalid and confirms stale pre-rename temporary state does not change the active public
+pointer. Candidate preview continues to block CRON and state mutation.
+
+The Administration Maintenance tab exposes a direct Release Control card. It links to
+the fixed standalone recovery page rather than embedding it, preserving the recovery
+plane's frame isolation and independence from the normal UI shell.
+
+Runtime diagnostics now distinguish the authoritative release identity (VERSION plus
+the stamped build cache marker) from older site-config/manifest component metadata.
+During candidate preview, CRON rows are explicitly reported as preview-isolated instead
+of implying that public scheduled jobs have not run.
 
 Version cleanup/retention controls, browser ZIP upload/install and the filesystem cleanup
 tool remain later roadmap items.
