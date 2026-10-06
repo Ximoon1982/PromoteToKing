@@ -23,7 +23,7 @@ grep -Fq 'p2k-2.14.2-9257577544d8-' "$ROOT/ui-v2.html" || fail "Public v2.14.2 b
 
 [[ -f "$SELF_DIR/CANDIDATE_RELEASE.json" ]] || fail "Candidate metadata is missing"
 [[ -f "$SELF_DIR/CANDIDATE_PAYLOAD.sha256" ]] || fail "Candidate manifest is missing"
-grep -Fq '"version": "2.14.4"' "$SELF_DIR/CANDIDATE_RELEASE.json" || fail "Candidate package is not v2.14.5"
+grep -Fq '"version": "2.14.5"' "$SELF_DIR/CANDIDATE_RELEASE.json" || fail "Candidate package is not v2.14.5"
 grep -Fq '"version": "2.14.2"' "$SELF_DIR/CANDIDATE_RELEASE.json" || fail "Candidate package does not accept public v2.14.2"
 
 (
@@ -142,7 +142,7 @@ after_ui="$(sha256sum "$ROOT/ui-v2.html" | awk '{print $1}')"
 "$PHP_BIN" "$ROOT/server/release-control/tools/install-candidate.php"   --root="$ROOT"   --package="$SELF_DIR"   --actor="$ACTOR"   --replace-candidate >/tmp/p2k-v2145-candidate-$$.json   || fail "Candidate installation/registration failed"
 
 grep -Fq '"ok": true' /tmp/p2k-v2145-candidate-$$.json || fail "Candidate installer did not report success"
-grep -Fq '"release_id": "2.14.4-' /tmp/p2k-v2145-candidate-$$.json || fail "Candidate release identity was not registered"
+grep -Fq '"release_id": "2.14.5-' /tmp/p2k-v2145-candidate-$.json || fail "Candidate release identity was not registered"
 cat /tmp/p2k-v2145-candidate-$$.json
 rm -f /tmp/p2k-v2145-candidate-$$.json
 
