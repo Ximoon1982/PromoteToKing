@@ -25,13 +25,13 @@ README = read("server/release-control/README.md")
 
 def test_v2144_identity_and_capabilities():
     version = read("VERSION").strip()
-    assert version in {"2.14.4", "2.14.5"}
+    assert version in {"2.14.4", "2.14.5", "2.14.6"}
     assert "candidate preview" in PAGE.lower() or "promotion and rollback" in PAGE.lower()
     assert "'candidate_side_effect_isolation' => true" in STATE
     assert "'candidate_database_mode' => 'read-only'" in STATE
     assert "'candidate_runtime_sandbox' => true" in STATE
     assert "'candidate_session_sandbox' => true" in STATE
-    if version == "2.14.5":
+    if version in {"2.14.5", "2.14.6"}:
         assert "'promotion'=>$candidateValid && $candidatePreviewValid && $publicValid" in STATE
         assert "'rollback'=>$mode === 'slots'" in STATE
         assert "'public_slot_routing'=>true" in STATE
