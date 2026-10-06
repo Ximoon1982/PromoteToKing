@@ -161,3 +161,17 @@ of implying that public scheduled jobs have not run.
 
 Version cleanup/retention controls, browser ZIP upload/install and the filesystem cleanup
 tool remain later roadmap items.
+
+
+## v2.14.7 release/version management
+
+Release Control inventories only managed immutable artifacts below the configured release-control runtime:
+`releases/`, `previews/` and `runtime-trees/`. Public, rollback-target, candidate and physical
+recovery-baseline release IDs are protected from deletion. Obsolete/unreferenced release IDs show a
+non-destructive cleanup preview with file/directory entry counts, apparent bytes and a hard-link-aware
+estimate of physical bytes that can actually be reclaimed.
+
+Deletion re-validates protection while holding the same exclusive state lock used by promotion and
+rollback. The operation removes derived preview/runtime trees first and the immutable release slot last.
+It never targets shared `data/`, `logs/`, `storage/`, the physical application root, uploaded installer
+archives or sibling projects. General filesystem cleanup remains outside v2.14.7 scope.
