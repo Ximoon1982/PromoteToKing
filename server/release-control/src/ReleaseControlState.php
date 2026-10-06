@@ -61,6 +61,10 @@ final class ReleaseControlState
 
         $invalidSlots = array_values(array_filter($slots, static fn(array $slot): bool => ($slot['integrity_status'] ?? '') !== 'valid'));
         $candidateValid = is_array($candidateSlot) && ($candidateSlot['integrity_status'] ?? '') === 'valid';
+        $candidatePreview = $candidateId !== ''
+            ? (new ReleasePreviewTree($this->root, $this->runtimeOverride))->describeExisting($candidateId)
+            : null;
+        $candidatePreviewValid = is_array($candidatePreview) && !empty($candidatePreview['valid']);
         $publicValid = $mode !== 'slots' || (is_array($publicSlot) && ($publicSlot['integrity_status'] ?? '') === 'valid' && is_array($publicRuntime));
         $previousValid = $previousId !== '' && is_array($previousSlot) && ($previousSlot['integrity_status'] ?? '') === 'valid' && is_array($previousRuntime);
 
@@ -82,6 +86,7 @@ final class ReleaseControlState
             'candidate_build_id'=>$state['candidate_build_id'] ?? null,
             'candidate_qualification_workflow'=>$state['candidate_qualification_workflow'] ?? null,
             'candidate_slot'=>$candidateSlot,
+            'candidate_preview'=>$candidatePreview,
             'transition_sequence'=>(int)($state['transition_sequence'] ?? 0),
             'last_transition'=>is_array($state['last_transition'] ?? null) ? $state['last_transition'] : null,
             'updated_at'=>$state['updated_at'] ?? null,
@@ -120,7 +125,7 @@ final class ReleaseControlState
                 'candidate_database_mode' => 'read-only',
                 'candidate_runtime_sandbox' => true,
                 'candidate_session_sandbox' => true,
-                'promotion'=>$candidateValid && $publicValid,
+                'promotion'=>$candidateValid && $candidatePreviewValid && $publicValid,
                 'rollback'=>$mode === 'slots' && $candidateId === '' && $publicValid && $previousValid,
                 'state_mutation'=>true,
                 'web_state_mutation'=>true,
