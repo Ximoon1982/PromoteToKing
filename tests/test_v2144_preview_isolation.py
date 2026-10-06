@@ -146,7 +146,12 @@ def test_legacy_get_side_effects_are_suppressed_or_sandboxed():
     assert "$result['previewReadOnly'] = true;" in migration
     assert "PreviewIsolation::active() ? 0 : expire_started_tracking($registry)" in COMMON
     diagnostics = API_ROUTER.split("case 'diagnostics':", 1)[1]
-    assert "if (!\\P2K\\TeamPoints\\PreviewIsolation::active())" in diagnostics
+    version = read("VERSION").strip()
+    if version == "2.14.4":
+        assert "if (!\\P2K\\TeamPoints\\PreviewIsolation::active())" in diagnostics
+    else:
+        assert "$previewActive = \\P2K\\TeamPoints\\PreviewIsolation::active();" in diagnostics
+        assert "if (!$previewActive)" in diagnostics
 
 
 def test_release_control_describes_isolation_without_weakening_it():
