@@ -35,7 +35,7 @@ MUTABLE_SEGMENTS = {
     "backup", "backups", "cache", "caches", "data", "log", "logs", "processed",
     "quarantine", "runtime", "sessions", "storage", "tmp", "upload", "uploads",
 }
-RECOVERY_EXACT = {".htaccess", "ReleaseControl.php", "PreviewRouter.php"}
+RECOVERY_EXACT = {".htaccess", "ReleaseControl.php", "PreviewRouter.php", "PublicRouter.php"}
 RECOVERY_PREFIXES = ("server/release-control/",)
 ROOT_RUNTIME_PREFIXES = ("cron-", "weekly-backup-")
 
