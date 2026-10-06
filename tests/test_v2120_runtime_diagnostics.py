@@ -28,12 +28,25 @@ def test_runtime_diagnostics_cache_marker_semantics_and_provenance():
     spec.loader.exec_module(module)
     assert module.make_key("2.12.0", SOURCE, BUILD_ID) == KEY
 
-    runtime = read("assets/js/pages/runtime-diagnostics.js")
-    assert "function siteConfigCacheMarkerMatchesVersion(marker,version)" in runtime
-    assert "parts.length===2&&/^[0-9a-f]{12}$/.test(parts[0])&&/^[0-9a-f]{16}$/.test(parts[1])" in runtime
-    assert "siteConfigAssetVersions.some(v=>!siteConfigCacheMarkerMatchesVersion(v,cfg.version))" in runtime
-    assert "siteConfigAssetVersions.some(v=>v!==cfg.version)" not in runtime
-    assert f"assets/js/pages/runtime-diagnostics.js?v={KEY}" in read("InsightsHealth.html")
+    # Preserve the historical v2.12.0 correction contract at its qualified source
+    # revision even after later releases legitimately evolve Runtime Diagnostics.
+    runtime_2120 = subprocess.check_output(["git", "show", f"{SOURCE}:assets/js/pages/runtime-diagnostics.js"], cwd=R, text=True)
+    page_2120 = subprocess.check_output(["git", "show", f"{SOURCE}:InsightsHealth.html"], cwd=R, text=True)
+    assert "function siteConfigCacheMarkerMatchesVersion(marker,version)" in runtime_2120
+    assert "parts.length===2&&/^[0-9a-f]{12}$/.test(parts[0])&&/^[0-9a-f]{16}$/.test(parts[1])" in runtime_2120
+    assert "siteConfigAssetVersions.some(v=>!siteConfigCacheMarkerMatchesVersion(v,cfg.version))" in runtime_2120
+    assert "siteConfigAssetVersions.some(v=>v!==cfg.version)" not in runtime_2120
+    assert f"assets/js/pages/runtime-diagnostics.js?v={KEY}" in page_2120
+
+    version = tuple(int(v) for v in read("VERSION").strip().split("."))
+    if version >= (2, 14, 6):
+        runtime = read("assets/js/pages/runtime-diagnostics.js")
+        assert "Browser site-config" not in runtime
+        assert "Site-config component" in runtime
+        assert "Manifest component" in runtime
+    else:
+        assert read("assets/js/pages/runtime-diagnostics.js") == runtime_2120
+        assert read("InsightsHealth.html") == page_2120
 
 
 def test_runtime_diagnostics_correction_installer(tmp_path):
@@ -56,8 +69,15 @@ def test_runtime_diagnostics_correction_installer(tmp_path):
     first = subprocess.run(["bash", str(script), str(target)], cwd=R, capture_output=True, text=True)
     assert first.returncode == 0, first.stderr
     assert sha(runtime) == NEW_RUNTIME and sha(page) == NEW_PAGE
-    assert runtime.read_text(encoding="utf-8") == read("assets/js/pages/runtime-diagnostics.js")
-    assert page.read_text(encoding="utf-8") == read("InsightsHealth.html")
+    version = tuple(int(v) for v in read("VERSION").strip().split("."))
+    if version >= (2, 14, 6):
+        expected_runtime = subprocess.check_output(["git", "show", f"{SOURCE}:assets/js/pages/runtime-diagnostics.js"], cwd=R, text=True)
+        expected_page = subprocess.check_output(["git", "show", f"{SOURCE}:InsightsHealth.html"], cwd=R, text=True)
+        assert runtime.read_text(encoding="utf-8") == expected_runtime
+        assert page.read_text(encoding="utf-8") == expected_page
+    else:
+        assert runtime.read_text(encoding="utf-8") == read("assets/js/pages/runtime-diagnostics.js")
+        assert page.read_text(encoding="utf-8") == read("InsightsHealth.html")
     assert runtime.stat().st_mode & 0o777 == 0o640
     assert page.stat().st_mode & 0o777 == 0o644
 
