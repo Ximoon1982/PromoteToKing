@@ -118,7 +118,9 @@ if (empty($status['enabled'])) {
 $decoded = rawurldecode($pathPart);
 $relative = ltrim($decoded, '/');
 if ($relative === '') $relative = 'index.html';
-if (str_ends_with($relative, '/')) $relative .= 'index.html';
+if (str_ends_with($relative, '/')) {
+    $relative .= preg_match('~^api/[^/]+/$~D', $relative) ? 'index.php' : 'index.html';
+}
 $relative = ReleaseSlotPolicy::normalizeRelativePath($relative);
 if ($relative === '' || !ReleaseSlotPolicy::isReleaseOwnedPath($relative)) {
     http_response_code(404);
@@ -222,6 +224,8 @@ if ($extension === 'php') {
     putenv('P2K_PREVIEW_ACTIVE=1');
     putenv('P2K_PREVIEW_RELEASE=' . $releaseId);
     putenv('P2K_PREVIEW_USERNAME=' . strtolower($username));
+    putenv('P2K_PREVIEW_ADMIN_USERNAME=' . strtolower($username));
+    putenv('P2K_PREVIEW_ADMIN_AUTHORIZED=1');
     putenv('P2K_PREVIEW_PUBLIC_ROOT=' . $root);
     putenv('P2K_PREVIEW_SANDBOX=' . $sandbox);
     $sharedConfig = $root . '/server/team-points/config/config.local.php';
@@ -229,6 +233,8 @@ if ($extension === 'php') {
     $_SERVER['P2K_PREVIEW_ACTIVE'] = '1';
     $_SERVER['P2K_PREVIEW_RELEASE'] = $releaseId;
     $_SERVER['P2K_PREVIEW_USERNAME'] = strtolower($username);
+    $_SERVER['P2K_PREVIEW_ADMIN_USERNAME'] = strtolower($username);
+    $_SERVER['P2K_PREVIEW_ADMIN_AUTHORIZED'] = '1';
     $_SERVER['P2K_PREVIEW_PUBLIC_ROOT'] = $root;
     $_SERVER['P2K_PREVIEW_SANDBOX'] = $sandbox;
     $_SERVER['REQUEST_URI'] = $originalUri;
