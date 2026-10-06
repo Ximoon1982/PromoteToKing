@@ -123,10 +123,13 @@ for path in "${INFRA_FILES[@]}"; do
   fi
 done
 
+# Install all stable routing dependencies first. .htaccess is the activation
+# pointer and must be replaced last so no request can target a missing PublicRouter.
 for path in "${INFRA_FILES[@]}"; do
+  [[ "$path" == ".htaccess" ]] && continue
   dst="$ROOT/$path"
   mkdir -p "$(dirname "$dst")"
-  tmp="$dst.p2k-v2145-preview-$$.tmp"
+  tmp="$dst.p2k-v2145-preview-$.tmp"
   cp -p "$PAYLOAD/$path" "$tmp"
   mv -f "$tmp" "$dst"
 done
@@ -134,6 +137,12 @@ done
 for path in "${PHP_INFRA[@]}"; do
   "$PHP_BIN" -l "$ROOT/$path" >/dev/null || fail "Activated recovery-plane PHP lint failed: $path"
 done
+
+# Atomic routing activation comes last.
+dst="$ROOT/.htaccess"
+tmp="$dst.p2k-v2145-preview-$.tmp"
+cp -p "$PAYLOAD/.htaccess" "$tmp"
+mv -f "$tmp" "$dst"
 
 after_version="$(sha256sum "$ROOT/VERSION" | awk '{print $1}')"
 after_ui="$(sha256sum "$ROOT/ui-v2.html" | awk '{print $1}')"
