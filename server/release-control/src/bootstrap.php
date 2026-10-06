@@ -10,6 +10,8 @@ require_once __DIR__ . '/ReleaseSlotStore.php';
 require_once __DIR__ . '/ReleaseSlotMaterializer.php';
 require_once __DIR__ . '/ReleaseCandidatePackage.php';
 require_once __DIR__ . '/ReleaseStateStore.php';
+require_once __DIR__ . '/ReleaseRuntimeTree.php';
+require_once __DIR__ . '/ReleaseDeploymentManager.php';
 require_once __DIR__ . '/ReleaseCandidateInstaller.php';
 require_once __DIR__ . '/ReleasePreviewTree.php';
 require_once __DIR__ . '/ReleasePreviewSession.php';
