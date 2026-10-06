@@ -154,7 +154,7 @@ $deploymentResult = strtolower(trim((string)($_GET['deployment_result'] ?? '')))
 <main class="wrap">
   <header class="head">
     <div><div class="eyebrow">Recovery plane</div><h1>Release Control</h1><p>Standalone release diagnostics · fixed URL <code>/ReleaseControl.php</code></p></div>
-    <div class="badge">v2.14.5 · Atomic promotion and rollback · candidate preview preserved</div>
+    <div class="badge">v2.14.6 · Operational proof and hardening · atomic promotion and rollback</div>
   </header>
 
 <?php if ($username === ''): ?>
