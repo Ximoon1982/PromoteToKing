@@ -55,9 +55,8 @@ $action = strtolower(trim((string)($_POST['action'] ?? '')));
 
 if ($method === 'POST' && !$authorized && $username === '' && $action === 'enable-preview') {
     $providedCsrf = trim((string)($_POST['csrf'] ?? ''));
-    $expectedCsrf = $auth->currentCsrfToken();
     $usernameHint = strtolower(trim((string)($_POST['preview_user'] ?? '')));
-    if ($providedCsrf !== '' && $expectedCsrf !== '' && hash_equals($expectedCsrf, $providedCsrf)
+    if ($providedCsrf !== '' && $auth->validateControlCsrfToken($usernameHint, $providedCsrf)
         && preg_match('/^[a-z0-9_-]{1,80}$/', $usernameHint) && $auth->isSuperAdmin($usernameHint)) {
         try {
             $previewSession->beginPendingEnable($usernameHint);
@@ -87,8 +86,7 @@ if ($method === 'GET' && $authorized && (string)($_GET['resume_preview'] ?? '') 
 
 if ($method === 'POST' && $authorized) {
     $providedCsrf = trim((string)($_POST['csrf'] ?? ''));
-    $expectedCsrf = $auth->currentCsrfToken();
-    if ($providedCsrf === '' || $expectedCsrf === '' || !hash_equals($expectedCsrf, $providedCsrf)) {
+    if ($providedCsrf === '' || !$auth->validateControlCsrfToken($username, $providedCsrf)) {
         http_response_code(403);
         $actionError = 'Release Control request validation failed. Reload this page and try again.';
     } else {
@@ -137,7 +135,7 @@ if ($authorized && is_array($snapshot) && !empty($snapshot['candidate_release'])
     $previewTree = (new ReleasePreviewTree(__DIR__))->describeExisting((string)$snapshot['candidate_release']);
 }
 $previewTreeReady = is_array($previewTree);
-$csrfToken = $authorized ? $auth->currentCsrfToken() : '';
+$csrfToken = $authorized ? $auth->controlCsrfToken($username) : '';
 $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
 $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
 $deploymentResult = strtolower(trim((string)($_GET['deployment_result'] ?? '')));
