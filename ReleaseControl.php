@@ -174,7 +174,7 @@ if ($authorized && $cleanupPreviewId !== '') {
 <main class="wrap">
   <header class="head">
     <div><div class="eyebrow">Recovery plane</div><h1>Release Control</h1><p>Standalone release diagnostics · fixed URL <code>/ReleaseControl.php</code></p></div>
-    <div class="badge">v2.14.6 · Operational proof and hardening · atomic promotion and rollback</div>
+    <div class="badge">v2.14.7 · Release/version management · atomic deployment preserved</div>
   </header>
 
 <?php if ($username === ''): ?>
