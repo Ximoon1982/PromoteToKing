@@ -37,7 +37,7 @@ def test_v2143_identity_and_control_plane_contract():
     assert "'personal_preview' => true" in STATE
     version = tuple(int(value) for value in (ROOT / "VERSION").read_text().strip().split("."))
     if version >= (2, 14, 5):
-        assert "'promotion'=>$candidateValid && $publicValid" in STATE
+        assert "'promotion'=>$candidateValid && $candidatePreviewValid && $publicValid" in STATE
         assert "'rollback'=>$mode === 'slots'" in STATE
         assert "'public_slot_routing'=>true" in STATE
     else:
