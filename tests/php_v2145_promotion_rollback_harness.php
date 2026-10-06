@@ -129,5 +129,15 @@ foreach ([$baseId,$candidateId] as $id) {
     if (($store->inspectSlot($id, true)['integrity_status'] ?? '') !== 'valid') fail2145('slot integrity lost after transitions: ' . $id);
 }
 
+// Candidate installation after the first promotion must use the routed public slot,
+// not the untouched physical 2.14.2 root, as its base identity.
+$futurePkg = $tmp . '/future-candidate';
+$futureHead = str_repeat('c', 40);
+$futureKey = 'p2k-2.14.6-' . substr($futureHead, 0, 12) . '-0011223344556677';
+makePackage2145($futurePkg, '2.14.6', $futureHead, $futureKey, '2.14.5', $targetHead, "future-2146\n");
+$future = (new ReleaseCandidateInstaller($root, $runtime))->install($futurePkg, 'ximoon');
+if (($future['candidate']['base_release_id'] ?? '') !== $candidateId) fail2145('post-promotion candidate used physical root instead of routed public slot');
+if (($future['state']['candidate_release'] ?? '') !== '2.14.6-' . substr($futureHead, 0, 12)) fail2145('future candidate registration failed in slot mode');
+
 rrmdir2145($tmp);
 echo "v2.14.5 promotion/rollback lifecycle harness passed\n";
