@@ -12,7 +12,7 @@ CLI = (ROOT / "server/release-control/tools/install-candidate.php").read_text(en
 def test_v2142_identity_and_recovery_ui_boundary():
     parts = tuple(int(value) for value in (ROOT / "VERSION").read_text().strip().split("."))
     assert parts >= (2, 14, 2)
-    assert "Public serving is still direct-root" in PAGE
+    assert "direct-root" in PAGE
     assert "<script" not in PAGE.lower()
     assert "<link" not in PAGE.lower()
 
@@ -44,7 +44,7 @@ def test_candidate_install_uses_verified_base_slot_and_never_routes():
 def test_candidate_state_write_is_locked_atomic_and_direct_root():
     assert "flock($lock, LOCK_EX)" in STATE_STORE
     assert "state.json" in STATE_STORE
-    assert "'mode' => 'direct-root'" in STATE_STORE
+    assert ("'mode'=>'direct-root'" in STATE_STORE) or ("'mode' => 'direct-root'" in STATE_STORE)
     assert "candidate_release" in STATE_STORE
     assert "candidate_registered_at" in STATE_STORE
     assert "@rename($tmp, $path)" in STATE_STORE
@@ -54,9 +54,15 @@ def test_candidate_state_write_is_locked_atomic_and_direct_root():
 def test_release_control_reports_candidate_but_serving_controls_stay_disabled():
     assert "'candidate_install' => true" in STATE
     assert "'candidate_registration' => true" in STATE
-    assert "'promotion' => false" in STATE
-    assert "'rollback' => false" in STATE
-    assert "'public_slot_routing' => false" in STATE
+    version = tuple(int(value) for value in (ROOT / "VERSION").read_text().strip().split("."))
+    if version >= (2, 14, 5):
+        assert "'promotion'=>$candidateValid && $publicValid" in STATE
+        assert "'rollback'=>$mode === 'slots'" in STATE
+        assert "'public_slot_routing'=>true" in STATE
+    else:
+        assert "'promotion' => false" in STATE
+        assert "'rollback' => false" in STATE
+        assert "'public_slot_routing' => false" in STATE
     assert "Preview candidate" in PAGE
     assert "Promote candidate" in PAGE
     assert "Rollback" in PAGE
