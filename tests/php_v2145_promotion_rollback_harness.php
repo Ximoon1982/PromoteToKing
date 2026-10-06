@@ -4,12 +4,13 @@ declare(strict_types=1);
 $src = dirname(__DIR__) . '/server/release-control/src';
 foreach ([
     'ReleaseSlotPolicy.php','ReleaseSlotFilesystemProbe.php','ReleaseSlotStore.php','ReleaseSlotMaterializer.php',
-    'ReleaseCandidatePackage.php','ReleaseStateStore.php','ReleaseRuntimeTree.php','ReleaseDeploymentManager.php',
+    'ReleaseCandidatePackage.php','ReleaseStateStore.php','ReleasePreviewTree.php','ReleaseRuntimeTree.php','ReleaseDeploymentManager.php',
     'ReleaseCandidateInstaller.php'
 ] as $file) require_once $src . '/' . $file;
 
 use P2K\ReleaseControl\ReleaseCandidateInstaller;
 use P2K\ReleaseControl\ReleaseDeploymentManager;
+use P2K\ReleaseControl\ReleasePreviewTree;
 use P2K\ReleaseControl\ReleaseRuntimeTree;
 use P2K\ReleaseControl\ReleaseSlotMaterializer;
 use P2K\ReleaseControl\ReleaseSlotStore;
@@ -80,6 +81,8 @@ $candidate = $install['candidate'] ?? [];
 if (($candidate['integrity_status'] ?? '') !== 'valid') fail2145('candidate invalid');
 $candidateId = (string)($candidate['release_id'] ?? '');
 $baseId = (string)($base['release_id'] ?? '');
+$preview = (new ReleasePreviewTree($root, $runtime))->prepare($candidateId);
+if (empty($preview['valid'])) fail2145('candidate preview did not prepare');
 
 $rootBefore = [
     'VERSION'=>hash_file('sha256', $root . '/VERSION'),
