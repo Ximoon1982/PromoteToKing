@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+trap 'rc=$?; echo "v2.14.5 package build failed at line $LINENO (exit $rc)" >&2; exit $rc' ERR
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 OUT="${1:-$ROOT/dist/v2.14.5}"
