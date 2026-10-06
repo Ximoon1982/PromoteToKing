@@ -47,4 +47,18 @@ foreach ($cases as $case) {
     }
 }
 
-echo "v2.14.3 preview original-request harness passed\n";
+$pathCases = [
+    ['/api/diagnostics/', 'api/diagnostics/index.php'],
+    ['/api/challenge-club-list/', 'api/challenge-club-list/index.php'],
+    ['/api/traffic/', 'api/traffic/index.php'],
+    ['/assets/', 'assets/index.html'],
+    ['/', 'index.html'],
+];
+foreach ($pathCases as [$input, $expected]) {
+    $actual = p2k_preview_relative_path($input);
+    if ($actual !== $expected) {
+        throw new RuntimeException('preview path resolution: expected ' . $expected . ', got ' . $actual);
+    }
+}
+
+echo "v2.14.4 preview request-target harness passed\n";
