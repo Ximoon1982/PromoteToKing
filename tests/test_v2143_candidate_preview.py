@@ -68,8 +68,15 @@ def test_preview_cookie_is_signed_identity_bound_and_http_only():
 
 
 def test_preview_control_uses_authenticated_csrf():
-    assert "currentCsrfToken" in AUTH
-    assert "hash_equals($expectedCsrf, $providedCsrf)" in PAGE
+    version = tuple(int(value) for value in (ROOT / "VERSION").read_text().strip().split("."))
+    if version >= (2, 14, 6):
+        assert "controlCsrfToken" in AUTH
+        assert "validateControlCsrfToken" in AUTH
+        assert "$auth->validateControlCsrfToken" in PAGE
+        assert "$auth->currentCsrfToken()" not in PAGE
+    else:
+        assert "currentCsrfToken" in AUTH
+        assert "hash_equals($expectedCsrf, $providedCsrf)" in PAGE
     assert 'name="csrf"' in PAGE
     assert 'name="preview_user"' in PAGE
     assert 'name="action" value="enable-preview"' in PAGE
