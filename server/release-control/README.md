@@ -4,7 +4,8 @@
 
 v2.14.6 carries the v2.14.5 atomic promotion/rollback architecture through the full
 operational lifecycle proof and hardens the recovery-plane controls observed during
-live candidate testing. The routing architecture remains unchanged: release slots and
+live candidate testing.
+The side-effect-isolated preview boundary was introduced in v2.14.4 and remains a required invariant. The routing architecture remains unchanged: release slots and
 runtime trees are still selected by one protected atomic state pointer.
 
 The physical Promote to King root remains the recovery baseline. Installing the v2.14.5
