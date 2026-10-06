@@ -56,6 +56,8 @@ jobs:
           php tests/php_v2140_release_control_harness.php
           php tests/php_v2141_release_slots_harness.php
           php tests/php_v2142_candidate_install_harness.php
+          php tests/php_v2143_session_runtime_harness.php
+          php tests/php_v2143_preview_oauth_status_harness.php
           php tests/php_v2143_candidate_preview_harness.php
           php tests/php_v2143_preview_request_target_harness.php
           php tests/php_v2145_public_router_harness.php
@@ -85,6 +87,10 @@ jobs:
         run: python tests/browser_gate_trophy_gallery_v2121.py
       - name: Events Showcase and Trophy browser gate
         run: python tests/browser_gate_v2122.py
+      - name: Events Showcase card renderer browser gate
+        run: python tests/browser_gate_events_showcase_card_v2122.py
+      - name: Events Showcase admin editor browser gate
+        run: python tests/browser_gate_events_showcase_admin_v2122.py
       - name: Match Recruitment controller readiness browser gate
         run: python tests/browser_gate_recruit_match_ready_v2122.py
       - name: Match Recruitment native admin detail browser gate
