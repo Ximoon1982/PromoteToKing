@@ -29,8 +29,13 @@ def test_v2140_recovery_plane_is_read_only():
     forbidden = ["file_put_contents(", "rename(", "unlink(", "mkdir(", "rmdir("]
     for token in forbidden:
         assert token not in STATE, token
-    assert "'promotion' => false" in STATE
-    assert "'rollback' => false" in STATE
+    version = tuple(int(value) for value in (ROOT / "VERSION").read_text().strip().split("."))
+    if version >= (2, 14, 5):
+        assert "'promotion'=>$candidateValid && $publicValid" in STATE
+        assert "'rollback'=>$mode === 'slots'" in STATE
+    else:
+        assert "'promotion' => false" in STATE
+        assert "'rollback' => false" in STATE
     assert "Preview candidate" in PAGE
     assert "Promote candidate" in PAGE
     assert "Rollback" in PAGE
