@@ -64,7 +64,7 @@ v2.14.6 lifecycle proof.
 
 ### HTTP and CRON alignment
 
-Existing Promote to King operational CRON dispatchers invoke their endpoints over HTTPS.
+Existing Promote to King HTTP/curl CRON endpoints are invoked by the operational dispatchers over HTTPS.
 Those URLs resolve through the same `PublicRouter.php` as normal public traffic.
 Therefore promotion/rollback changes HTTP and the active HTTP/curl CRON implementation
 together. Candidate preview continues to block candidate CRON/background execution.
