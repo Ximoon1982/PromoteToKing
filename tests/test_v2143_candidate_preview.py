@@ -26,18 +26,24 @@ def selector_module():
 
 
 def test_v2143_identity_and_control_plane_contract():
-    assert (ROOT / "VERSION").read_text().strip() in {"2.14.3", "2.14.4"}
+    assert (ROOT / "VERSION").read_text().strip() in {"2.14.3", "2.14.4", "2.14.5"}
     assert "candidate preview" in PAGE
-    assert "Public serving is still direct-root" in PAGE
+    assert "direct-root" in PAGE
     assert "Preview candidate for me" in PAGE
     assert "Stop preview" in PAGE
     assert 'href="/index.html">Open candidate site</a>' in PAGE
     assert "Promote candidate" in PAGE
     assert "Rollback" in PAGE
     assert "'personal_preview' => true" in STATE
-    assert "'promotion' => false" in STATE
-    assert "'rollback' => false" in STATE
-    assert "'public_slot_routing' => false" in STATE
+    version = tuple(int(value) for value in (ROOT / "VERSION").read_text().strip().split("."))
+    if version >= (2, 14, 5):
+        assert "'promotion'=>$candidateValid && $publicValid" in STATE
+        assert "'rollback'=>$mode === 'slots'" in STATE
+        assert "'public_slot_routing'=>true" in STATE
+    else:
+        assert "'promotion' => false" in STATE
+        assert "'rollback' => false" in STATE
+        assert "'public_slot_routing' => false" in STATE
     assert "'candidate_cron' => false" in STATE
 
 
@@ -179,12 +185,15 @@ def test_preview_tree_uses_candidate_files_and_only_explicit_shared_links():
 
 
 def test_recovery_files_are_outside_policy_v2_but_legacy_policy_still_supported():
-    assert "POLICY_VERSION = 2" in POLICY
+    version = tuple(int(value) for value in (ROOT / "VERSION").read_text().strip().split("."))
+    assert ("POLICY_VERSION = 3" in POLICY) if version >= (2, 14, 5) else ("POLICY_VERSION = 2" in POLICY)
     assert "isReleaseOwnedPathForVersion" in POLICY
     mod = selector_module()
     assert not mod.included(".htaccess")
     assert not mod.included("ReleaseControl.php")
     assert not mod.included("PreviewRouter.php")
+    if version >= (2, 14, 5):
+        assert not mod.included("PublicRouter.php")
     assert not mod.included("server/release-control/src/ReleasePreviewSession.php")
     assert mod.included("VERSION")
     assert mod.included("ui-v2.html")
