@@ -36,3 +36,23 @@ def test_release_control_is_exposed_as_maintenance_card_without_embedding():
     assert "iframe" not in card.lower()
     assert "Recovery plane" in card
     assert "Super Admin" in card
+
+
+API_ROUTER = (ROOT / "api/router.php").read_text(encoding="utf-8")
+RUNTIME_DIAGNOSTICS = (ROOT / "assets/js/pages/runtime-diagnostics.js").read_text(encoding="utf-8")
+
+
+def test_runtime_diagnostics_separate_release_identity_from_component_metadata():
+    assert "Release version markers disagree" not in API_ROUTER
+    assert "Browser site-config" not in RUNTIME_DIAGNOSTICS
+    assert "Loaded site-config cache markers include" not in RUNTIME_DIAGNOSTICS
+    assert "'identity_source'=>'VERSION + stamped build cache key'" in API_ROUTER
+    assert "'component_versions_are_release_identity'=>false" in API_ROUTER
+    assert "Site-config component" in RUNTIME_DIAGNOSTICS
+    assert "Manifest component" in RUNTIME_DIAGNOSTICS
+
+
+def test_preview_cron_diagnostics_are_explicitly_isolated():
+    assert "'status'=>'preview_isolated'" in API_ROUTER
+    assert "'cron_context'=>$previewActive?'isolated_candidate_sandbox':'public_runtime'" in API_ROUTER
+    assert "preview isolated" in RUNTIME_DIAGNOSTICS
