@@ -5,6 +5,7 @@ require_once __DIR__ . '/server/release-control/src/bootstrap.php';
 
 use P2K\ReleaseControl\ReleaseControlAuth;
 use P2K\ReleaseControl\ReleaseControlState;
+use P2K\ReleaseControl\ReleaseDeploymentManager;
 use P2K\ReleaseControl\ReleasePreviewSession;
 use P2K\ReleaseControl\ReleasePreviewTree;
 
@@ -102,6 +103,24 @@ if ($method === 'POST' && $authorized) {
                 header('Location: /ReleaseControl.php?preview_result=disabled', true, 303);
                 exit;
             }
+            if ($action === 'promote-candidate') {
+                if ((string)($_POST['confirm'] ?? '') !== 'yes') {
+                    throw new RuntimeException('Promotion confirmation is required.');
+                }
+                (new ReleaseDeploymentManager(__DIR__))->promote($username);
+                $previewSession->disable();
+                header('Location: /ReleaseControl.php?deployment_result=promoted', true, 303);
+                exit;
+            }
+            if ($action === 'rollback') {
+                if ((string)($_POST['confirm'] ?? '') !== 'yes') {
+                    throw new RuntimeException('Rollback confirmation is required.');
+                }
+                (new ReleaseDeploymentManager(__DIR__))->rollback($username);
+                $previewSession->disable();
+                header('Location: /ReleaseControl.php?deployment_result=rolled-back', true, 303);
+                exit;
+            }
             http_response_code(400);
             $actionError = 'Unknown Release Control action.';
         } catch (Throwable $e) {
@@ -121,6 +140,7 @@ $previewTreeReady = is_array($previewTree);
 $csrfToken = $authorized ? $auth->currentCsrfToken() : '';
 $oauthResult = strtolower(trim((string)($_GET['oauth_result'] ?? '')));
 $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
+$deploymentResult = strtolower(trim((string)($_GET['deployment_result'] ?? '')));
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -136,7 +156,7 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
 <main class="wrap">
   <header class="head">
     <div><div class="eyebrow">Recovery plane</div><h1>Release Control</h1><p>Standalone release diagnostics · fixed URL <code>/ReleaseControl.php</code></p></div>
-    <div class="badge">v2.14.4 · Side-effect-isolated candidate preview</div>
+    <div class="badge">v2.14.5 · Atomic promotion and rollback</div>
   </header>
 
 <?php if ($username === ''): ?>
@@ -153,19 +173,25 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
     <p class="small">Allowlist source: <?= rc_h($auth->allowlistSource()) ?></p>
   </section>
 <?php else: ?>
-  <section class="notice"><strong>Public serving is still direct-root.</strong> v2.14.4 can route only this authenticated Super Admin browser session to the registered candidate. Everyone else, OAuth callback traffic and all CRON/background execution remain on the public release. Candidate database sessions are forced read-only; runtime/cache/log/session writes are isolated in a protected preview sandbox; maintenance and background endpoints remain blocked.</section>
-  <?php if ($actionError !== ''): ?><section class="notice"><strong>Preview action failed.</strong> <?= rc_h($actionError) ?></section><?php endif; ?>
-  <?php if ($previewResult === 'enabled'): ?><section class="notice"><strong>Candidate preview enabled for this browser session.</strong> Open the public site from the control below to browse the candidate.</section><?php elseif ($previewResult === 'disabled'): ?><section class="notice"><strong>Candidate preview disabled.</strong> This browser is back on the public release.</section><?php endif; ?>
+  <?php if (($snapshot['mode'] ?? '') === 'slots'): ?>
+    <section class="notice"><strong>Public release-slot routing is active.</strong> Public HTTP traffic and the existing HTTP/curl CRON endpoints resolve through the same atomic release pointer. The physical root remains the recovery baseline and is not overwritten during promotion or rollback.</section>
+  <?php else: ?>
+    <section class="notice"><strong>Public serving remains on the direct-root baseline.</strong> PublicRouter currently serves the existing root files. Candidate preview remains isolated to this authenticated Super Admin browser until you explicitly promote it.</section>
+  <?php endif; ?>
+  <?php if ($actionError !== ''): ?><section class="notice"><strong>Release action failed.</strong> <?= rc_h($actionError) ?></section><?php endif; ?>
+  <?php if ($previewResult === 'enabled'): ?><section class="notice"><strong>Candidate preview enabled for this browser session.</strong> Open the site from the control below to browse the candidate.</section><?php elseif ($previewResult === 'disabled'): ?><section class="notice"><strong>Candidate preview disabled.</strong> This browser is back on the public release.</section><?php endif; ?>
+  <?php if ($deploymentResult === 'promoted'): ?><section class="notice"><strong>Candidate promoted atomically.</strong> Public traffic now resolves from the promoted release; the former public release is retained as the rollback target.</section><?php elseif ($deploymentResult === 'rolled-back'): ?><section class="notice"><strong>Rollback completed atomically.</strong> The previous public release is serving again, and the rolled-back release is registered as the candidate for verification or re-promotion.</section><?php endif; ?>
 
   <div class="grid">
     <section class="card">
       <h2>Current public installation</h2>
       <dl class="meta">
-        <dt>VERSION</dt><dd><?= rc_h($snapshot['installed_version'] ?: 'unavailable') ?></dd>
+        <dt>Public VERSION</dt><dd><?= rc_h($snapshot['public_version'] ?: 'unavailable') ?></dd>
         <dt>Serving mode</dt><dd><?= rc_h($snapshot['mode']) ?></dd>
         <dt>Public release</dt><dd><?= rc_h($snapshot['public_release'] ?? 'not recorded') ?></dd>
         <dt>Build cache key</dt><dd><?= rc_h($snapshot['build_identity']['cache_key'] ?? 'not stamped / unavailable') ?></dd>
         <dt>Source HEAD</dt><dd><?= rc_h($snapshot['build_identity']['source_head_short'] ?? 'unavailable') ?></dd>
+        <dt>Physical root VERSION</dt><dd><?= rc_h($snapshot['installed_version'] ?: 'unavailable') ?></dd>
       </dl>
     </section>
 
@@ -182,6 +208,8 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
         <dt>My preview</dt><dd><?= !empty($previewStatus['enabled']) ? 'enabled · ' . rc_h($previewStatus['release_id'] ?? '') : 'disabled' ?></dd>
         <dt>Slot routing</dt><dd><?= !empty($snapshot['release_slots_enabled']) ? 'enabled' : 'disabled (direct-root)' ?></dd>
         <dt>Stored slots</dt><dd><?= rc_h($snapshot['slot_storage']['slot_count'] ?? 0) ?></dd>
+        <dt>Transition #</dt><dd><?= rc_h($snapshot['transition_sequence'] ?? 0) ?></dd>
+        <dt>Last transition</dt><dd><?php $lt = $snapshot['last_transition'] ?? null; ?><?= is_array($lt) ? rc_h(($lt['action'] ?? 'unknown') . ' · ' . ($lt['from'] ?? '?') . ' → ' . ($lt['to'] ?? '?')) : 'none' ?></dd>
       </dl>
     </section>
 
@@ -268,20 +296,35 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
 
     <section class="card">
       <h2>Deployment controls</h2>
-      <p class="small">Personal candidate preview is available only to this authenticated Super Admin session. The isolated administrator-session bootstrap is allowed inside the preview sandbox; application/data mutations, maintenance/background execution, public promotion and rollback remain disabled.</p>
+      <p class="small">Preview remains personal and side-effect-isolated. Promotion and rollback verify immutable slots and runtime trees first, then change the public release with one atomic state-file replacement. No application tree is copied over the live root during the switch.</p>
       <div class="actions">
         <?php if (is_array($candidate) && $csrfToken !== '' && $previewTreeReady): ?>
           <?php if (!empty($previewStatus['enabled'])): ?>
             <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="disable-preview"><button class="button" type="submit">Stop preview</button></form>
             <a class="button primary" href="/index.html">Open candidate site</a>
           <?php else: ?>
-            <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="preview_user" value="<?= rc_h($username) ?>"><input type="hidden" name="action" value="enable-preview"><button class="button primary" type="submit">Preview candidate for me</button></form>
+            <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="preview_user" value="<?= rc_h($username) ?>"><input type="hidden" name="action" value="enable-preview"><button class="button" type="submit">Preview candidate for me</button></form>
           <?php endif; ?>
         <?php else: ?>
           <span class="button disabled">Preview candidate</span>
-          <?php if (is_array($candidate) && !$previewTreeReady): ?><span class="small">Preview tree is not prepared. Re-run the v2.14.4 candidate-preview bootstrap.</span><?php endif; ?>
+          <?php if (is_array($candidate) && !$previewTreeReady): ?><span class="small">Preview tree is not prepared. Re-run the v2.14.5 candidate-preview bootstrap.</span><?php endif; ?>
         <?php endif; ?>
-        <span class="button disabled">Promote candidate</span><span class="button disabled">Rollback</span>
+
+        <?php if (!empty($snapshot['capabilities']['promotion']) && is_array($candidate) && $csrfToken !== ''): ?>
+          <form method="post" action="/ReleaseControl.php">
+            <input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="promote-candidate">
+            <label class="small"><input type="checkbox" name="confirm" value="yes" required> Confirm public switch to <?= rc_h($candidate['release_id'] ?? 'candidate') ?></label>
+            <button class="button primary" type="submit">Promote candidate</button>
+          </form>
+        <?php else: ?><span class="button disabled">Promote candidate</span><?php endif; ?>
+
+        <?php if (!empty($snapshot['capabilities']['rollback']) && $csrfToken !== ''): ?>
+          <form method="post" action="/ReleaseControl.php">
+            <input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="rollback">
+            <label class="small"><input type="checkbox" name="confirm" value="yes" required> Confirm rollback to <?= rc_h($snapshot['previous_public_release'] ?? 'previous release') ?></label>
+            <button class="button" type="submit">Rollback</button>
+          </form>
+        <?php else: ?><span class="button disabled">Rollback</span><?php endif; ?>
       </div>
     </section>
 
@@ -294,8 +337,10 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
         <dt>Candidate install</dt><dd>Enabled through verified CLI package installation</dd>
         <dt>Personal preview</dt><dd>Enabled for authenticated Super Admin session only</dd>
         <dt>Preview side effects</dt><dd>Isolated: read-only DB sessions + protected preview runtime/session sandbox</dd>
-        <dt>Public slot routing</dt><dd>Disabled in v2.14.4</dd>
-        <dt>Promotion / rollback</dt><dd>Disabled in v2.14.4</dd>
+        <dt>Public slot routing</dt><dd><?= ($snapshot['mode'] ?? '') === 'slots' ? 'active' : 'available; direct-root baseline currently active' ?></dd>
+        <dt>Public CRON routing</dt><dd>follows the same public release pointer</dd>
+        <dt>Promotion</dt><dd><?= !empty($snapshot['capabilities']['promotion']) ? 'available' : 'not currently available' ?></dd>
+        <dt>Rollback</dt><dd><?= !empty($snapshot['capabilities']['rollback']) ? 'available' : 'not currently available' ?></dd>
       </dl>
       <div class="actions"><a class="button" href="/">Open public site</a></div>
     </section>
