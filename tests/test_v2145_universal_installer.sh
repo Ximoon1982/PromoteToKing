@@ -29,6 +29,15 @@ grep -Fq 'class ReleaseRuntimeTree' "$PKGDIR/payload/server/release-control/src/
 grep -Fq -- '--replace-candidate' "$PKGDIR/prepare-candidate-preview-v2.14.5.sh"
 bash -n "$PKGDIR/prepare-candidate-preview-v2.14.5.sh"
 bash -n "$INSTALLER"
+python3 - "$PKGDIR/prepare-candidate-preview-v2.14.5.sh" <<'PY'
+from pathlib import Path
+import sys
+text=Path(sys.argv[1]).read_text()
+stage=text.index('[[ "$path" == ".htaccess" ]] && continue')
+activate=text.index('# Atomic routing activation comes last.')
+copy_router=text.index('PublicRouter.php')
+assert copy_router < stage < activate
+PY
 
 PREVIEW_ROOT="$TMP/preview-root"
 mkdir -p "$PREVIEW_ROOT"
@@ -46,6 +55,9 @@ bash "$PKGDIR/prepare-candidate-preview-v2.14.5.sh" "$PREVIEW_ROOT" ximoon >/dev
 [[ "$(sha256sum "$PREVIEW_ROOT/ui-v2.html" | awk '{print $1}')" == "$PUBLIC_UI_SHA" ]]
 [[ "$(tr -d '\r\n' < "$PREVIEW_ROOT/VERSION")" == "2.14.2" ]]
 grep -Fq 'v2.14.5 · Atomic promotion and rollback' "$PREVIEW_ROOT/ReleaseControl.php"
+test -f "$PREVIEW_ROOT/PublicRouter.php"
+test -f "$PREVIEW_ROOT/server/release-control/src/ReleaseRuntimeTree.php"
+test -f "$PREVIEW_ROOT/server/release-control/src/ReleaseDeploymentManager.php"
 grep -Fq 'PublicRouter.php' "$PREVIEW_ROOT/.htaccess"
 grep -Fq '"candidate_release": "2.14.5-' "$PREVIEW_ROOT/data/runtime-v280/release-control/state.json"
 
