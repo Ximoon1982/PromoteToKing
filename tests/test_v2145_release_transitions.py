@@ -44,7 +44,7 @@ def test_public_router_is_stable_and_ordered_after_preview():
     preview = HTACCESS.index("/PreviewRouter.php [L]")
     public = HTACCESS.index("/PublicRouter.php [L]", preview)
     assert preview < public
-    assert "ReleaseControl\.php|PreviewRouter\.php|PublicRouter\.php|server/release-control" in HTACCESS
+    assert r"ReleaseControl\.php|PreviewRouter\.php|PublicRouter\.php|server/release-control" in HTACCESS
     assert "auth/callback" in HTACCESS
     assert "P2KRC_PREVIEW" in HTACCESS
     assert "X-P2K-Public-Release" in PUBLIC
