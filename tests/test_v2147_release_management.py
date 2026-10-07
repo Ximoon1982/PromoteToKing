@@ -49,3 +49,23 @@ def test_release_control_uses_csrf_and_explicit_confirmation_for_delete():
 def test_manager_is_in_recovery_bootstrap_and_admin_card_mentions_cleanup():
     assert "ReleaseVersionManager.php" in BOOTSTRAP
     assert "remove unreferenced obsolete release artifacts" in ADMIN
+
+
+def test_release_management_is_single_paginated_detailed_list():
+    assert "<h2>Installed release slots</h2>" not in PAGE
+    assert "$releasePageSize = 10;" in PAGE
+    assert "array_slice($managedReleasesAll, $releasePageOffset, $releasePageSize)" in PAGE
+    assert 'aria-label="Release list pagination"' in PAGE
+    assert "Showing <?= rc_h($releasePageFrom) ?>–<?= rc_h($releasePageTo) ?>" in PAGE
+    assert "Page <?= rc_h($releasePage) ?> of <?= rc_h($releasePageCount) ?>" in PAGE
+    assert "?release_page=<?= rc_h($releasePage + 1) ?>#release-management" in PAGE
+    assert "?release_page=<?= rc_h($releasePage - 1) ?>#release-management" in PAGE
+    assert "$integrityValid ? 'valid' : 'INVALID'" in PAGE
+
+
+def test_deletion_preview_has_direct_anchor_and_keeps_page_context():
+    assert 'id="deletion-preview"' in PAGE
+    assert "#deletion-preview" in PAGE
+    assert 'name="release_page" value="<?= rc_h($releasePage) ?>"' in PAGE
+    assert "cleanup_preview=" in PAGE
+    assert "#release-management" not in PAGE.split("cleanup_preview=", 1)[1].split("Preview deletion", 1)[0]

@@ -126,8 +126,9 @@ if ($method === 'POST' && $authorized) {
                     throw new RuntimeException('Release deletion confirmation is required.');
                 }
                 $releaseId = trim((string)($_POST['release_id'] ?? ''));
+                $releasePageAfterDelete = max(1, (int)($_POST['release_page'] ?? 1));
                 $releaseManager->deleteRelease($releaseId, $username);
-                header('Location: /ReleaseControl.php?cleanup_result=deleted&release_id=' . rawurlencode($releaseId) . '#release-management', true, 303);
+                header('Location: /ReleaseControl.php?cleanup_result=deleted&release_id=' . rawurlencode($releaseId) . '&release_page=' . $releasePageAfterDelete . '#release-management', true, 303);
                 exit;
             }
             http_response_code(400);
@@ -153,6 +154,14 @@ $deploymentResult = strtolower(trim((string)($_GET['deployment_result'] ?? '')))
 $cleanupResult = strtolower(trim((string)($_GET['cleanup_result'] ?? '')));
 $cleanupResultRelease = trim((string)($_GET['release_id'] ?? ''));
 $releaseInventory = $authorized ? $releaseManager->inventory() : null;
+$managedReleasesAll = is_array($releaseInventory) ? array_values((array)($releaseInventory['releases'] ?? [])) : [];
+$releasePageSize = 10;
+$releasePageCount = max(1, (int)ceil(count($managedReleasesAll) / $releasePageSize));
+$releasePage = max(1, min($releasePageCount, (int)($_GET['release_page'] ?? 1)));
+$releasePageOffset = ($releasePage - 1) * $releasePageSize;
+$managedReleasesPage = array_slice($managedReleasesAll, $releasePageOffset, $releasePageSize);
+$releasePageFrom = $managedReleasesAll === [] ? 0 : $releasePageOffset + 1;
+$releasePageTo = min(count($managedReleasesAll), $releasePageOffset + count($managedReleasesPage));
 $cleanupPreviewId = trim((string)($_GET['cleanup_preview'] ?? ''));
 $cleanupPreview = null;
 if ($authorized && $cleanupPreviewId !== '') {
@@ -167,7 +176,7 @@ if ($authorized && $cleanupPreviewId !== '') {
 <meta name="color-scheme" content="dark">
 <title>Promote to King · Release Control</title>
 <style>
-:root{color-scheme:dark;--bg:#0e0d0c;--panel:#1a1815;--panel2:#211e19;--text:#f5ead9;--muted:#a99f92;--gold:#f3bd55;--line:#ffffff18;--ok:#8fd18a;--info:#8ab6ee;--warning:#e7bd68;--error:#ef8c82}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#211a12 0,#0e0d0c 44%);color:var(--text);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}.wrap{max-width:980px;margin:0 auto;padding:28px 18px 56px}.head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.eyebrow{text-transform:uppercase;letter-spacing:.11em;font-size:11px;color:var(--gold);font-weight:800}.head h1{margin:4px 0 3px;font-size:29px}.head p{margin:0;color:var(--muted)}.badge{border:1px solid #f3bd5544;background:#f3bd5510;color:#ffd88c;border-radius:999px;padding:7px 11px;font-size:12px;white-space:nowrap}.notice,.card{background:linear-gradient(145deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:15px}.notice{padding:14px 16px;margin-bottom:14px}.notice strong{color:#ffd88c}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{padding:18px}.card.full{grid-column:1/-1}.card h2{font-size:16px;margin:0 0 12px;color:#ffe1a4}.meta{display:grid;grid-template-columns:180px 1fr;gap:7px 14px;margin:0}.meta dt{color:var(--muted)}.meta dd{margin:0;overflow-wrap:anywhere}.checks{display:grid;gap:8px}.check{display:grid;grid-template-columns:10px 180px 1fr;gap:10px;align-items:start;padding:9px 0;border-top:1px solid var(--line)}.check:first-child{border-top:0}.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;background:var(--info)}.check.ok .dot{background:var(--ok)}.check.warning .dot{background:var(--warning)}.check.error .dot{background:var(--error)}.check strong{font-size:14px}.check span{color:var(--muted)}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:15px}.button{display:inline-block;text-decoration:none;border:1px solid #ffffff24;border-radius:9px;padding:9px 13px;background:#2a251e;color:var(--text);font:700 15px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer}.button.primary{background:var(--gold);border-color:var(--gold);color:#1a140b}.disabled{opacity:.45}.small{font-size:12px;color:var(--muted)}code{color:#ffd88c}@media(max-width:700px){.grid{grid-template-columns:1fr}.head{display:block}.badge{display:inline-block;margin-top:10px}.meta{grid-template-columns:1fr}.meta dd{margin-bottom:7px}.check{grid-template-columns:10px 1fr}.check span{grid-column:2}}
+:root{color-scheme:dark;--bg:#0e0d0c;--panel:#1a1815;--panel2:#211e19;--text:#f5ead9;--muted:#a99f92;--gold:#f3bd55;--line:#ffffff18;--ok:#8fd18a;--info:#8ab6ee;--warning:#e7bd68;--error:#ef8c82}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#211a12 0,#0e0d0c 44%);color:var(--text);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}.wrap{max-width:980px;margin:0 auto;padding:28px 18px 56px}.head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.eyebrow{text-transform:uppercase;letter-spacing:.11em;font-size:11px;color:var(--gold);font-weight:800}.head h1{margin:4px 0 3px;font-size:29px}.head p{margin:0;color:var(--muted)}.badge{border:1px solid #f3bd5544;background:#f3bd5510;color:#ffd88c;border-radius:999px;padding:7px 11px;font-size:12px;white-space:nowrap}.notice,.card{background:linear-gradient(145deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:15px}.notice{padding:14px 16px;margin-bottom:14px}.notice strong{color:#ffd88c}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{padding:18px}.card.full{grid-column:1/-1}.card h2{font-size:16px;margin:0 0 12px;color:#ffe1a4}.meta{display:grid;grid-template-columns:180px 1fr;gap:7px 14px;margin:0}.meta dt{color:var(--muted)}.meta dd{margin:0;overflow-wrap:anywhere}.checks{display:grid;gap:8px}.check{display:grid;grid-template-columns:10px 180px 1fr;gap:10px;align-items:start;padding:9px 0;border-top:1px solid var(--line)}.check:first-child{border-top:0}.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;background:var(--info)}.check.ok .dot{background:var(--ok)}.check.warning .dot{background:var(--warning)}.check.error .dot{background:var(--error)}.check strong{font-size:14px}.check span{color:var(--muted)}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:15px}.button{display:inline-block;text-decoration:none;border:1px solid #ffffff24;border-radius:9px;padding:9px 13px;background:#2a251e;color:var(--text);font:700 15px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer}.button.primary{background:var(--gold);border-color:var(--gold);color:#1a140b}.disabled{opacity:.45}.small{font-size:12px;color:var(--muted)}.pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.pagination-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.pagination .button{padding:7px 10px;font-size:13px}.pagination .current{color:#ffd88c;font-weight:700}code{color:#ffd88c}@media(max-width:700px){.grid{grid-template-columns:1fr}.head{display:block}.badge{display:inline-block;margin-top:10px}.meta{grid-template-columns:1fr}.meta dd{margin-bottom:7px}.check{grid-template-columns:10px 1fr}.check span{grid-column:2}}
 </style>
 </head>
 <body>
@@ -263,32 +272,6 @@ if ($authorized && $cleanupPreviewId !== '') {
       </dl>
     </section>
 
-    <section class="card full">
-      <h2>Installed release slots</h2>
-      <?php $slots = $snapshot['slot_storage']['slots'] ?? []; ?>
-      <?php if ($slots === []): ?>
-        <p class="small">No release slot has been materialized yet.</p>
-      <?php else: ?>
-        <div class="checks">
-          <?php foreach ($slots as $slot): $valid = ($slot['integrity_status'] ?? '') === 'valid'; ?>
-            <div class="check <?= $valid ? 'ok' : 'error' ?>">
-              <i class="dot" aria-hidden="true"></i>
-              <strong><?= rc_h($slot['release_id']) ?></strong>
-              <span>
-                <?= $valid ? 'valid' : 'INVALID' ?> ·
-                <?= rc_h($slot['strategy'] ?: 'unknown') ?> ·
-                <?= rc_h($slot['file_count']) ?> files ·
-                <?= rc_h(rc_bytes((int)$slot['logical_bytes'])) ?> logical ·
-                <?= rc_h(rc_bytes((int)$slot['additional_bytes_at_creation'])) ?> additional at creation ·
-                <?= rc_h($slot['hardlinked_files']) ?> hard-linked / <?= rc_h($slot['copied_files']) ?> copied
-                <?php if (!$valid && !empty($slot['errors'])): ?> · <?= rc_h(implode('; ', $slot['errors'])) ?><?php endif; ?>
-              </span>
-            </div>
-          <?php endforeach; ?>
-        </div>
-      <?php endif; ?>
-    </section>
-
     <section class="card full" id="release-management">
       <h2>Release/version management</h2>
       <p class="small">Only release-control-owned immutable slots, candidate previews and routed runtime trees are managed here. Shared <code>data/</code>, <code>logs/</code>, <code>storage/</code>, the physical recovery root and unrelated projects are outside cleanup scope.</p>
@@ -301,24 +284,24 @@ if ($authorized && $cleanupPreviewId !== '') {
         <dt>Apparent size</dt><dd><?= rc_h(rc_bytes((int)($rmTotals['removable_apparent_bytes'] ?? 0))) ?></dd>
         <dt>Estimated reclaimable disk</dt><dd><?= rc_h(rc_bytes((int)($rmTotals['estimated_reclaimable_bytes'] ?? 0))) ?> <span class="small">(hard-link aware estimate)</span></dd>
       </dl>
-      <?php $managedReleases = is_array($releaseInventory) ? ($releaseInventory['releases'] ?? []) : []; ?>
-      <?php if ($managedReleases === []): ?>
+      <?php if ($managedReleasesAll === []): ?>
         <p class="small">No release-control-managed release artifacts were found.</p>
       <?php else: ?>
         <div class="checks">
-          <?php foreach ($managedReleases as $release): $stats = $release['stats'] ?? []; $roles = $release['roles'] ?? []; ?>
+          <?php foreach ($managedReleasesPage as $release): $stats = $release['stats'] ?? []; $roles = $release['roles'] ?? []; $integrityValid = ($release['integrity_status'] ?? '') === 'valid'; ?>
             <div class="check <?= !empty($release['protected']) ? 'ok' : (!empty($release['cleanup_ready']) ? 'warning' : 'error') ?>">
               <i class="dot" aria-hidden="true"></i>
               <strong><?= rc_h($release['release_id'] ?? 'unknown') ?></strong>
               <span>
                 <?= $roles !== [] ? 'PROTECTED · ' . rc_h(implode(' + ', $roles)) : 'obsolete / unreferenced' ?> ·
+                <?= $integrityValid ? 'valid' : 'INVALID' ?> ·
                 <?= rc_h(implode(' + ', $release['artifacts'] ?? [])) ?> ·
                 <?= rc_h($stats['inode_entries'] ?? 0) ?> entries ·
                 <?= rc_h(rc_bytes((int)($stats['apparent_bytes'] ?? 0))) ?> apparent ·
                 <?= rc_h(rc_bytes((int)($stats['estimated_reclaimable_bytes'] ?? 0))) ?> estimated reclaimable
                 <?php if (!empty($stats['hardlink_preserved_bytes'])): ?> · <?= rc_h(rc_bytes((int)$stats['hardlink_preserved_bytes'])) ?> still shared by hard links<?php endif; ?>
                 <?php if (empty($release['protected']) && !empty($release['cleanup_ready'])): ?>
-                  · <a class="button" href="/ReleaseControl.php?cleanup_preview=<?= rawurlencode((string)$release['release_id']) ?>#release-management">Preview deletion</a>
+                  · <a class="button" href="/ReleaseControl.php?release_page=<?= rc_h($releasePage) ?>&cleanup_preview=<?= rawurlencode((string)$release['release_id']) ?>#deletion-preview">Preview deletion</a>
                 <?php elseif (!empty($stats['scan_errors'])): ?>
                   · scan blocked: <?= rc_h(implode('; ', $stats['scan_errors'])) ?>
                 <?php endif; ?>
@@ -326,10 +309,18 @@ if ($authorized && $cleanupPreviewId !== '') {
             </div>
           <?php endforeach; ?>
         </div>
+        <div class="pagination" aria-label="Release list pagination">
+          <span class="small">Showing <?= rc_h($releasePageFrom) ?>–<?= rc_h($releasePageTo) ?> of <?= rc_h(count($managedReleasesAll)) ?> releases</span>
+          <nav class="pagination-nav" aria-label="Release pages">
+            <?php if ($releasePage > 1): ?><a class="button" href="/ReleaseControl.php?release_page=<?= rc_h($releasePage - 1) ?>#release-management">Previous</a><?php endif; ?>
+            <span class="current">Page <?= rc_h($releasePage) ?> of <?= rc_h($releasePageCount) ?></span>
+            <?php if ($releasePage < $releasePageCount): ?><a class="button" href="/ReleaseControl.php?release_page=<?= rc_h($releasePage + 1) ?>#release-management">Next</a><?php endif; ?>
+          </nav>
+        </div>
       <?php endif; ?>
 
       <?php if (is_array($cleanupPreview)): $cpStats = $cleanupPreview['stats'] ?? []; ?>
-        <div class="notice" style="margin-top:14px">
+        <div class="notice" id="deletion-preview" style="margin-top:14px;scroll-margin-top:18px">
           <strong>Deletion preview — nothing has been deleted yet.</strong>
           <p><?= rc_h($cleanupPreview['release_id'] ?? '') ?> · <?= rc_h(implode(' + ', $cleanupPreview['artifacts'] ?? [])) ?> · <?= rc_h($cpStats['inode_entries'] ?? 0) ?> entries · <?= rc_h(rc_bytes((int)($cpStats['estimated_reclaimable_bytes'] ?? 0))) ?> estimated reclaimable.</p>
           <?php if (!empty($cleanupPreview['protected'])): ?>
@@ -342,6 +333,7 @@ if ($authorized && $cleanupPreviewId !== '') {
               <input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>">
               <input type="hidden" name="action" value="delete-release">
               <input type="hidden" name="release_id" value="<?= rc_h($cleanupPreview['release_id'] ?? '') ?>">
+              <input type="hidden" name="release_page" value="<?= rc_h($releasePage) ?>">
               <label class="small"><input type="checkbox" name="confirm" value="yes" required> Confirm permanent deletion of this obsolete managed release</label>
               <button class="button" type="submit">Delete obsolete release</button>
             </form>
