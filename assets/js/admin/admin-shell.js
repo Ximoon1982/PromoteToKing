@@ -79,7 +79,7 @@ return `<article class="dashboard-admin-shell-card" data-admin-shell-card="${esc
 function adminReleaseControlCard(){
 return `<article class="dashboard-admin-shell-card dashboard-admin-release-control-card" data-admin-release-control-card>
   <header class="dashboard-admin-shell-card-head"><div><span class="dashboard-admin-shell-eyebrow">Maintenance</span><h3>Release Control</h3></div><span class="dashboard-admin-shell-status is-good">Recovery plane</span></header>
-  <p>Preview qualified candidates, promote or roll back atomically, inspect release-slot integrity and remove unreferenced obsolete release artifacts from the standalone recovery plane.</p>
+  <p>Upload qualified release ZIPs, preview candidates, promote or roll back atomically, manage release slots and clean conservative P2K maintenance artifacts from the standalone recovery plane.</p>
   <div class="dashboard-admin-shell-metrics"><div class="dashboard-admin-shell-metric"><span>Access</span><strong>Super Admin</strong><small>Fixed recovery URL</small></div></div>
   <div class="dashboard-admin-shell-meta"><span><b>Mode</b><em>Standalone</em></span><span><b>Path</b><em>/ReleaseControl.php</em></span></div>
   <footer class="dashboard-admin-shell-actions"><a class="dashboard-button" href="/ReleaseControl.php">Open Release Control</a></footer>
