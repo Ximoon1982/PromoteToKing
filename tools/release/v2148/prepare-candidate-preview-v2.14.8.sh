@@ -163,7 +163,7 @@ after_ui="$(sha256sum "$ROOT/ui-v2.html" | awk '{print $1}')"
 "$PHP_BIN" "$ROOT/server/release-control/tools/install-candidate.php"   --root="$ROOT"   --package="$SELF_DIR"   --actor="$ACTOR"   --replace-candidate >/tmp/p2k-v2148-candidate-$$.json   || fail "Candidate installation/registration failed"
 
 grep -Fq '"ok": true' /tmp/p2k-v2148-candidate-$$.json || fail "Candidate installer did not report success"
-grep -Fq '"release_id": "2.14.7-' /tmp/p2k-v2148-candidate-$$.json || fail "Candidate release identity was not registered"
+grep -Fq '"release_id": "2.14.8-' /tmp/p2k-v2148-candidate-$$.json || fail "Candidate release identity was not registered"
 cat /tmp/p2k-v2148-candidate-$$.json
 rm -f /tmp/p2k-v2148-candidate-$$.json
 
