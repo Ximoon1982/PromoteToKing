@@ -175,3 +175,23 @@ Deletion re-validates protection while holding the same exclusive state lock use
 rollback. The operation removes derived preview/runtime trees first and the immutable release slot last.
 It never targets shared `data/`, `logs/`, `storage/`, the physical application root, uploaded installer
 archives or sibling projects. General filesystem cleanup remains outside v2.14.7 scope.
+
+
+## v2.14.8 browser package installation
+
+Release Control can install a qualified cumulative release ZIP from the authenticated Super Admin page. The upload is staged below protected release-control runtime and is never executed directly. Archive traversal, absolute/backslash paths, symbolic links, excessive entry counts and oversized expanded content are rejected.
+
+The package must pass the existing `CANDIDATE_RELEASE.json` / `CANDIDATE_PAYLOAD.sha256` contract and also provide `RECOVERY_PLANE.sha256`. The recovery-plane manifest is restricted to `.htaccess`, the standalone routers/ReleaseControl page, and `server/release-control/**`; host-local `.env*` / `*.local.*` files are forbidden. Candidate installation and preview preparation complete before the recovery plane is activated. Recovery-plane files are backed up under `storage/release-backups/` and activation places `.htaccess` last. Upload/install never promotes the candidate.
+
+The existing CLI candidate-preview bootstrap remains the recovery fallback and is required once to introduce v2.14.8 itself on a v2.14.7 host.
+
+## v2.14.8 conservative filesystem cleanup
+
+The filesystem cleanup crawler is intentionally not a general file browser. It can classify only:
+
+- top-level PromoteToKing installer/package archives;
+- top-level extracted PromoteToKing installer/package directories;
+- release-control backups older than seven days, while retaining the newest three;
+- stale release-control upload/candidate/preview/runtime staging artifacts older than 24 hours.
+
+Unknown top-level files/directories, shared mutable data, the physical recovery baseline and unrelated projects are never deletion candidates. Every candidate is scanned without following symlinks, shows entry/apparent/reclaimable estimates, requires an explicit deletion preview and confirmation, and is reclassified immediately before deletion.
