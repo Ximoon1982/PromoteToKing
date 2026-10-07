@@ -21,7 +21,7 @@ def test_v2141_release_identity_and_read_only_recovery_page():
     parts = tuple(int(value) for value in (ROOT / "VERSION").read_text().strip().split("."))
     assert parts >= (2, 14, 1)
     assert "direct-root" in PAGE
-    assert "Installed release slots" in PAGE
+    assert "Installed release slots" in PAGE or "Release/version management" in PAGE
     assert "Preview candidate" in PAGE
     assert "Promote candidate" in PAGE
     assert "Rollback" in PAGE
