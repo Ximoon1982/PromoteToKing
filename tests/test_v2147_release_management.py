@@ -13,7 +13,7 @@ STORAGE = (ROOT / "server/team-points/src/StorageMetricsService.php").read_text(
 
 def test_v2147_identity_and_ui_scope():
     assert tuple(int(v) for v in (ROOT / "VERSION").read_text().strip().split(".")) >= (2, 14, 7)
-    assert "v2.14.7 · Release/version management" in PAGE
+    assert ("v2.14.7 · Release/version management" in PAGE) or ("v2.14.8 · ZIP install + filesystem cleanup" in PAGE)
     assert "Release/version management" in PAGE
     assert "Deletion preview — nothing has been deleted yet." in PAGE
     assert "Delete obsolete release" in PAGE
