@@ -151,7 +151,7 @@ final class FilesystemCleanupManager
         $now = time();
         $out = [];
         foreach ($locations as [$base,$prefixes,$category]) {
-            if (!is_dir($base) || is_link($base)) continue;
+            if (!is_dir($base) || is_link($base) || !$this->isWithinRoot($base)) continue;
             foreach (scandir($base) ?: [] as $name) {
                 if ($name === '.' || $name === '..') continue;
                 $matches = false;
@@ -170,14 +170,15 @@ final class FilesystemCleanupManager
     private function row(string $path, string $category, string $reason, bool $ready): array
     {
         $mtime = (int)(filemtime($path) ?: 0);
+        $stats = $this->scanPath($path);
         return [
             'relative_path'=>$this->relative($path),
             'category'=>$category,
             'reason'=>$reason,
             'modified_at'=>$mtime > 0 ? gmdate('c', $mtime) : null,
             'age_seconds'=>$mtime > 0 ? max(0, time() - $mtime) : null,
-            'cleanup_ready'=>$ready && !is_link($path),
-            'stats'=>$this->scanPath($path),
+            'cleanup_ready'=>$ready && !is_link($path) && empty($stats['scan_errors']),
+            'stats'=>$stats,
         ];
     }
 
@@ -291,6 +292,13 @@ final class FilesystemCleanupManager
         $relative = $this->normalizeRelative($relative);
         if ($relative === '') throw new \InvalidArgumentException('Filesystem cleanup path is invalid.');
         return rtrim($this->root, '/\\') . '/' . $relative;
+    }
+
+    private function isWithinRoot(string $path): bool
+    {
+        $root = rtrim($this->root, '/\\');
+        $path = rtrim($path, '/\\');
+        return $path === $root || str_starts_with($path, $root . '/');
     }
 
     private function relative(string $path): string
