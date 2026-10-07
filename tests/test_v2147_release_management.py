@@ -85,3 +85,17 @@ def test_storage_capacity_labels_apparent_size_and_hardlink_semantics():
     assert "renderProjection('Apparent filesystem'" in TP_ADMIN_JS
     assert "'measurement_basis'=>'apparent_path_bytes'" in STORAGE
     assert "'hard_links_counted_per_path'=>true" in STORAGE
+
+
+def test_same_version_candidate_replacement_requires_exact_accepted_public_identity():
+    installer = (ROOT / "server/release-control/src/ReleaseCandidateInstaller.php").read_text(encoding="utf-8")
+    builder = (ROOT / "tools/release/v2147/build-universal-2.13x.sh").read_text(encoding="utf-8")
+    assert "version_compare((string)$meta['version'], (string)$current['version'], '<')" in installer
+    assert "Candidate VERSION must not be older than the current public VERSION." in installer
+    assert "Candidate package does not accept current public build" in installer
+    for head in (
+        "42bceef45141821420dba8cb13d4f65c9fc6c0ba",
+        "1d54cce25475c86b3a4af7bb179ff58302de43a2",
+        "76f38c288520127554317885691f0159bbd81b35",
+    ):
+        assert head in builder

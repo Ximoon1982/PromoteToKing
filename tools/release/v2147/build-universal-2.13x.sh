@@ -252,6 +252,9 @@ REFS_2146=(
   ca61201cf2922936cf825152df47d096e0af5f41
 )
 REFS_2147=(
+  42bceef45141821420dba8cb13d4f65c9fc6c0ba
+  1d54cce25475c86b3a4af7bb179ff58302de43a2
+  76f38c288520127554317885691f0159bbd81b35
   "$HEAD"
 )
 
@@ -366,7 +369,10 @@ payload={
     {"version":"2.14.3","source_head":"2826f1fb512e5bdc8961c197218bae21339ea234"},
     {"version":"2.14.4","source_head":"1faa8a1bbfb7aed188d69119a6a92b2423a88171"},
     {"version":"2.14.5","source_head":"2441efcd1d07bf3edc899982d0ed2a404e83c2d7"},
-    {"version":"2.14.6","source_head":"ca61201cf2922936cf825152df47d096e0af5f41"}
+    {"version":"2.14.6","source_head":"ca61201cf2922936cf825152df47d096e0af5f41"},
+    {"version":"2.14.7","source_head":"42bceef45141821420dba8cb13d4f65c9fc6c0ba"},
+    {"version":"2.14.7","source_head":"1d54cce25475c86b3a4af7bb179ff58302de43a2"},
+    {"version":"2.14.7","source_head":"76f38c288520127554317885691f0159bbd81b35"}
   ]
 }
 Path(out).write_text(json.dumps(payload,indent=2)+"\n")

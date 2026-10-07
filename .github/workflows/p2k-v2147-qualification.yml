@@ -68,6 +68,7 @@ jobs:
           php tests/php_v2146_release_control_csrf_harness.php
           php tests/php_v2146_operational_proof_harness.php
           php tests/php_v2147_release_management_harness.php
+          php tests/php_v2147_same_version_candidate_harness.php
           php tests/php_v2147_trophy_remote_import_harness.php
           python server/release-control/tools/release-slot-paths.py HEAD > "$RUNNER_TEMP/v2147-slot-paths.txt"
           grep -Fxq VERSION "$RUNNER_TEMP/v2147-slot-paths.txt"

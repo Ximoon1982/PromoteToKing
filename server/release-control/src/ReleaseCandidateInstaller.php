@@ -20,8 +20,8 @@ final class ReleaseCandidateInstaller
         $meta = $package->validate();
 
         $current = $this->currentPublicIdentity();
-        if (version_compare((string)$meta['version'], (string)$current['version'], '<=')) {
-            throw new \RuntimeException('Candidate VERSION must be newer than the current public VERSION.');
+        if (version_compare((string)$meta['version'], (string)$current['version'], '<')) {
+            throw new \RuntimeException('Candidate VERSION must not be older than the current public VERSION.');
         }
         $accepted = false;
         foreach ((array)$meta['accepted_public_builds'] as $row) {

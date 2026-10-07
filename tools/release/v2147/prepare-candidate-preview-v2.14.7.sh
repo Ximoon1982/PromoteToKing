@@ -27,6 +27,7 @@ grep -Fq '"version": "2.14.7"' "$SELF_DIR/CANDIDATE_RELEASE.json" || fail "Candi
 grep -Fq '"version": "2.14.2"' "$SELF_DIR/CANDIDATE_RELEASE.json" || fail "Candidate package does not accept public v2.14.2"
 grep -Fq '"version": "2.14.5"' "$SELF_DIR/CANDIDATE_RELEASE.json" || fail "Candidate package does not accept public v2.14.5"
 grep -Fq '"version": "2.14.6"' "$SELF_DIR/CANDIDATE_RELEASE.json" || fail "Candidate package does not accept public v2.14.6"
+grep -Fq '"version": "2.14.7"' "$SELF_DIR/CANDIDATE_RELEASE.json" || fail "Candidate package does not accept qualified public v2.14.7 replacements"
 
 (
   cd "$PAYLOAD"
