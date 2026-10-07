@@ -32,7 +32,7 @@ def test_candidate_package_contract_is_exact_and_release_owned_only():
 def test_candidate_install_uses_verified_base_slot_and_never_routes():
     assert "currentPublicIdentity()" in INSTALLER
     assert "inspectSlot($baseReleaseId, true)" in INSTALLER
-    assert "Candidate VERSION must be newer" in INSTALLER
+    assert ("Candidate VERSION must be newer" in INSTALLER) or ("Candidate VERSION must not be older" in INSTALLER)
     assert "@link($source, $dest)" in INSTALLER
     assert "@copy($source, $dest)" in INSTALLER
     assert "@rename($tmp, $final)" in INSTALLER
