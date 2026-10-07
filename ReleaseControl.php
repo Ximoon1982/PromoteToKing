@@ -5,7 +5,9 @@ require_once __DIR__ . '/server/release-control/src/bootstrap.php';
 
 use P2K\ReleaseControl\ReleaseControlAuth;
 use P2K\ReleaseControl\ReleaseControlState;
+use P2K\ReleaseControl\FilesystemCleanupManager;
 use P2K\ReleaseControl\ReleaseDeploymentManager;
+use P2K\ReleaseControl\ReleasePackageUploadInstaller;
 use P2K\ReleaseControl\ReleasePreviewSession;
 use P2K\ReleaseControl\ReleasePreviewTree;
 use P2K\ReleaseControl\ReleaseVersionManager;
@@ -52,6 +54,8 @@ $username = $auth->currentUsername();
 $authorized = $username !== '' && $auth->isSuperAdmin($username);
 $previewSession = new ReleasePreviewSession(__DIR__);
 $releaseManager = new ReleaseVersionManager(__DIR__);
+$packageInstaller = new ReleasePackageUploadInstaller(__DIR__);
+$filesystemCleanup = new FilesystemCleanupManager(__DIR__);
 $actionError = '';
 $action = strtolower(trim((string)($_POST['action'] ?? '')));
 
@@ -131,6 +135,24 @@ if ($method === 'POST' && $authorized) {
                 header('Location: /ReleaseControl.php?cleanup_result=deleted&release_id=' . rawurlencode($releaseId) . '&release_page=' . $releasePageAfterDelete . '#release-management', true, 303);
                 exit;
             }
+            if ($action === 'upload-release-package') {
+                if ((string)($_POST['confirm'] ?? '') !== 'yes') {
+                    throw new RuntimeException('Release ZIP installation confirmation is required.');
+                }
+                $result = $packageInstaller->installUploaded((array)($_FILES['release_zip'] ?? []), $username);
+                header('Location: /ReleaseControl.php?package_result=installed&package_release=' . rawurlencode((string)($result['release_id'] ?? '')) . '#package-upload', true, 303);
+                exit;
+            }
+            if ($action === 'delete-filesystem-artifact') {
+                if ((string)($_POST['confirm'] ?? '') !== 'yes') {
+                    throw new RuntimeException('Filesystem cleanup confirmation is required.');
+                }
+                $relativePath = trim((string)($_POST['filesystem_path'] ?? ''));
+                $cleanupPageAfterDelete = max(1, (int)($_POST['filesystem_page'] ?? 1));
+                $filesystemCleanup->delete($relativePath, $username);
+                header('Location: /ReleaseControl.php?filesystem_result=deleted&filesystem_path=' . rawurlencode($relativePath) . '&filesystem_page=' . $cleanupPageAfterDelete . '#filesystem-cleanup', true, 303);
+                exit;
+            }
             http_response_code(400);
             $actionError = 'Unknown Release Control action.';
         } catch (Throwable $e) {
@@ -153,6 +175,10 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
 $deploymentResult = strtolower(trim((string)($_GET['deployment_result'] ?? '')));
 $cleanupResult = strtolower(trim((string)($_GET['cleanup_result'] ?? '')));
 $cleanupResultRelease = trim((string)($_GET['release_id'] ?? ''));
+$packageResult = strtolower(trim((string)($_GET['package_result'] ?? '')));
+$packageRelease = trim((string)($_GET['package_release'] ?? ''));
+$filesystemResult = strtolower(trim((string)($_GET['filesystem_result'] ?? '')));
+$filesystemResultPath = trim((string)($_GET['filesystem_path'] ?? ''));
 $releaseInventory = $authorized ? $releaseManager->inventory() : null;
 $managedReleasesAll = is_array($releaseInventory) ? array_values((array)($releaseInventory['releases'] ?? [])) : [];
 $releasePageSize = 10;
@@ -167,6 +193,21 @@ $cleanupPreview = null;
 if ($authorized && $cleanupPreviewId !== '') {
     try { $cleanupPreview = $releaseManager->describeRelease($cleanupPreviewId); }
     catch (Throwable) { $cleanupPreview = null; }
+}
+$filesystemInventory = $authorized ? $filesystemCleanup->inventory() : null;
+$filesystemCandidatesAll = is_array($filesystemInventory) ? array_values((array)($filesystemInventory['candidates'] ?? [])) : [];
+$filesystemPageSize = 10;
+$filesystemPageCount = max(1, (int)ceil(count($filesystemCandidatesAll) / $filesystemPageSize));
+$filesystemPage = max(1, min($filesystemPageCount, (int)($_GET['filesystem_page'] ?? 1)));
+$filesystemPageOffset = ($filesystemPage - 1) * $filesystemPageSize;
+$filesystemCandidatesPage = array_slice($filesystemCandidatesAll, $filesystemPageOffset, $filesystemPageSize);
+$filesystemPageFrom = $filesystemCandidatesAll === [] ? 0 : $filesystemPageOffset + 1;
+$filesystemPageTo = min(count($filesystemCandidatesAll), $filesystemPageOffset + count($filesystemCandidatesPage));
+$filesystemPreviewPath = trim((string)($_GET['fs_cleanup_preview'] ?? ''));
+$filesystemPreview = null;
+if ($authorized && $filesystemPreviewPath !== '') {
+    try { $filesystemPreview = $filesystemCleanup->describe($filesystemPreviewPath); }
+    catch (Throwable) { $filesystemPreview = null; }
 }
 ?><!doctype html>
 <html lang="en">
@@ -183,7 +224,7 @@ if ($authorized && $cleanupPreviewId !== '') {
 <main class="wrap">
   <header class="head">
     <div><div class="eyebrow">Recovery plane</div><h1>Release Control</h1><p>Standalone release diagnostics · fixed URL <code>/ReleaseControl.php</code></p></div>
-    <div class="badge">v2.14.7 · Release/version management · atomic deployment preserved</div>
+    <div class="badge">v2.14.8 · ZIP install + filesystem cleanup · atomic deployment preserved</div>
   </header>
 
 <?php if ($username === ''): ?>
@@ -209,6 +250,8 @@ if ($authorized && $cleanupPreviewId !== '') {
   <?php if ($previewResult === 'enabled'): ?><section class="notice"><strong>Candidate preview enabled for this browser session.</strong> Open the site from the control below to browse the candidate.</section><?php elseif ($previewResult === 'disabled'): ?><section class="notice"><strong>Candidate preview disabled.</strong> This browser is back on the public release.</section><?php endif; ?>
   <?php if ($deploymentResult === 'promoted'): ?><section class="notice"><strong>Candidate promoted atomically.</strong> Public traffic now resolves from the promoted release; the former public release is retained as the rollback target.</section><?php elseif ($deploymentResult === 'rolled-back'): ?><section class="notice"><strong>Rollback completed atomically.</strong> The previous public release is serving again, and the rolled-back release is registered as the candidate for verification or re-promotion.</section><?php endif; ?>
   <?php if ($cleanupResult === 'deleted'): ?><section class="notice"><strong>Obsolete release removed.</strong> <?= rc_h($cleanupResultRelease) ?> and its release-control-owned preview/runtime artifacts were deleted.</section><?php endif; ?>
+  <?php if ($packageResult === 'installed'): ?><section class="notice"><strong>Release ZIP installed as candidate.</strong> <?= rc_h($packageRelease) ?> is registered and its preview tree is prepared. Public traffic was not changed.</section><?php endif; ?>
+  <?php if ($filesystemResult === 'deleted'): ?><section class="notice"><strong>Filesystem cleanup completed.</strong> <?= rc_h($filesystemResultPath) ?> was removed after revalidation.</section><?php endif; ?>
 
   <div class="grid">
     <section class="card">
@@ -270,6 +313,31 @@ if ($authorized && $cleanupPreviewId !== '') {
         <dt>Symlinks</dt><dd><?= is_array($fs) ? (!empty($fs['symlink_supported']) ? 'supported; not used for snapshots' : 'not available') : 'not probed' ?></dd>
         <dt>Atomic rename</dt><dd><?= is_array($fs) ? (!empty($fs['atomic_rename_supported']) ? 'supported' : 'not available') : 'not probed' ?></dd>
       </dl>
+    </section>
+
+
+    <section class="card full" id="package-upload">
+      <h2>Install release ZIP</h2>
+      <p class="small">Upload a qualified Promote to King release ZIP directly here. The package is staged under protected release-control runtime, archive paths and hashes are validated, the immutable candidate and preview tree are prepared, and only then is the recovery plane updated from its dedicated manifest. <strong>Public traffic is never promoted by this action.</strong></p>
+      <dl class="meta">
+        <dt>ZIP support</dt><dd><?= $packageInstaller->available() ? 'available' : 'unavailable · PHP ZipArchive extension required' ?></dd>
+        <dt>Effective upload limit</dt><dd><?= rc_h(rc_bytes($packageInstaller->uploadLimitBytes())) ?></dd>
+        <dt>Candidate replacement</dt><dd>Allowed only through the exact package/public-build contract</dd>
+        <dt>Recovery backup</dt><dd>Created under <code>storage/release-backups/</code> before activation</dd>
+        <dt>Promotion</dt><dd>never automatic · use Deployment controls after preview verification</dd>
+      </dl>
+      <?php if ($packageInstaller->available()): ?>
+        <form method="post" action="/ReleaseControl.php" enctype="multipart/form-data" class="actions">
+          <input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>">
+          <input type="hidden" name="action" value="upload-release-package">
+          <input type="hidden" name="MAX_FILE_SIZE" value="<?= rc_h($packageInstaller->uploadLimitBytes()) ?>">
+          <input class="button" type="file" name="release_zip" accept=".zip,application/zip" required>
+          <label class="small"><input type="checkbox" name="confirm" value="yes" required> Confirm candidate installation and recovery-plane update; public release remains unchanged</label>
+          <button class="button primary" type="submit">Upload and install candidate ZIP</button>
+        </form>
+      <?php else: ?>
+        <p class="small">Browser ZIP installation is disabled on this host because <code>ZipArchive</code> is unavailable. Existing CLI candidate installation remains available as recovery fallback.</p>
+      <?php endif; ?>
     </section>
 
     <section class="card full" id="release-management">
@@ -344,6 +412,72 @@ if ($authorized && $cleanupPreviewId !== '') {
       <?php endif; ?>
     </section>
 
+
+    <section class="card full" id="filesystem-cleanup">
+      <h2>Filesystem cleanup</h2>
+      <p class="small">Conservative crawler for P2K maintenance artifacts outside immutable release slots. It recognizes only P2K installer archives/extractions, old release-control backups and stale release-control staging leftovers. Unknown top-level files/directories and unrelated projects are ignored and cannot be deleted here.</p>
+      <?php $fcTotals = is_array($filesystemInventory) ? ($filesystemInventory['totals'] ?? []) : []; ?>
+      <dl class="meta">
+        <dt>Cleanup candidates</dt><dd><?= rc_h($fcTotals['candidate_count'] ?? 0) ?></dd>
+        <dt>Candidate entries</dt><dd><?= rc_h($fcTotals['inode_entries'] ?? 0) ?> files/directories</dd>
+        <dt>Apparent size</dt><dd><?= rc_h(rc_bytes((int)($fcTotals['apparent_bytes'] ?? 0))) ?></dd>
+        <dt>Estimated reclaimable disk</dt><dd><?= rc_h(rc_bytes((int)($fcTotals['estimated_reclaimable_bytes'] ?? 0))) ?> <span class="small">(hard-link aware estimate)</span></dd>
+      </dl>
+      <?php foreach ((array)($filesystemInventory['rules'] ?? []) as $rule): ?><p class="small">• <?= rc_h($rule) ?></p><?php endforeach; ?>
+      <?php if ($filesystemCandidatesAll === []): ?>
+        <p class="small">No conservative filesystem cleanup candidates were found.</p>
+      <?php else: ?>
+        <div class="checks">
+          <?php foreach ($filesystemCandidatesPage as $artifact): $artifactStats = (array)($artifact['stats'] ?? []); ?>
+            <div class="check <?= !empty($artifact['cleanup_ready']) ? 'warning' : 'error' ?>">
+              <i class="dot" aria-hidden="true"></i>
+              <strong><?= rc_h($artifact['category'] ?? 'artifact') ?></strong>
+              <span>
+                <code><?= rc_h($artifact['relative_path'] ?? '') ?></code> ·
+                <?= rc_h($artifactStats['inode_entries'] ?? 0) ?> entries ·
+                <?= rc_h(rc_bytes((int)($artifactStats['apparent_bytes'] ?? 0))) ?> apparent ·
+                <?= rc_h(rc_bytes((int)($artifactStats['estimated_reclaimable_bytes'] ?? 0))) ?> estimated reclaimable ·
+                <?= rc_h($artifact['reason'] ?? '') ?>
+                <?php if (!empty($artifact['cleanup_ready'])): ?>
+                  · <a class="button" href="/ReleaseControl.php?filesystem_page=<?= rc_h($filesystemPage) ?>&fs_cleanup_preview=<?= rawurlencode((string)($artifact['relative_path'] ?? '')) ?>#filesystem-deletion-preview">Preview deletion</a>
+                <?php endif; ?>
+              </span>
+            </div>
+          <?php endforeach; ?>
+        </div>
+        <div class="pagination" aria-label="Filesystem cleanup pagination">
+          <span class="small">Showing <?= rc_h($filesystemPageFrom) ?>–<?= rc_h($filesystemPageTo) ?> of <?= rc_h(count($filesystemCandidatesAll)) ?> candidates</span>
+          <nav class="pagination-nav" aria-label="Filesystem cleanup pages">
+            <?php if ($filesystemPage > 1): ?><a class="button" href="/ReleaseControl.php?filesystem_page=<?= rc_h($filesystemPage - 1) ?>#filesystem-cleanup">Previous</a><?php endif; ?>
+            <span class="current">Page <?= rc_h($filesystemPage) ?> of <?= rc_h($filesystemPageCount) ?></span>
+            <?php if ($filesystemPage < $filesystemPageCount): ?><a class="button" href="/ReleaseControl.php?filesystem_page=<?= rc_h($filesystemPage + 1) ?>#filesystem-cleanup">Next</a><?php endif; ?>
+          </nav>
+        </div>
+      <?php endif; ?>
+
+      <?php if (is_array($filesystemPreview)): $fpStats = (array)($filesystemPreview['stats'] ?? []); ?>
+        <div class="notice" id="filesystem-deletion-preview" style="margin-top:14px;scroll-margin-top:18px">
+          <strong>Filesystem deletion preview — nothing has been deleted yet.</strong>
+          <p><code><?= rc_h($filesystemPreview['relative_path'] ?? '') ?></code> · <?= rc_h($filesystemPreview['category'] ?? '') ?> · <?= rc_h($fpStats['inode_entries'] ?? 0) ?> entries · <?= rc_h(rc_bytes((int)($fpStats['estimated_reclaimable_bytes'] ?? 0))) ?> estimated reclaimable.</p>
+          <p class="small"><?= rc_h($filesystemPreview['reason'] ?? '') ?></p>
+          <?php if (empty($filesystemPreview['cleanup_ready'])): ?>
+            <p>Deletion is blocked because this path no longer satisfies the conservative cleanup rules.</p>
+          <?php else: ?>
+            <form method="post" action="/ReleaseControl.php">
+              <input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>">
+              <input type="hidden" name="action" value="delete-filesystem-artifact">
+              <input type="hidden" name="filesystem_path" value="<?= rc_h($filesystemPreview['relative_path'] ?? '') ?>">
+              <input type="hidden" name="filesystem_page" value="<?= rc_h($filesystemPage) ?>">
+              <label class="small"><input type="checkbox" name="confirm" value="yes" required> Confirm permanent deletion of this maintenance artifact</label>
+              <button class="button" type="submit">Delete maintenance artifact</button>
+            </form>
+          <?php endif; ?>
+        </div>
+      <?php elseif ($filesystemPreviewPath !== ''): ?>
+        <p class="small">Requested filesystem cleanup preview is unavailable or no longer eligible.</p>
+      <?php endif; ?>
+    </section>
+
     <section class="card">
       <h2>Shared mutable paths</h2>
       <p class="small">Kept outside immutable slots by contract:</p>
@@ -408,7 +542,7 @@ if ($authorized && $cleanupPreviewId !== '') {
         <dt>Authenticated as</dt><dd>@<?= rc_h($username) ?></dd>
         <dt>Allowlist source</dt><dd><?= rc_h($auth->allowlistSource()) ?></dd>
         <dt>Application dependency</dt><dd>None on UI v1/UI v2 shell assets or JavaScript</dd>
-        <dt>Candidate install</dt><dd>Enabled through verified CLI package installation</dd>
+        <dt>Candidate install</dt><dd>Enabled through verified browser ZIP upload or CLI fallback</dd>
         <dt>Personal preview</dt><dd>Enabled for authenticated Super Admin session only</dd>
         <dt>Preview side effects</dt><dd>Isolated: read-only DB sessions + protected preview runtime/session sandbox</dd>
         <dt>Public slot routing</dt><dd><?= ($snapshot['mode'] ?? '') === 'slots' ? 'active' : 'available; direct-root baseline currently active' ?></dd>
