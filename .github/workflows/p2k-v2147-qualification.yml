@@ -48,11 +48,14 @@ jobs:
           php -l server/team-points/src/PreviewIsolation.php
           php -l server/team-points/src/Auth.php
           php -l server/team-points/public/session.php
+          php -l server/trophy-gallery/src/TrophyRemoteArtworkImporter.php
+          php -l server/trophy-gallery/src/TrophyGalleryStore.php
+          php -l server/trophy-gallery/public/api.php
           bash -n tools/release/v2147/build-universal-2.13x.sh
           bash -n tools/release/v2147/prepare-candidate-preview-v2.14.7.sh
           bash -n tools/release/v2147/install-promote-to-king-v2.14.7-universal.sh.in
           python -m py_compile tools/release/v2147/canonical-hash.py tools/release/v2147/stamp-runtime-cache-key.py server/release-control/tools/release-slot-paths.py
-          python -m pytest -q tests/test_v2140_release_control.py tests/test_v2141_release_slots.py tests/test_v2142_candidate_install.py tests/test_v2143_candidate_preview.py tests/test_v2143_insights_adjustments.py tests/test_v2144_preview_isolation.py tests/test_v2145_release_transitions.py tests/test_v2146_release_control_hardening.py tests/test_v2147_release_management.py
+          python -m pytest -q tests/test_v2140_release_control.py tests/test_v2141_release_slots.py tests/test_v2142_candidate_install.py tests/test_v2143_candidate_preview.py tests/test_v2143_insights_adjustments.py tests/test_v2144_preview_isolation.py tests/test_v2145_release_transitions.py tests/test_v2146_release_control_hardening.py tests/test_v2147_release_management.py tests/test_v2147_trophy_remote_import.py
           php tests/php_v2140_release_control_harness.php
           php tests/php_v2141_release_slots_harness.php
           php tests/php_v2142_candidate_install_harness.php
@@ -65,6 +68,7 @@ jobs:
           php tests/php_v2146_release_control_csrf_harness.php
           php tests/php_v2146_operational_proof_harness.php
           php tests/php_v2147_release_management_harness.php
+          php tests/php_v2147_trophy_remote_import_harness.php
           python server/release-control/tools/release-slot-paths.py HEAD > "$RUNNER_TEMP/v2147-slot-paths.txt"
           grep -Fxq VERSION "$RUNNER_TEMP/v2147-slot-paths.txt"
           grep -Fxq ui-v2.html "$RUNNER_TEMP/v2147-slot-paths.txt"
@@ -74,6 +78,8 @@ jobs:
           ! grep -Fxq PublicRouter.php "$RUNNER_TEMP/v2147-slot-paths.txt"
           ! grep -Fq server/release-control/ "$RUNNER_TEMP/v2147-slot-paths.txt"
           node --check assets/js/admin/admin-shell.js
+          node --check assets/js/admin/trophy-gallery-admin-v2121.js
+          node --check assets/js/admin/trophy-gallery-admin-view-v2121.js
           node --check assets/js/admin/tool-registry.js
           node --check assets/js/pages/challenge-list-assistant.js
           node --check assets/js/pages/runtime-diagnostics.js
