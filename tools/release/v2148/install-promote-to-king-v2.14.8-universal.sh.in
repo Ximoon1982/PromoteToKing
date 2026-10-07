@@ -360,7 +360,7 @@ grep -Fq "PHP_SAPI !== 'cli'" "$ROOT/server/release-control/tools/install-candid
 
 printf 'Materializing verified v2.14.8 release slot...\n'
 TARGET_SLOT_RESULT="$("$PYTHON_BIN" "$ROOT/server/release-control/tools/release-slot-paths.py" --root "$ROOT" | "$PHP_BIN" "$ROOT/server/release-control/tools/materialize-current-slot.php" --root="$ROOT" --version="2.14.8" --source-head="$SOURCE_HEAD" --cache-key="$CACHE_KEY" --paths=-)" \
-  || abort_after_activation "Unable to materialize the verified v2.14.7 release slot"
+  || abort_after_activation "Unable to materialize the verified v2.14.8 release slot"
 printf '%s\n' "$TARGET_SLOT_RESULT"
 
 ACTIVATED=0
