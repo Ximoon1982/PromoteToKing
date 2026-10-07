@@ -80,7 +80,7 @@ final class StorageMetricsService
         $cacheMetric=['path'=>$cache]+$cacheStat+['quota_bytes'=>$cacheQuota,'ratio'=>$cacheRatio,'percent'=>round(100*$cacheRatio,2),'max_entries'=>$cacheMaxEntries,'entry_ratio'=>$cacheEntryRatio,'entry_percent'=>round(100*$cacheEntryRatio,2),'status'=>max($cacheRatio,$cacheEntryRatio)>=$warning?'red':'green'];
         $quota=max(0,(int)($storage['filesystem_quota_bytes']??0));$total=$rootStat['bytes']+$archiveStat['bytes'];$ratio=$quota>0?$total/$quota:null;
         $siteRoot=dirname(__DIR__,3);$objects=$this->siteObjectStats($siteRoot,$root);$maxFiles=max(0,(int)($storage['filesystem_max_files']??0));$fileWarning=(float)($storage['filesystem_file_warning_ratio']??$warning);$fileRatio=$maxFiles>0?$objects['files']/$maxFiles:null;
-        return ['runtime_root'=>$root,'cache'=>$cacheMetric,'logs'=>['path'=>$logs]+$logStat,'archive'=>['path'=>$archive]+$archiveStat,
+        return ['measurement_basis'=>'apparent_path_bytes','hard_links_counted_per_path'=>true,'runtime_root'=>$root,'cache'=>$cacheMetric,'logs'=>['path'=>$logs]+$logStat,'archive'=>['path'=>$archive]+$archiveStat,
             'other_runtime'=>['bytes'=>$other,'files'=>max(0,$rootStat['files']-$cacheStat['files']-$logStat['files'])],'total_bytes'=>$total,'quota_bytes'=>$quota,'ratio'=>$ratio,'percent'=>$ratio===null?null:round(100*$ratio,2),
             'status'=>$ratio===null?'unbounded':($ratio>=$warning?'red':'green'),'objects'=>['site_root'=>$siteRoot]+$objects+['max_files'=>$maxFiles,'file_ratio'=>$fileRatio,'file_percent'=>$fileRatio===null?null:round(100*$fileRatio,2),'status'=>$fileRatio===null?'unbounded':($fileRatio>=$fileWarning?'red':'green')]];
     }

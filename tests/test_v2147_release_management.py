@@ -6,6 +6,9 @@ MANAGER = (ROOT / "server/release-control/src/ReleaseVersionManager.php").read_t
 STATE = (ROOT / "server/release-control/src/ReleaseStateStore.php").read_text(encoding="utf-8")
 BOOTSTRAP = (ROOT / "server/release-control/src/bootstrap.php").read_text(encoding="utf-8")
 ADMIN = (ROOT / "assets/js/admin/admin-shell.js").read_text(encoding="utf-8")
+TP_ADMIN = (ROOT / "TeamPointsAdmin.html").read_text(encoding="utf-8")
+TP_ADMIN_JS = (ROOT / "assets/js/pages/team-points-admin.js").read_text(encoding="utf-8")
+STORAGE = (ROOT / "server/team-points/src/StorageMetricsService.php").read_text(encoding="utf-8")
 
 
 def test_v2147_identity_and_ui_scope():
@@ -69,3 +72,16 @@ def test_deletion_preview_has_direct_anchor_and_keeps_page_context():
     assert 'name="release_page" value="<?= rc_h($releasePage) ?>"' in PAGE
     assert "cleanup_preview=" in PAGE
     assert "#release-management" not in PAGE.split("cleanup_preview=", 1)[1].split("Preview deletion", 1)[0]
+
+
+def test_storage_capacity_labels_apparent_size_and_hardlink_semantics():
+    assert "apparent/path-summed sizes" in TP_ADMIN
+    assert "do not represent physical disk blocks or reclaimable space" in TP_ADMIN
+    assert "Apparent filesystem" in TP_ADMIN
+    assert "not a forecast of physical disk blocks" in TP_ADMIN
+    assert "Apparent filesystem size" in TP_ADMIN_JS
+    assert "hard links counted per path" in TP_ADMIN_JS
+    assert "Apparent filesystem:" in TP_ADMIN_JS
+    assert "renderProjection('Apparent filesystem'" in TP_ADMIN_JS
+    assert "'measurement_basis'=>'apparent_path_bytes'" in STORAGE
+    assert "'hard_links_counted_per_path'=>true" in STORAGE

@@ -265,19 +265,19 @@
   <section data-panel="storage" role="tabpanel" hidden>
     <section class="p2k-tp-card">
       <div class="p2k-tp-card-head">
-        <div><h2>Storage &amp; capacity</h2><p>Measured independently for the Core database, Analytics database and protected filesystem. Capacity also tracks the hosting file-count contract so inode growth is visible before it becomes operationally dangerous.</p></div>
+        <div><h2>Storage &amp; capacity</h2><p>Measured independently for the Core database, Analytics database and protected filesystem. Filesystem byte figures are apparent/path-summed sizes: hard-linked files are counted at each path, so they do not represent physical disk blocks or reclaimable space. Hosting file/object counts are tracked separately.</p></div>
         <button class="p2k-tp-button" id="storageRefresh" type="button">Refresh measurement</button>
       </div>
       <div class="p2k-storage-grid" id="storageCards"><div class="p2k-storage-empty">No storage measurement loaded.</div></div>
       <div class="p2k-tp-status" id="storageStatus">Open this tab to measure storage.</div>
     </section>
     <section class="p2k-tp-card">
-      <div class="p2k-tp-card-head"><div><h2>Monthly storage evolution</h2><p>Month-end measurements are retained in Analytics. Hover or tap the plot to inspect a month; the 80% and 100% database limits are shown against configured quotas.</p></div></div>
-      <div class="p2k-storage-chart" id="storageHistoryChart" role="img" aria-label="Monthly database and filesystem size evolution"><span class="p2k-storage-empty">Storage history will appear after measurements accumulate.</span></div>
-      <div class="p2k-storage-legend"><span><i class="core"></i>Core DB</span><span><i class="analytics"></i>Analytics DB</span><span><i class="filesystem"></i>Filesystem</span></div>
+      <div class="p2k-tp-card-head"><div><h2>Monthly storage evolution</h2><p>Month-end measurements are retained in Analytics. The filesystem series is apparent/path-summed size, not physical disk usage. Hover or tap the plot to inspect a month; the 80% and 100% database limits are shown against configured quotas.</p></div></div>
+      <div class="p2k-storage-chart" id="storageHistoryChart" role="img" aria-label="Monthly database and apparent filesystem size evolution"><span class="p2k-storage-empty">Storage history will appear after measurements accumulate.</span></div>
+      <div class="p2k-storage-legend"><span><i class="core"></i>Core DB</span><span><i class="analytics"></i>Analytics DB</span><span><i class="filesystem"></i>Apparent filesystem</span></div>
     </section>
     <section class="p2k-tp-card">
-      <div class="p2k-tp-card-head"><div><h2>Capacity projection</h2><p>Projection uses the measured monthly size series once two calendar months are available. During the first month only, daily samples provide a clearly labelled bootstrap estimate; non-growing baselines are not extrapolated.</p></div></div>
+      <div class="p2k-tp-card-head"><div><h2>Capacity projection</h2><p>Projection uses the measured monthly size series once two calendar months are available. The filesystem projection follows apparent/path-summed size and is not a forecast of physical disk blocks. During the first month only, daily samples provide a clearly labelled bootstrap estimate; non-growing baselines are not extrapolated.</p></div></div>
       <div class="p2k-storage-projections" id="storageProjections"></div>
     </section>
   </section>

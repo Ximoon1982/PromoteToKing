@@ -111,7 +111,7 @@
     let pinnedIndex = null;
     const showTip = dot => {
       const index=Number(dot.dataset.storageIndex),r=history[index];
-      tip.innerHTML = `<strong>${esc(r.week || r.month || r.date)}</strong><br>Core: ${esc(bytes(r.core_bytes))}<br>Analytics: ${esc(bytes(r.analytics_bytes))}<br>Filesystem: ${esc(bytes(r.filesystem_bytes))}`;
+      tip.innerHTML = `<strong>${esc(r.week || r.month || r.date)}</strong><br>Core: ${esc(bytes(r.core_bytes))}<br>Analytics: ${esc(bytes(r.analytics_bytes))}<br>Apparent filesystem: ${esc(bytes(r.filesystem_bytes))}`;
       tip.hidden = false; tip.style.left = `${dot.cx.baseVal.value/width*100}%`; tip.style.top = `${dot.cy.baseVal.value/height*100}%`;
     };
     host.querySelectorAll('[data-storage-index]').forEach(dot => {
@@ -143,19 +143,19 @@
     $('storageCards').innerHTML = [
       capacityCard('Core DB', core, core.available ? `${number(core.tables)} tables` : core.error || 'Connection unavailable'),
       capacityCard('Analytics DB', analytics, analytics.available ? `${number(analytics.tables)} tables` : analytics.error || 'Connection unavailable'),
-      capacityCard('Filesystem total', { ...fs, bytes:fs.total_bytes, available:true }, `Cache ${bytes(cache.bytes)} · logs ${bytes(fs.logs?.bytes)} · archive ${bytes(fs.archive?.bytes)}`),
+      capacityCard('Apparent filesystem size', { ...fs, bytes:fs.total_bytes, available:true }, `${number(fs.objects?.objects || 0)} filesystem objects · hard links counted per path · cache ${bytes(cache.bytes)} · logs ${bytes(fs.logs?.bytes)} · archive ${bytes(fs.archive?.bytes)}`),
       capacityCard('Filesystem cache', { ...cache, available:true }, `${number(cache.files)} compressed cache files · ${number(cache.max_entries || 0)} entry ceiling`),
       objectCountCard('Hosting file count', fs.objects || {})
     ].join('');
     renderStorageChart(payload?.weekly_history || [], payload);
-    $('storageProjections').innerHTML = [renderProjection('Core DB', payload?.projection?.core), renderProjection('Analytics DB', payload?.projection?.analytics), renderProjection('Filesystem', payload?.projection?.filesystem)].join('');
+    $('storageProjections').innerHTML = [renderProjection('Core DB', payload?.projection?.core), renderProjection('Analytics DB', payload?.projection?.analytics), renderProjection('Apparent filesystem', payload?.projection?.filesystem)].join('');
     const red = [core, analytics, cache, fs.objects].filter(x => x?.status === 'red').length;
-    setMessage('storageStatus', red ? `${red} storage area${red===1?' is':'s are'} at or above the 80% warning threshold.` : `Measured ${formatUtc(payload?.measured_at)}. Database indicators are green below 80%.`, red ? 'error' : 'success');
+    setMessage('storageStatus', red ? `${red} storage area${red===1?' is':'s are'} at or above the 80% warning threshold. Filesystem bytes are apparent/path-summed, not physical disk usage.` : `Measured ${formatUtc(payload?.measured_at)}. Filesystem bytes are apparent/path-summed; hard links are counted at each path.`, red ? 'error' : 'success');
   }
 
   async function loadStorageMetrics(force = false) {
     if (state.storageLoaded && !force) return;
-    setMessage('storageStatus', 'Measuring Core DB, Analytics DB and protected filesystem…');
+    setMessage('storageStatus', 'Measuring Core DB, Analytics DB and apparent filesystem size…');
     try {
       const payload = await request('storage');
       renderStorage(payload.storage || {});
