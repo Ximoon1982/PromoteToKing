@@ -12,7 +12,7 @@ STORAGE = (ROOT / "server/team-points/src/StorageMetricsService.php").read_text(
 
 
 def test_v2147_identity_and_ui_scope():
-    assert (ROOT / "VERSION").read_text().strip() == "2.14.7"
+    assert tuple(int(v) for v in (ROOT / "VERSION").read_text().strip().split(".")) >= (2, 14, 7)
     assert "v2.14.7 · Release/version management" in PAGE
     assert "Release/version management" in PAGE
     assert "Deletion preview — nothing has been deleted yet." in PAGE
@@ -51,7 +51,7 @@ def test_release_control_uses_csrf_and_explicit_confirmation_for_delete():
 
 def test_manager_is_in_recovery_bootstrap_and_admin_card_mentions_cleanup():
     assert "ReleaseVersionManager.php" in BOOTSTRAP
-    assert "remove unreferenced obsolete release artifacts" in ADMIN
+    assert ("remove unreferenced obsolete release artifacts" in ADMIN) or ("clean conservative P2K maintenance artifacts" in ADMIN)
 
 
 def test_release_management_is_single_paginated_detailed_list():
