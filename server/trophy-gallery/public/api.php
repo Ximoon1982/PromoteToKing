@@ -18,6 +18,10 @@ try{
  if($action==='save'){Http::method('POST');$body=Http::body();Http::json(trophy_mutation($store->save($body,trophy_expected_revision($body)),'record'));}
  if($action==='duplicate'){Http::method('POST');$body=Http::body();Http::json(trophy_mutation($store->duplicate((string)($body['id']??''),trophy_expected_revision($body)),'record'));}
  if($action==='delete'){Http::method('POST');$body=Http::body();Http::json(trophy_mutation($store->delete((string)($body['id']??''),trophy_expected_revision($body)),'deleted'));}
+ if($action==='import-url'){
+  Http::method('POST');$body=Http::body();$result=$store->importUrlAndAssign((string)($body['url']??''),(string)($body['id']??''),(string)($body['slot']??''),trophy_expected_revision($body));
+  Http::json(['ok'=>true,'media'=>$result['value']['media'],'record'=>$result['value']['record'],'imported'=>$result['value']['imported'],'revision'=>$result['revision']]);
+ }
  if($action==='upload'){
   Http::method('POST');$result=$store->uploadAndAssign($_FILES['artwork']??[],(string)($_POST['trophy_id']??''),(string)($_POST['slot']??''),(string)($_POST['source']??'upload'),trophy_expected_revision());
   Http::json(['ok'=>true,'media'=>$result['value']['media'],'record'=>$result['value']['record'],'revision'=>$result['revision']]);

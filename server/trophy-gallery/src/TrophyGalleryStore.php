@@ -2,6 +2,8 @@
 declare(strict_types=1);
 namespace P2K\TrophyGallery;
 
+require_once __DIR__.'/TrophyRemoteArtworkImporter.php';
+
 use DateTimeImmutable;
 use RuntimeException;
 use Throwable;
@@ -9,8 +11,8 @@ use Throwable;
 final class TrophyGalleryStore
 {
     public const SCHEMA_VERSION=2;
-    private string $root; private string $catalog; private string $artwork; private string $trash;
-    public function __construct(?string $root=null){$this->root=rtrim($root?:dirname(__DIR__,3).'/data/trophy-gallery','/');$this->catalog=$this->root.'/catalog.json';$this->artwork=$this->root.'/artwork';$this->trash=$this->root.'/.trash';foreach([$this->root,$this->artwork,$this->trash]as$d)if(!is_dir($d)&&!mkdir($d,0750,true)&&!is_dir($d))throw new RuntimeException('Trophy data directory is unavailable.');}
+    private string $root; private string $catalog; private string $artwork; private string $trash; private TrophyRemoteArtworkFetcher $remoteImporter;
+    public function __construct(?string $root=null,?TrophyRemoteArtworkFetcher $remoteImporter=null){$this->root=rtrim($root?:dirname(__DIR__,3).'/data/trophy-gallery','/');$this->catalog=$this->root.'/catalog.json';$this->artwork=$this->root.'/artwork';$this->trash=$this->root.'/.trash';$this->remoteImporter=$remoteImporter?:new TrophyRemoteArtworkImporter();foreach([$this->root,$this->artwork,$this->trash]as$d)if(!is_dir($d)&&!mkdir($d,0750,true)&&!is_dir($d))throw new RuntimeException('Trophy data directory is unavailable.');}
 
     public function catalogue(bool $publishedOnly=false):array{$c=$this->read();$rows=$c['records'];if($publishedOnly){$rows=array_values(array_filter($rows,static fn($r)=>($r['status']??'')==='published'));$allow=array_flip(['id','league','competition','title','award_date','description_md','award_page','competition_page','result_table_url','vignette_media_id','modal_media_id','vignette_url','modal_url','matches']);$rows=array_map(static fn($r)=>array_intersect_key($r,$allow),$rows);}usort($rows,static fn($a,$b)=>strcmp((string)($b['award_date']??''),(string)($a['award_date']??''))?:strcmp((string)($a['title']??''),(string)($b['title']??''))?:strcmp((string)$a['id'],(string)$b['id']));return['schema_version'=>self::SCHEMA_VERSION,'revision'=>$c['revision'],'records'=>$rows];}
     public function records(bool $publishedOnly=false):array{return $this->catalogue($publishedOnly)['records'];}
@@ -24,6 +26,72 @@ final class TrophyGalleryStore
     public function delete(string $id,?int $expected=null):array{$id=$this->id($id,false);$snapshot=$this->read();if($this->index($snapshot,$id)===null)throw new RuntimeException('Trophy record not found.');$staged=[];foreach($snapshot['media']as$m)if(is_array($m)&&($m['owner_trophy_id']??'')===$id){$from=$this->path($m);if(!is_file($from))continue;$to=$this->trash.'/'.basename($from).'.'.bin2hex(random_bytes(4));if(!rename($from,$to)){foreach(array_reverse($staged)as[$a,$b])@rename($b,$a);throw new RuntimeException('Owned artwork could not be staged.');}$staged[]=[$from,$to];}try{$out=$this->change(function(&$c)use($id){$i=$this->index($c,$id);if($i===null)throw new RuntimeException('Trophy record not found.');$r=$c['records'][$i];array_splice($c['records'],$i,1);foreach(array_keys($c['media'])as$mid)if(($c['media'][$mid]['owner_trophy_id']??'')===$id)unset($c['media'][$mid]);return$r;},$expected);foreach($staged as[, $to])@unlink($to);return$out;}catch(Throwable$e){foreach(array_reverse($staged)as[$from,$to])@rename($to,$from);throw$e;}}
 
     public function uploadAndAssign(array $file,string $owner,string $slot,string $source,?int $expected=null):array{$owner=$this->id($owner,false);if(!in_array($slot,['vignette','modal'],true))throw new RuntimeException('Invalid artwork slot.');if(!in_array($source,['upload','engraving'],true))throw new RuntimeException('Invalid artwork source.');[$tmp,$meta]=$this->validateUpload($file);$id=bin2hex(random_bytes(16));$name=$id.'.'.$meta['extension'];$target=$this->artwork.'/'.$name;if(!move_uploaded_file($tmp,$target))throw new RuntimeException('Artwork could not be stored.');chmod($target,0640);$old=null;try{$out=$this->change(function(&$c)use($owner,$slot,$source,$id,$name,$meta,&$old){$i=$this->index($c,$owner);if($i===null)throw new RuntimeException('Save the Trophy before assigning artwork.');$field=$slot.'_media_id';$oldId=(string)($c['records'][$i][$field]??'');$candidate=$c['media'][$oldId]??null;if(is_array($candidate)&&($candidate['owner_trophy_id']??'')===$owner)$old=$candidate;$m=['id'=>$id,'owner_trophy_id'=>$owner,'slot'=>$slot,'source'=>$source,'file'=>$name,'mime'=>$meta['mime'],'bytes'=>$meta['bytes'],'width'=>$meta['width'],'height'=>$meta['height'],'created_at'=>gmdate(DATE_ATOM)];$c['media'][$id]=$m;$c['records'][$i][$field]=$id;$c['records'][$i]['updated_at']=gmdate(DATE_ATOM);if(is_array($old))unset($c['media'][$oldId]);return['media'=>$m,'record'=>$c['records'][$i]];},$expected);}catch(Throwable$e){@unlink($target);throw$e;}if(is_array($old))@unlink($this->path($old));return$out;}
+
+    public function importUrlAndAssign(string $url,string $owner,string $slot,?int $expected=null):array{
+        $owner=$this->id($owner,false);
+        if(!in_array($slot,['vignette','modal'],true))throw new RuntimeException('Invalid artwork slot.');
+        $url=$this->url($url);
+        if($url==='')throw new RuntimeException('Remote artwork URL is required.');
+        $snapshot=$this->read();
+        if($expected!==null&&$expected!==$snapshot['revision'])throw new RuntimeException('Trophy catalogue changed; reload before saving.');
+        $i=$this->index($snapshot,$owner);
+        if($i===null)throw new RuntimeException('Save the Trophy before assigning artwork.');
+        $field=$slot.'_media_id';
+        $urlField=$slot.'_url';
+        $oldId=(string)($snapshot['records'][$i][$field]??'');
+        $existing=$snapshot['media'][$oldId]??null;
+        if(is_array($existing)&&($existing['owner_trophy_id']??'')===$owner&&($existing['source']??'')==='external_url'&&($existing['source_url']??'')===$url){
+            try{$existingPath=$this->path($existing);}catch(Throwable){$existingPath='';}
+            if($existingPath!==''&&is_file($existingPath)){
+                return['value'=>['media'=>$existing,'record'=>$snapshot['records'][$i],'imported'=>false],'revision'=>$snapshot['revision']];
+            }
+        }
+
+        $asset=$this->remoteImporter->fetch($url);
+        $id=bin2hex(random_bytes(16));
+        $name=$id.'.'.$asset['extension'];
+        $target=$this->artwork.'/'.$name;
+        $tmp=$this->artwork.'/.remote-'.$id.'.tmp';
+        $bytesData=(string)($asset['bytes_data']??'');
+        $written=@file_put_contents($tmp,$bytesData,LOCK_EX);
+        if($written===false||$written!==strlen($bytesData)){@unlink($tmp);throw new RuntimeException('Remote artwork could not be staged locally.');}
+        @chmod($tmp,0640);
+        if(!@rename($tmp,$target)){@unlink($tmp);throw new RuntimeException('Remote artwork could not be stored locally.');}
+        @chmod($target,0640);
+
+        $old=null;
+        try{
+            $out=$this->change(function(&$c)use($owner,$slot,$field,$urlField,$url,$id,$name,$asset,&$old){
+                $i=$this->index($c,$owner);
+                if($i===null)throw new RuntimeException('Trophy record not found.');
+                $oldId=(string)($c['records'][$i][$field]??'');
+                $candidate=$c['media'][$oldId]??null;
+                if(is_array($candidate)&&($candidate['owner_trophy_id']??'')===$owner)$old=$candidate;
+                $m=[
+                    'id'=>$id,
+                    'owner_trophy_id'=>$owner,
+                    'slot'=>$slot,
+                    'source'=>'external_url',
+                    'source_url'=>$url,
+                    'resolved_url'=>(string)($asset['final_url']??$url),
+                    'file'=>$name,
+                    'mime'=>(string)$asset['mime'],
+                    'bytes'=>(int)$asset['bytes'],
+                    'width'=>(int)$asset['width'],
+                    'height'=>(int)$asset['height'],
+                    'created_at'=>gmdate(DATE_ATOM)
+                ];
+                $c['media'][$id]=$m;
+                $c['records'][$i][$field]=$id;
+                $c['records'][$i][$urlField]=$url;
+                $c['records'][$i]['updated_at']=gmdate(DATE_ATOM);
+                if(is_array($old))unset($c['media'][(string)$old['id']]);
+                return['media'=>$m,'record'=>$c['records'][$i],'imported'=>true];
+            },$expected);
+        }catch(Throwable$e){@unlink($target);throw$e;}
+        if(is_array($old))@unlink($this->path($old));
+        return$out;
+    }
 
     public function media(string $id):array{$c=$this->read();$id=$this->mediaId($id);$m=$c['media'][$id]??null;if(!is_array($m))throw new RuntimeException('Artwork not found.');$p=$this->path($m);if(!is_file($p))throw new RuntimeException('Artwork file is missing.');return[array_intersect_key($m,array_flip(['id','mime','bytes','width','height','created_at'])),$p];}
     public function audit(bool $purge=false):array{$c=$this->read();$used=[];foreach($c['records']as$r)foreach(['vignette_media_id','modal_media_id']as$f)if(($r[$f]??'')!=='')$used[(string)$r[$f]]=true;$ids=array_values(array_diff(array_keys($c['media']),array_keys($used)));$known=[];foreach($c['media']as$m)if(is_array($m))$known[(string)($m['file']??'')]=true;$files=[];foreach(glob($this->artwork.'/*')?:[]as$p){$n=basename($p);if(is_file($p)&&preg_match('/^[a-f0-9]{32}\.(?:png|jpg|webp)$/',$n)&&!isset($known[$n]))$files[]=$n;}sort($ids);sort($files);if($purge&&($ids||$files)){$this->change(function(&$locked)use($ids){foreach($ids as$id)unset($locked['media'][$id]);return null;},$c['revision']);foreach($ids as$id){$m=$c['media'][$id]??null;if(is_array($m))@unlink($this->path($m));}foreach($files as$n)@unlink($this->artwork.'/'.$n);}return['orphan_media_ids'=>$ids,'orphan_files'=>$files,'orphan_count'=>count($ids)+count($files),'purged'=>$purge?count($ids)+count($files):0];}
