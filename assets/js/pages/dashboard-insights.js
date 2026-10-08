@@ -1,4 +1,14 @@
-/* Lazy integrated public Insights controller. Integrated in v2.8.8. */
+    const csvButton=byId("opponentsCsvExport");if(csvButton&&!csvButton.dataset.bound){csvButton.dataset.bound="1";csvButton.addEventListener("click",()=>{window.location.href=opponentCsvURL(state.opponentsTableState);});}
+/* 
+  function opponentCsvURL(tableState = state.opponentsTableState) {
+    const url = new URL("server/team-points/public/opponents-export.php", window.location.href);
+    if (tableState?.query) url.searchParams.set("search", tableState.query);
+    url.searchParams.set("filter", tableState?.filter || "all");
+    if (tableState?.sort) url.searchParams.set("sort", tableState.sort);
+    url.searchParams.set("direction", tableState?.direction === "asc" ? "asc" : "desc");
+    return url.href;
+  }
+Lazy integrated public Insights controller. Integrated in v2.8.8. */
 (() => {
   "use strict";
   window.P2K_CREATE_DASHBOARD_INSIGHTS = function createDashboardInsights(ctx) {
@@ -32,6 +42,13 @@ function membersTableColumns() {
     if (state.teamEnd) url.searchParams.set("end", state.teamEnd);
     if (includeSummary) url.searchParams.set("include_summary", "1");
     if (section && section !== "all") url.searchParams.set("section", section);
+    return url.href;
+  }
+
+  function memberCsvURL() {
+    const url = new URL("server/team-points/public/members-insights-export.php", window.location.href);
+    if (state.membersTableState?.sort) url.searchParams.set("sort", state.membersTableState.sort);
+    url.searchParams.set("direction", state.membersTableState?.direction === "desc" ? "desc" : "asc");
     return url.href;
   }
 
@@ -71,6 +88,11 @@ function membersTableColumns() {
   }
 
   async function loadMemberInsights({ force = false } = {}) {
+    const csvButton = byId("membersCsvExport");
+    if (csvButton && !csvButton.dataset.bound) {
+      csvButton.dataset.bound = "1";
+      csvButton.addEventListener("click", () => { window.location.href = memberCsvURL(); });
+    }
     if (state.membersLoaded && !force) return;
     const status = byId("membersTableStatus");
     if (status) { status.classList.remove("is-error"); status.textContent = "Loading member summary…"; }
