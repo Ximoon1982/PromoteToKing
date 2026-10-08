@@ -422,6 +422,42 @@ if ($filesystemAuditRequested) {
     </section>
 
 
+    <section class="card full" id="filesystem-audit">
+      <h2>Filesystem &amp; inode audit</h2>
+      <p class="small">Read-only recursive accounting of the complete PromoteToKing tree. Symbolic links are not followed; hard-linked files are deduplicated by inode; independent projects, <code>.p2k-preserve</code> trees and unknown content remain protected. Audit findings never grant deletion rights.</p>
+      <?php if (!$filesystemAuditRequested): ?>
+        <div class="actions"><a class="button" href="/ReleaseControl.php?filesystem_audit=1#filesystem-audit">Run full filesystem audit</a></div>
+        <p class="small">The scan is on-demand because it recursively stats the full tree.</p>
+      <?php elseif ($filesystemAuditError !== ''): ?>
+        <p class="small">Audit failed: <?= rc_h($filesystemAuditError) ?></p>
+      <?php elseif (is_array($filesystemAudit)): ?>
+        <?php $fa=(array)($filesystemAudit['totals']??[]); $fd=(array)($filesystemAudit['filesystem']??[]); ?>
+        <dl class="meta">
+          <dt>Total entries</dt><dd><?= rc_h($fa['inode_entries'] ?? 0) ?></dd>
+          <dt>Unique file inodes</dt><dd><?= rc_h($fa['unique_file_inodes'] ?? 0) ?></dd>
+          <dt>Apparent file size</dt><dd><?= rc_h(rc_bytes((int)($fa['apparent_bytes'] ?? 0))) ?></dd>
+          <dt>Unique allocated estimate</dt><dd><?= rc_h(rc_bytes((int)($fa['unique_allocated_bytes'] ?? 0))) ?> <span class="small">(hard links counted once)</span></dd>
+          <dt>Hard-link references</dt><dd><?= rc_h($fa['hardlink_reference_entries'] ?? 0) ?></dd>
+          <dt>Host filesystem free</dt><dd><?= ($fd['free_bytes']??null)===null?'unavailable':rc_h(rc_bytes((int)$fd['free_bytes'])) ?></dd>
+        </dl>
+        <div class="checks">
+          <?php foreach ((array)($filesystemAudit['top_level'] ?? []) as $area): $as=(array)($area['stats']??[]); ?>
+            <div class="check <?= !empty($area['protected'])?'ok':(!empty($area['deletion_authorized'])?'warning':'info') ?>">
+              <i class="dot" aria-hidden="true"></i>
+              <strong><code><?= rc_h($area['relative_path'] ?? '') ?></code></strong>
+              <span><?= rc_h($area['category'] ?? '') ?> · <?= rc_h($as['inode_entries'] ?? 0) ?> entries · <?= rc_h(rc_bytes((int)($as['apparent_bytes'] ?? 0))) ?> apparent · <?= rc_h(rc_bytes((int)($as['unique_allocated_bytes'] ?? 0))) ?> unique allocated<?php if (!empty($area['protected'])): ?> · protected: <?= rc_h($area['protection_reason'] ?? '') ?><?php endif; ?></span>
+            </div>
+          <?php endforeach; ?>
+        </div>
+        <?php $findings=(array)($filesystemAudit['maintenance_findings']??[]); if ($findings !== []): ?>
+          <h3>Recursive maintenance findings</h3>
+          <p class="small">Review-only nested P2K installer/package-looking paths. They are not deletable unless the conservative cleanup classifier separately authorizes them.</p>
+          <div class="checks"><?php foreach ($findings as $finding): ?><div class="check info"><i class="dot" aria-hidden="true"></i><strong>review only</strong><span><code><?= rc_h($finding['relative_path'] ?? '') ?></code> · <?= rc_h($finding['protection_reason'] ?? '') ?></span></div><?php endforeach; ?></div>
+        <?php endif; ?>
+        <div class="actions"><a class="button" href="/ReleaseControl.php?filesystem_audit=1#filesystem-audit">Run audit again</a></div>
+      <?php endif; ?>
+    </section>
+
     <section class="card full" id="filesystem-cleanup">
       <h2>Filesystem cleanup</h2>
       <p class="small">Conservative crawler for P2K maintenance artifacts outside immutable release slots. It recognizes only P2K installer archives/extractions, old release-control backups and stale release-control staging leftovers. Unknown top-level files/directories and unrelated projects are ignored and cannot be deleted here.</p>
