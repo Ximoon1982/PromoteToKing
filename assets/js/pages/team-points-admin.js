@@ -616,6 +616,9 @@
     $('tpRun').addEventListener('click', runManualContinuously);
     $('tpRefresh').addEventListener('click', () => refreshStatus(true).catch(() => {}));
     $('storageRefresh')?.addEventListener('click', () => loadStorageMetrics(true));
+    $('membersFullCsvExport')?.addEventListener('click', () => {
+      window.location.href = 'server/team-points/public/members-insights-export.php';
+    });
     $('memberChronologyRefresh')?.addEventListener('click', () => loadMemberChronology(true));
     $('memberChronologyApply')?.addEventListener('click', () => { state.memberEventsLoaded=false; loadMemberChronology(true); });
     $('memberChronologyClear')?.addEventListener('click', () => {
