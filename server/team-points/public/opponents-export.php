@@ -4,10 +4,11 @@ declare(strict_types=1);
 require_once __DIR__ . '/../src/bootstrap.php';
 
 use P2K\TeamPoints\PublicReadDatabase;
-use P2K\TeamPoints\{ApiException,Http,Repository};
+use P2K\TeamPoints\{ApiException,Auth,Http,Repository};
 
 try {
     Http::method('GET');
+    Auth::requireAdmin();
     $config = p2k_tp_config();
     $repository = new Repository(PublicReadDatabase::core(), PublicReadDatabase::analytics());
     if (!$repository->schemaInstalled()) {
@@ -54,6 +55,20 @@ try {
     $q->execute($params);
     $rows = $q->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
+    $behaviour = [];
+    $bq = $repository->analytics()->prepare(
+        "SELECT opponent_slug,COUNT(*) sample_matches,ROUND(AVG(board_count),1) avg_boards,
+                ROUND(AVG(opponent_avg_rating),0) avg_opponent_rating,
+                SUM(is_league=1) league_matches,SUM(is_league=0) friendly_matches,
+                SUM(end_time>=UTC_TIMESTAMP()-INTERVAL 90 DAY) matches_last_90d,
+                ROUND(AVG(CASE WHEN status='finished' THEN p2k_score-opponent_score END),2) avg_score_margin
+         FROM p2k_an_match_facts
+         WHERE club_slug=? AND opponent_slug IS NOT NULL AND opponent_slug<>'' AND is_void=0
+         GROUP BY opponent_slug"
+    );
+    $bq->execute([$club]);
+    foreach ($bq->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) $behaviour[(string)$row['opponent_slug']] = $row;
+
     $core = [];
     $cq = $repository->core()->prepare(
         'SELECT opponent_slug,country_code,first_seen_at,last_seen_at,last_checked_at,icon_url,icon_checked_at,profile_updated_at,last_error
@@ -75,7 +90,7 @@ try {
         'opponent_slug','name','club_url','disabled','country_code',
         'matches','registered','ongoing','finished','wins','draws','losses',
         'result_covered','result_missing','result_coverage_percent',
-        'our_points','their_points','balance','win_rate_percent','total_boards',
+        'our_points','their_points','balance','win_rate_percent','total_boards','avg_boards','avg_opponent_rating','league_matches','friendly_matches','matches_last_90d','avg_score_margin',
         'first_match_at_utc','last_match_at_utc',
         'first_seen_at_utc','last_seen_at_utc','last_checked_at_utc','profile_updated_at_utc',
         'icon_url','icon_checked_at_utc','last_error'
@@ -84,12 +99,14 @@ try {
     foreach ($rows as $row) {
         $slug = (string)$row['opponent_slug'];
         $m = $core[$slug] ?? [];
+        $b = $behaviour[$slug] ?? [];
         fputcsv($out, [
             $slug,(string)$row['display_name'],(string)($row['club_url'] ?? ''),(int)$row['disabled'],(string)($m['country_code'] ?? ''),
             (int)$row['matches'],(int)$row['registered'],(int)$row['ongoing'],(int)$row['finished'],
             (int)$row['wins'],(int)$row['draws'],(int)$row['losses'],
             (int)$row['result_covered'],(int)$row['result_missing'],(float)$row['result_coverage_percent'],
             (float)$row['our_points'],(float)$row['their_points'],(float)$row['balance'],(float)$row['win_rate'],(int)$row['total_boards'],
+            (float)($b['avg_boards'] ?? 0),$b['avg_opponent_rating']===null?'':(int)($b['avg_opponent_rating'] ?? 0),(int)($b['league_matches'] ?? 0),(int)($b['friendly_matches'] ?? 0),(int)($b['matches_last_90d'] ?? 0),(float)($b['avg_score_margin'] ?? 0),
             (string)($row['first_match_at'] ?? ''),(string)($row['last_match_at'] ?? ''),
             (string)($m['first_seen_at'] ?? ''),(string)($m['last_seen_at'] ?? ''),(string)($m['last_checked_at'] ?? ''),(string)($m['profile_updated_at'] ?? ''),
             (string)($m['icon_url'] ?? ''),(string)($m['icon_checked_at'] ?? ''),(string)($m['last_error'] ?? '')
