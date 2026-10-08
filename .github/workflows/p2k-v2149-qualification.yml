@@ -94,6 +94,7 @@ jobs:
           node --check assets/js/pages/runtime-diagnostics.js
           node --check assets/js/pages/team-points-admin.js
           node --check assets/js/pages/club-intelligence.js
+          node --check server/release-control/public/release-control-upload.js
       - name: v2.14.9 installer and candidate bootstrap gate
         run: bash tests/test_v2149_universal_installer.sh
       - name: Build v2.14.9 cumulative incremental installer
