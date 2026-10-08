@@ -14,7 +14,6 @@ BUILDER = (ROOT / "tools/release/v2149/build-universal-2.13x.sh").read_text(enco
 UPLOAD_JS = (ROOT / "server/release-control/public/release-control-upload.js").read_text(encoding="utf-8")
 TROPHY_PUBLIC = (ROOT / "assets/js/admin/trophy-gallery-public-v2121.js").read_text(encoding="utf-8")
 TROPHY_POC = (ROOT / "assets/js/admin/trophy-gallery-poc.js").read_text(encoding="utf-8")
-TROPHY_R538 = (ROOT / "assets/js/admin/trophy-gallery-r5fix3.8.js").read_text(encoding="utf-8")
 TROPHY_INDEX = (ROOT / "trophies/index.html").read_text(encoding="utf-8")
 
 
@@ -124,10 +123,10 @@ def test_trophy_gallery_runtime_dependency_is_packaged_for_candidate_slots():
 
 
 def test_public_trophy_gallery_preserves_preview_cookie_and_busts_old_cache():
-    for source in [TROPHY_PUBLIC, TROPHY_POC, TROPHY_R538]:
+    for source in [TROPHY_PUBLIC, TROPHY_POC]:
         assert 'credentials:"omit"' not in source
         assert 'credentials:"same-origin"' in source
     assert "p2k-2.14.9-preview-credentials-1" in TROPHY_INDEX
-    assert "r538-v2149-preview-credentials-1" in TROPHY_INDEX
+    assert "trophy-gallery-r5fix3.8.js?v=r538-d52193a71712" in TROPHY_INDEX
     assert "p2k-2.12.1-325bae01fa7d-4273295631bdd483" not in TROPHY_INDEX
     assert "assets/js/admin/trophy-gallery-public-v2121.js" in BUILDER
