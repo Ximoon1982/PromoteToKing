@@ -37,7 +37,9 @@ def test_v2145_identity_and_control_plane():
     assert "Rollback" in PAGE
     assert "confirm" in PAGE
     assert "ReleaseDeploymentManager" in PAGE
-    assert "<script" not in PAGE.lower()
+    allowed_script = '<script src="/server/release-control/public/release-control-upload.js"></script>'
+    assert allowed_script in PAGE
+    assert "<script" not in PAGE.replace(allowed_script, "").lower()
     assert "<link" not in PAGE.lower()
 
 
