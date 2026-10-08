@@ -15,7 +15,7 @@ const year = r => String(r?.award_date || "").slice(0, 4) || "Undated";
 
 async function records() {
   if (cache) return cache;
-  const q = await fetch(`${API}?action=list`, { cache: "no-store", credentials: "omit" });
+  const q = await fetch(`${API}?action=list`, { cache: "no-store", credentials:"same-origin" });
   const j = await q.json();
   if (!q.ok || !j?.ok) throw Error(j?.error?.message || `HTTP ${q.status}`);
   return cache = j.records || [];
