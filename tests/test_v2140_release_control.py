@@ -16,7 +16,9 @@ def test_release_identity_and_fixed_recovery_url():
 
 def test_recovery_page_is_shell_independent_and_no_store():
     lowered = PAGE.lower()
-    assert "<script" not in lowered
+    allowed_script = '<script src="/server/release-control/public/release-control-upload.js"></script>'
+    assert allowed_script in PAGE
+    assert "<script" not in PAGE.replace(allowed_script, "").lower()
     assert "<link" not in lowered
     assert "dashboard-v2.js" not in PAGE
     assert "ui-v2.html" not in PAGE
