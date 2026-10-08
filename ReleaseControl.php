@@ -211,6 +211,13 @@ if ($authorized && $filesystemPreviewPath !== '') {
     try { $filesystemPreview = $filesystemCleanup->describe($filesystemPreviewPath); }
     catch (Throwable) { $filesystemPreview = null; }
 }
+$filesystemAuditRequested = $authorized && (string)($_GET['filesystem_audit'] ?? '') === '1';
+$filesystemAudit = null;
+$filesystemAuditError = '';
+if ($filesystemAuditRequested) {
+    try { $filesystemAudit = $filesystemAuditManager->inventory(); }
+    catch (Throwable $e) { $filesystemAuditError = $e->getMessage(); }
+}
 ?><!doctype html>
 <html lang="en">
 <head>
