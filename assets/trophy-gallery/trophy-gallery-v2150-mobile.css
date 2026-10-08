@@ -1,0 +1,11 @@
+/* P2K v2.15.0 — mobile Trophy modal gutter correction.
+   Loaded after the immutable r5fix3.8 presentation layer. */
+@media (max-width: 560px) {
+  .p2k-r538-modal {
+    width: min(calc(100vw - 24px), 100%) !important;
+    max-width: calc(100vw - 24px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    justify-self: center !important;
+  }
+}
