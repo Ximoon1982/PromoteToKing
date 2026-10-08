@@ -82,3 +82,13 @@ def test_v2149_builder_pins_v2148_and_packages_new_surface():
         "server/release-control/src/FilesystemAuditManager.php",
     ]:
         assert path in BUILDER
+
+
+def test_trophy_gallery_uses_physical_shared_data_root_under_release_routing():
+    store = (ROOT / "server/trophy-gallery/src/TrophyGalleryStore.php").read_text(encoding="utf-8")
+    editor = (ROOT / "server/trophy-gallery/public/editor-meta.php").read_text(encoding="utf-8")
+    assert "P2K_PUBLIC_ROOT" in store
+    assert "P2K_PREVIEW_PUBLIC_ROOT" in store
+    assert "P2K_PUBLIC_ROOT" in editor
+    assert "P2K_PREVIEW_PUBLIC_ROOT" in editor
+    assert "server/trophy-gallery/public/editor-meta.php" in BUILDER
