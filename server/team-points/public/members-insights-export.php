@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../src/bootstrap.php';
 
 use P2K\TeamPoints\PublicReadDatabase;
-use P2K\TeamPoints\{ApiException,Http,MemberInsightsTableService,Repository,ResponseCache};
+use P2K\TeamPoints\{ApiException,Auth,Http,MemberInsightsTableService,Repository,ResponseCache};
 
 function p2k_members_csv_utc(mixed $value): string {
     $value = trim((string)$value);
@@ -21,6 +21,7 @@ function p2k_members_csv_epoch(mixed $value): string {
 
 try {
     Http::method('GET');
+    Auth::requireAdmin();
     $config = p2k_tp_config();
     $repository = new Repository(PublicReadDatabase::core(), PublicReadDatabase::analytics());
     if (!$repository->schemaInstalled()) {
