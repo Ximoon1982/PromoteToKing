@@ -6,6 +6,7 @@ require_once __DIR__ . '/server/release-control/src/bootstrap.php';
 use P2K\ReleaseControl\ReleaseControlAuth;
 use P2K\ReleaseControl\ReleaseControlState;
 use P2K\ReleaseControl\FilesystemCleanupManager;
+use P2K\ReleaseControl\FilesystemAuditManager;
 use P2K\ReleaseControl\ReleaseDeploymentManager;
 use P2K\ReleaseControl\ReleasePackageUploadInstaller;
 use P2K\ReleaseControl\ReleasePreviewSession;
@@ -56,6 +57,7 @@ $previewSession = new ReleasePreviewSession(__DIR__);
 $releaseManager = new ReleaseVersionManager(__DIR__);
 $packageInstaller = new ReleasePackageUploadInstaller(__DIR__);
 $filesystemCleanup = new FilesystemCleanupManager(__DIR__);
+$filesystemAuditManager = new FilesystemAuditManager(__DIR__);
 $actionError = '';
 $action = strtolower(trim((string)($_POST['action'] ?? '')));
 
@@ -224,7 +226,7 @@ if ($authorized && $filesystemPreviewPath !== '') {
 <main class="wrap">
   <header class="head">
     <div><div class="eyebrow">Recovery plane</div><h1>Release Control</h1><p>Standalone release diagnostics · fixed URL <code>/ReleaseControl.php</code></p></div>
-    <div class="badge">v2.14.8 · ZIP install + filesystem cleanup · atomic deployment preserved</div>
+    <div class="badge">v2.14.9 · filesystem audit + CSV exports · atomic deployment preserved</div>
   </header>
 
 <?php if ($username === ''): ?>
