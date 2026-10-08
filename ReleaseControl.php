@@ -138,12 +138,17 @@ if ($method === 'POST' && $authorized) {
                 exit;
             }
             if ($action === 'upload-release-package') {
-                if ((string)($_POST['confirm'] ?? '') !== 'yes') {
-                    throw new RuntimeException('Release ZIP installation confirmation is required.');
+                try {
+                    if ((string)($_POST['confirm'] ?? '') !== 'yes') {
+                        throw new RuntimeException('Release ZIP installation confirmation is required.');
+                    }
+                    $result = $packageInstaller->installUploaded((array)($_FILES['release_zip'] ?? []), $username);
+                    header('Location: /ReleaseControl.php?package_result=installed&package_release=' . rawurlencode((string)($result['release_id'] ?? '')) . '#package-upload', true, 303);
+                    exit;
+                } catch (Throwable $e) {
+                    header('Location: /ReleaseControl.php?package_result=error&package_error=' . rawurlencode($e->getMessage()) . '#package-upload', true, 303);
+                    exit;
                 }
-                $result = $packageInstaller->installUploaded((array)($_FILES['release_zip'] ?? []), $username);
-                header('Location: /ReleaseControl.php?package_result=installed&package_release=' . rawurlencode((string)($result['release_id'] ?? '')) . '#package-upload', true, 303);
-                exit;
             }
             if ($action === 'delete-filesystem-artifact') {
                 if ((string)($_POST['confirm'] ?? '') !== 'yes') {
@@ -199,6 +204,7 @@ $cleanupResult = strtolower(trim((string)($_GET['cleanup_result'] ?? '')));
 $cleanupResultRelease = trim((string)($_GET['release_id'] ?? ''));
 $packageResult = strtolower(trim((string)($_GET['package_result'] ?? '')));
 $packageRelease = trim((string)($_GET['package_release'] ?? ''));
+$packageError = trim((string)($_GET['package_error'] ?? ''));
 $filesystemResult = strtolower(trim((string)($_GET['filesystem_result'] ?? '')));
 $filesystemResultPath = trim((string)($_GET['filesystem_path'] ?? ''));
 $releaseInventory = $authorized ? $releaseManager->inventory() : null;
@@ -352,6 +358,7 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
 
     <section class="card full" id="package-upload">
       <h2>Install release ZIP</h2>
+      <?php if ($packageResult === 'error' && $packageError !== ''): ?><section class="notice" style="border-color:#a94b4b;background:#2a1515"><strong>Release ZIP installation failed.</strong> <?= rc_h($packageError) ?></section><?php endif; ?>
       <p class="small">Upload a qualified Promote to King release ZIP directly here. The package is staged under protected release-control runtime, archive paths and hashes are validated, the immutable candidate and preview tree are prepared, and only then is the recovery plane updated from its dedicated manifest. <strong>Public traffic is never promoted by this action.</strong></p>
       <dl class="meta">
         <dt>ZIP support</dt><dd><?= $packageInstaller->available() ? 'available' : 'unavailable · PHP ZipArchive extension required' ?></dd>
@@ -703,7 +710,13 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
         window.location.href=xhr.responseURL || '/ReleaseControl.php#package-upload';
         return;
       }
-      if(status) status.textContent='Installation failed with HTTP '+xhr.status+'.';
+      let detail='';
+      try {
+        const text=(xhr.responseText||'').trim();
+        const match=text.match(/Release ZIP installation failed\.\s*<\/strong>\s*([^<]+)/i);
+        if(match&&match[1]) detail=match[1].trim();
+      } catch (_) {}
+      if(status) status.textContent=detail?('Installation failed: '+detail):('Installation failed with HTTP '+xhr.status+'.');
       if(submit){submit.disabled=false;submit.textContent='Upload and install candidate ZIP';}
     });
     xhr.addEventListener('error',()=>{
