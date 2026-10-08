@@ -49,6 +49,7 @@ FILES=(
   assets/js/admin/trophy-gallery-admin-view-v2121.js
   assets/js/admin/trophy-gallery-engraver-v2121.js
   assets/js/admin/trophy-gallery-poc.js
+  assets/js/admin/trophy-gallery-public-v2121.js
   assets/js/admin/trophy-gallery-r5fix3.8.js
   assets/trophy-gallery/trophy-gallery-r5fix3.8.css
   assets/trophy-gallery/engraving/editor-v2121.html
