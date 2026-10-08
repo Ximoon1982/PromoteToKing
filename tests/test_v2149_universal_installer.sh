@@ -83,10 +83,17 @@ grep -Fq 'v2.14.9 · filesystem audit + CSV exports' "$PREVIEW_ROOT/ReleaseContr
 grep -Fq 'class FilesystemAuditManager' "$PREVIEW_ROOT/server/release-control/src/FilesystemAuditManager.php"
 grep -Fq 'class ReleasePackageUploadInstaller' "$PREVIEW_ROOT/server/release-control/src/ReleasePackageUploadInstaller.php"
 grep -Fq 'class FilesystemCleanupManager' "$PREVIEW_ROOT/server/release-control/src/FilesystemCleanupManager.php"
-test -f "$PREVIEW_ROOT/server/trophy-gallery/src/TrophyRemoteArtworkImporter.php"
-test -f "$PREVIEW_ROOT/server/trophy-gallery/public/api.php"
-test -f "$PREVIEW_ROOT/server/trophy-gallery/public/media.php"
-php -r 'require $argv[1]; echo class_exists("P2K\\TrophyGallery\\TrophyGalleryStore") ? "ok\n" : "missing\n";' "$PREVIEW_ROOT/server/trophy-gallery/src/TrophyGalleryStore.php" | grep -Fxq ok
+CANDIDATE_RELEASE_ID="$(python3 - "$PREVIEW_ROOT/data/runtime-v280/release-control/state.json" <<'PY'
+import json,sys
+print(json.load(open(sys.argv[1],encoding="utf-8"))["candidate_release"])
+PY
+)"
+CANDIDATE_APP="$PREVIEW_ROOT/data/runtime-v280/release-control/previews/$CANDIDATE_RELEASE_ID/app"
+test -f "$CANDIDATE_APP/server/trophy-gallery/src/TrophyRemoteArtworkImporter.php"
+test -f "$CANDIDATE_APP/server/trophy-gallery/src/TrophyGalleryStore.php"
+test -f "$CANDIDATE_APP/server/trophy-gallery/public/api.php"
+test -f "$CANDIDATE_APP/server/trophy-gallery/public/media.php"
+php -r 'require $argv[1]; echo class_exists("P2K\\TrophyGallery\\TrophyGalleryStore") ? "ok\n" : "missing\n";' "$CANDIDATE_APP/server/trophy-gallery/src/TrophyGalleryStore.php" | grep -Fxq ok
 grep -Fq 'class ReleaseVersionManager' "$PREVIEW_ROOT/server/release-control/src/ReleaseVersionManager.php"
 test -f "$PREVIEW_ROOT/PublicRouter.php"
 test -f "$PREVIEW_ROOT/server/release-control/src/ReleaseRuntimeTree.php"
