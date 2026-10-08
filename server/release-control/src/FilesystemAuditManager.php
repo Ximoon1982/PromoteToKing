@@ -67,7 +67,7 @@ final class FilesystemAuditManager
             'areas'=>$areas,
             'area_open_counts'=>array_fill_keys($names, 1),
             'global_inodes'=>[],
-            'area_inodes'=>[],
+            'area_inodes'=>array_fill_keys($names, []),
             'totals'=>$this->emptyStats(),
             'maintenance_findings'=>[],
             'maintenance_findings_truncated'=>false,
@@ -184,11 +184,11 @@ final class FilesystemAuditManager
                 $state['processed_entries']++;
             }
 
+            $this->rebuildTotals($state);
             if (empty($state['stack'])) {
                 $state['status'] = 'complete';
                 $state['completed_at'] = gmdate('c');
                 $state['current_path'] = '';
-                $this->rebuildTotals($state);
             }
             $state['maintenance_findings_truncated'] = count($state['maintenance_findings']) > self::MAX_FINDINGS;
             if ($state['maintenance_findings_truncated']) {
