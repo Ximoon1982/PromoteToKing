@@ -81,7 +81,7 @@ async function adminList(force=false){
 }
 async function publicList(force=false){
  if(!force&&publicCache)return publicCache;
- const response=await fetch(`${TROPHY_API}?action=list`,{cache:"no-store",credentials:"omit"});
+ const response=await fetch(`${TROPHY_API}?action=list`,{cache:"no-store",credentials:"same-origin"});
  const payload=await response.json();
  if(!response.ok||!payload?.ok)throw new Error(payload?.error?.message||`HTTP ${response.status}`);
  publicCache=payload;
