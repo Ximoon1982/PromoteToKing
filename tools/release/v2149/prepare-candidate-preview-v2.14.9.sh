@@ -43,6 +43,7 @@ INFRA_FILES=(
   server/release-control/config/.htaccess
   server/release-control/config/config.example.php
   server/release-control/public/preview-oauth-session.php
+  server/release-control/public/release-control-upload.js
   server/release-control/src/bootstrap.php
   server/release-control/src/ReleaseControlAuth.php
   server/release-control/src/ReleaseControlState.php
