@@ -13,7 +13,9 @@ def test_v2142_identity_and_recovery_ui_boundary():
     parts = tuple(int(value) for value in (ROOT / "VERSION").read_text().strip().split("."))
     assert parts >= (2, 14, 2)
     assert "direct-root" in PAGE
-    assert "<script" not in PAGE.lower()
+    allowed_script = '<script src="/server/release-control/public/release-control-upload.js"></script>'
+    assert allowed_script in PAGE
+    assert "<script" not in PAGE.replace(allowed_script, "").lower()
     assert "<link" not in PAGE.lower()
 
 
