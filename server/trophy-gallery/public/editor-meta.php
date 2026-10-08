@@ -6,7 +6,9 @@ use P2K\TeamPoints\Auth;
 use P2K\TeamPoints\Http;
 
 function p2k_trophy_r534_root() {
-    $root = dirname(__DIR__, 3).'/data/trophy-gallery';
+    $publicRoot = trim((string)(getenv('P2K_PUBLIC_ROOT') ?: getenv('P2K_PREVIEW_PUBLIC_ROOT') ?: ''));
+    $base = $publicRoot !== '' ? $publicRoot : dirname(__DIR__, 3);
+    $root = rtrim($base, '/\\').'/data/trophy-gallery';
     if (!is_dir($root)) {
         if (!mkdir($root, 0750, true) && !is_dir($root)) {
             throw new RuntimeException('Trophy metadata directory is unavailable.');
