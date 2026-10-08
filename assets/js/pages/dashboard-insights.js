@@ -35,13 +35,6 @@ function membersTableColumns() {
     return url.href;
   }
 
-  function memberCsvURL() {
-    const url = new URL("server/team-points/public/members-insights-export.php", window.location.href);
-    if (state.membersTableState?.sort) url.searchParams.set("sort", state.membersTableState.sort);
-    url.searchParams.set("direction", state.membersTableState?.direction === "desc" ? "desc" : "asc");
-    return url.href;
-  }
-
   let insightsChartsPromise = null;
   function ensureInsightsCharts() {
     if (window.P2K_INSIGHTS_CHARTS) return Promise.resolve(window.P2K_INSIGHTS_CHARTS);
@@ -78,11 +71,6 @@ function membersTableColumns() {
   }
 
   async function loadMemberInsights({ force = false } = {}) {
-    const csvButton = byId("membersCsvExport");
-    if (csvButton && !csvButton.dataset.bound) {
-      csvButton.dataset.bound = "1";
-      csvButton.addEventListener("click", () => { window.location.href = memberCsvURL(); });
-    }
     if (state.membersLoaded && !force) return;
     const status = byId("membersTableStatus");
     if (status) { status.classList.remove("is-error"); status.textContent = "Loading member summary…"; }
@@ -567,15 +555,6 @@ function membersTableColumns() {
     return url.href;
   }
 
-  function opponentCsvURL(tableState = state.opponentsTableState) {
-    const url = new URL("server/team-points/public/opponents-export.php", window.location.href);
-    if (tableState?.query) url.searchParams.set("search", tableState.query);
-    if (tableState?.filter && tableState.filter !== "all") url.searchParams.set("filter", tableState.filter);
-    if (tableState?.sort) url.searchParams.set("sort", tableState.sort);
-    url.searchParams.set("direction", tableState?.direction === "asc" ? "asc" : "desc");
-    return url.href;
-  }
-
   function applyOpponentSummaryPayload(payload) {
     const summary=payload?.summary||{}, rows=Array.isArray(payload?.top_opponents)?payload.top_opponents.map(row=>({...row})):[];
     setText("opponentsStatTotal",number(summary.different_opponents));setText("opponentsStatPlayed",number(summary.played_historically));setText("opponentsStatCurrent",number(summary.currently_playing));setText("opponentsStatRegistration",number(summary.in_registration));setText("opponentsStatFinished",number(summary.finished_matches));renderOpponentTopChart(rows);
@@ -585,8 +564,6 @@ function membersTableColumns() {
   }
 
   async function loadOpponentInsights({ force = false } = {}) {
-    const csvButton=byId("opponentsCsvExport");
-    if(csvButton&&!csvButton.dataset.bound){csvButton.dataset.bound="1";csvButton.addEventListener("click",()=>{window.location.href=opponentCsvURL(state.opponentsTableState);});}
     if(state.opponentsLoaded&&!force)return;const status=byId("opponentsTableStatus");if(status){status.classList.remove("is-error");status.textContent="Loading opponent summary…";}state.opponentsProgressiveStops?.forEach(stop=>stop?.());state.opponentsProgressiveStops=[];
     const loadBalance=async()=>{const host=byId("opponentsBalanceAnalyzer");if(!host)return;const cacheKey="opponents-balance-v4";const cached=window.P2K_PROGRESSIVE?.snapshotGet?.(cacheKey,5*60000);if(cached?.payload&&window.P2K_OPPONENT_BALANCE?.render){window.P2K_OPPONENT_BALANCE.render(host,cached.payload);}else host.innerHTML='<p class="p2k-table-status">Loading all-match opponent heatmaps…</p>';try{const payload=await loadJSON(opponentInsightsURL(state.opponentsTableState,{section:"balance"}),{credentials:"same-origin"});if(payload?.ok===false)throw new Error(payload?.error?.message||"Opponent balance heatmaps are unavailable.");if(!window.P2K_OPPONENT_BALANCE?.render)throw new Error("Opponent balance renderer did not initialize.");window.P2K_OPPONENT_BALANCE.render(host,payload);window.P2K_PROGRESSIVE?.snapshotSet?.(cacheKey,payload);}catch(error){if(!cached?.payload)host.innerHTML=`<p class="p2k-table-status is-error">Unable to load opponent heatmaps: ${escapeHTML(error.message||error)}</p>`;}};
     const loadTable=async()=>{if(state.opponentsTableProgressiveLoaded)return;state.opponentsTableProgressiveLoaded=true;try{const payload=await loadJSON(opponentInsightsURL(state.opponentsTableState,{section:"table"}),{credentials:"same-origin"});const totalRows=Number(payload.pagination?.total_rows||0);if(!state.opponentsTable){state.opponentsTable=new window.P2KDataTable({root:byId("opponentsDataTable"),columns:opponentsTableColumns(),rows:payload.rows||[],totalRows,pageSize:25,searchInput:byId("opponentsTableSearch"),filterInput:byId("opponentsTableFilter"),countHost:byId("opponentsTableCount"),pagerHost:byId("opponentsTablePager"),state:state.opponentsTableState,remoteLoader:async tableState=>{const remote=await loadJSON(opponentInsightsURL(tableState,{section:"table"}),{credentials:"same-origin"});return{rows:remote.rows||[],totalRows:Number(remote.pagination?.total_rows||0),pagination:remote.pagination};},onRemoteState:event=>{if(!status)return;status.classList.toggle("is-error",Boolean(event.error));status.textContent=event.loading?"Loading matching database rows…":event.error?`Unable to load opponent rows: ${event.error.message||event.error}`:`Database updated · ${number(event.payload?.totalRows||0)} matching opponents`;},onStateChange:next=>{state.opponentsTableState=next;writeNavigationState({replace:true});}});}else state.opponentsTable.setRemoteData(payload.rows||[],totalRows);if(status)status.textContent=`Opponent table ready · ${number(totalRows)} rows`;}catch(e){state.opponentsTableProgressiveLoaded=false;if(status){status.classList.add("is-error");status.textContent=`Unable to load opponent rows: ${e.message||e}`;}}};
