@@ -30,7 +30,6 @@ FILES=(
   assets/js/pages/club-intelligence.js
   server/team-points/public/members-insights-export.php
   server/team-points/public/opponents-export.php
-  server/release-control/src/FilesystemAuditManager.php
   trophies/index.html
   RecruitMatch.html
   ChallengeListAssistant.html
@@ -273,6 +272,9 @@ REFS_2147=(
   4b76f2763d3df0a4bb5b256cab48b0bc44e6efaa
 )
 REFS_2148=(
+  ab3af15ed65325c74558ac1f50d6e18d3935e7c5
+)
+REFS_2149=(
   "$HEAD"
 )
 
@@ -318,7 +320,8 @@ emit_baselines() {
   emit_baselines "2.14.5" REFS_2145
   emit_baselines "2.14.6" REFS_2146
   emit_baselines "2.14.7" REFS_2147
-  emit_baselines "2.14.9" REFS_2148
+  emit_baselines "2.14.8" REFS_2148
+  emit_baselines "2.14.9" REFS_2149
 } > "$DIR/BASELINES.tsv"
 
 python3 - "$DIR/install-promote-to-king-v2.14.9.sh" "$HEAD" "$CACHE_KEY" <<'PY'
