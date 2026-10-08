@@ -80,6 +80,7 @@ FILES=(
   server/team-points-green/tools/converge-v2.13.1.php
   server/team-points-green/tools/converge-v2.13.2.php
   server/trophy-gallery/src/TrophyGalleryStore.php
+  server/trophy-gallery/public/editor-meta.php
   server/release-control/config/.htaccess
   server/release-control/config/config.example.php
   server/release-control/public/preview-oauth-session.php
