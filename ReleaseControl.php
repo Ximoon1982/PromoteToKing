@@ -361,14 +361,19 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
         <dt>Promotion</dt><dd>never automatic · use Deployment controls after preview verification</dd>
       </dl>
       <?php if ($packageInstaller->available()): ?>
-        <form method="post" action="/ReleaseControl.php" enctype="multipart/form-data" class="actions">
+        <form method="post" action="/ReleaseControl.php" enctype="multipart/form-data" class="actions" id="packageUploadForm">
           <input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>">
           <input type="hidden" name="action" value="upload-release-package">
           <input type="hidden" name="MAX_FILE_SIZE" value="<?= rc_h($packageInstaller->uploadLimitBytes()) ?>">
-          <input class="button" type="file" name="release_zip" accept=".zip,application/zip" required>
+          <input class="button" type="file" name="release_zip" id="packageUploadFile" accept=".zip,application/zip" required>
           <label class="small"><input type="checkbox" name="confirm" value="yes" required> Confirm candidate installation and recovery-plane update; public release remains unchanged</label>
-          <button class="button primary" type="submit">Upload and install candidate ZIP</button>
+          <button class="button primary" type="submit" id="packageUploadSubmit">Upload and install candidate ZIP</button>
         </form>
+        <div id="packageUploadProgress" hidden>
+          <div class="progress-row"><strong id="packageUploadStatus">Preparing upload…</strong><span class="small" id="packageUploadPercent">0%</span></div>
+          <div class="progress-shell" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="packageUploadProgressBar"><div class="progress-bar" style="width:0%" id="packageUploadProgressFill"></div></div>
+          <p class="small">After the upload reaches 100%, Release Control still verifies hashes, materializes the candidate, prepares preview, backs up the recovery plane and activates recovery files. Do not close this page until the result is shown.</p>
+        </div>
       <?php else: ?>
         <p class="small">Browser ZIP installation is disabled on this host because <code>ZipArchive</code> is unavailable. Existing CLI candidate installation remains available as recovery fallback.</p>
       <?php endif; ?>
@@ -654,5 +659,65 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
   </div>
 <?php endif; ?>
 </main>
+<script>
+(() => {
+  const form=document.getElementById('packageUploadForm');
+  if(!form || !window.XMLHttpRequest) return;
+  const wrap=document.getElementById('packageUploadProgress');
+  const status=document.getElementById('packageUploadStatus');
+  const percent=document.getElementById('packageUploadPercent');
+  const bar=document.getElementById('packageUploadProgressBar');
+  const fill=document.getElementById('packageUploadProgressFill');
+  const submit=document.getElementById('packageUploadSubmit');
+
+  const setProgress=(value,label)=>{
+    const pct=Math.max(0,Math.min(100,Math.round(value)));
+    if(fill) fill.style.width=pct+'%';
+    if(percent) percent.textContent=pct+'%';
+    if(bar) bar.setAttribute('aria-valuenow',String(pct));
+    if(status && label) status.textContent=label;
+  };
+
+  form.addEventListener('submit',(event)=>{
+    if(!form.reportValidity()) return;
+    event.preventDefault();
+    if(wrap) wrap.hidden=false;
+    if(submit){submit.disabled=true;submit.textContent='Uploading…';}
+    setProgress(0,'Uploading release ZIP…');
+
+    const xhr=new XMLHttpRequest();
+    xhr.open('POST',form.action,true);
+    xhr.upload.addEventListener('progress',(e)=>{
+      if(e.lengthComputable){
+        const pct=(e.loaded/e.total)*100;
+        setProgress(pct,pct<100?'Uploading release ZIP…':'Upload complete. Verifying and installing candidate…');
+      }
+    });
+    xhr.upload.addEventListener('load',()=>{
+      setProgress(100,'Upload complete. Verifying and installing candidate…');
+      if(percent) percent.textContent='100% · installing';
+    });
+    xhr.addEventListener('load',()=>{
+      if(xhr.status>=200 && xhr.status<400){
+        if(status) status.textContent='Installation response received. Loading result…';
+        window.location.href=xhr.responseURL || '/ReleaseControl.php#package-upload';
+        return;
+      }
+      if(status) status.textContent='Installation failed with HTTP '+xhr.status+'.';
+      if(submit){submit.disabled=false;submit.textContent='Upload and install candidate ZIP';}
+    });
+    xhr.addEventListener('error',()=>{
+      if(status) status.textContent='Upload failed because the browser lost the connection.';
+      if(submit){submit.disabled=false;submit.textContent='Upload and install candidate ZIP';}
+    });
+    xhr.addEventListener('abort',()=>{
+      if(status) status.textContent='Upload cancelled.';
+      if(submit){submit.disabled=false;submit.textContent='Upload and install candidate ZIP';}
+    });
+    xhr.send(new FormData(form));
+  });
+})();
+</script>
+
 </body>
 </html>
