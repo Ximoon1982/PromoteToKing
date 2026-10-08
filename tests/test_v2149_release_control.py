@@ -17,14 +17,23 @@ def test_v2149_identity_and_audit_ui():
     assert (ROOT / "VERSION").read_text().strip() == "2.14.9"
     assert "v2.14.9 · filesystem audit + CSV exports" in PAGE
     assert 'id="filesystem-audit"' in PAGE
-    assert "Run full filesystem audit" in PAGE
+    assert "Start full filesystem audit" in PAGE
+    assert "Pause audit" in PAGE
+    assert "Resume audit" in PAGE
+    assert "Restart from zero" in PAGE
+    assert 'role="progressbar"' in PAGE
+    assert 'http-equiv="refresh"' in PAGE
     assert "Audit findings never grant deletion rights." in PAGE
     assert "FilesystemAuditManager.php" in BOOTSTRAP
 
 
 def test_filesystem_audit_is_recursive_hardlink_aware_and_protective():
-    assert "RecursiveDirectoryIterator" in AUDIT
-    assert "FilesystemIterator::SKIP_DOTS" in AUDIT
+    assert "DEFAULT_BATCH_ENTRIES" in AUDIT
+    assert "MAX_BATCH_SECONDS" in AUDIT
+    assert "filesystem-audit-v2.json" in AUDIT
+    assert "public function pause()" in AUDIT
+    assert "public function resume()" in AUDIT
+    assert "public function step(" in AUDIT
     assert "lstat" in AUDIT
     assert "unique_file_inodes" in AUDIT
     assert "unique_allocated_bytes" in AUDIT
