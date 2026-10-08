@@ -111,3 +111,9 @@ def test_release_zip_upload_has_browser_progress_and_install_phase_feedback():
     assert "package_result=error&package_error=" in PAGE
     assert "Release ZIP installation failed." in PAGE
     assert "$packageError" in PAGE
+
+
+def test_trophy_gallery_runtime_dependency_is_packaged_for_candidate_slots():
+    assert "server/trophy-gallery/src/TrophyRemoteArtworkImporter.php" in BUILDER
+    assert "server/trophy-gallery/public/api.php" in BUILDER
+    assert "server/trophy-gallery/public/media.php" in BUILDER
