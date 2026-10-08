@@ -250,7 +250,7 @@
 
   <section data-panel="members" role="tabpanel" hidden>
     <div class="p2k-tp-card">
-      <div class="p2k-tp-card-head"><div><h2>Member chronology</h2><p>Green roster chronology with display-level join consolidation. Departure account checks run asynchronously against the Chess.com player API and preserve the exact reported account/closure status when available.</p></div><button class="p2k-tp-button" id="memberChronologyRefresh" type="button">Refresh chronology</button></div>
+      <div class="p2k-tp-card-head"><div><h2>Member chronology</h2><p>Green roster chronology with display-level join consolidation. Departure account checks run asynchronously against the Chess.com player API and preserve the exact reported account/closure status when available.</p></div><div class="p2k-tp-actions"><button class="p2k-tp-button blue" id="membersFullCsvExport" type="button">Download members CSV</button><button class="p2k-tp-button" id="memberChronologyRefresh" type="button">Refresh chronology</button></div></div>
       <div class="p2k-tp-form" style="margin:.8rem 0">
         <div class="p2k-tp-field"><label for="memberChronologyMember">Member name</label><input class="p2k-tp-input" id="memberChronologyMember" type="search" placeholder="Current or former username" autocomplete="off"></div>
         <div class="p2k-tp-field"><label for="memberChronologyEventType">Event type</label><select class="p2k-tp-select" id="memberChronologyEventType"><option value="">All events</option><option value="joined">Joined</option><option value="rejoined">Rejoined</option><option value="left">Left</option><option value="name_changed">Name changed</option></select></div>
