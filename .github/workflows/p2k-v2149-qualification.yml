@@ -77,6 +77,7 @@ jobs:
           php tests/php_v2148_filesystem_cleanup_harness.php
           php tests/php_v2148_release_zip_upload_harness.php
           php tests/php_v2149_filesystem_audit_harness.php
+          php tests/php_v2149_trophy_routed_data_harness.php
           python server/release-control/tools/release-slot-paths.py HEAD > "$RUNNER_TEMP/v2149-slot-paths.txt"
           grep -Fxq VERSION "$RUNNER_TEMP/v2149-slot-paths.txt"
           grep -Fxq ui-v2.html "$RUNNER_TEMP/v2149-slot-paths.txt"
