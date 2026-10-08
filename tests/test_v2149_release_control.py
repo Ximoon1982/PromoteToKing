@@ -11,6 +11,7 @@ TP_ADMIN = (ROOT / "TeamPointsAdmin.html").read_text(encoding="utf-8")
 TP_JS = (ROOT / "assets/js/pages/team-points-admin.js").read_text(encoding="utf-8")
 CI_JS = (ROOT / "assets/js/pages/club-intelligence.js").read_text(encoding="utf-8")
 BUILDER = (ROOT / "tools/release/v2149/build-universal-2.13x.sh").read_text(encoding="utf-8")
+UPLOAD_JS = (ROOT / "server/release-control/public/release-control-upload.js").read_text(encoding="utf-8")
 
 
 def test_v2149_identity_and_audit_ui():
@@ -102,10 +103,11 @@ def test_same_version_hotfix_accepts_qualified_v2149_public_baseline():
 def test_release_zip_upload_has_browser_progress_and_install_phase_feedback():
     assert 'id="packageUploadForm"' in PAGE
     assert 'id="packageUploadProgress"' in PAGE
-    assert "xhr.upload.addEventListener('progress'" in PAGE
-    assert "Upload complete. Verifying and installing candidate" in PAGE
-    assert "100% · installing" in PAGE
+    assert "xhr.upload.addEventListener('progress'" in UPLOAD_JS
+    assert "Upload complete. Verifying and installing candidate" in UPLOAD_JS
+    assert "100% · installing" in UPLOAD_JS
     assert "Do not close this page until the result is shown." in PAGE
+    assert '/server/release-control/public/release-control-upload.js' in PAGE
     assert "package_result=error&package_error=" in PAGE
     assert "Release ZIP installation failed." in PAGE
     assert "$packageError" in PAGE
