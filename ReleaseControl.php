@@ -155,6 +155,26 @@ if ($method === 'POST' && $authorized) {
                 header('Location: /ReleaseControl.php?filesystem_result=deleted&filesystem_path=' . rawurlencode($relativePath) . '&filesystem_page=' . $cleanupPageAfterDelete . '#filesystem-cleanup', true, 303);
                 exit;
             }
+            if ($action === 'filesystem-audit-start') {
+                $filesystemAuditManager->start(false);
+                header('Location: /ReleaseControl.php?filesystem_audit=1#filesystem-audit', true, 303);
+                exit;
+            }
+            if ($action === 'filesystem-audit-restart') {
+                $filesystemAuditManager->start(true);
+                header('Location: /ReleaseControl.php?filesystem_audit=1#filesystem-audit', true, 303);
+                exit;
+            }
+            if ($action === 'filesystem-audit-pause') {
+                $filesystemAuditManager->pause();
+                header('Location: /ReleaseControl.php?filesystem_audit=1#filesystem-audit', true, 303);
+                exit;
+            }
+            if ($action === 'filesystem-audit-resume') {
+                $filesystemAuditManager->resume();
+                header('Location: /ReleaseControl.php?filesystem_audit=1#filesystem-audit', true, 303);
+                exit;
+            }
             http_response_code(400);
             $actionError = 'Unknown Release Control action.';
         } catch (Throwable $e) {
@@ -212,21 +232,26 @@ if ($authorized && $filesystemPreviewPath !== '') {
     catch (Throwable) { $filesystemPreview = null; }
 }
 $filesystemAuditRequested = $authorized && (string)($_GET['filesystem_audit'] ?? '') === '1';
-$filesystemAudit = null;
+$filesystemAudit = $authorized ? $filesystemAuditManager->status() : null;
 $filesystemAuditError = '';
-if ($filesystemAuditRequested) {
-    try { $filesystemAudit = $filesystemAuditManager->inventory(); }
-    catch (Throwable $e) { $filesystemAuditError = $e->getMessage(); }
+if ($filesystemAuditRequested && is_array($filesystemAudit) && ($filesystemAudit['status'] ?? '') === 'running') {
+    try { $filesystemAudit = $filesystemAuditManager->step(); }
+    catch (Throwable $e) {
+        $filesystemAuditError = $e->getMessage();
+        $filesystemAudit = $filesystemAuditManager->status();
+    }
 }
+$filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit) && ($filesystemAudit['status'] ?? '') === 'running';
 ?><!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
+<?php if ($filesystemAuditRunning): ?><meta http-equiv="refresh" content="1;url=/ReleaseControl.php?filesystem_audit=1#filesystem-audit"><?php endif; ?>
 <title>Promote to King · Release Control</title>
 <style>
-:root{color-scheme:dark;--bg:#0e0d0c;--panel:#1a1815;--panel2:#211e19;--text:#f5ead9;--muted:#a99f92;--gold:#f3bd55;--line:#ffffff18;--ok:#8fd18a;--info:#8ab6ee;--warning:#e7bd68;--error:#ef8c82}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#211a12 0,#0e0d0c 44%);color:var(--text);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}.wrap{max-width:980px;margin:0 auto;padding:28px 18px 56px}.head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.eyebrow{text-transform:uppercase;letter-spacing:.11em;font-size:11px;color:var(--gold);font-weight:800}.head h1{margin:4px 0 3px;font-size:29px}.head p{margin:0;color:var(--muted)}.badge{border:1px solid #f3bd5544;background:#f3bd5510;color:#ffd88c;border-radius:999px;padding:7px 11px;font-size:12px;white-space:nowrap}.notice,.card{background:linear-gradient(145deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:15px}.notice{padding:14px 16px;margin-bottom:14px}.notice strong{color:#ffd88c}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{padding:18px}.card.full{grid-column:1/-1}.card h2{font-size:16px;margin:0 0 12px;color:#ffe1a4}.meta{display:grid;grid-template-columns:180px 1fr;gap:7px 14px;margin:0}.meta dt{color:var(--muted)}.meta dd{margin:0;overflow-wrap:anywhere}.checks{display:grid;gap:8px}.check{display:grid;grid-template-columns:10px 180px 1fr;gap:10px;align-items:start;padding:9px 0;border-top:1px solid var(--line)}.check:first-child{border-top:0}.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;background:var(--info)}.check.ok .dot{background:var(--ok)}.check.warning .dot{background:var(--warning)}.check.error .dot{background:var(--error)}.check strong{font-size:14px}.check span{color:var(--muted)}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:15px}.button{display:inline-block;text-decoration:none;border:1px solid #ffffff24;border-radius:9px;padding:9px 13px;background:#2a251e;color:var(--text);font:700 15px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer}.button.primary{background:var(--gold);border-color:var(--gold);color:#1a140b}.disabled{opacity:.45}.small{font-size:12px;color:var(--muted)}.pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.pagination-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.pagination .button{padding:7px 10px;font-size:13px}.pagination .current{color:#ffd88c;font-weight:700}code{color:#ffd88c}@media(max-width:700px){.grid{grid-template-columns:1fr}.head{display:block}.badge{display:inline-block;margin-top:10px}.meta{grid-template-columns:1fr}.meta dd{margin-bottom:7px}.check{grid-template-columns:10px 1fr}.check span{grid-column:2}}
+:root{color-scheme:dark;--bg:#0e0d0c;--panel:#1a1815;--panel2:#211e19;--text:#f5ead9;--muted:#a99f92;--gold:#f3bd55;--line:#ffffff18;--ok:#8fd18a;--info:#8ab6ee;--warning:#e7bd68;--error:#ef8c82}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#211a12 0,#0e0d0c 44%);color:var(--text);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}.wrap{max-width:980px;margin:0 auto;padding:28px 18px 56px}.head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.eyebrow{text-transform:uppercase;letter-spacing:.11em;font-size:11px;color:var(--gold);font-weight:800}.head h1{margin:4px 0 3px;font-size:29px}.head p{margin:0;color:var(--muted)}.badge{border:1px solid #f3bd5544;background:#f3bd5510;color:#ffd88c;border-radius:999px;padding:7px 11px;font-size:12px;white-space:nowrap}.notice,.card{background:linear-gradient(145deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:15px}.notice{padding:14px 16px;margin-bottom:14px}.notice strong{color:#ffd88c}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{padding:18px}.card.full{grid-column:1/-1}.card h2{font-size:16px;margin:0 0 12px;color:#ffe1a4}.meta{display:grid;grid-template-columns:180px 1fr;gap:7px 14px;margin:0}.meta dt{color:var(--muted)}.meta dd{margin:0;overflow-wrap:anywhere}.checks{display:grid;gap:8px}.check{display:grid;grid-template-columns:10px 180px 1fr;gap:10px;align-items:start;padding:9px 0;border-top:1px solid var(--line)}.check:first-child{border-top:0}.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;background:var(--info)}.check.ok .dot{background:var(--ok)}.check.warning .dot{background:var(--warning)}.check.error .dot{background:var(--error)}.check strong{font-size:14px}.check span{color:var(--muted)}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:15px}.button{display:inline-block;text-decoration:none;border:1px solid #ffffff24;border-radius:9px;padding:9px 13px;background:#2a251e;color:var(--text);font:700 15px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer}.button.primary{background:var(--gold);border-color:var(--gold);color:#1a140b}.disabled{opacity:.45}.small{font-size:12px;color:var(--muted)}.pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.pagination-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.pagination .button{padding:7px 10px;font-size:13px}.pagination .current{color:#ffd88c;font-weight:700}.progress-shell{height:18px;border:1px solid #ffffff24;border-radius:999px;overflow:hidden;background:#0d0c0a;margin:10px 0}.progress-bar{height:100%;background:linear-gradient(90deg,#8ab6ee,#f3bd55);min-width:2px}.progress-row{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.status-running{color:#8ab6ee}.status-paused{color:#e7bd68}.status-complete{color:#8fd18a}code{color:#ffd88c}@media(max-width:700px){.grid{grid-template-columns:1fr}.head{display:block}.badge{display:inline-block;margin-top:10px}.meta{grid-template-columns:1fr}.meta dd{margin-bottom:7px}.check{grid-template-columns:10px 1fr}.check span{grid-column:2}}
 </style>
 </head>
 <body>
@@ -424,37 +449,66 @@ if ($filesystemAuditRequested) {
 
     <section class="card full" id="filesystem-audit">
       <h2>Filesystem &amp; inode audit</h2>
-      <p class="small">Read-only recursive accounting of the complete PromoteToKing tree. Symbolic links are not followed; hard-linked files are deduplicated by inode; independent projects, <code>.p2k-preserve</code> trees and unknown content remain protected. Audit findings never grant deletion rights.</p>
-      <?php if (!$filesystemAuditRequested): ?>
-        <div class="actions"><a class="button" href="/ReleaseControl.php?filesystem_audit=1#filesystem-audit">Run full filesystem audit</a></div>
-        <p class="small">The scan is on-demand because it recursively stats the full tree.</p>
-      <?php elseif ($filesystemAuditError !== ''): ?>
-        <p class="small">Audit failed: <?= rc_h($filesystemAuditError) ?></p>
-      <?php elseif (is_array($filesystemAudit)): ?>
-        <?php $fa=(array)($filesystemAudit['totals']??[]); $fd=(array)($filesystemAudit['filesystem']??[]); ?>
+      <p class="small">Persisted, resumable, read-only recursive accounting of the complete PromoteToKing tree. Work is split into bounded batches; refreshes or interrupted requests continue from the saved cursor. Symbolic links are not followed and audit findings never grant deletion rights.</p>
+      <?php $auditStatus=(string)($filesystemAudit['status']??'idle'); ?>
+      <?php if ($filesystemAuditError !== ''): ?><p class="small">Last audit error: <?= rc_h($filesystemAuditError) ?></p><?php endif; ?>
+
+      <?php if ($auditStatus === 'idle'): ?>
+        <form method="post" action="/ReleaseControl.php" class="actions">
+          <input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>">
+          <input type="hidden" name="action" value="filesystem-audit-start">
+          <button class="button primary" type="submit">Start full filesystem audit</button>
+        </form>
+      <?php else: ?>
+        <?php $progress=max(0,min(100,(int)($filesystemAudit['progress_percent']??0))); $fa=(array)($filesystemAudit['totals']??[]); $fd=(array)($filesystemAudit['filesystem']??[]); ?>
+        <div class="progress-row">
+          <strong class="status-<?= rc_h($auditStatus) ?>"><?= rc_h(strtoupper($auditStatus)) ?></strong>
+          <span class="small"><?= rc_h($filesystemAudit['completed_top_level'] ?? 0) ?> / <?= rc_h($filesystemAudit['total_top_level'] ?? 0) ?> top-level areas complete · <?= rc_h($filesystemAudit['processed_entries'] ?? 0) ?> entries processed</span>
+        </div>
+        <div class="progress-shell" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= rc_h($progress) ?>"><div class="progress-bar" style="width:<?= rc_h($progress) ?>%"></div></div>
         <dl class="meta">
-          <dt>Total entries</dt><dd><?= rc_h($fa['inode_entries'] ?? 0) ?></dd>
+          <dt>Progress</dt><dd><?= rc_h($progress) ?>%</dd>
+          <dt>Current path</dt><dd><code><?= rc_h($filesystemAudit['current_path'] ?: '—') ?></code></dd>
+          <dt>Pending queued entries</dt><dd><?= rc_h($filesystemAudit['pending_entries'] ?? 0) ?></dd>
+          <dt>Started</dt><dd><?= rc_h($filesystemAudit['started_at'] ?? '—') ?></dd>
+          <dt>Updated</dt><dd><?= rc_h($filesystemAudit['updated_at'] ?? '—') ?></dd>
+          <?php if ($auditStatus === 'complete'): ?><dt>Completed</dt><dd><?= rc_h($filesystemAudit['completed_at'] ?? '—') ?></dd><?php endif; ?>
+          <dt>Total entries counted</dt><dd><?= rc_h($fa['inode_entries'] ?? 0) ?></dd>
           <dt>Unique file inodes</dt><dd><?= rc_h($fa['unique_file_inodes'] ?? 0) ?></dd>
           <dt>Apparent file size</dt><dd><?= rc_h(rc_bytes((int)($fa['apparent_bytes'] ?? 0))) ?></dd>
           <dt>Unique allocated estimate</dt><dd><?= rc_h(rc_bytes((int)($fa['unique_allocated_bytes'] ?? 0))) ?> <span class="small">(hard links counted once)</span></dd>
           <dt>Hard-link references</dt><dd><?= rc_h($fa['hardlink_reference_entries'] ?? 0) ?></dd>
           <dt>Host filesystem free</dt><dd><?= ($fd['free_bytes']??null)===null?'unavailable':rc_h(rc_bytes((int)$fd['free_bytes'])) ?></dd>
         </dl>
-        <div class="checks">
-          <?php foreach ((array)($filesystemAudit['top_level'] ?? []) as $area): $as=(array)($area['stats']??[]); ?>
-            <div class="check <?= !empty($area['protected'])?'ok':(!empty($area['deletion_authorized'])?'warning':'info') ?>">
-              <i class="dot" aria-hidden="true"></i>
-              <strong><code><?= rc_h($area['relative_path'] ?? '') ?></code></strong>
-              <span><?= rc_h($area['category'] ?? '') ?> · <?= rc_h($as['inode_entries'] ?? 0) ?> entries · <?= rc_h(rc_bytes((int)($as['apparent_bytes'] ?? 0))) ?> apparent · <?= rc_h(rc_bytes((int)($as['unique_allocated_bytes'] ?? 0))) ?> unique allocated<?php if (!empty($area['protected'])): ?> · protected: <?= rc_h($area['protection_reason'] ?? '') ?><?php endif; ?></span>
-            </div>
-          <?php endforeach; ?>
+
+        <div class="actions">
+          <?php if ($auditStatus === 'running'): ?>
+            <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="filesystem-audit-pause"><button class="button" type="submit">Pause audit</button></form>
+            <span class="small">This page refreshes automatically while the audit is running.</span>
+          <?php elseif ($auditStatus === 'paused'): ?>
+            <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="filesystem-audit-resume"><button class="button primary" type="submit">Resume audit</button></form>
+          <?php endif; ?>
+          <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="filesystem-audit-restart"><button class="button" type="submit">Restart from zero</button></form>
         </div>
+
+        <?php $areas=(array)($filesystemAudit['top_level']??[]); if ($areas !== []): ?>
+          <h3>Top-level accounting</h3>
+          <div class="checks">
+            <?php foreach ($areas as $area): $as=(array)($area['stats']??[]); $areaState=(string)($area['status']??'pending'); ?>
+              <div class="check <?= $areaState==='complete'?'ok':($areaState==='scanning'?'info':'') ?>">
+                <i class="dot" aria-hidden="true"></i>
+                <strong><code><?= rc_h($area['relative_path'] ?? '') ?></code></strong>
+                <span><?= rc_h($areaState) ?> · <?= rc_h($area['category'] ?? '') ?> · <?= rc_h($as['inode_entries'] ?? 0) ?> entries · <?= rc_h(rc_bytes((int)($as['apparent_bytes'] ?? 0))) ?> apparent<?php if ($areaState==='complete'): ?> · <?= rc_h(rc_bytes((int)($as['unique_allocated_bytes'] ?? 0))) ?> unique allocated<?php endif; ?><?php if (!empty($area['protected'])): ?> · protected: <?= rc_h($area['protection_reason'] ?? '') ?><?php endif; ?></span>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+
         <?php $findings=(array)($filesystemAudit['maintenance_findings']??[]); if ($findings !== []): ?>
           <h3>Recursive maintenance findings</h3>
-          <p class="small">Review-only nested P2K installer/package-looking paths. They are not deletable unless the conservative cleanup classifier separately authorizes them.</p>
+          <p class="small">Findings appear progressively while scanning and remain review-only.</p>
           <div class="checks"><?php foreach ($findings as $finding): ?><div class="check info"><i class="dot" aria-hidden="true"></i><strong>review only</strong><span><code><?= rc_h($finding['relative_path'] ?? '') ?></code> · <?= rc_h($finding['protection_reason'] ?? '') ?></span></div><?php endforeach; ?></div>
         <?php endif; ?>
-        <div class="actions"><a class="button" href="/ReleaseControl.php?filesystem_audit=1#filesystem-audit">Run audit again</a></div>
       <?php endif; ?>
     </section>
 
