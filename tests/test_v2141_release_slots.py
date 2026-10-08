@@ -26,7 +26,9 @@ def test_v2141_release_identity_and_read_only_recovery_page():
     assert "Promote candidate" in PAGE
     assert "Rollback" in PAGE
     lowered = PAGE.lower()
-    assert "<script" not in lowered
+    allowed_script = '<script src="/server/release-control/public/release-control-upload.js"></script>'
+    assert allowed_script in PAGE
+    assert "<script" not in PAGE.replace(allowed_script, "").lower()
     assert "<link" not in lowered
 
 def test_web_state_projection_remains_non_mutating():
