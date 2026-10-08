@@ -31,7 +31,7 @@ def test_v2144_identity_and_capabilities():
     assert "'candidate_database_mode' => 'read-only'" in STATE
     assert "'candidate_runtime_sandbox' => true" in STATE
     assert "'candidate_session_sandbox' => true" in STATE
-    if version in {"2.14.5", "2.14.6", "2.14.7", "2.14.8"}:
+    if version in {"2.14.5", "2.14.6", "2.14.7", "2.14.8", "2.14.9"}:
         assert "'promotion'=>$candidateValid && $candidatePreviewValid && $publicValid" in STATE
         assert "'rollback'=>$mode === 'slots'" in STATE
         assert "'public_slot_routing'=>true" in STATE
