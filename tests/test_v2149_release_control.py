@@ -92,3 +92,17 @@ def test_trophy_gallery_uses_physical_shared_data_root_under_release_routing():
     assert "P2K_PUBLIC_ROOT" in editor
     assert "P2K_PREVIEW_PUBLIC_ROOT" in editor
     assert "server/trophy-gallery/public/editor-meta.php" in BUILDER
+
+
+def test_same_version_hotfix_accepts_qualified_v2149_public_baseline():
+    assert "cdebea685efe6794a383bd12316fc0f961c6791d" in BUILDER
+    assert '{"version":"2.14.9","source_head":"cdebea685efe6794a383bd12316fc0f961c6791d"}' in BUILDER
+
+
+def test_release_zip_upload_has_browser_progress_and_install_phase_feedback():
+    assert 'id="packageUploadForm"' in PAGE
+    assert 'id="packageUploadProgress"' in PAGE
+    assert "xhr.upload.addEventListener('progress'" in PAGE
+    assert "Upload complete. Verifying and installing candidate" in PAGE
+    assert "100% · installing" in PAGE
+    assert "Do not close this page until the result is shown." in PAGE
