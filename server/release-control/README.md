@@ -195,3 +195,12 @@ The filesystem cleanup crawler is intentionally not a general file browser. It c
 - stale release-control upload/candidate/preview/runtime staging artifacts older than 24 hours.
 
 Unknown top-level files/directories, shared mutable data, the physical recovery baseline and unrelated projects are never deletion candidates. Every candidate is scanned without following symlinks, shows entry/apparent/reclaimable estimates, requires an explicit deletion preview and confirmation, and is reclassified immediately before deletion.
+
+## v2.14.9 filesystem audit and administrative CSV exports
+
+v2.14.9 keeps the v2.14.8 deletion boundary unchanged while expanding visibility. Release Control adds an on-demand, read-only recursive filesystem audit across the PromoteToKing tree. It does not follow symbolic links, reports file/directory/symlink entry counts, apparent bytes and device/inode-deduplicated allocated-byte estimates, and makes hard-link duplication visible instead of treating every path as independent physical usage.
+
+Top-level content is classified before presentation. The physical P2K baseline and shared runtime paths remain protected. Directories carrying `.p2k-preserve` or independent project markers such as `.git`, `composer.json`, `package.json`, `pyproject.toml`, `requirements.txt`, `Cargo.toml` or `go.mod` are explicitly protected. Unknown top-level content is protected by default. Strict P2K installer/package-like names discovered recursively below those areas are reported as review-only findings and never gain deletion authority from the audit. Actual filesystem deletion remains exclusively governed by the conservative v2.14.8 `FilesystemCleanupManager`, including immediate pre-delete reclassification.
+
+Administration gains two database-backed CSV exports. Team Points Admin → Members exports the complete known member population, including current/former and profile/activity status, ratings, contribution data and authoritative join time in both ISO UTC (`joined_utc`) and Unix seconds (`joined_epoch`). Club Intelligence → Opponents exports the complete opponent-intelligence profile dataset with canonical outcomes, result coverage, lineup/rating behaviour, league/friendly mix, recent frequency, overlap and profile metadata. Both endpoints require administrator authorization.
+
