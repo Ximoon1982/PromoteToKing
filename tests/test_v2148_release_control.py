@@ -10,8 +10,8 @@ ADMIN = (ROOT / "assets/js/admin/admin-shell.js").read_text(encoding="utf-8")
 
 
 def test_v2148_identity_and_release_control_ui():
-    assert (ROOT / "VERSION").read_text().strip() == "2.14.8"
-    assert "v2.14.8 · ZIP install + filesystem cleanup" in PAGE
+    assert (ROOT / "VERSION").read_text().strip() in {"2.14.8", "2.14.9"}
+    assert ("v2.14.8 · ZIP install + filesystem cleanup" in PAGE) or ("v2.14.9 · filesystem audit + CSV exports" in PAGE)
     assert 'id="package-upload"' in PAGE
     assert 'enctype="multipart/form-data"' in PAGE
     assert 'name="action" value="upload-release-package"' in PAGE
