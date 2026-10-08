@@ -35,6 +35,12 @@ grep -Fq 'joined_utc' "$PKGDIR/payload/server/team-points/public/members-insight
 grep -Fq 'ciOpponentCsvExport' "$PKGDIR/payload/assets/js/pages/club-intelligence.js"
 grep -Fq 'class ReleasePackageUploadInstaller' "$PKGDIR/payload/server/release-control/src/ReleasePackageUploadInstaller.php"
 grep -Fq 'class FilesystemCleanupManager' "$PKGDIR/payload/server/release-control/src/FilesystemCleanupManager.php"
+test -f "$PKGDIR/payload/server/trophy-gallery/src/TrophyRemoteArtworkImporter.php"
+test -f "$PKGDIR/payload/server/trophy-gallery/public/api.php"
+test -f "$PKGDIR/payload/server/trophy-gallery/public/media.php"
+php -l "$PKGDIR/payload/server/trophy-gallery/src/TrophyRemoteArtworkImporter.php" >/dev/null
+php -l "$PKGDIR/payload/server/trophy-gallery/public/api.php" >/dev/null
+php -l "$PKGDIR/payload/server/trophy-gallery/public/media.php" >/dev/null
 test -s "$PKGDIR/RECOVERY_PLANE.sha256"
 grep -Fq 'server/release-control/public/release-control-upload.js' "$PKGDIR/RECOVERY_PLANE.sha256"
 grep -Fq 'class ReleaseVersionManager' "$PKGDIR/payload/server/release-control/src/ReleaseVersionManager.php"
@@ -77,6 +83,10 @@ grep -Fq 'v2.14.9 · filesystem audit + CSV exports' "$PREVIEW_ROOT/ReleaseContr
 grep -Fq 'class FilesystemAuditManager' "$PREVIEW_ROOT/server/release-control/src/FilesystemAuditManager.php"
 grep -Fq 'class ReleasePackageUploadInstaller' "$PREVIEW_ROOT/server/release-control/src/ReleasePackageUploadInstaller.php"
 grep -Fq 'class FilesystemCleanupManager' "$PREVIEW_ROOT/server/release-control/src/FilesystemCleanupManager.php"
+test -f "$PREVIEW_ROOT/server/trophy-gallery/src/TrophyRemoteArtworkImporter.php"
+test -f "$PREVIEW_ROOT/server/trophy-gallery/public/api.php"
+test -f "$PREVIEW_ROOT/server/trophy-gallery/public/media.php"
+php -r 'require $argv[1]; echo class_exists("P2K\\TrophyGallery\\TrophyGalleryStore") ? "ok\n" : "missing\n";' "$PREVIEW_ROOT/server/trophy-gallery/src/TrophyGalleryStore.php" | grep -Fxq ok
 grep -Fq 'class ReleaseVersionManager' "$PREVIEW_ROOT/server/release-control/src/ReleaseVersionManager.php"
 test -f "$PREVIEW_ROOT/PublicRouter.php"
 test -f "$PREVIEW_ROOT/server/release-control/src/ReleaseRuntimeTree.php"
