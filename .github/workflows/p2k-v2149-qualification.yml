@@ -1,0 +1,137 @@
+name: P2K v2.14.9 qualification
+
+on:
+  push:
+    branches: [release/v2.14.9]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env: {MARIADB_ROOT_PASSWORD: root}
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mariadb-admin ping -h localhost -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Install MariaDB PHP driver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y php-mysql php-zip
+          php -m | grep -qi pdo_mysql
+          php -m | grep -qi zip
+      - name: Install browser regression dependencies
+        run: |
+          python -m pip install --disable-pip-version-check -r tests/requirements.txt
+          python -m playwright install --with-deps chromium
+          sudo ln -sf "$(find "$HOME/.cache/ms-playwright" -type f -name chrome -path '*chrome-linux*' | head -1)" /usr/bin/chromium
+      - name: v2.14.9 syntax and release-control contracts
+        run: |
+          test "$(cat VERSION)" = "2.14.9"
+          php -l ReleaseControl.php
+          php -l PreviewRouter.php
+          php -l PublicRouter.php
+          for f in server/release-control/src/*.php server/release-control/public/*.php server/release-control/tools/*.php; do php -l "$f"; done
+          php -l server/team-points/src/PreviewIsolation.php
+          php -l server/team-points/src/Auth.php
+          php -l server/team-points/public/session.php
+          php -l server/trophy-gallery/src/TrophyRemoteArtworkImporter.php
+          php -l server/trophy-gallery/src/TrophyGalleryStore.php
+          php -l server/trophy-gallery/public/api.php
+          php -l server/release-control/src/FilesystemAuditManager.php
+          php -l server/team-points/public/members-insights-export.php
+          php -l server/team-points/public/opponents-export.php
+          bash -n tools/release/v2149/build-universal-2.13x.sh
+          bash -n tools/release/v2149/prepare-candidate-preview-v2.14.9.sh
+          bash -n tools/release/v2149/install-promote-to-king-v2.14.9-universal.sh.in
+          python -m py_compile tools/release/v2149/canonical-hash.py tools/release/v2149/stamp-runtime-cache-key.py server/release-control/tools/release-slot-paths.py
+          python -m pytest -q tests/test_v2140_release_control.py tests/test_v2141_release_slots.py tests/test_v2142_candidate_install.py tests/test_v2143_candidate_preview.py tests/test_v2143_insights_adjustments.py tests/test_v2144_preview_isolation.py tests/test_v2145_release_transitions.py tests/test_v2146_release_control_hardening.py tests/test_v2147_release_management.py tests/test_v2147_trophy_remote_import.py tests/test_v2149_release_control.py
+          php tests/php_v2140_release_control_harness.php
+          php tests/php_v2141_release_slots_harness.php
+          php tests/php_v2142_candidate_install_harness.php
+          php tests/php_v2143_session_runtime_harness.php
+          php tests/php_v2143_preview_oauth_status_harness.php
+          php tests/php_v2143_candidate_preview_harness.php
+          php tests/php_v2143_preview_request_target_harness.php
+          php tests/php_v2145_public_router_harness.php
+          php tests/php_v2145_promotion_rollback_harness.php
+          php tests/php_v2146_release_control_csrf_harness.php
+          php tests/php_v2146_operational_proof_harness.php
+          php tests/php_v2147_release_management_harness.php
+          php tests/php_v2147_same_version_candidate_harness.php
+          php tests/php_v2147_trophy_remote_import_harness.php
+          php tests/php_v2148_filesystem_cleanup_harness.php
+          php tests/php_v2148_release_zip_upload_harness.php
+          php tests/php_v2149_filesystem_audit_harness.php
+          python server/release-control/tools/release-slot-paths.py HEAD > "$RUNNER_TEMP/v2149-slot-paths.txt"
+          grep -Fxq VERSION "$RUNNER_TEMP/v2149-slot-paths.txt"
+          grep -Fxq ui-v2.html "$RUNNER_TEMP/v2149-slot-paths.txt"
+          ! grep -Fxq .htaccess "$RUNNER_TEMP/v2149-slot-paths.txt"
+          ! grep -Fxq ReleaseControl.php "$RUNNER_TEMP/v2149-slot-paths.txt"
+          ! grep -Fxq PreviewRouter.php "$RUNNER_TEMP/v2149-slot-paths.txt"
+          ! grep -Fxq PublicRouter.php "$RUNNER_TEMP/v2149-slot-paths.txt"
+          ! grep -Fq server/release-control/ "$RUNNER_TEMP/v2149-slot-paths.txt"
+          node --check assets/js/admin/admin-shell.js
+          node --check assets/js/admin/trophy-gallery-admin-v2121.js
+          node --check assets/js/admin/trophy-gallery-admin-view-v2121.js
+          node --check assets/js/admin/tool-registry.js
+          node --check assets/js/pages/challenge-list-assistant.js
+          node --check assets/js/pages/runtime-diagnostics.js
+          node --check assets/js/pages/team-points-admin.js
+          node --check assets/js/pages/club-intelligence.js
+      - name: v2.14.9 installer and candidate bootstrap gate
+        run: bash tests/test_v2149_universal_installer.sh
+      - name: Build v2.14.9 cumulative incremental installer
+        run: |
+          bash tools/release/v2149/build-universal-2.13x.sh "$RUNNER_TEMP/v2149-qual"
+          unzip -t "$RUNNER_TEMP/v2149-qual/PromoteToKing_v2.14.9_INCREMENTAL_FROM_2.13.x.zip"
+          grep -Fxq "$(git rev-parse HEAD)" "$RUNNER_TEMP/v2149-qual/PromoteToKing_v2.14.9_INCREMENTAL_FROM_2.13.x/SOURCE_HEAD.txt"
+          sha256sum "$RUNNER_TEMP/v2149-qual/PromoteToKing_v2.14.9_INCREMENTAL_FROM_2.13.x.zip"
+      - name: Trophy admin mount-race browser gate
+        run: python tests/browser_gate_trophy_admin_mount_race_v2133.py
+      - name: Focused Trophy Gallery browser lifecycle
+        run: python tests/browser_gate_trophy_gallery_v2121.py
+      - name: Events Showcase and Trophy browser gate
+        run: python tests/browser_gate_v2122.py
+      - name: Events Showcase card renderer browser gate
+        run: python tests/browser_gate_events_showcase_card_v2122.py
+      - name: Events Showcase admin editor browser gate
+        run: python tests/browser_gate_events_showcase_admin_v2122.py
+      - name: Match Recruitment controller readiness browser gate
+        run: python tests/browser_gate_recruit_match_ready_v2122.py
+      - name: Match Recruitment native admin detail browser gate
+        run: python tests/browser_gate_match_recruitment_admin_v2122.py
+      - name: Existing Match Recruitment browser gate
+        run: python tests/browser_gate_recruit_match_v2.py
+      - name: Existing Trophy overlay/browser gates
+        run: |
+          python tests/browser_gate_trophy_gallery_overlay.py
+          python tests/browser_gate_trophy_gallery_preview_containment.py
+          python tests/browser_gate_v2120_trophy_mobile_engraver.py
+      - name: Inherited architecture and canonical audit
+        run: |
+          python tools/test-suite/architecture_gate.py
+          python tools/test-suite/p2k_test_suite.py audit --json
+      - name: Full canonical P2K regression
+        run: |
+          set +e
+          python tools/test-suite/p2k_test_suite.py regression > "$RUNNER_TEMP/p2k-v2149-regression.log" 2>&1
+          rc=$?
+          tail -n 300 "$RUNNER_TEMP/p2k-v2149-regression.log"
+          exit "$rc"
+      - name: Full canonical P2K browser regression
+        run: python tools/test-suite/p2k_test_suite.py browser
