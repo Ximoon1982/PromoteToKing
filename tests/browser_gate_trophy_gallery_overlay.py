@@ -253,6 +253,7 @@ def main() -> None:
                 assert page.locator(f'script[src*="site-config.js?v={SITE_CONFIG_KEY}"]').count() == 1
                 assert page.locator(f'script[src*="trophy-gallery-r5fix3.8.js?v={R538_JS}"]').count() == 1
                 assert page.locator(f'link[href*="trophy-gallery-r5fix3.8.css?v={R538_CSS}"]').count() == 1
+                assert page.locator('link[href*="trophy-gallery-v2150-mobile.css?v=p2k-2.15.0-mobile-modal-gutter-1"]').count() == 1
                 assert page.locator(f'script[src*="trophy-gallery-r5fix3.10.js?v={R5310_JS}"]').count() == 1
 
                 host = "#adminShellNativeDetailHost"
@@ -359,7 +360,11 @@ def main() -> None:
                 public_page.wait_for_selector("#p2kR538Modal:not([hidden])", timeout=15000)
                 box = public_page.locator("#p2kR538Modal:not([hidden]) .p2k-r538-modal").bounding_box()
                 assert box is not None
-                assert box["x"] >= -1 and box["x"] + box["width"] <= 391
+                left_gutter = box["x"]
+                right_gutter = 390 - (box["x"] + box["width"])
+                assert left_gutter >= 10, box
+                assert right_gutter >= 10, box
+                assert abs(left_gutter - right_gutter) <= 2, (left_gutter, right_gutter, box)
                 assert public_page.locator("#p2kR538Modal a[href='https://example.test/primary']").count() == 1
                 assert public_page.locator("#p2kR538Modal a[href='https://example.test/secondary']").count() == 1
                 public_context.close()
