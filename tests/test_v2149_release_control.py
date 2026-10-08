@@ -106,3 +106,6 @@ def test_release_zip_upload_has_browser_progress_and_install_phase_feedback():
     assert "Upload complete. Verifying and installing candidate" in PAGE
     assert "100% · installing" in PAGE
     assert "Do not close this page until the result is shown." in PAGE
+    assert "package_result=error&package_error=" in PAGE
+    assert "Release ZIP installation failed." in PAGE
+    assert "$packageError" in PAGE
