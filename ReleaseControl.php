@@ -449,7 +449,7 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
 
     <section class="card full" id="filesystem-audit">
       <h2>Filesystem &amp; inode audit</h2>
-      <p class="small">Persisted, resumable, read-only recursive accounting of the complete PromoteToKing tree. Work is split into bounded batches; refreshes or interrupted requests continue from the saved cursor. Symbolic links are not followed and audit findings never grant deletion rights.</p>
+      <p class="small">Persisted, resumable, read-only recursive accounting of the complete PromoteToKing tree. Work is split into bounded batches; refreshes or interrupted requests continue from the saved cursor. Symbolic links are not followed. Audit findings never grant deletion rights.</p>
       <?php $auditStatus=(string)($filesystemAudit['status']??'idle'); ?>
       <?php if ($filesystemAuditError !== ''): ?><p class="small">Last audit error: <?= rc_h($filesystemAuditError) ?></p><?php endif; ?>
 
