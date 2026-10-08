@@ -49,6 +49,7 @@ INFRA_FILES=(
   server/release-control/src/ReleaseVersionManager.php
   server/release-control/src/ReleasePackageUploadInstaller.php
   server/release-control/src/FilesystemCleanupManager.php
+  server/release-control/src/FilesystemAuditManager.php
   server/release-control/src/ReleaseSlotPolicy.php
   server/release-control/src/ReleaseSlotFilesystemProbe.php
   server/release-control/src/ReleaseSlotStore.php
@@ -80,6 +81,7 @@ PHP_INFRA=(
   server/release-control/src/ReleaseVersionManager.php
   server/release-control/src/ReleasePackageUploadInstaller.php
   server/release-control/src/FilesystemCleanupManager.php
+  server/release-control/src/FilesystemAuditManager.php
   server/release-control/src/ReleaseSlotPolicy.php
   server/release-control/src/ReleaseSlotFilesystemProbe.php
   server/release-control/src/ReleaseSlotStore.php
