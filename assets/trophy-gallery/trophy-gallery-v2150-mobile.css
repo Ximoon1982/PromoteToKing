@@ -1,5 +1,53 @@
-/* P2K v2.15.0 — mobile Trophy modal gutter correction.
+/* P2K v2.15.0 — Trophy modal viewport/layout corrections.
    Loaded after the immutable r5fix3.8 presentation layer. */
+
+/* Full-viewport artwork viewer. */
+.p2k-r538-viewer-overlay {
+  box-sizing: border-box !important;
+  padding: max(0px, env(safe-area-inset-top))
+           max(0px, env(safe-area-inset-right))
+           max(0px, env(safe-area-inset-bottom))
+           max(0px, env(safe-area-inset-left)) !important;
+}
+.p2k-r538-viewer {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  padding: 14px !important;
+  border-radius: 0 !important;
+}
+.p2k-r538-viewer img {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+
+/* Desktop: portrait, square and near-square stay image-left/details-right.
+   Genuine landscape artwork uses the full modal width above the details. */
+@media (min-width: 781px) {
+  .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-body {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-left {
+    width: 100% !important;
+  }
+  .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-art {
+    width: 100% !important;
+    min-height: 0 !important;
+    height: min(58dvh, 640px) !important;
+  }
+  .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-art img {
+    width: auto !important;
+    height: auto !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+  }
+}
+
+/* Mobile gutter correction. */
 @media (max-width: 560px) {
   .p2k-r538-modal {
     width: min(calc(100vw - 24px), 100%) !important;
@@ -7,5 +55,8 @@
     margin-left: auto !important;
     margin-right: auto !important;
     justify-self: center !important;
+  }
+  .p2k-r538-viewer {
+    padding: 10px !important;
   }
 }
