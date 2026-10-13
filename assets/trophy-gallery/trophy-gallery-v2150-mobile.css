@@ -46,14 +46,16 @@
   .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-art {
     width: 100% !important;
     min-height: 0 !important;
-    height: clamp(440px, 62dvh, 720px) !important;
+    height: auto !important;
   }
   #p2kTrophyModal > article.p2k-v2150-landscape .p2k-trophy-modal-art img,
   .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-art img {
+    display: block !important;
     width: auto !important;
     height: auto !important;
     max-width: 100% !important;
-    max-height: 100% !important;
+    max-height: min(62dvh, 720px) !important;
+    margin: 0 auto !important;
     object-fit: contain !important;
   }
   #p2kTrophyModal > article.p2k-v2150-landscape .p2k-trophy-modal-details,
