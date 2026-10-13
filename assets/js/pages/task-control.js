@@ -419,8 +419,15 @@
     if(!host)return;
     host.querySelectorAll(":scope > section").forEach(section=>{
       if(section.classList.contains("connection-card"))return;
-      section.hidden=green ? section.id!=="greenSchedulerControl" : section.id==="greenSchedulerControl";
+      const inactive=green ? section.id!=="greenSchedulerControl" : section.id==="greenSchedulerControl";
+      section.hidden=inactive;
+      section.classList.toggle("is-task-surface-hidden",inactive);
     });
+    const trackedHistory=$("trackedHistoryModal");
+    if(trackedHistory){
+      trackedHistory.classList.toggle("is-task-surface-hidden",green);
+      if(green)trackedHistory.hidden=true;
+    }
     document.querySelectorAll("[data-task-tab]").forEach(btn=>{const active=btn.dataset.taskTab===key;btn.classList.toggle("is-active",active);btn.setAttribute("aria-selected",active?"true":"false");});
     if(green)refreshGreenControl();
     if(updateHistory){const u=new URL(location.href);u.searchParams.set("tab",key);if(window.parent!==window){history.replaceState({tab:key},"",u);window.parent.postMessage({type:"p2k-embedded-tab-change",tool:"task-control",tab:key},window.location.origin)}else history.pushState({tab:key},"",u);}
