@@ -246,8 +246,8 @@ JOIN p2k_tp_members u ON u.member_id=b.member_id;
 DROP VIEW IF EXISTS p2k_tp_match_summaries;
 CREATE VIEW p2k_tp_match_summaries AS
 SELECT club_slug,match_id,board_count,(board_count*2) AS game_count,p2k_score AS team_score,
-       CASE WHEN p2k_score>opponent_score THEN 'win' WHEN p2k_score<opponent_score THEN 'loss' ELSE 'draw' END AS result,
-       CASE WHEN p2k_score>opponent_score THEN 5*board_count WHEN p2k_score=opponent_score THEN 2*board_count ELSE 0 END AS competition_points,
+       result,
+       competition_points,
        COALESCE(finalized_at,end_time,last_verified_at) AS finalized_at,updated_at
 FROM p2k_tp_match_metadata
 WHERE status='finished' AND is_void=0 AND board_count>0 AND (p2k_score<>0 OR opponent_score<>0);
