@@ -1,0 +1,37 @@
+name: P2K v2.15.0 package
+
+on:
+  push:
+    branches: [release/v2.15.0]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Run focused v2.15.0 regressions
+        run: |
+          python3 -m pytest -q tests/test_v2150_trophy_modal_layout.py
+          php -l server/team-points-green/tools/audit-club-points.php
+      - name: Build v2.15.0 incremental candidate
+        run: |
+          bash tools/release/v2150/build-incremental.sh "$RUNNER_TEMP/v2150"
+          unzip -t "$RUNNER_TEMP/v2150/PromoteToKing_v2.15.0_INCREMENTAL_FROM_2.14.9.zip"
+          test -s "$RUNNER_TEMP/v2150/PromoteToKing_v2.15.0_INCREMENTAL_FROM_2.14.9/CANDIDATE_RELEASE.json"
+          test -s "$RUNNER_TEMP/v2150/PromoteToKing_v2.15.0_INCREMENTAL_FROM_2.14.9/CANDIDATE_PAYLOAD.sha256"
+          test -s "$RUNNER_TEMP/v2150/PromoteToKing_v2.15.0_INCREMENTAL_FROM_2.14.9/RECOVERY_PLANE.sha256"
+          grep -Fxq "$(git rev-parse HEAD)" "$RUNNER_TEMP/v2150/PromoteToKing_v2.15.0_INCREMENTAL_FROM_2.14.9/SOURCE_HEAD.txt"
+          sha256sum "$RUNNER_TEMP/v2150/PromoteToKing_v2.15.0_INCREMENTAL_FROM_2.14.9.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PromoteToKing-v2.15.0-incremental-${{ github.sha }}
+          path: ${{ runner.temp }}/v2150/PromoteToKing_v2.15.0_INCREMENTAL_FROM_2.14.9.zip
+          if-no-files-found: error
+          retention-days: 30
