@@ -44,19 +44,31 @@
   }
   #p2kTrophyModal > article.p2k-v2150-landscape .p2k-trophy-modal-art,
   .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-art {
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
     width: 100% !important;
+    min-width: 0 !important;
     min-height: 0 !important;
     height: auto !important;
+    overflow: hidden !important;
+    contain: layout paint !important;
   }
   #p2kTrophyModal > article.p2k-v2150-landscape .p2k-trophy-modal-art img,
   .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-art img {
+    box-sizing: border-box !important;
+    position: static !important;
     display: block !important;
+    flex: 0 1 auto !important;
     width: auto !important;
     height: auto !important;
     max-width: 100% !important;
     max-height: min(62dvh, 720px) !important;
     margin: 0 auto !important;
     object-fit: contain !important;
+    object-position: center top !important;
+    transform: none !important;
   }
   #p2kTrophyModal > article.p2k-v2150-landscape .p2k-trophy-modal-details,
   .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-details {
