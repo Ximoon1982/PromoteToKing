@@ -2,6 +2,7 @@
    Loaded after the immutable r5fix3.8 presentation layer. */
 
 /* Full-viewport artwork viewer. */
+#p2kTrophyViewer,
 .p2k-r538-viewer-overlay {
   box-sizing: border-box !important;
   padding: max(0px, env(safe-area-inset-top))
@@ -9,6 +10,7 @@
            max(0px, env(safe-area-inset-bottom))
            max(0px, env(safe-area-inset-left)) !important;
 }
+#p2kTrophyViewer,
 .p2k-r538-viewer {
   box-sizing: border-box !important;
   width: 100% !important;
@@ -18,6 +20,7 @@
   padding: 14px !important;
   border-radius: 0 !important;
 }
+#p2kTrophyViewer img,
 .p2k-r538-viewer img {
   max-width: 100% !important;
   max-height: 100% !important;
@@ -27,20 +30,25 @@
 /* Desktop: portrait, square and near-square stay image-left/details-right.
    Genuine landscape artwork uses the full modal width above the details. */
 @media (min-width: 781px) {
+  #p2kTrophyModal > article.p2k-v2150-landscape,
   .p2k-r538-modal.p2k-v2150-landscape {
     width: min(1240px, calc(100vw - 48px)) !important;
   }
+  #p2kTrophyModal > article.p2k-v2150-landscape .p2k-trophy-modal-body,
   .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-body {
     grid-template-columns: minmax(0, 1fr) !important;
   }
+  #p2kTrophyModal > article.p2k-v2150-landscape .p2k-trophy-modal-art,
   .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-left {
     width: 100% !important;
   }
+  #p2kTrophyModal > article.p2k-v2150-landscape .p2k-trophy-modal-art,
   .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-art {
     width: 100% !important;
     min-height: 0 !important;
     height: clamp(440px, 62dvh, 720px) !important;
   }
+  #p2kTrophyModal > article.p2k-v2150-landscape .p2k-trophy-modal-art img,
   .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-art img {
     width: auto !important;
     height: auto !important;
@@ -48,9 +56,13 @@
     max-height: 100% !important;
     object-fit: contain !important;
   }
+  #p2kTrophyModal > article.p2k-v2150-landscape .p2k-trophy-modal-details,
   .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-details {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     align-items: start !important;
+  }
+  #p2kTrophyModal > article.p2k-v2150-landscape .p2k-trophy-meta {
+    grid-column: 1 / -1 !important;
   }
   .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-lead,
   .p2k-r538-modal.p2k-v2150-landscape .p2k-r538-meta {
@@ -62,13 +74,16 @@
    artwork area and tighter vertical rhythm so the modal visibly adapts
    rather than merely shrinking the desktop composition. */
 @media (max-width: 780px) {
+  #p2kTrophyModal .p2k-trophy-modal-body,
   .p2k-r538-modal .p2k-r538-modal-body {
     grid-template-columns: minmax(0, 1fr) !important;
   }
+  #p2kTrophyModal .p2k-trophy-modal-art,
   .p2k-r538-modal .p2k-r538-modal-art {
     min-height: 0 !important;
     height: min(46dvh, 430px) !important;
   }
+  #p2kTrophyModal .p2k-trophy-modal-art img,
   .p2k-r538-modal .p2k-r538-modal-art img {
     width: auto !important;
     height: auto !important;
@@ -80,6 +95,7 @@
 
 /* Mobile gutter correction. */
 @media (max-width: 560px) {
+  #p2kTrophyModal > article,
   .p2k-r538-modal {
     width: min(calc(100vw - 24px), 100%) !important;
     max-width: calc(100vw - 24px) !important;
@@ -87,20 +103,25 @@
     margin-right: auto !important;
     justify-self: center !important;
   }
+  #p2kTrophyModal .p2k-trophy-modal-head,
   .p2k-r538-modal .p2k-r538-modal-head {
     padding: 11px 12px !important;
   }
+  #p2kTrophyModal .p2k-trophy-modal-body,
   .p2k-r538-modal .p2k-r538-modal-body {
     gap: 10px !important;
     padding: 10px !important;
   }
+  #p2kTrophyModal .p2k-trophy-modal-art,
   .p2k-r538-modal .p2k-r538-modal-art {
     height: min(38dvh, 340px) !important;
     padding: 6px !important;
   }
+  #p2kTrophyModal .p2k-trophy-modal-details,
   .p2k-r538-modal .p2k-r538-modal-details {
     gap: 8px !important;
   }
+  #p2kTrophyViewer,
   .p2k-r538-viewer {
     padding: 10px !important;
   }
