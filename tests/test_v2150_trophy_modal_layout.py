@@ -10,8 +10,8 @@ def read(path: str) -> str:
 def test_v2150_trophy_modal_assets_are_loaded_on_both_entry_points():
     ui = read("ui-v2.html")
     standalone = read("trophies/index.html")
-    css_key = "trophy-gallery-v2150-mobile.css?v=p2k-2.15.0-trophy-modal-layout-4"
-    js_key = "trophy-gallery-v2150-modal-layout.js?v=p2k-2.15.0-trophy-modal-layout-4"
+    css_key = "trophy-gallery-v2150-mobile.css?v=p2k-2.15.0-trophy-modal-layout-5"
+    js_key = "trophy-gallery-v2150-modal-layout.js?v=p2k-2.15.0-trophy-modal-layout-5"
     assert css_key in ui
     assert css_key in standalone
     assert js_key in ui
@@ -36,7 +36,8 @@ def test_v2150_landscape_modal_stacks_art_above_details_on_desktop():
     assert "#p2kTrophyModal > article.p2k-v2150-landscape .p2k-trophy-modal-body" in css
     assert ".p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-body" in css
     assert "grid-template-columns: minmax(0, 1fr) !important;" in css
-    assert "height: clamp(440px, 62dvh, 720px) !important;" in css
+    assert "height: auto !important;" in css
+    assert "max-height: min(62dvh, 720px) !important;" in css
     assert "grid-template-columns: repeat(2, minmax(0, 1fr)) !important;" in css
 
 
