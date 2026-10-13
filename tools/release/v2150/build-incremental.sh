@@ -77,7 +77,6 @@ grep -Fq 'trophy-gallery-v2150-modal-layout.js' "$DIR/payload/trophies/index.htm
 grep -Fq 'trophy-gallery-v2150-mobile.css' "$DIR/payload/trophies/index.html"
 grep -Fq 'LANDSCAPE_RATIO = 1.10' "$DIR/payload/assets/js/admin/trophy-gallery-v2150-modal-layout.js"
 grep -Fq 'height: 100dvh !important' "$DIR/payload/assets/trophy-gallery/trophy-gallery-v2150-mobile.css"
-"$PHP_BIN" -v >/dev/null 2>&1 || true
 
 printf '%s\n' "$HEAD" > "$DIR/SOURCE_HEAD.txt"
 printf '%s\n' "$CACHE_KEY" > "$DIR/ASSET_CACHE_KEY.txt"
