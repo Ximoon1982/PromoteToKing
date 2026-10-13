@@ -10,8 +10,8 @@ def read(path: str) -> str:
 def test_v2150_trophy_modal_assets_are_loaded_on_both_entry_points():
     ui = read("ui-v2.html")
     standalone = read("trophies/index.html")
-    css_key = "trophy-gallery-v2150-mobile.css?v=p2k-2.15.0-trophy-modal-layout-3"
-    js_key = "trophy-gallery-v2150-modal-layout.js?v=p2k-2.15.0-trophy-modal-layout-3"
+    css_key = "trophy-gallery-v2150-mobile.css?v=p2k-2.15.0-trophy-modal-layout-4"
+    js_key = "trophy-gallery-v2150-modal-layout.js?v=p2k-2.15.0-trophy-modal-layout-4"
     assert css_key in ui
     assert css_key in standalone
     assert js_key in ui
@@ -25,12 +25,15 @@ def test_v2150_orientation_classifier_is_desktop_only_and_uses_real_image_dimens
     assert "img.naturalWidth / img.naturalHeight" in js
     assert 'classList.toggle("p2k-v2150-landscape"' in js
     assert 'classList.toggle("p2k-v2150-side-by-side"' in js
+    assert '#p2kTrophyModal .p2k-trophy-modal-art img' in js
+    assert '#p2kR538Modal .p2k-r538-modal-art img[data-r538-view-image]' in js
     assert 'img.addEventListener("load"' in js
 
 
 def test_v2150_landscape_modal_stacks_art_above_details_on_desktop():
     css = read("assets/trophy-gallery/trophy-gallery-v2150-mobile.css")
     assert "@media (min-width: 781px)" in css
+    assert "#p2kTrophyModal > article.p2k-v2150-landscape .p2k-trophy-modal-body" in css
     assert ".p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-body" in css
     assert "grid-template-columns: minmax(0, 1fr) !important;" in css
     assert "height: clamp(440px, 62dvh, 720px) !important;" in css
@@ -55,6 +58,8 @@ def test_v2150_modal_image_click_still_opens_existing_viewer_and_viewer_is_full_
     css = read("assets/trophy-gallery/trophy-gallery-v2150-mobile.css")
     js = read("assets/js/admin/trophy-gallery-v2150-modal-layout.js")
     assert 'artImg.addEventListener("click",enlarge);' in legacy
+    assert 'openBaseViewerFromImage' in js
+    assert '#p2kTrophyViewer' in js
     assert "function openViewer(url" in legacy
     assert ".p2k-r538-viewer {" in css
     assert "width: 100% !important;" in css
