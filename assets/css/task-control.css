@@ -42,3 +42,10 @@
 @media(max-width:620px){.task-surface-tabs{flex-direction:column}.task-surface-tab{width:100%}.green-mini-grid{grid-template-columns:1fr}.green-inline-control{align-items:stretch;flex-direction:column}}
 /* v2.10.6 Green migration card observability */
 .green-progress-detail{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;color:var(--muted);font-size:.78rem}.green-estimated-progress{border-style:dashed}.green-field-grid label{min-width:0}.green-field-grid .control-input{width:100%;max-width:100%}@media(max-width:650px){.green-mini-grid{grid-template-columns:1fr}.green-control-surface .task-controls{display:grid;grid-template-columns:1fr}.green-control-surface .task-controls .control-button{width:100%;white-space:normal}.green-control-surface .table-wrap{overflow-x:auto}}
+
+
+/* v2.15.0: hard tab isolation. Some legacy card rules use explicit display
+   declarations, so do not rely on the HTML hidden attribute alone. */
+.is-task-surface-hidden {
+  display: none !important;
+}
