@@ -10,8 +10,8 @@ def read(path: str) -> str:
 def test_v2150_trophy_modal_assets_are_loaded_on_both_entry_points():
     ui = read("ui-v2.html")
     standalone = read("trophies/index.html")
-    css_key = "trophy-gallery-v2150-mobile.css?v=p2k-2.15.0-trophy-modal-layout-2"
-    js_key = "trophy-gallery-v2150-modal-layout.js?v=p2k-2.15.0-trophy-modal-layout-2"
+    css_key = "trophy-gallery-v2150-mobile.css?v=p2k-2.15.0-trophy-modal-layout-3"
+    js_key = "trophy-gallery-v2150-modal-layout.js?v=p2k-2.15.0-trophy-modal-layout-3"
     assert css_key in ui
     assert css_key in standalone
     assert js_key in ui
@@ -33,17 +33,21 @@ def test_v2150_landscape_modal_stacks_art_above_details_on_desktop():
     assert "@media (min-width: 781px)" in css
     assert ".p2k-r538-modal.p2k-v2150-landscape .p2k-r538-modal-body" in css
     assert "grid-template-columns: minmax(0, 1fr) !important;" in css
-    assert "height: min(58dvh, 640px) !important;" in css
+    assert "height: clamp(440px, 62dvh, 720px) !important;" in css
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr)) !important;" in css
 
 
-def test_v2150_portrait_and_square_keep_existing_side_by_side_layout():
+def test_v2150_portrait_and_square_keep_existing_side_by_side_layout_on_desktop():
     css = read("assets/trophy-gallery/trophy-gallery-v2150-mobile.css")
-    # The override must only alter the body grid when the landscape class is present.
-    body_grid_rules = [
-        line for line in css.splitlines()
-        if "grid-template-columns:" in line
-    ]
-    assert body_grid_rules == ["    grid-template-columns: minmax(0, 1fr) !important;"]
+    assert ".p2k-r538-modal.p2k-v2150-side-by-side" not in css
+    assert "@media (max-width: 780px)" in css
+    assert ".p2k-r538-modal .p2k-r538-modal-body" in css
+
+def test_v2150_mobile_has_a_distinct_compact_artwork_height():
+    css = read("assets/trophy-gallery/trophy-gallery-v2150-mobile.css")
+    assert "height: min(46dvh, 430px) !important;" in css
+    assert "height: min(38dvh, 340px) !important;" in css
+    assert "gap: 10px !important;" in css
 
 
 def test_v2150_modal_image_click_still_opens_existing_viewer_and_viewer_is_full_viewport():
