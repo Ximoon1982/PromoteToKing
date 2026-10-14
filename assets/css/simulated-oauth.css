@@ -501,3 +501,80 @@ body.p2k-auth-modal-open {
   outline: 2px solid rgba(246, 183, 60, .45);
   outline-offset: 2px;
 }
+
+
+/* v2.15.0 administrator presentation preview controls. */
+.p2k-auth-admin-preview {
+  display: grid;
+  gap: 10px;
+  margin-top: 17px;
+  padding: 13px;
+  border: 1px solid rgba(246, 183, 60, .28);
+  border-radius: 9px;
+  background: rgba(246, 183, 60, .055);
+}
+.p2k-auth-admin-preview-title {
+  display: grid;
+  gap: 3px;
+}
+.p2k-auth-admin-preview-title strong,
+.p2k-auth-preview-copy strong {
+  color: #f6d493;
+  font-size: 13px;
+}
+.p2k-auth-admin-preview-title span,
+.p2k-auth-preview-copy span {
+  color: #bdb4a9;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.p2k-auth-preview-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(255, 255, 255, .08);
+}
+.p2k-auth-preview-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.p2k-auth-preview-copy code {
+  color: #ffd078;
+}
+.p2k-auth-view-as-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.p2k-auth-view-as-form[hidden] {
+  display: none !important;
+}
+.p2k-auth-view-as-form input {
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 8px;
+  background: #100f0e;
+  color: #f4efe8;
+  font: inherit;
+}
+.p2k-auth-view-as-form input:focus {
+  border-color: #f6b73c;
+  outline: 2px solid rgba(246, 183, 60, .16);
+  outline-offset: 1px;
+}
+.p2k-auth-view-as-form .p2k-auth-error {
+  grid-column: 1 / -1;
+}
+@media (max-width: 520px) {
+  .p2k-auth-view-as-form {
+    grid-template-columns: 1fr;
+  }
+  .p2k-auth-view-as-form .p2k-auth-secondary {
+    width: 100%;
+  }
+}
