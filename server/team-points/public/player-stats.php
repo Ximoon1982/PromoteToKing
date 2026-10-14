@@ -5,6 +5,7 @@ use P2K\Shared\SharedChessGateway;
 use P2K\TeamPoints\ApiException;
 use P2K\TeamPoints\Database;
 use P2K\TeamPoints\PublicReadDatabase;
+use P2K\TeamPoints\PreviewIsolation;
 use P2K\TeamPoints\Http;
 use P2K\TeamPoints\Repository;
 try {
@@ -21,7 +22,7 @@ try {
     ]);
     if (!is_array($stats)) throw new ApiException('Chess.com statistics are unavailable for this member.',404,'PLAYER_STATS_UNAVAILABLE');
     $ratings=Repository::ratingsFromStats($stats);
-    $stored=$repo->storeMemberRatings($club,$username,$ratings['daily_rating'],$ratings['chess960_rating']);
+    $stored=PreviewIsolation::active()?false:$repo->storeMemberRatings($club,$username,$ratings['daily_rating'],$ratings['chess960_rating']);
     $stats['_p2k_rating_snapshot']=['stored'=>$stored,'daily_rating'=>$ratings['daily_rating'],'chess960_rating'=>$ratings['chess960_rating'],'observed_at'=>gmdate('c')];
     Http::json($stats);
 } catch (ApiException $e) {

@@ -5,6 +5,7 @@ use P2K\Shared\SharedChessGateway;
 use P2K\TeamPoints\ApiException;
 use P2K\TeamPoints\Database;
 use P2K\TeamPoints\PublicReadDatabase;
+use P2K\TeamPoints\PreviewIsolation;
 use P2K\TeamPoints\Http;
 use P2K\TeamPoints\Repository;
 try {
@@ -32,7 +33,22 @@ try {
                 $payload=$gateway->json('https://api.chess.com/pub/player/'.rawurlencode(strtolower($username)),[
                     'consumer'=>'achievement-player-card','cache_ttl_seconds'=>$refreshAge,'max_stale_seconds'=>180*86400,'allow_stale_on_error'=>true,
                 ]);
-                if(is_array($payload)){$repo->storePlayerProfileSnapshot($club,$username,$payload,true);$snapshot=$repo->playerProfileSnapshot($club,$username);}
+                if(is_array($payload)){
+                    if(PreviewIsolation::active()){
+                        $country=trim((string)($payload['country']??''));
+                        if($country!==''&&str_contains($country,'/')){$parts=array_values(array_filter(explode('/',$country)));$country=(string)end($parts);}
+                        $snapshot=[
+                            'username'=>(string)($payload['username']??$username),
+                            'avatar_url'=>(string)($payload['avatar']??''),
+                            'profile_url'=>(string)($payload['url']??$payload['@id']??('https://www.chess.com/member/'.rawurlencode($username))),
+                            'country_code'=>$country,
+                            'profile_status'=>(string)($payload['status']??''),
+                            'avatar_checked_at'=>gmdate('Y-m-d H:i:s'),
+                        ];
+                    }else{
+                        $repo->storePlayerProfileSnapshot($club,$username,$payload,true);$snapshot=$repo->playerProfileSnapshot($club,$username);
+                    }
+                }
             }catch(Throwable){/* stale/fallback is intentionally usable */}
         }
         $snapshot=is_array($snapshot)?$snapshot:[];

@@ -5,6 +5,7 @@ use P2K\Shared\SharedChessGateway;
 use P2K\TeamPoints\ApiException;
 use P2K\TeamPoints\Database;
 use P2K\TeamPoints\PublicReadDatabase;
+use P2K\TeamPoints\PreviewIsolation;
 use P2K\TeamPoints\Http;
 use P2K\TeamPoints\Repository;
 
@@ -47,8 +48,19 @@ try {
                 $gateway??=new SharedChessGateway(null,$config['app']??[]);
                 $payload=$gateway->json('https://api.chess.com/pub/club/'.rawurlencode($lookupSlug),['consumer'=>'opponent-icon','cache_ttl_seconds'=>$refreshAge,'max_stale_seconds'=>180*86400,'allow_stale_on_error'=>true]);
                 if(is_array($payload)){
-                    $repo->storeOpponentProfileSnapshot($club,$lookupSlug,$payload,true);
-                    $snapshot=$repo->opponentProfileSnapshot($club,$lookupSlug);
+                    if(PreviewIsolation::active()){
+                        $snapshot=[
+                            'opponent_slug'=>$lookupSlug,
+                            'display_name'=>(string)($payload['name']??$lookupSlug),
+                            'club_url'=>Repository::chessClubHumanUrl((string)($payload['url']??$payload['@id']??''),$lookupSlug),
+                            'country_code'=>(string)($payload['country']??''),
+                            'icon_url'=>(string)($payload['icon']??$payload['avatar']??$payload['image']??''),
+                            'icon_checked_at'=>gmdate('Y-m-d H:i:s'),
+                        ];
+                    }else{
+                        $repo->storeOpponentProfileSnapshot($club,$lookupSlug,$payload,true);
+                        $snapshot=$repo->opponentProfileSnapshot($club,$lookupSlug);
+                    }
                 }
             }catch(Throwable){$lookupFailed=true;}
         }
@@ -63,9 +75,22 @@ try {
                     $resolved=is_array($match)?p2k_opponent_canonical_from_match($match,$club):null;
                     if(is_array($resolved)&&$resolved['slug']!==''&&$resolved['slug']!==$requestedSlug){
                         $lookupSlug=(string)$resolved['slug'];
-                        $repo->recordOpponentCheck($club,$requestedSlug,$lookupSlug,(string)$resolved['name'],false,'Legacy opponent slug repaired from authoritative match team URL.');
+                        if(!PreviewIsolation::active())$repo->recordOpponentCheck($club,$requestedSlug,$lookupSlug,(string)$resolved['name'],false,'Legacy opponent slug repaired from authoritative match team URL.');
                         $payload=$gateway->json('https://api.chess.com/pub/club/'.rawurlencode($lookupSlug),['consumer'=>'opponent-icon-repair','cache_ttl_seconds'=>$refreshAge,'max_stale_seconds'=>180*86400,'allow_stale_on_error'=>true]);
-                        if(is_array($payload)){$repo->storeOpponentProfileSnapshot($club,$lookupSlug,$payload,true);$snapshot=$repo->opponentProfileSnapshot($club,$lookupSlug);}
+                        if(is_array($payload)){
+                            if(PreviewIsolation::active()){
+                                $snapshot=[
+                                    'opponent_slug'=>$lookupSlug,
+                                    'display_name'=>(string)($payload['name']??$resolved['name']??$lookupSlug),
+                                    'club_url'=>Repository::chessClubHumanUrl((string)($payload['url']??$payload['@id']??''),$lookupSlug),
+                                    'country_code'=>(string)($payload['country']??''),
+                                    'icon_url'=>(string)($payload['icon']??$payload['avatar']??$payload['image']??''),
+                                    'icon_checked_at'=>gmdate('Y-m-d H:i:s'),
+                                ];
+                            }else{
+                                $repo->storeOpponentProfileSnapshot($club,$lookupSlug,$payload,true);$snapshot=$repo->opponentProfileSnapshot($club,$lookupSlug);
+                            }
+                        }
                     }
                 }catch(Throwable){}
             }

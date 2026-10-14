@@ -13,7 +13,10 @@ final class MiacService
 
     public function generation(): int
     {
-        $this->ensureState();
+        // Production keeps the historical lazy-state initialization. Candidate
+        // preview DB sessions are deliberately read-only, so preview must only
+        // consume already-published identity state.
+        if (!PreviewIsolation::active()) $this->ensureState();
         $q=$this->core->prepare('SELECT identity_map_generation FROM p2k_miac_state WHERE club_slug=?');
         $q->execute([$this->clubSlug]);
         return max(1,(int)($q->fetchColumn()?:1));
@@ -96,9 +99,10 @@ final class MiacService
     public function resolve(string $username): array
     {
         $key=\p2k_tp_username_key($username);if($key==='')return ['raw_username_key'=>'','canonical_username_key'=>'','canonical_username'=>'','reason'=>'self','conflict'=>false,'generation'=>$this->generation()];
-        $this->ensureName($username);
+        $preview=PreviewIsolation::active();
+        if(!$preview)$this->ensureName($username);
         $q=$this->core->prepare('SELECT canonical_username_key,canonical_username,resolution_reason,conflict,identity_map_generation FROM p2k_miac_canonical_map WHERE club_slug=? AND username_key=?');$q->execute([$this->clubSlug,$key]);$r=$q->fetch(PDO::FETCH_ASSOC);
-        if(!is_array($r)){$this->rebuildCanonicalMap(false,'resolve_missing_map');$q->execute([$this->clubSlug,$key]);$r=$q->fetch(PDO::FETCH_ASSOC);}
+        if(!is_array($r)&&!$preview){$this->rebuildCanonicalMap(false,'resolve_missing_map');$q->execute([$this->clubSlug,$key]);$r=$q->fetch(PDO::FETCH_ASSOC);}
         return ['raw_username_key'=>$key,'canonical_username_key'=>(string)($r['canonical_username_key']??$key),'canonical_username'=>(string)($r['canonical_username']??$username),'reason'=>(string)($r['resolution_reason']??'self'),'conflict'=>(bool)($r['conflict']??false),'generation'=>(int)($r['identity_map_generation']??$this->generation())];
     }
 
@@ -212,7 +216,13 @@ final class MiacService
 
     public function summary(int $limit=500,string $search=''): array
     {
-        $this->ensureState();$auto=$this->applyAutomaticEvidencePolicy();$gen=$this->generation();$search=trim($search);$params=[$this->clubSlug];$where='club_slug=?';if($search!==''){$where.=' AND (old_username_key LIKE ? OR new_username_key LIKE ?)';$params[]='%'.strtolower($search).'%';$params[]='%'.strtolower($search).'%';}
+        if(PreviewIsolation::active()){
+            $gen=$this->generation();
+            $auto=['changed'=>0,'confirmed'=>0,'conflicts'=>0,'generation'=>$gen,'preview_read_only'=>true];
+        }else{
+            $this->ensureState();$auto=$this->applyAutomaticEvidencePolicy();$gen=$this->generation();
+        }
+        $search=trim($search);$params=[$this->clubSlug];$where='club_slug=?';if($search!==''){$where.=' AND (old_username_key LIKE ? OR new_username_key LIKE ?)';$params[]='%'.strtolower($search).'%';$params[]='%'.strtolower($search).'%';}
         $limit=max(1,min(500,$limit));$q=$this->core->prepare("SELECT old_username_key,new_username_key,confidence,shared_boards,same_joined,roster_handover,coexists,status,evidence_source,evidence_json,reviewed_by,reviewed_at FROM p2k_miac_edges WHERE {$where} ORDER BY FIELD(status,'conflict','candidate','confirmed','rejected'),FIELD(confidence,'Very strong','Strong','Possible'),shared_boards DESC LIMIT {$limit}");$q->execute($params);$edges=$q->fetchAll(PDO::FETCH_ASSOC)?:[];
         foreach($edges as &$edge){$decoded=json_decode((string)($edge['evidence_json']??''),true);$edge['evidence']=is_array($decoded)?$decoded:[];}unset($edge);
         $counts=$this->core->prepare('SELECT status,COUNT(*) n FROM p2k_miac_edges WHERE club_slug=? GROUP BY status');$counts->execute([$this->clubSlug]);$by=[];foreach($counts->fetchAll(PDO::FETCH_ASSOC)?:[] as $r)$by[$r['status']]=(int)$r['n'];
