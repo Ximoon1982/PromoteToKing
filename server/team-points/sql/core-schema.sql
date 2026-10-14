@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS p2k_tp_members (
   profile_url VARCHAR(500) NULL,
   country_code VARCHAR(16) NULL,
   profile_status VARCHAR(40) NULL,
+  title VARCHAR(8) NULL,
   avatar_checked_at DATETIME NULL,
   profile_updated_at DATETIME NULL,
   first_seen_at DATETIME NOT NULL,
@@ -597,3 +598,4 @@ CREATE TABLE IF NOT EXISTS p2k_tp_reconstruction_actions (
 INSERT IGNORE INTO p2k_core_schema_version(version) VALUES(16);
 
 INSERT IGNORE INTO p2k_core_schema_version(version) VALUES(17);
+INSERT IGNORE INTO p2k_core_schema_version(version) VALUES(18);

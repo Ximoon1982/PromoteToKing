@@ -27,6 +27,15 @@ OVERLAY_FILES=(
   assets/js/admin/trophy-gallery-v2150-modal-layout.js
   assets/trophy-gallery/trophy-gallery-v2150-mobile.css
   server/team-points-green/tools/audit-club-points.php
+  server/team-points/src/MiacService.php
+  server/team-points/src/Repository.php
+  server/team-points/public/cron.php
+  server/team-points/public/player-stats.php
+  server/team-points/public/player-cards.php
+  server/team-points/public/opponent-icons.php
+  server/team-points/public/members-insights-export.php
+  server/team-points/sql/core-schema.sql
+  server/team-points/sql/core-migration-v2.15.0.sql
 )
 
 RECOVERY_FILES=(
@@ -145,6 +154,8 @@ Contents:
 - Club-points audit tool added in the current 2.15.0 branch.
 - Task Control tab isolation.
 - Administrator Member view / View as member profile controls.
+- Candidate-preview read paths remain database-read-only.
+- Chess.com player titles are persisted by the existing profile refresh and included in Members CSV.
 
 Recommended installation:
   cd ~/PromoteToKing

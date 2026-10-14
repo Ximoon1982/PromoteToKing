@@ -28,7 +28,7 @@ try {
     Auth::requireCron(trim((string)($_SERVER['HTTP_X_P2K_CRON_TOKEN'] ?? ($_GET['token'] ?? '')))); $authenticated = true;
     $pdo = Database::core(); $analytics = Database::analytics();
     $repository = new Repository($pdo, $analytics);
-    if (!$repository->schemaInstalled()) $repository->upgradeExistingSchema();
+    if (!$repository->schemaCurrent()) $repository->upgradeExistingSchema();
     if (!$repository->schemaInstalled()) throw new ApiException('The v2.8 Core/Analytics databases are not initialized or upgraded.',503,'SCHEMA_NOT_INSTALLED');
     $registry = new TaskRegistry($pdo);
     if ($registry->isPaused($taskKey)) Http::json(['ok'=>true,'status'=>'paused','lane'=>$lane,'processed_items'=>0,'message'=>ucfirst($lane).' Points is paused.','server_controlled'=>true]);

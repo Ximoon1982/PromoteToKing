@@ -43,6 +43,7 @@ try {
                             'profile_url'=>(string)($payload['url']??$payload['@id']??('https://www.chess.com/member/'.rawurlencode($username))),
                             'country_code'=>$country,
                             'profile_status'=>(string)($payload['status']??''),
+                            'title'=>strtoupper(substr(trim((string)($payload['title']??'')),0,8)),
                             'avatar_checked_at'=>gmdate('Y-m-d H:i:s'),
                         ];
                     }else{
@@ -55,7 +56,7 @@ try {
         $profiles[$key]=[
             'username'=>(string)($snapshot['username']??$username),'avatar'=>(string)($snapshot['avatar_url']??''),
             'country'=>(string)($snapshot['country_code']??''),'url'=>(string)($snapshot['profile_url']??('https://www.chess.com/member/'.rawurlencode($username))),
-            'status'=>(string)($snapshot['profile_status']??''),'avatar_checked_at'=>$snapshot['avatar_checked_at']??null,
+            'status'=>(string)($snapshot['profile_status']??''),'title'=>(string)($snapshot['title']??''),'avatar_checked_at'=>$snapshot['avatar_checked_at']??null,
         ];
     }
     // Avatar URLs change rarely. Login/profile access revalidates explicitly through opportunistic profile ingestion.

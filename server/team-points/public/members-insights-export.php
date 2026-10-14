@@ -44,10 +44,15 @@ try {
     $rows = is_array($payload['rows'] ?? null) ? $payload['rows'] : [];
 
     $meta = [];
+    $titleColumn='';
+    try{
+        $titleProbe=$repository->core()->query("SHOW COLUMNS FROM p2k_tp_members LIKE 'title'");
+        if($titleProbe->fetch(PDO::FETCH_ASSOC))$titleColumn=',title';
+    }catch(Throwable){}
     $q = $repository->core()->prepare(
         'SELECT username_key,player_id,joined_at,daily_rating,chess960_rating,rating_updated_at,
                 player_matches_checked_at,player_matches_observed_at,stats_checked_at,stats_observed_at,
-                profile_observed_at,country_code,profile_status,profile_url,avatar_url,profile_updated_at,
+                profile_observed_at,country_code,profile_status'.$titleColumn.',profile_url,avatar_url,profile_updated_at,
                 first_seen_at,last_seen_at
          FROM p2k_tp_members WHERE club_slug=?'
     );
@@ -64,7 +69,7 @@ try {
     if ($out === false) throw new RuntimeException('Unable to open CSV output stream.');
     fwrite($out, "\xEF\xBB\xBF");
     fputcsv($out, [
-        'username','username_key','member_status','current_member','activity_status','profile_status','country_code','player_id',
+        'username','username_key','member_status','current_member','activity_status','profile_status','title','country_code','player_id',
         'joined_utc','joined_epoch','first_seen_utc','first_seen_epoch','last_seen_utc','last_seen_epoch',
         'daily_rating','chess960_rating','rating_updated_utc','rating_updated_epoch',
         'daily_rank','team_position','position_change','team_points','matches','games','wins','draws','losses',
@@ -84,7 +89,7 @@ try {
             : (string)($row['daily_rank'] ?? '');
         fputcsv($out, [
             (string)($row['username'] ?? ''),$key,!empty($row['current_member'])?'current':'former',!empty($row['current_member'])?1:0,
-            (string)($row['activity_status'] ?? 'unknown'),(string)($m['profile_status'] ?? ''),(string)($m['country_code'] ?? ''),(string)($m['player_id'] ?? ''),
+            (string)($row['activity_status'] ?? 'unknown'),(string)($m['profile_status'] ?? ''),(string)($m['title'] ?? ''),(string)($m['country_code'] ?? ''),(string)($m['player_id'] ?? ''),
             p2k_members_csv_utc($m['joined_at'] ?? null),p2k_members_csv_epoch($m['joined_at'] ?? null),
             p2k_members_csv_utc($m['first_seen_at'] ?? $row['first_seen_at'] ?? null),p2k_members_csv_epoch($m['first_seen_at'] ?? $row['first_seen_at'] ?? null),
             p2k_members_csv_utc($m['last_seen_at'] ?? $row['last_seen_at'] ?? null),p2k_members_csv_epoch($m['last_seen_at'] ?? $row['last_seen_at'] ?? null),

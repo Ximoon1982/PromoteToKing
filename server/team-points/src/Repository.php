@@ -10,10 +10,12 @@ use PDO;
 final class Repository
 {
     private const CORE_SCHEMA_VERSION = 17;
+    private const CURRENT_CORE_SCHEMA_VERSION = 18;
     private const ANALYTICS_SCHEMA_VERSION = 10;
     private PDO $pdo;
     private ?PDO $analyticsPdo = null;
     private bool $analyticsFailed = false;
+    private ?bool $memberTitleColumnAvailable = null;
     /** Per-request club resolution memo; avoids repeated population-wide checks. */
     private array $resolvedClubSlugs = [];
     /** Queue job -> club scope memo for canonical outstanding-work deduplication. */
@@ -91,6 +93,22 @@ final class Repository
         return $this->schemaVersion() >= self::CORE_SCHEMA_VERSION && $this->analyticsSchemaVersion() >= self::ANALYTICS_SCHEMA_VERSION;
     }
 
+    public function schemaCurrent(): bool
+    {
+        return $this->schemaVersion() >= self::CURRENT_CORE_SCHEMA_VERSION && $this->analyticsSchemaVersion() >= self::ANALYTICS_SCHEMA_VERSION;
+    }
+
+    private function memberTitleColumnAvailable(): bool
+    {
+        if($this->memberTitleColumnAvailable!==null)return $this->memberTitleColumnAvailable;
+        try{
+            $q=$this->pdo->query("SHOW COLUMNS FROM p2k_tp_members LIKE 'title'");
+            return $this->memberTitleColumnAvailable=(bool)$q->fetch(PDO::FETCH_ASSOC);
+        }catch(\Throwable){
+            return $this->memberTitleColumnAvailable=false;
+        }
+    }
+
     /** v2.8.2 converges all supported v2.8 branches in place; pre-v2.8 layouts remain unsupported. */
     public function upgradeExistingSchema(string $schemaPath = ''): bool
     {
@@ -114,6 +132,7 @@ final class Repository
         if ($coreVersion < 15) $this->executeSqlFile($this->pdo, $root . '/sql/core-migration-v2.9.22.sql');
         if ($coreVersion < 16) $this->executeSqlFile($this->pdo, $root . '/sql/core-migration-v2.9.22.6.sql');
         if ($coreVersion < 17) $this->executeSqlFile($this->pdo, $root . '/sql/core-migration-v2.10.6.sql');
+        if ($coreVersion < 18) $this->executeSqlFile($this->pdo, $root . '/sql/core-migration-v2.15.0.sql');
         if ($analyticsVersion < 3) $this->executeSqlFile($this->analytics(), $root . '/sql/analytics-migration-v2.8.1-hotfix2.sql');
         if ($analyticsVersion < 4) {
             $this->executeSqlFile($this->analytics(), $root . '/sql/analytics-migration-v2.8.2.sql');
@@ -327,16 +346,30 @@ final class Repository
         $country=trim((string)($profile['country']??''));
         if($country!=='' && str_contains($country,'/')){$parts=array_values(array_filter(explode('/',$country)));$country=(string)end($parts);}
         $status=trim((string)($profile['status']??''));
-        $q=$this->pdo->prepare("UPDATE p2k_tp_members SET
-            avatar_url=CASE WHEN ?=1 THEN NULLIF(?,'') WHEN ?<>'' THEN ? ELSE avatar_url END,
-            profile_url=CASE WHEN ?<>'' THEN ? ELSE profile_url END,
-            country_code=CASE WHEN ?<>'' THEN ? ELSE country_code END,
-            profile_status=CASE WHEN ?<>'' THEN ? ELSE profile_status END,
-            avatar_checked_at=CASE WHEN ?=1 THEN UTC_TIMESTAMP() ELSE avatar_checked_at END,
-            profile_updated_at=UTC_TIMESTAMP()
-            WHERE club_slug=? AND username_key=?");
+        $title=strtoupper(substr(trim((string)($profile['title']??'')),0,8));
         $checked=$markChecked?1:0;
-        $q->execute([$checked,$avatar,$avatar,$avatar,$profileUrl,$profileUrl,$country,$country,$status,$status,$checked,$clubSlug,$key]);
+        if($this->memberTitleColumnAvailable()){
+            $q=$this->pdo->prepare("UPDATE p2k_tp_members SET
+                avatar_url=CASE WHEN ?=1 THEN NULLIF(?,'') WHEN ?<>'' THEN ? ELSE avatar_url END,
+                profile_url=CASE WHEN ?<>'' THEN ? ELSE profile_url END,
+                country_code=CASE WHEN ?<>'' THEN ? ELSE country_code END,
+                profile_status=CASE WHEN ?<>'' THEN ? ELSE profile_status END,
+                title=NULLIF(?,''),
+                avatar_checked_at=CASE WHEN ?=1 THEN UTC_TIMESTAMP() ELSE avatar_checked_at END,
+                profile_updated_at=UTC_TIMESTAMP()
+                WHERE club_slug=? AND username_key=?");
+            $q->execute([$checked,$avatar,$avatar,$avatar,$profileUrl,$profileUrl,$country,$country,$status,$status,$title,$checked,$clubSlug,$key]);
+        }else{
+            $q=$this->pdo->prepare("UPDATE p2k_tp_members SET
+                avatar_url=CASE WHEN ?=1 THEN NULLIF(?,'') WHEN ?<>'' THEN ? ELSE avatar_url END,
+                profile_url=CASE WHEN ?<>'' THEN ? ELSE profile_url END,
+                country_code=CASE WHEN ?<>'' THEN ? ELSE country_code END,
+                profile_status=CASE WHEN ?<>'' THEN ? ELSE profile_status END,
+                avatar_checked_at=CASE WHEN ?=1 THEN UTC_TIMESTAMP() ELSE avatar_checked_at END,
+                profile_updated_at=UTC_TIMESTAMP()
+                WHERE club_slug=? AND username_key=?");
+            $q->execute([$checked,$avatar,$avatar,$avatar,$profileUrl,$profileUrl,$country,$country,$status,$status,$checked,$clubSlug,$key]);
+        }
         $changed=$q->rowCount()>0;
         $playerId=(int)($profile['player_id']??0);
         if($markChecked&&$playerId>0){try{(new MiacService($this->pdo,$clubSlug))->observePlayerId($username,$playerId);}catch(\Throwable $identityError){RuntimeTelemetry::record('miac_player_id_error',['username'=>$key,'error'=>$identityError->getMessage()]);}}
@@ -345,7 +378,8 @@ final class Repository
 
     public function playerProfileSnapshot(string $clubSlug,string $username): ?array
     {
-        $q=$this->pdo->prepare('SELECT username,avatar_url,profile_url,country_code,profile_status,avatar_checked_at,profile_updated_at FROM p2k_tp_members WHERE club_slug=? AND username_key=? LIMIT 1');
+        $titleSql=$this->memberTitleColumnAvailable()?'title':'NULL AS title';
+        $q=$this->pdo->prepare('SELECT username,avatar_url,profile_url,country_code,profile_status,'.$titleSql.',avatar_checked_at,profile_updated_at FROM p2k_tp_members WHERE club_slug=? AND username_key=? LIMIT 1');
         $q->execute([strtolower(trim($clubSlug)),\p2k_tp_username_key($username)]);
         $row=$q->fetch(PDO::FETCH_ASSOC); return is_array($row)?$row:null;
     }
@@ -356,7 +390,8 @@ final class Repository
         $keys=array_values(array_unique(array_filter(array_map('strval',$usernameKeys))));
         if($keys===[])return [];
         if(count($keys)>100)$keys=array_slice($keys,0,100);
-        $q=$this->pdo->prepare('SELECT username_key,username,avatar_url,profile_url,country_code,profile_status,avatar_checked_at,profile_updated_at FROM p2k_tp_members WHERE club_slug=? AND username_key IN ('.implode(',',array_fill(0,count($keys),'?')).')');
+        $titleSql=$this->memberTitleColumnAvailable()?'title':'NULL AS title';
+        $q=$this->pdo->prepare('SELECT username_key,username,avatar_url,profile_url,country_code,profile_status,'.$titleSql.',avatar_checked_at,profile_updated_at FROM p2k_tp_members WHERE club_slug=? AND username_key IN ('.implode(',',array_fill(0,count($keys),'?')).')');
         $q->execute(array_merge([strtolower(trim($clubSlug))],$keys));$out=[];
         foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $row)$out[(string)$row['username_key']]=$row;
         return $out;
@@ -3321,7 +3356,7 @@ final class Repository
         $sql='SELECT p.username_key,p.username,p.points,p.matches,p.games,p.wins,p.draws,p.losses,p.daily_rating,p.chess960_rating,p.last_standard_game_at,p.last_chess960_game_at,COALESCE(a.achievement_count,0) achievement_count,COALESCE(l.total_points,0) live_points,COALESCE(l.arena_count,0) live_arenas,l.best_rank live_best_rank'.$from.$whereSql." ORDER BY COALESCE(a.achievement_count,0) DESC,p.username ASC LIMIT {$pageSize} OFFSET {$offset}";
         $q=$analytics->prepare($sql);$q->execute($joinParams);$rawRows=$q->fetchAll(PDO::FETCH_ASSOC)?:[];$rows=[];
         $snapshots=$this->playerProfileSnapshots($clubSlug,array_map(static fn(array $r):string=>(string)$r['username_key'],$rawRows));
-        foreach($rawRows as $r){$points=(float)$r['points'];$snapshot=$snapshots[(string)$r['username_key']]??[];$rows[]=['username_key'=>(string)$r['username_key'],'username'=>(string)$r['username'],'current_member'=>true,'points'=>$points,'matches'=>(int)$r['matches'],'games'=>(int)$r['games'],'wins'=>(int)$r['wins'],'draws'=>(int)$r['draws'],'losses'=>(int)$r['losses'],'daily_rating'=>$r['daily_rating']===null?null:(int)$r['daily_rating'],'chess960_rating'=>$r['chess960_rating']===null?null:(int)$r['chess960_rating'],'last_standard_game_at'=>$r['last_standard_game_at'],'last_chess960_game_at'=>$r['last_chess960_game_at'],'live_points'=>(float)$r['live_points'],'live_arenas'=>(int)$r['live_arenas'],'live_best_rank'=>$r['live_best_rank']===null?null:(int)$r['live_best_rank'],'live_rank'=>$this->liveRankForPoints((float)$r['live_points']),'achievement_count'=>(int)$r['achievement_count'],'daily_rank'=>$this->hallRankForPoints($points),'avatar'=>(string)($snapshot['avatar_url']??''),'profile_url'=>(string)($snapshot['profile_url']??''),'country'=>(string)($snapshot['country_code']??''),'profile_status'=>(string)($snapshot['profile_status']??''),'avatar_checked_at'=>$snapshot['avatar_checked_at']??null];}
+        foreach($rawRows as $r){$points=(float)$r['points'];$snapshot=$snapshots[(string)$r['username_key']]??[];$rows[]=['username_key'=>(string)$r['username_key'],'username'=>(string)$r['username'],'current_member'=>true,'points'=>$points,'matches'=>(int)$r['matches'],'games'=>(int)$r['games'],'wins'=>(int)$r['wins'],'draws'=>(int)$r['draws'],'losses'=>(int)$r['losses'],'daily_rating'=>$r['daily_rating']===null?null:(int)$r['daily_rating'],'chess960_rating'=>$r['chess960_rating']===null?null:(int)$r['chess960_rating'],'last_standard_game_at'=>$r['last_standard_game_at'],'last_chess960_game_at'=>$r['last_chess960_game_at'],'live_points'=>(float)$r['live_points'],'live_arenas'=>(int)$r['live_arenas'],'live_best_rank'=>$r['live_best_rank']===null?null:(int)$r['live_best_rank'],'live_rank'=>$this->liveRankForPoints((float)$r['live_points']),'achievement_count'=>(int)$r['achievement_count'],'daily_rank'=>$this->hallRankForPoints($points),'avatar'=>(string)($snapshot['avatar_url']??''),'profile_url'=>(string)($snapshot['profile_url']??''),'country'=>(string)($snapshot['country_code']??''),'profile_status'=>(string)($snapshot['profile_status']??''),'title'=>(string)($snapshot['title']??''),'avatar_checked_at'=>$snapshot['avatar_checked_at']??null];}
         $summaryQ=$analytics->prepare('SELECT COUNT(*) current_members,ROUND(COALESCE(SUM(points),0),1) team_points FROM p2k_an_player_totals WHERE club_slug=? AND current_member=1');$summaryQ->execute([$clubSlug]);$summary=$summaryQ->fetch(PDO::FETCH_ASSOC)?:[];
         return ['rows'=>$rows,'pagination'=>['page'=>$page,'page_size'=>$pageSize,'total_rows'=>$totalRows,'total_pages'=>$pages],'summary'=>['current_members'=>(int)($summary['current_members']??0),'team_points'=>(float)($summary['team_points']??0)]];
     }
@@ -3424,7 +3459,8 @@ final class Repository
         $clubSlug = $this->resolveDataClubSlug($clubSlug);
         $miac=new MiacService($this->pdo,$clubSlug);$resolved=$miac->resolve($username);$usernameKey=(string)$resolved['canonical_username_key'];$username=(string)$resolved['canonical_username'];$aliasKeys=$miac->aliasesFor($usernameKey);if(!in_array($usernameKey,$aliasKeys,true))$aliasKeys[]=$usernameKey;$aliasKeys=array_values(array_unique(array_filter($aliasKeys)));$aliasMarks=implode(',',array_fill(0,count($aliasKeys),'?'));
         $profile = $this->projectedPlayerSummary($clubSlug, $username) ?? $this->publicPlayerSummary($clubSlug, $username);$profile['identity_aliases']=$aliasKeys;$profile['identity_generation']=(int)$resolved['generation'];
-        $memberQuery = $this->pdo->prepare('SELECT joined_at,first_seen_at,last_seen_at,current_member,daily_rating,chess960_rating,rating_updated_at,avatar_url,profile_url,country_code,profile_status,avatar_checked_at,profile_updated_at FROM p2k_tp_members WHERE club_slug=? AND username_key=? LIMIT 1');
+        $titleSql=$this->memberTitleColumnAvailable()?'title':'NULL AS title';
+        $memberQuery = $this->pdo->prepare('SELECT joined_at,first_seen_at,last_seen_at,current_member,daily_rating,chess960_rating,rating_updated_at,avatar_url,profile_url,country_code,profile_status,'.$titleSql.',avatar_checked_at,profile_updated_at FROM p2k_tp_members WHERE club_slug=? AND username_key=? LIMIT 1');
         $memberQuery->execute([$clubSlug,$usernameKey]);
         $member = $memberQuery->fetch() ?: [];
         $profile['joined_at'] = $member['joined_at'] ?? null;
@@ -3439,6 +3475,7 @@ final class Repository
         $profile['profile_url'] = (string)($member['profile_url'] ?? '');
         $profile['country'] = (string)($member['country_code'] ?? '');
         $profile['profile_status'] = (string)($member['profile_status'] ?? '');
+        $profile['title'] = (string)($member['title'] ?? '');
         $profile['avatar_checked_at'] = $member['avatar_checked_at'] ?? null;
         $profile['profile_updated_at'] = $member['profile_updated_at'] ?? null;
         try { $aq=$this->analytics()->prepare('SELECT last_standard_game_at,last_chess960_game_at FROM p2k_an_player_totals WHERE club_slug=? AND username_key=? LIMIT 1');$aq->execute([$clubSlug,$usernameKey]);$activity=$aq->fetch()?:[];$profile['last_standard_game_at']=$activity['last_standard_game_at']??null;$profile['last_chess960_game_at']=$activity['last_chess960_game_at']??null; }
