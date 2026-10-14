@@ -12,7 +12,7 @@ def test_profile_menu_exposes_admin_preview_controls():
     assert 'params.get("memberView") === "1"' in js
     assert 'getMemberView: () => requestedMemberView' in js
     assert '"Member view"' in js
-    assert '"View as member"' in js
+    assert "View as member" in js
     assert 'url.searchParams.set("memberView", "1")' in js
     assert 'url.searchParams.set("name", clean)' in js
     assert 'Signed in as ${session.username}' in js
