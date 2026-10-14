@@ -132,7 +132,8 @@ payload={
   "payload_manifest_sha256":manifest_sha,
   "accepted_public_builds":[
     {"version":"2.14.9","source_head":"2603b3f57f9bde29bbf0f6adf490b2bc533623ab"},
-    {"version":"2.15.0","source_head":"90a195679e434c15a72a1636cf026eb9070d0b78"}
+    {"version":"2.15.0","source_head":"90a195679e434c15a72a1636cf026eb9070d0b78"},
+    {"version":"2.15.0","source_head":"85a75741fd4612ff8d2f1a9cc6de453f2d42a6da"}
   ]
 }
 Path(out).write_text(json.dumps(payload,indent=2)+"\n")
@@ -148,6 +149,7 @@ Static asset cache key: $CACHE_KEY
 Accepted public bases:
 - v2.14.9 at $BASE_HEAD
 - v2.15.0 at 90a195679e434c15a72a1636cf026eb9070d0b78
+- v2.15.0 at 85a75741fd4612ff8d2f1a9cc6de453f2d42a6da
 
 Contents:
 - Trophy modal mobile gutter correction.
