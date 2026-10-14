@@ -120,7 +120,8 @@ payload={
   "qualification_workflow":"P2K v2.15.0 package",
   "payload_manifest_sha256":manifest_sha,
   "accepted_public_builds":[
-    {"version":"2.14.9","source_head":"2603b3f57f9bde29bbf0f6adf490b2bc533623ab"}
+    {"version":"2.14.9","source_head":"2603b3f57f9bde29bbf0f6adf490b2bc533623ab"},
+    {"version":"2.15.0","source_head":"90a195679e434c15a72a1636cf026eb9070d0b78"}
   ]
 }
 Path(out).write_text(json.dumps(payload,indent=2)+"\n")
@@ -133,13 +134,17 @@ cat > "$DIR/README_INSTALL.txt" <<TXT
 Promote to King v2.15.0 incremental candidate package
 Source HEAD: $HEAD
 Static asset cache key: $CACHE_KEY
-Required public base: v2.14.9 at $BASE_HEAD
+Accepted public bases:
+- v2.14.9 at $BASE_HEAD
+- v2.15.0 at 90a195679e434c15a72a1636cf026eb9070d0b78
 
 Contents:
 - Trophy modal mobile gutter correction.
 - Adaptive desktop Trophy modal layout based on artwork aspect ratio.
 - Full-viewport Trophy artwork viewer.
 - Club-points audit tool added in the current 2.15.0 branch.
+- Task Control tab isolation.
+- Administrator Member view / View as member profile controls.
 
 Recommended installation:
   cd ~/PromoteToKing
