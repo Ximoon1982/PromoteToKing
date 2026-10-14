@@ -18,6 +18,7 @@ OVERLAY_FILES=(
   VERSION
   ui-v2.html
   TaskControl.html
+  TournamentManagement.html
   trophies/index.html
   assets/css/simulated-oauth.css
   assets/css/task-control.css
@@ -36,6 +37,7 @@ OVERLAY_FILES=(
   server/team-points/public/members-insights-export.php
   server/team-points/sql/core-schema.sql
   server/team-points/sql/core-migration-v2.15.0.sql
+  server/tournaments/src/TournamentService.php
 )
 
 RECOVERY_FILES=(
@@ -156,6 +158,7 @@ Contents:
 - Administrator Member view / View as member profile controls.
 - Candidate-preview read paths remain database-read-only.
 - Chess.com player titles are persisted by the existing profile refresh and included in Members CSV.
+- Tournament discovery keeps the immediately previous quarter open so late-created quarterly tournaments are rediscovered.
 
 Recommended installation:
   cd ~/PromoteToKing

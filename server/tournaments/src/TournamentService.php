@@ -683,8 +683,11 @@ final class TournamentService
         $monthly = $now->modify('first day of this month')->modify('-2 months')->format('Y-m');
         $currentQuarter = (int)ceil(((int)$now->format('n')) / 3);
         $year = (int)$now->format('Y');
-        $settledQuarter = $currentQuarter - 1;
-        if ($settledQuarter < 1) { $settledQuarter = 4; $year--; }
+        // Keep the immediately previous quarter open for rediscovery. Quarterly
+        // tournaments may be created after an earlier probe returned 404, so only
+        // the quarter before that is safe to mark as fully settled.
+        $settledQuarter = $currentQuarter - 2;
+        if ($settledQuarter < 1) { $settledQuarter += 4; $year--; }
         return [
             'monthlyThrough' => $monthly,
             'quarterlyThrough' => sprintf('%04d-Q%d', $year, $settledQuarter),
