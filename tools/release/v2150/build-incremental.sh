@@ -25,9 +25,11 @@ OVERLAY_FILES=(
   assets/js/shared/real-oauth.js
   assets/js/pages/dashboard-v2.js
   assets/js/pages/task-control.js
+  assets/js/admin/admin-shell.js
   assets/js/admin/trophy-gallery-v2150-modal-layout.js
   assets/trophy-gallery/trophy-gallery-v2150-mobile.css
   server/team-points-green/tools/audit-club-points.php
+  server/team-points-green/src/GreenRepository.php
   server/team-points/src/MiacService.php
   server/team-points/src/Repository.php
   server/team-points/public/cron.php
@@ -162,6 +164,7 @@ Contents:
 - Chess.com player titles are persisted by the existing profile refresh and included in Members CSV.
 - Tournament discovery keeps the immediately previous quarter open so late-created quarterly tournaments are rediscovered.
 - Monthly Top 10 discovery ends after September 2026; Top 32 continues.
+- Member lookup consolidates aliases, full lifecycle chronology and existing member metrics; known alias changes are surfaced even when the historical lifecycle event is absent.
 
 Recommended installation:
   cd ~/PromoteToKing
