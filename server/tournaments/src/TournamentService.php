@@ -654,7 +654,8 @@ final class TournamentService
         for ($month = $monthlyStart; $month <= $monthlyFrontier; $month = $month->modify('+1 month')) {
             $monthName = $month->format('F');
             $year = (int)$month->format('Y');
-            foreach ([10, 32] as $size) {
+            $sizes = $month < new \DateTimeImmutable('2026-10-01', new \DateTimeZone('UTC')) ? [10, 32] : [32];
+            foreach ($sizes as $size) {
                 $list[] = $this->slugify("Promote to King top {$size} players of {$monthName} {$year} knock-out");
             }
         }

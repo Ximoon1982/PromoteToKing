@@ -161,6 +161,7 @@ Contents:
 - Candidate-preview read paths remain database-read-only.
 - Chess.com player titles are persisted by the existing profile refresh and included in Members CSV.
 - Tournament discovery keeps the immediately previous quarter open so late-created quarterly tournaments are rediscovered.
+- Monthly Top 10 discovery ends after September 2026; Top 32 continues.
 
 Recommended installation:
   cd ~/PromoteToKing
