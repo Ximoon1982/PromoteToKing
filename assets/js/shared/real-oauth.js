@@ -9,6 +9,7 @@
   const params = new URLSearchParams(window.location.search);
   const requestedSimulatedOAuth = params.get("oauth") === "1" || params.get("simulatedOAuth") === "1";
   const requestedRealOAuth = !requestedSimulatedOAuth;
+  const requestedMemberView = params.get("memberView") === "1";
   const requestedDisplayName = (() => {
     const value = String(params.get("name") || "").trim();
     return /^[A-Za-z0-9_-]{1,80}$/.test(value) ? value : "";
@@ -42,6 +43,7 @@
     getSession: () => session ? { ...session } : null,
     getDisplayUsername: () => session ? (requestedDisplayName || session.username) : "",
     getDisplaySession: () => session ? { ...session, username: requestedDisplayName || session.username, displayOnly: Boolean(requestedDisplayName), authenticatedUsername: session.username } : null,
+    getMemberView: () => requestedMemberView,
     getCsrf: () => csrf,
     getAdminBootstrap: () => adminBootstrap,
     getAdminBootstrapAgeMs: () => adminBootstrap ? Math.max(0, Date.now() - adminBootstrapReceivedAt) : Number.POSITIVE_INFINITY,
@@ -84,6 +86,9 @@
       if (!sessionStatusUnavailable) return;
       clearSessionRecovery();
       void refreshSession();
+    });
+    window.addEventListener("p2k-admin-ready", () => {
+      if (modal && !modal.hidden) renderProfile(modal.querySelector(".p2k-auth-dialog-body"));
     });
     window.addEventListener("pagehide", () => observer?.disconnect(), { once: true });
   }
@@ -223,11 +228,85 @@
   function closeModal() { if (!modal) return; modal.hidden = true; modal.setAttribute("aria-hidden", "true"); document.body.classList.remove("p2k-auth-modal-open"); lastFocused?.focus?.(); lastFocused = null; }
   function renderProfile(body) {
     if (!body || !session) return; body.replaceChildren();
+    const displayName = requestedDisplayName || session.username;
+    const viewingOther = Boolean(requestedDisplayName && requestedDisplayName.toLowerCase() !== session.username.toLowerCase());
     const summary = document.createElement("div"); summary.className = "p2k-auth-profile-summary"; summary.appendChild(createAvatar(session, "p2k-auth-profile-avatar"));
-    const identity = document.createElement("div"); identity.className = "p2k-auth-profile-identity"; const user = document.createElement("strong"); user.textContent = session.username; identity.appendChild(user); if (session.name) { const n = document.createElement("span"); n.textContent = session.name; identity.appendChild(n); } if (session.title || session.status || session.membership) { const m = document.createElement("span"); m.textContent = [session.title, session.status, session.membership].filter(Boolean).join(" · "); identity.appendChild(m); } summary.appendChild(identity);
+    const identity = document.createElement("div"); identity.className = "p2k-auth-profile-identity";
+    const user = document.createElement("strong"); user.textContent = viewingOther ? `Viewing as ${displayName}` : session.username; identity.appendChild(user);
+    if (viewingOther) { const signed = document.createElement("span"); signed.textContent = `Signed in as ${session.username}`; identity.appendChild(signed); }
+    else if (session.name) { const n = document.createElement("span"); n.textContent = session.name; identity.appendChild(n); }
+    if (session.title || session.status || session.membership) { const m = document.createElement("span"); m.textContent = [session.title, session.status, session.membership].filter(Boolean).join(" · "); identity.appendChild(m); }
+    summary.appendChild(identity);
     const details = document.createElement("dl"); details.className = "p2k-auth-profile-details"; detail(details, "Location", session.location || session.country); detail(details, "Country", session.countryCode); detail(details, "Followers", formatNumber(session.followers)); detail(details, "Joined", formatDate(session.joined)); detail(details, "Last online", formatDate(session.lastOnline, true));
+
+    const adminControls = (window.P2K_ADMIN_MODE === true || requestedMemberView) ? buildAdminPreviewControls(viewingOther) : null;
     const actions = document.createElement("div"); actions.className = "p2k-auth-profile-actions"; if (session.profileURL) { const a = document.createElement("a"); a.className = "p2k-auth-secondary"; a.href = session.profileURL; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = "Open Chess.com profile"; actions.appendChild(a); } const out = document.createElement("button"); out.type = "button"; out.className = "p2k-auth-danger"; out.textContent = "Log off"; out.addEventListener("click", logout); actions.appendChild(out);
-    body.append(summary); if (details.childElementCount) body.append(details); body.append(actions);
+    body.append(summary); if (details.childElementCount) body.append(details); if (adminControls) body.append(adminControls); body.append(actions);
+  }
+
+  function previewURL({ memberView = requestedMemberView, displayName = requestedDisplayName } = {}) {
+    const url = new URL(window.location.href);
+    if (memberView) url.searchParams.set("memberView", "1"); else url.searchParams.delete("memberView");
+    const clean = String(displayName || "").trim();
+    if (clean && clean.toLowerCase() !== String(session?.username || "").toLowerCase()) url.searchParams.set("name", clean);
+    else url.searchParams.delete("name");
+    if (memberView) {
+      url.searchParams.delete("view");
+      url.searchParams.delete("adminCategory");
+      url.searchParams.delete("adminDetail");
+      url.searchParams.delete("adminDetailTab");
+      url.searchParams.delete("adminTool");
+      url.searchParams.delete("adminToolTab");
+      url.searchParams.delete("adminContext");
+      if (url.searchParams.get("page") === "administration") url.searchParams.set("page", "dashboard");
+    }
+    return url;
+  }
+
+  function applyPreviewURL(options) {
+    closeModal();
+    window.location.assign(previewURL(options).href);
+  }
+
+  function buildAdminPreviewControls(viewingOther) {
+    const section = document.createElement("section"); section.className = "p2k-auth-admin-preview";
+    const title = document.createElement("div"); title.className = "p2k-auth-admin-preview-title"; title.innerHTML = "<strong>Administrator preview</strong><span>Presentation only. Your authenticated administrator session and server permissions do not change.</span>";
+    section.appendChild(title);
+
+    const memberRow = document.createElement("div"); memberRow.className = "p2k-auth-preview-row";
+    const memberCopy = document.createElement("div"); memberCopy.className = "p2k-auth-preview-copy"; memberCopy.innerHTML = "<strong>Member view</strong><span>Hide administrator navigation and controls.</span>";
+    const memberToggle = document.createElement("label"); memberToggle.className = "p2k-auth-switch"; memberToggle.title = "Toggle member-only presentation";
+    const memberInput = document.createElement("input"); memberInput.type = "checkbox"; memberInput.checked = requestedMemberView; memberInput.setAttribute("aria-label", "Member view");
+    const memberTrack = document.createElement("span"); memberTrack.className = "p2k-auth-switch-track"; memberToggle.append(memberInput, memberTrack);
+    memberInput.addEventListener("change", () => applyPreviewURL({ memberView: memberInput.checked }));
+    memberRow.append(memberCopy, memberToggle); section.appendChild(memberRow);
+
+    const asRow = document.createElement("div"); asRow.className = "p2k-auth-preview-row p2k-auth-preview-as";
+    const asCopy = document.createElement("div"); asCopy.className = "p2k-auth-preview-copy"; asCopy.innerHTML = "<strong>View as member</strong><span>Use the existing display-only <code>?name=</code> preview.</span>";
+    const asToggle = document.createElement("label"); asToggle.className = "p2k-auth-switch"; asToggle.title = "Toggle another-member preview";
+    const asInput = document.createElement("input"); asInput.type = "checkbox"; asInput.checked = viewingOther; asInput.setAttribute("aria-label", "View as another member");
+    const asTrack = document.createElement("span"); asTrack.className = "p2k-auth-switch-track"; asToggle.append(asInput, asTrack);
+    asRow.append(asCopy, asToggle); section.appendChild(asRow);
+
+    const form = document.createElement("form"); form.className = "p2k-auth-view-as-form"; form.hidden = !viewingOther;
+    const input = document.createElement("input"); input.type = "text"; input.autocomplete = "off"; input.maxLength = 80; input.pattern = "[A-Za-z0-9_-]{1,80}"; input.placeholder = "Chess.com username"; input.value = viewingOther ? requestedDisplayName : "";
+    input.setAttribute("aria-label", "Chess.com username to view as");
+    const apply = document.createElement("button"); apply.type = "submit"; apply.className = "p2k-auth-secondary"; apply.textContent = "Apply";
+    const error = document.createElement("span"); error.className = "p2k-auth-error"; error.setAttribute("aria-live", "polite");
+    form.append(input, apply, error); section.appendChild(form);
+
+    asInput.addEventListener("change", () => {
+      if (!asInput.checked) return applyPreviewURL({ displayName: "" });
+      form.hidden = false; input.focus();
+    });
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      const value = String(input.value || "").trim();
+      if (!/^[A-Za-z0-9_-]{1,80}$/.test(value)) { error.textContent = "Enter a valid Chess.com username."; input.focus(); return; }
+      error.textContent = "";
+      applyPreviewURL({ displayName: value });
+    });
+    return section;
   }
   function detail(list, label, value) { if (value === null || value === undefined || value === "") return; const dt = document.createElement("dt"); dt.textContent = label; const dd = document.createElement("dd"); dd.textContent = String(value); list.append(dt, dd); }
   function formatNumber(value) { return Number.isFinite(Number(value)) ? new Intl.NumberFormat("en-GB").format(Number(value)) : ""; }
