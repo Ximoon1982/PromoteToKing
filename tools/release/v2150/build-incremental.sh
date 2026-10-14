@@ -17,7 +17,13 @@ git -C "$ROOT" merge-base --is-ancestor "$BASE_HEAD" "$HEAD" || { echo "HEAD mus
 OVERLAY_FILES=(
   VERSION
   ui-v2.html
+  TaskControl.html
   trophies/index.html
+  assets/css/simulated-oauth.css
+  assets/css/task-control.css
+  assets/js/shared/real-oauth.js
+  assets/js/pages/dashboard-v2.js
+  assets/js/pages/task-control.js
   assets/js/admin/trophy-gallery-v2150-modal-layout.js
   assets/trophy-gallery/trophy-gallery-v2150-mobile.css
   server/team-points-green/tools/audit-club-points.php
