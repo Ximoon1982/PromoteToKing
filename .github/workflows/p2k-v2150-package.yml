@@ -21,6 +21,9 @@ jobs:
       - name: Run focused v2.15.0 regressions
         run: |
           python3 -m pytest -q tests/test_v2150_trophy_modal_layout.py tests/test_v2150_task_control_tab_isolation.py tests/test_v2150_admin_profile_preview.py
+          node --check assets/js/shared/real-oauth.js
+          node --check assets/js/pages/dashboard-v2.js
+          node --check assets/js/pages/task-control.js
           php -l server/team-points-green/tools/audit-club-points.php
       - name: Build v2.15.0 incremental candidate
         run: |
