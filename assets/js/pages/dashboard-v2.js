@@ -337,13 +337,19 @@ const host = byId("adminDashboardHost");
 host?.replaceChildren();
 if (host) host.hidden = true;
 }
+function memberViewRequested() {
+try { return new URLSearchParams(location.search).get("memberView") === "1"; }
+catch (_) { return false; }
+}
 function setAdmin(enabled, run = state.authRun) {
 if (run !== state.authRun) return;
 state.admin = Boolean(enabled);
 state.adminResolved = true;
+const memberView = memberViewRequested();
 window.P2K_ADMIN_MODE = state.admin;
-window.dispatchEvent(new CustomEvent("p2k-admin-ready", { detail: { allowed: state.admin } }));
-if (state.admin) {
+window.P2K_MEMBER_VIEW = memberView;
+window.dispatchEvent(new CustomEvent("p2k-admin-ready", { detail: { allowed: state.admin, memberView } }));
+if (state.admin && !memberView) {
 ensureAdminInterface();
 ensureAdminPriorityCard();
 loadAdminPriorityHealth();
@@ -354,7 +360,7 @@ removeAdminInterface();
 removeAdminPriorityCard();
 }
 renderView();
-if (!state.admin && state.adminResolved) writeNavigationState({ replace: true });
+if ((!state.admin || memberView) && state.adminResolved) writeNavigationState({ replace: true });
 }
 function writeTableState(url, prefix, tableState, active) {
 const values = tableState || {};
@@ -431,17 +437,19 @@ button.tabIndex = active ? 0 : -1;
 document.querySelectorAll("[data-hall-panel]").forEach(panel => { panel.hidden = panel.dataset.hallPanel !== state.hallSubtab; });
 }
 function renderView() {
-const showAdmin = state.admin && state.view === "admin";
+const memberView = memberViewRequested();
+const adminVisible = state.admin && !memberView;
+const showAdmin = adminVisible && state.view === "admin";
 const showDashboard = !showAdmin && (state.publicPage === "dashboard" || (!state.adminResolved && state.publicPage === "administration"));
 const showHall = !showAdmin && state.publicPage === "hall";
 const showInsights = !showAdmin && state.publicPage === "insights";
-const showAdministration = !showAdmin && state.admin && state.publicPage === "administration";
+const showAdministration = !showAdmin && adminVisible && state.publicPage === "administration";
 byId("dashboardPublicTabs").hidden = showAdmin;
 byId("publicDashboardPanel").hidden = !showDashboard;
 byId("hallOfFamePage").hidden = !showHall;
 byId("teamInsightsPage").hidden = !showInsights;
 if (byId("administrationPage")) byId("administrationPage").hidden = !showAdministration;
-if (byId("dashboardAdministrationTab")) byId("dashboardAdministrationTab").hidden = !state.admin;
+if (byId("dashboardAdministrationTab")) byId("dashboardAdministrationTab").hidden = !adminVisible;
 if (showAdministration && window.P2K_ADMIN_MODE === true) { const map={upcoming:"adminUpcomingFrame",creation:"adminCreationFrame",challenge:"adminChallengeFrame",open:"adminOpenFrame","live-ranks":"adminLiveRanksFrame",tasks:"adminTasksFrame",logs:"adminLogsFrame",diagnostics:"adminDiagnosticsFrame",storage:"adminStorageFrame",intelligence:"adminIntelligenceFrame",reconciliation:"adminReconciliationFrame",members:"adminMembersFrame",migration:"adminMigrationFrame"}; ensureIntegratedFrame(map[state.adminSubtab]||map.upcoming); }
 renderSubtabs();
 const adminGroupForTool = tool => tool === "live-ranks" ? "live" : (["tasks","logs","diagnostics","storage","intelligence","reconciliation","members","migration"].includes(tool) ? "tools" : "daily");
@@ -478,7 +486,8 @@ function showPublicPage(page, { member = "", reset = false, hallSubtab = "", ins
 state.view = "public";
 if (page === "team-insights") page = "insights";
 if (page === "tournaments") { page = "hall"; hallSubtab = "tournaments"; }
-state.publicPage = ["dashboard", "hall", "insights", "administration"].includes(page) && (page !== "administration" || state.admin || !state.adminResolved) ? page : "dashboard";
+const adminVisible = state.admin && !memberViewRequested();
+state.publicPage = ["dashboard", "hall", "insights", "administration"].includes(page) && (page !== "administration" || adminVisible || !state.adminResolved) ? page : "dashboard";
 if (state.publicPage === "insights" && ["team", "members", "matches", "arenas", "opponents"].includes(insightsSubtab)) state.insightsSubtab = insightsSubtab;
 if (state.publicPage === "hall" && ["daily", "live", "tournaments", "achievements"].includes(hallSubtab)) state.hallSubtab = hallSubtab;
 renderView();
