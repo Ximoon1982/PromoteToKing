@@ -17,6 +17,7 @@ git -C "$ROOT" merge-base --is-ancestor "$BASE_HEAD" "$HEAD" || { echo "HEAD mus
 OVERLAY_FILES=(
   VERSION
   ui-v2.html
+  ClubIntelligence.html
   TaskControl.html
   TournamentManagement.html
   trophies/index.html
@@ -96,6 +97,7 @@ CACHE_KEY="$(python3 "$ROOT/tools/release/static_asset_cache_key.py" key --versi
 python3 "$ROOT/tools/release/static_asset_cache_key.py" stamp --root "$DIR/payload" --version 2.15.0 --source-head "$HEAD" --build-id "$BUILD_ID" >/dev/null
 
 grep -Fq "$CACHE_KEY" "$DIR/payload/ui-v2.html"
+grep -Fq "$CACHE_KEY" "$DIR/payload/ClubIntelligence.html"
 grep -Fq "$CACHE_KEY" "$DIR/payload/trophies/index.html"
 grep -Fq 'trophy-gallery-v2150-modal-layout.js' "$DIR/payload/ui-v2.html"
 grep -Fq 'trophy-gallery-v2150-mobile.css' "$DIR/payload/ui-v2.html"
