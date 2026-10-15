@@ -23,5 +23,6 @@ def test_traffic_ui_exposes_usage_detail():
 
 def test_helper_is_loaded_and_packaged():
     assert "shared/MatchAssistantUsage.php" in BOOT
-    for path in ["assets/js/pages/club-intelligence.js","server/team-points/public/intelligence.php","server/team-points/src/bootstrap.php","server/shared/MatchAssistantUsage.php"]:
+    for path in ["ClubIntelligence.html","assets/js/pages/club-intelligence.js","server/team-points/public/intelligence.php","server/team-points/src/bootstrap.php","server/shared/MatchAssistantUsage.php"]:
         assert path in BUILDER
+    assert 'grep -Fq "$CACHE_KEY" "$DIR/payload/ClubIntelligence.html"' in BUILDER
