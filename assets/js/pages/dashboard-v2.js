@@ -189,12 +189,19 @@ return raw || "Unknown";
 const matchTimeControlLabel = value => {
 const raw = String(value || "").trim();
 if (!raw) return "Unknown";
-if (/^\d+$/.test(raw)) {
-const seconds = Number(raw);
-if (seconds > 0 && seconds % 86400 === 0) {
-const days = seconds / 86400;
-return `${days} day${days === 1 ? "" : "s"} / move`;
+let moves = 1;
+let seconds = null;
+const ratio = raw.match(/^(\d+)\s*\/\s*(\d+)$/);
+if (ratio) {
+moves = Number(ratio[1]);
+seconds = Number(ratio[2]);
+} else if (/^\d+$/.test(raw)) {
+seconds = Number(raw);
 }
+if (Number.isFinite(moves) && moves > 0 && Number.isFinite(seconds) && seconds > 0) {
+const days = seconds / moves / 86400;
+const label = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 3 }).format(days);
+return `${label} day${days === 1 ? "" : "s"} / move`;
 }
 return raw;
 };

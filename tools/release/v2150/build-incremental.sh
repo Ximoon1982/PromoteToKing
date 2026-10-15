@@ -172,6 +172,7 @@ Contents:
 - Monthly Top 10 discovery ends after September 2026; Top 32 continues.
 - Member lookup consolidates aliases, full lifecycle chronology and existing member metrics; known alias changes are surfaced even when the historical lifecycle event is absent.
 - Maintenance → Traffic & visitors includes shared Match Assistant usage analytics from UI v1 and UI v2.
+- Chess.com Daily time controls are displayed as human-readable days per move instead of raw moves/seconds values.
 
 Recommended installation:
   cd ~/PromoteToKing

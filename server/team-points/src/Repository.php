@@ -2997,9 +2997,12 @@ final class Repository
         $result['analytics']['time_control_distribution'] = array_map(static function (array $row): array {
             $raw = trim((string)$row['label']);
             $label = $raw;
-            if (preg_match('/^1\/(\d+)$/',$raw,$matches) === 1) {
-                $days = (int)$matches[1] / 86400;
-                $label = rtrim(rtrim(number_format($days,2,'.',''),'0'),'.') . ($days === 1.0 ? ' day / move' : ' days / move');
+            if (preg_match('/^(\d+)\/(\d+)$/',$raw,$matches) === 1 && (int)$matches[1] > 0 && (int)$matches[2] > 0) {
+                $days = (int)$matches[2] / (int)$matches[1] / 86400;
+                $label = rtrim(rtrim(number_format($days,3,'.',''),'0'),'.') . (abs($days - 1.0) < 0.0000001 ? ' day / move' : ' days / move');
+            } elseif (preg_match('/^\d+$/',$raw) === 1 && (int)$raw > 0) {
+                $days = (int)$raw / 86400;
+                $label = rtrim(rtrim(number_format($days,3,'.',''),'0'),'.') . (abs($days - 1.0) < 0.0000001 ? ' day / move' : ' days / move');
             } elseif ($raw === '' || strtolower($raw) === 'unknown') {
                 $label = 'Unknown';
             }
