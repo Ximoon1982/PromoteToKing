@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../src/bootstrap.php';
 
 use P2K\TeamPoints\PublicReadDatabase;
-use P2K\TeamPoints\{ApiException,Auth,Http,MemberInsightsTableService,Repository,ResponseCache};
+use P2K\TeamPoints\{ApiException,Auth,Http,Repository};
 
 function p2k_members_csv_utc(mixed $value): string {
     $value = trim((string)$value);
