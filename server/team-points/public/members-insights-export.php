@@ -29,7 +29,6 @@ try {
     }
 
     $club = (string)$config['app']['club_slug'];
-    $club = (string)$config['app']['club_slug'];
 
     $search = trim((string)($_GET['search'] ?? ''));
     $filter = strtolower(trim((string)($_GET['filter'] ?? 'all')));
@@ -63,6 +62,12 @@ try {
     if (function_exists('ob_flush')) @ob_flush();
     flush();
 
+    $titleColumn = '';
+    try {
+        $titleProbe = $repository->core()->query("SHOW COLUMNS FROM p2k_tp_members LIKE 'title'");
+        if ($titleProbe->fetch(PDO::FETCH_ASSOC)) $titleColumn = ',title';
+    } catch (Throwable) {}
+
     $page = 1;
     $pageSize = 100;
     $currentPosition = 0;
@@ -81,11 +86,6 @@ try {
         if ($keys !== []) {
             foreach (array_chunk($keys, 100) as $chunk) {
                 $marks = implode(',', array_fill(0, count($chunk), '?'));
-                $titleColumn = '';
-                try {
-                    $titleProbe = $repository->core()->query("SHOW COLUMNS FROM p2k_tp_members LIKE 'title'");
-                    if ($titleProbe->fetch(PDO::FETCH_ASSOC)) $titleColumn = ',title';
-                } catch (Throwable) {}
                 $q = $repository->core()->prepare(
                     'SELECT username_key,player_id,joined_at,daily_rating,chess960_rating,rating_updated_at,
                             player_matches_checked_at,player_matches_observed_at,stats_checked_at,stats_observed_at,
@@ -106,6 +106,14 @@ try {
                 : (string)($row['daily_rank'] ?? '');
             $teamPosition = '';
             if (!empty($row['current_member'])) $teamPosition = ++$currentPosition;
+            $games = max(0, (int)($row['games'] ?? 0));
+            $wins = max(0, (int)($row['wins'] ?? 0));
+            $draws = max(0, (int)($row['draws'] ?? 0));
+            $losses = max(0, (int)($row['losses'] ?? 0));
+            $covered = $wins + $draws + $losses;
+            $missing = max(0, $games - $covered);
+            $coveragePercent = $games > 0 ? round(100 * $covered / $games, 1) : 0.0;
+            $winRate = $covered > 0 ? round(100 * $wins / $covered, 1) : '';
             fputcsv($out, [
                 (string)($row['username'] ?? ''),$key,!empty($row['current_member'])?'current':'former',!empty($row['current_member'])?1:0,
                 (string)($row['activity_status'] ?? 'unknown'),(string)($m['profile_status'] ?? ''),(string)($m['title'] ?? ''),(string)($m['country_code'] ?? ''),(string)($m['player_id'] ?? ''),
@@ -115,8 +123,8 @@ try {
                 $row['daily_rating'] ?? $m['daily_rating'] ?? '',$row['chess960_rating'] ?? $m['chess960_rating'] ?? '',
                 p2k_members_csv_utc($row['rating_updated_at'] ?? $m['rating_updated_at'] ?? null),p2k_members_csv_epoch($row['rating_updated_at'] ?? $m['rating_updated_at'] ?? null),
                 $rank,$teamPosition,'',$row['points'] ?? 0,$row['matches'] ?? 0,$row['games'] ?? 0,
-                $row['wins'] ?? 0,$row['draws'] ?? 0,$row['losses'] ?? 0,$row['result_covered'] ?? 0,$row['result_missing'] ?? 0,
-                $row['result_coverage_percent'] ?? 0,$row['win_rate'] ?? '',$row['points_per_game'] ?? 0,$row['current_matches'] ?? 0,
+                $wins,$draws,$losses,$covered,$missing,
+                $coveragePercent,$winRate,$row['points_per_game'] ?? 0,$row['current_matches'] ?? 0,
                 $row['live_points'] ?? 0,$row['live_arenas'] ?? 0,$row['live_best_rank'] ?? '',$row['achievement_count'] ?? 0,
                 p2k_members_csv_utc($row['first_activity'] ?? null),p2k_members_csv_epoch($row['first_activity'] ?? null),
                 p2k_members_csv_utc($row['last_activity'] ?? null),p2k_members_csv_epoch($row['last_activity'] ?? null),
