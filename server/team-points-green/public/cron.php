@@ -3,8 +3,14 @@ declare(strict_types=1);
 require_once dirname(__DIR__).'/src/bootstrap.php';
 use P2K\Green\GreenConfig;
 use P2K\Green\GreenWorker;
+use P2K\TeamPoints\Repository;
 try{
     GreenConfig::authorizeCron();
+    // Green is the production Team Points scheduler. Keep the shared Core schema
+    // converged here so release migrations do not depend on the retired Blue CRON.
+    $schemaRepository=new Repository(GreenConfig::core(),GreenConfig::analytics());
+    if(!$schemaRepository->schemaCurrent())$schemaRepository->upgradeExistingSchema();
+    if(!$schemaRepository->schemaCurrent())throw new RuntimeException('Shared Team Points schema convergence failed.');
     $minute=(int)gmdate('i');
     $worker=new GreenWorker(null,55,50,[
         'feeder_id'=>'gscf-main',
