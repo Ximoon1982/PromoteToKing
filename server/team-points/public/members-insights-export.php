@@ -69,14 +69,14 @@ try {
     } catch (Throwable) {}
 
     $page = 1;
-    $pageSize = 100;
+    $pageSize = 500;
     $currentPosition = 0;
     do {
-        $payload = $repository->publicMemberInsightsSection($club, [
+        $payload = $repository->publicMemberInsights($club, [
             'page'=>$page,'page_size'=>$pageSize,'search'=>$search,'filter'=>$filter,
             'sort'=>$sort,'direction'=>$direction,'start'=>'','end'=>'','usernames'=>'',
-            'activity_status'=>$activityStatus,
-        ], 'table');
+            'activity_status'=>$activityStatus,'_export'=>true,'_include_secondary'=>false,
+        ]);
         $rows = is_array($payload['rows'] ?? null) ? $payload['rows'] : [];
         $pagination = is_array($payload['pagination'] ?? null) ? $payload['pagination'] : [];
         if ($rows === []) break;
