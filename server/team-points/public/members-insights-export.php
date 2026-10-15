@@ -40,6 +40,10 @@ try {
         'sort'=>(string)($_GET['sort'] ?? 'username'),
         'direction'=>(string)($_GET['direction'] ?? 'asc'),
         'start'=>'','end'=>'','evolution'=>'1m','usernames'=>'','activity_status'=>'',
+        // CSV export needs the current ranking only. Reconstructing a second full
+        // historical member population solely for position_change made this GET
+        // request capable of exhausting shared-host resources before output began.
+        'include_position_comparison'=>false,
     ], false);
     $rows = is_array($payload['rows'] ?? null) ? $payload['rows'] : [];
 

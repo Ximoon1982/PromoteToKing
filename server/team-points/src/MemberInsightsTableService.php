@@ -58,7 +58,10 @@ final class MemberInsightsTableService
 
         [$comparisonEnd, $comparisonStart] = $this->comparisonRange($start, $end, $evolutionKey);
         $previousPositions = [];
-        $comparisonAvailable = $comparisonEnd !== null
+        $comparisonRequested = !array_key_exists('include_position_comparison', $options)
+            || !empty($options['include_position_comparison']);
+        $comparisonAvailable = $comparisonRequested
+            && $comparisonEnd !== null
             && ($comparisonStart === null || $comparisonStart <= $comparisonEnd)
             && in_array($sort, self::HISTORICAL_POSITION_SORTS, true);
         if ($comparisonAvailable) {

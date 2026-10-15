@@ -33,6 +33,7 @@ OVERLAY_FILES=(
   server/team-points-green/src/GreenRepository.php
   server/team-points/src/bootstrap.php
   server/team-points/src/MiacService.php
+  server/team-points/src/MemberInsightsTableService.php
   server/team-points/src/Repository.php
   server/team-points/public/cron.php
   server/team-points/public/player-stats.php
@@ -173,6 +174,7 @@ Contents:
 - Member lookup consolidates aliases, full lifecycle chronology and existing member metrics; known alias changes are surfaced even when the historical lifecycle event is absent.
 - Maintenance → Traffic & visitors includes shared Match Assistant usage analytics from UI v1 and UI v2.
 - Chess.com Daily time controls are displayed as human-readable days per move instead of raw moves/seconds values.
+- Members CSV export skips the unnecessary full historical position-comparison pass to avoid shared-host resource exhaustion.
 
 Recommended installation:
   cd ~/PromoteToKing
