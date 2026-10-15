@@ -3383,7 +3383,7 @@ final class Repository
     public function publicMemberInsights(string $clubSlug, array $options = []): array
     {
         $clubSlug=$this->resolveDataClubSlug($clubSlug);
-        $page=max(1,(int)($options['page']??1));$unpaged=!empty($options['_unpaged']);$pageSize=$unpaged?100000:max(10,min(100,(int)($options['page_size']??25)));
+        $page=max(1,(int)($options['page']??1));$unpaged=!empty($options['_unpaged']);$pageLimit=!empty($options['_export'])?500:100;$pageSize=$unpaged?100000:max(10,min($pageLimit,(int)($options['page_size']??25)));
         $search=substr(trim((string)($options['search']??'')),0,120);$filter=strtolower(trim((string)($options['filter']??'current')));$activityStatuses=self::memberActivityStatusList((string)($options['activity_status']??''));
         if(!in_array($filter,['all','current','former','active','playing','new','milestones'],true))$filter='current';
         $wanted=array_values(array_unique(array_filter(array_map(static fn(string $v):string=>\p2k_tp_username_key($v),explode(',',(string)($options['usernames']??''))))));if(count($wanted)>200)$wanted=array_slice($wanted,0,200);
@@ -3392,7 +3392,8 @@ final class Repository
         foreach([$startDate,$endDate] as $value){if($value==='')continue;$date=DateTimeImmutable::createFromFormat('!Y-m-d',$value,new DateTimeZone('UTC'));if(!$date||$date->format('Y-m-d')!==$value)throw new ApiException('Invalid member insight date.',400,'INVALID_DATE');}
         if($startDate!==''&&$endDate!==''&&$startDate>$endDate)throw new ApiException('The start date must not be after the end date.',400,'INVALID_DATE_RANGE');
         if($startDate===''&&$endDate===''&&!in_array($filter,['playing','new'],true)&&$sort!=='current_matches'){
-            return $this->publicMemberInsightsMaterialized($clubSlug,$page,$pageSize,$search,$filter,$wanted,$sort,$direction,true,$activityStatuses);
+            $includeSecondary=!array_key_exists('_include_secondary',$options)||!empty($options['_include_secondary']);
+            return $this->publicMemberInsightsMaterialized($clubSlug,$page,$pageSize,$search,$filter,$wanted,$sort,$direction,$includeSecondary,$activityStatuses);
         }
         $eventWhere="e.club_slug=? AND NOT EXISTS (SELECT 1 FROM p2k_tp_match_metadata vm WHERE vm.club_slug=e.club_slug AND vm.match_id=e.match_id AND vm.is_void=1)";$eventParams=[$clubSlug];if($startDate!==''){$eventWhere.=' AND game_end_utc>=?';$eventParams[]=$startDate.' 00:00:00';}
         if($endDate!==''){$exclusive=(new DateTimeImmutable($endDate,new DateTimeZone('UTC')))->modify('+1 day')->format('Y-m-d H:i:s');$eventWhere.=' AND game_end_utc<?';$eventParams[]=$exclusive;}
