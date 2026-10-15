@@ -41,3 +41,17 @@ def test_profile_and_opponent_refreshes_keep_production_persistence():
     assert "$repo->storePlayerProfileSnapshot" in CARDS
     assert "if(!PreviewIsolation::active())$repo->recordOpponentCheck" in ICONS
     assert "$repo->storeOpponentProfileSnapshot" in ICONS
+
+
+ADMIN_CONTROLLER = read("assets/js/admin/admin-session-controller.js")
+BUILDER = read("tools/release/v2150/build-incremental.sh")
+
+def test_admin_recent_match_detail_skips_refresh_mutation_in_candidate_preview():
+    assert 'document.getElementById("p2k-candidate-preview-banner")' in ADMIN_CONTROLLER
+    detail = ADMIN_CONTROLLER.split("async function openAdminFreshMatchDetail", 1)[1].split("function openAdminMetricModal", 1)[0]
+    assert "if(isCandidatePreview())" in detail
+    assert "await openMatchDetail(id,{replaceInitial:true});" in detail
+    assert 'match-detail-refresh.php' in detail
+
+def test_preview_safe_admin_controller_is_packaged():
+    assert "assets/js/admin/admin-session-controller.js" in BUILDER
