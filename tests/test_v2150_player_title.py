@@ -9,6 +9,7 @@ REPOSITORY = read("server/team-points/src/Repository.php")
 SCHEMA = read("server/team-points/sql/core-schema.sql")
 MIGRATION = read("server/team-points/sql/core-migration-v2.15.0.sql")
 CRON = read("server/team-points/public/cron.php")
+GREEN_CRON = read("server/team-points-green/public/cron.php")
 CARDS = read("server/team-points/public/player-cards.php")
 CSV = read("server/team-points/public/members-insights-export.php")
 BUILDER = read("tools/release/v2150/build-incremental.sh")
@@ -20,6 +21,8 @@ def test_title_is_additive_schema_18_but_schema_17_remains_runtime_compatible():
     assert "title VARCHAR(8) NULL" in SCHEMA
     assert "VALUES(18)" in MIGRATION
     assert "if (!$repository->schemaCurrent()) $repository->upgradeExistingSchema();" in CRON
+    assert "if(!$schemaRepository->schemaCurrent())$schemaRepository->upgradeExistingSchema();" in GREEN_CRON
+    assert "Shared Team Points schema convergence failed." in GREEN_CRON
 
 def test_profile_refresh_persists_title_without_extra_api_path():
     store = REPOSITORY.split("public function storePlayerProfileSnapshot",1)[1].split("public function playerProfileSnapshot",1)[0]
@@ -47,6 +50,7 @@ def test_incremental_package_contains_runtime_and_schema_changes():
         "server/team-points/public/player-cards.php",
         "server/team-points/public/opponent-icons.php",
         "server/team-points/public/members-insights-export.php",
+        "server/team-points-green/public/cron.php",
         "server/team-points/sql/core-schema.sql",
         "server/team-points/sql/core-migration-v2.15.0.sql",
     ]:
