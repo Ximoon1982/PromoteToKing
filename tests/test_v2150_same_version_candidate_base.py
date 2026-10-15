@@ -13,3 +13,7 @@ def test_previous_supported_public_bases_remain_accepted():
 
 def test_latest_promoted_v2150_build_is_accepted():
     assert '"version":"2.15.0","source_head":"d97cbb6832750aed633f55d450bbc87a0ab43458"' in BUILDER
+
+
+def test_current_promoted_v2150_build_is_accepted():
+    assert '"version":"2.15.0","source_head":"05229163a970e16e443cb88c1df3eaeaf677b268"' in BUILDER
