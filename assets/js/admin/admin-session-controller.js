@@ -139,8 +139,15 @@ const items = Array.isArray(rows) ? rows : [];
 if (!items.length) return '<p class="p2k-table-status">No matching items.</p>';
 return `<div class="p2k-compact-list">${items.map(item => `<button type="button" data-admin-match-detail="${Number(item.match_id || item.matchId || 0)}"><span>${escapeHTML(item.status || (item.league ? "League" : "Match"))}</span><strong>${escapeHTML(item.name || item.title || "Team match")}</strong><small>${item.first_discovered_at ? `Discovered ${escapeHTML(formatRelative(`${String(item.first_discovered_at).replace(" ","T")}Z`))}` : item.detail ? escapeHTML(item.detail) : ""}</small></button>`).join("")}</div>`;
 }
+function isCandidatePreview() {
+return Boolean(document.getElementById("p2k-candidate-preview-banner"));
+}
 async function openAdminFreshMatchDetail(matchId) {
 const id=Number(matchId)||0;if(!id)return;
+if(isCandidatePreview()){
+await openMatchDetail(id,{replaceInitial:true});
+return;
+}
 showInsightsModal({eyebrow:"Administrator dashboard",title:`Match ${id}`,subtitle:"Refreshing from Chess.com…",html:'<p class="p2k-table-status">Fetching the latest match payload before opening the profile…</p>'});
 try{
 const client=window.P2K_TEAM_POINTS_CLIENT;
