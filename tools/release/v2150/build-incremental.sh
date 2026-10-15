@@ -27,6 +27,7 @@ OVERLAY_FILES=(
   assets/js/pages/task-control.js
   assets/js/pages/club-intelligence.js
   assets/js/admin/admin-shell.js
+  assets/js/admin/admin-session-controller.js
   assets/js/admin/trophy-gallery-v2150-modal-layout.js
   assets/trophy-gallery/trophy-gallery-v2150-mobile.css
   server/team-points-green/tools/audit-club-points.php
