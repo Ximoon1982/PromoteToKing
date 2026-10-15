@@ -31,6 +31,7 @@ OVERLAY_FILES=(
   assets/trophy-gallery/trophy-gallery-v2150-mobile.css
   server/team-points-green/tools/audit-club-points.php
   server/team-points-green/src/GreenRepository.php
+  server/team-points-green/public/cron.php
   server/team-points/src/bootstrap.php
   server/team-points/src/MiacService.php
   server/team-points/src/MemberInsightsTableService.php
@@ -176,7 +177,8 @@ Contents:
 - Member lookup consolidates aliases, full lifecycle chronology and existing member metrics; known alias changes are surfaced even when the historical lifecycle event is absent.
 - Maintenance → Traffic & visitors includes shared Match Assistant usage analytics from UI v1 and UI v2.
 - Chess.com Daily time controls are displayed as human-readable days per move instead of raw moves/seconds values.
-- Members CSV export skips the unnecessary full historical position-comparison pass to avoid shared-host resource exhaustion.
+- Members CSV export streams materialized member pages instead of building the full population before output.
+- Green Team Points CRON converges the shared Core schema used by the production scheduler.
 
 Recommended installation:
   cd ~/PromoteToKing
