@@ -26,6 +26,7 @@ jobs:
           node --check assets/js/pages/task-control.js
           node --check assets/js/pages/club-intelligence.js
           node --check assets/js/admin/admin-shell.js
+          node --check assets/js/admin/admin-session-controller.js
           php -l server/team-points-green/tools/audit-club-points.php
           php -l server/team-points-green/src/GreenRepository.php
           php -l server/team-points/public/intelligence.php
