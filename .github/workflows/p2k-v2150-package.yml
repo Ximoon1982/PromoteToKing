@@ -20,13 +20,16 @@ jobs:
         run: python3 -m pip install --disable-pip-version-check pytest
       - name: Run focused v2.15.0 regressions
         run: |
-          python3 -m pytest -q tests/test_v2150_trophy_modal_layout.py tests/test_v2150_task_control_tab_isolation.py tests/test_v2150_admin_profile_preview.py tests/test_v2150_preview_read_only_reads.py tests/test_v2150_player_title.py tests/test_v2150_tournament_discovery.py tests/test_v2150_tournament_monthly_cutoff.py tests/test_v2150_member_lookup_dossier.py tests/test_v2150_same_version_candidate_base.py
+          python3 -m pytest -q tests/test_v2150_trophy_modal_layout.py tests/test_v2150_task_control_tab_isolation.py tests/test_v2150_admin_profile_preview.py tests/test_v2150_preview_read_only_reads.py tests/test_v2150_player_title.py tests/test_v2150_tournament_discovery.py tests/test_v2150_tournament_monthly_cutoff.py tests/test_v2150_member_lookup_dossier.py tests/test_v2150_traffic_match_assistant.py tests/test_v2150_same_version_candidate_base.py
           node --check assets/js/shared/real-oauth.js
           node --check assets/js/pages/dashboard-v2.js
           node --check assets/js/pages/task-control.js
+          node --check assets/js/pages/club-intelligence.js
           node --check assets/js/admin/admin-shell.js
           php -l server/team-points-green/tools/audit-club-points.php
           php -l server/team-points-green/src/GreenRepository.php
+          php -l server/team-points/public/intelligence.php
+          php -l server/shared/MatchAssistantUsage.php
           php -l server/tournaments/src/TournamentService.php
       - name: Build v2.15.0 incremental candidate
         run: |

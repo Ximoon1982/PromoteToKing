@@ -11,6 +11,7 @@ use P2K\TeamPoints\Http;
 use P2K\TeamPoints\MiacService;
 use P2K\TeamPoints\Repository;
 use P2K\TeamPoints\RuntimeTelemetry;
+use P2K\Shared\MatchAssistantUsage;
 
 try{
     Http::method('GET');
@@ -24,6 +25,7 @@ try{
         $data=\P2K\Shared\TrafficAnalytics::report($root,$days);
         $data['diagnostics']=\P2K\Shared\TrafficAnalytics::diagnostics($root);
         $data['self_test']=\P2K\Shared\TrafficAnalytics::selfTest($root);
+        $data['match_assistant']=MatchAssistantUsage::report($root,$days);
         Http::json(['ok'=>true,'scope'=>$scope,'server_utc'=>gmdate(DATE_ATOM),'data'=>$data]);
     }
 

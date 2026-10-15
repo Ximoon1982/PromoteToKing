@@ -9,6 +9,7 @@ require_once dirname(__DIR__, 2) . '/shared/MatchTrackingRetention.php';
 require_once dirname(__DIR__, 2) . '/shared/FilesystemRetention.php';
 require_once dirname(__DIR__, 2) . '/shared/TaskRegistry.php';
 require_once dirname(__DIR__, 2) . '/shared/TrafficAnalytics.php';
+require_once dirname(__DIR__, 2) . '/shared/MatchAssistantUsage.php';
 
 spl_autoload_register(static function (string $class): void {
     $prefix = 'P2K\\TeamPoints\\';
