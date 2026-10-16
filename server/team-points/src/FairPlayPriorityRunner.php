@@ -25,6 +25,7 @@ final class FairPlayPriorityRunner
     public function run(?float $deadline = null, int $maxLiveMatches = 2): array
     {
         $deadline ??= microtime(true) + 5.0;
+        $this->api->setDeadlineAt($deadline);
         $maxLiveMatches = max(0, min(3, $maxLiveMatches));
         $service = new FairPlayReconciliationService($this->core, $this->repository, $this->api, $this->clubSlug);
         $service->ensureSchema();
