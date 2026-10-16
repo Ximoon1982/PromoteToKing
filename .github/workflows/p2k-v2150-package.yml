@@ -32,6 +32,11 @@ jobs:
           php -l server/team-points/public/intelligence.php
           php -l server/team-points/public/members-insights-export.php
           php -l server/team-points/src/MemberInsightsTableService.php
+          php -l server/team-points/src/CronMaintenanceCoordinator.php
+          php -l server/team-points-green/src/GreenWorker.php
+          php -l server/team-points/bin/maintenance.php
+          php tests/analytics_convergence_v21097_test.php
+          php tests/team_points_maintenance_cutover_v2150_test.php
           php -l server/shared/MatchAssistantUsage.php
           php -l server/tournaments/src/TournamentService.php
       - name: Build v2.15.0 incremental candidate

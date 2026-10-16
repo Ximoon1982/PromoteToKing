@@ -33,8 +33,12 @@ OVERLAY_FILES=(
   assets/trophy-gallery/trophy-gallery-v2150-mobile.css
   server/team-points-green/tools/audit-club-points.php
   server/team-points-green/src/GreenRepository.php
+  server/team-points-green/src/GreenWorker.php
   server/team-points-green/public/cron.php
   server/team-points/src/bootstrap.php
+  server/team-points/src/CronMaintenanceCoordinator.php
+  server/team-points/bin/maintenance.php
+  server/team-points/bin/cutover-blue-maintenance-cron.sh
   server/team-points/src/MiacService.php
   server/team-points/src/MemberInsightsTableService.php
   server/team-points/src/Repository.php
