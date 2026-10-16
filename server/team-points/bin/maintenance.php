@@ -20,8 +20,17 @@ $hardDeadline=$started+$seconds;
 $core=Database::core();
 $analytics=Database::analytics();
 $repository=new Repository($core,$analytics);
-if(!$repository->schemaCurrent())$repository->upgradeExistingSchema();
-if(!$repository->schemaInstalled())throw new RuntimeException('Team Points schema is not ready.');
+$trace=getenv('P2K_MAINT_TRACE')==='1';
+$traceStage=static function(string $stage) use($trace,$started):void{
+    if($trace)fwrite(STDERR,sprintf("[maintenance +%.3fs] %s\n",microtime(true)-$started,$stage));
+};
+$traceStage('database-connected');
+$statementBudget=max(1.0,$hardDeadline-microtime(true)-2.0);
+foreach([$core,$analytics] as $pdo){
+    try{$pdo->exec('SET SESSION max_statement_time='.number_format(min(20.0,$statementBudget),3,'.',''));}catch(Throwable){}
+}
+if(!$repository->schemaInstalled())throw new RuntimeException('Team Points baseline schema is not ready.');
+$traceStage('baseline-schema-ready');
 
 $config=p2k_tp_config();
 $club=strtolower((string)($config['app']['club_slug']??'promote-to-king'));
@@ -47,6 +56,7 @@ try{
     // maintenance lanes. It checks newly-finished and active matches only;
     // historical backfill remains retired once complete.
     try{
+        $traceStage('fair-play-priority-start');
         $priorityDeadline=min($hardDeadline-4.0,microtime(true)+5.0);
         $out['fair_play_priority']=(new FairPlayPriorityRunner(
             $core,
@@ -54,6 +64,7 @@ try{
             new ChessApi($repository),
             $club
         ))->run($priorityDeadline,2);
+        $traceStage('fair-play-priority-end');
     }catch(Throwable $e){
         $out['fair_play_priority']=['ran'=>false,'error'=>$e->getMessage()];
     }
@@ -74,6 +85,7 @@ try{
         }
         $slice=max(6.0,$remaining/$lanesLeft);
         $laneDeadline=min($hardDeadline-1.5,microtime(true)+$slice);
+        $traceStage('lane-'.$lane.'-start');
         $out['lanes'][$lane]=(new CronMaintenanceCoordinator(
             $core,
             $analytics,
@@ -82,8 +94,10 @@ try{
             $lane,
             $laneDeadline
         ))->run();
+        $traceStage('lane-'.$lane.'-end');
     }
 
+    $traceStage('maintenance-complete');
     $out['elapsed_ms']=(int)round((microtime(true)-$started)*1000);
     $out['remaining_seconds']=max(0.0,round($hardDeadline-microtime(true),3));
     fwrite(STDOUT,json_encode($out,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE).PHP_EOL);
