@@ -8,8 +8,8 @@ $must(!str_contains($coord,'refreshIfDue($this->clubSlug,300'),'Legacy Club main
 $must(str_contains($coord,"'reason'=>'dedicated_convergence_owner'"),'Legacy Club maintenance must expose delegated analytics ownership.');
 
 $green=$read('server/team-points-green/src/GreenWorker.php');
-$must(str_contains($green,"maybeRebuildAnalytics($this->cycle,300)"),'Green-native p2k_g_* analytics rebuild must remain enabled.');
-$must(!str_contains($green,"(new GreenCompatibility($this->repo))->maybeRebuildAnalytics"),'Green must not start mature p2k_an_* compatibility analytics rebuilds.');
+$must(str_contains($green,"maybeRebuildAnalytics(\$this->cycle,300)"),'Green-native p2k_g_* analytics rebuild must remain enabled.');
+$must(!str_contains($green,"(new GreenCompatibility(\$this->repo))->maybeRebuildAnalytics"),'Green must not start mature p2k_an_* compatibility analytics rebuilds.');
 $must(str_contains($green,"'reason'=>'dedicated_convergence_owner'"),'Green telemetry must expose delegated mature analytics ownership.');
 
 $cli=$read('server/team-points/bin/analytics-convergence.php');
