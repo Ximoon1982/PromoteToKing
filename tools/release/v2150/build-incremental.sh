@@ -153,7 +153,8 @@ payload={
     {"version":"2.15.0","source_head":"d97cbb6832750aed633f55d450bbc87a0ab43458"},
     {"version":"2.15.0","source_head":"05229163a970e16e443cb88c1df3eaeaf677b268"},
     {"version":"2.15.0","source_head":"dbe84511927e8751818a9812d2a2f95453d86d96"},
-    {"version":"2.15.0","source_head":"168bc09316bcc20d81de16830c5a382234082911"}
+    {"version":"2.15.0","source_head":"168bc09316bcc20d81de16830c5a382234082911"},
+    {"version":"2.15.0","source_head":"62d11ee558b4c02931fe641cdfad93c99d87de60"}
   ]
 }
 Path(out).write_text(json.dumps(payload,indent=2)+"\n")
@@ -174,6 +175,7 @@ Accepted public bases:
 - v2.15.0 at 05229163a970e16e443cb88c1df3eaeaf677b268
 - v2.15.0 at dbe84511927e8751818a9812d2a2f95453d86d96
 - v2.15.0 at 168bc09316bcc20d81de16830c5a382234082911
+- v2.15.0 at 62d11ee558b4c02931fe641cdfad93c99d87de60
 
 Contents:
 - Trophy modal mobile gutter correction.
