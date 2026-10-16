@@ -13,11 +13,11 @@ $must(str_contains($worker,"['club','player']")&&str_contains($worker,"['player'
 $must(str_contains($worker,'new CronMaintenanceCoordinator'),'Maintenance worker must run the existing bounded maintenance coordinator.');
 $priority=$read('server/team-points/src/FairPlayPriorityRunner.php');
 $must(str_contains($priority,'$this->api->setDeadlineAt($deadline);'),'Fair Play priority Chess API calls must inherit the maintenance deadline.');
-$must(substr_count($coord,'$api->setDeadlineAt($deadline);')>=2,'Coordinator Chess API users must inherit their slice deadlines.');
 $must(!str_contains($worker,'new Worker('),'Maintenance worker must not run legacy Blue acquisition.');
 $must(!str_contains($worker,'new CronLoop('),'Maintenance worker must not run the legacy Blue queue loop.');
 
 $coord=$read('server/team-points/src/CronMaintenanceCoordinator.php');
+$must(substr_count($coord,'$api->setDeadlineAt($deadline);')>=2,'Coordinator Chess API users must inherit their slice deadlines.');
 $must(str_contains($coord,"'classes']['analytics']=['ran'=>false,'reason'=>'dedicated_convergence_owner'"),'Club maintenance must leave mature all-analytics to dedicated convergence.');
 $must(str_contains($coord,"runClass('intelligence'"),'Club intelligence maintenance must remain.');
 $must(str_contains($coord,"runClass('fair_play'"),'Ongoing Fair Play maintenance must remain.');
