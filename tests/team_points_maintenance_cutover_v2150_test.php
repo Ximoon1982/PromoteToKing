@@ -11,6 +11,9 @@ $must(str_contains($worker,"p2k_tp_maintenance_"),'Maintenance worker must seria
 $must(str_contains($worker,'new FairPlayPriorityRunner'),'Maintenance worker must preserve the Fair Play priority slice.');
 $must(str_contains($worker,"['club','player']")&&str_contains($worker,"['player','club']"),'Maintenance worker must alternate Club/Player first priority.');
 $must(str_contains($worker,'new CronMaintenanceCoordinator'),'Maintenance worker must run the existing bounded maintenance coordinator.');
+$must(!str_contains($worker,'upgradeExistingSchema'),'Maintenance worker must never perform schema migration inside its bounded runtime.');
+$must(str_contains($worker,"getenv('P2K_MAINT_TRACE')==='1'"),'Maintenance worker must support opt-in stage tracing for shared-host diagnostics.');
+$must(str_contains($worker,'SET SESSION max_statement_time'),'Maintenance worker must install an early database statement budget.');
 $priority=$read('server/team-points/src/FairPlayPriorityRunner.php');
 $must(str_contains($priority,'$this->api->setDeadlineAt($deadline);'),'Fair Play priority Chess API calls must inherit the maintenance deadline.');
 $must(!str_contains($worker,'new Worker('),'Maintenance worker must not run legacy Blue acquisition.');
