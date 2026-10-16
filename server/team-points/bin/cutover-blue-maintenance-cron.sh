@@ -28,8 +28,37 @@ resolve_php_cli(){
 
 PHP_BIN="$(resolve_php_cli)"
 command -v crontab >/dev/null 2>&1 || { echo "ERROR: crontab unavailable." >&2; exit 1; }
-SCRIPT="$ROOT/server/team-points/bin/maintenance.php"
-[[ -f "$SCRIPT" ]] || { echo "ERROR: Missing $SCRIPT" >&2; exit 1; }
+CONFIG="$ROOT/server/team-points/config/config.local.php"
+[[ -f "$CONFIG" ]] || { echo "ERROR: Missing protected Team Points config at $CONFIG" >&2; exit 1; }
+
+HELPER_DIR="$HOME/.p2k"
+HELPER="$HELPER_DIR/team-points-maintenance-active.sh"
+mkdir -p "$HELPER_DIR"
+chmod 700 "$HELPER_DIR"
+
+cat >"$HELPER" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT=$(printf '%q' "$ROOT")
+PHP_BIN=$(printf '%q' "$PHP_BIN")
+CONFIG="\$ROOT/server/team-points/config/config.local.php"
+RUNTIME="\$("\$PHP_BIN" -r '\$c=require \$argv[1]; \$r=rtrim((string)((\$c["storage"]["runtime_dir"]??"")),"/\\\\"); echo \$r!==""?\$r:dirname(dirname(dirname(\$argv[1])))."/data/runtime-v280";' "\$CONFIG")"
+STATE="\$RUNTIME/release-control/state.json"
+MODE="direct-root"
+RELEASE=""
+if [[ -f "\$STATE" ]]; then
+  read -r MODE RELEASE < <("\$PHP_BIN" -r '\$s=json_decode((string)file_get_contents(\$argv[1]),true); \$m=(string)(\$s["mode"]??"direct-root"); \$r=(string)(\$s["public_release"]??""); if(\$m==="slots"&&!preg_match("/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}\$/D",\$r)) exit(3); echo \$m," ",\$r;' "\$STATE")
+fi
+if [[ "\$MODE" == "slots" ]]; then
+  APP="\$RUNTIME/release-control/runtime-trees/\$RELEASE/app"
+else
+  APP="\$ROOT"
+fi
+SCRIPT="\$APP/server/team-points/bin/maintenance.php"
+[[ -f "\$SCRIPT" ]] || { echo "ERROR: Active Team Points maintenance worker unavailable: \$SCRIPT" >&2; exit 4; }
+exec env P2K_TP_CONFIG="\$CONFIG" "\$PHP_BIN" -d display_errors=0 -d 'error_reporting=E_ALL & ~E_DEPRECATED' "\$SCRIPT" 45
+EOF
+chmod 700 "$HELPER"
 
 CURRENT="$(mktemp)"
 NEXT="$(mktemp)"
@@ -53,19 +82,17 @@ awk '
 ' "$CURRENT" >"$NEXT"
 
 quote_sq(){ printf "'%s'" "${1//\'/\'\"\'\"\'}"; }
-ROOT_Q="$(quote_sq "$ROOT")"
-PHP_Q="$(quote_sq "$PHP_BIN")"
-SCRIPT_Q="$(quote_sq 'server/team-points/bin/maintenance.php')"
+HELPER_Q="$(quote_sq "$HELPER")"
 
 [[ ! -s "$NEXT" ]] || printf '\n' >>"$NEXT"
 printf '%s\n' '# BEGIN P2K TEAM POINTS MAINTENANCE v2.15.0' >>"$NEXT"
-printf '3-59/5 * * * * cd %s && %s %s 45 >/dev/null 2>&1\n' "$ROOT_Q" "$PHP_Q" "$SCRIPT_Q" >>"$NEXT"
+printf '3-59/5 * * * * %s >/dev/null 2>&1\n' "$HELPER_Q" >>"$NEXT"
 printf '%s\n' '# END P2K TEAM POINTS MAINTENANCE v2.15.0' >>"$NEXT"
 
 crontab "$NEXT"
 
 INSTALLED="$(crontab -l 2>/dev/null || true)"
-MAINT_COUNT="$(printf '%s\n' "$INSTALLED" | grep -c 'server/team-points/bin/maintenance.php' || true)"
+MAINT_COUNT="$(printf '%s\n' "$INSTALLED" | grep -F -c "$HELPER" || true)"
 CLUB_COUNT="$(printf '%s\n' "$INSTALLED" | grep -E -c 'cron-dispatch-v2\.[0-9.]+\.sh[[:space:]]+club([[:space:]]|$)' || true)"
 PLAYER_COUNT="$(printf '%s\n' "$INSTALLED" | grep -E -c 'cron-dispatch-v2\.[0-9.]+\.sh[[:space:]]+player([[:space:]]|$)' || true)"
 TOURNAMENT_COUNT="$(printf '%s\n' "$INSTALLED" | grep -E -c 'cron-dispatch-v2\.[0-9.]+\.sh[[:space:]]+tournaments([[:space:]]|$)' || true)"
@@ -81,4 +108,4 @@ echo "SUCCESS: Team Points maintenance cutover installed."
 echo "Backup: $BACKUP"
 echo "Removed legacy Blue acquisition schedules: club=$CLUB_COUNT player=$PLAYER_COUNT"
 echo "Preserved P2K schedules: tournaments=$TOURNAMENT_COUNT match-tracking=$TRACKING_COUNT"
-echo "Installed maintenance schedule: every 5 minutes at minute 3, using $PHP_BIN"
+echo "Installed maintenance schedule: every 5 minutes at minute 3, using active-slot resolver $HELPER"
