@@ -26,7 +26,7 @@ final class CronMaintenanceCoordinator
                 return ['ran'=>true,'snapshot_date'=>$snapshot['date']??null,'anomaly_scan'=>$scan['summary']??null,'scanned_at'=>$scan['scanned_at']??null];
             });
             $out['classes']['fair_play']=$this->runClass('fair_play',8.0,3.0,function(float $deadline):array{
-                $api=new ChessApi($this->repository);$service=new FairPlayReconciliationService($this->core,$this->repository,$api,$this->clubSlug);$firstFinished=null;
+                $api=new ChessApi($this->repository);$api->setDeadlineAt($deadline);$service=new FairPlayReconciliationService($this->core,$this->repository,$api,$this->clubSlug);$firstFinished=null;
                 if($this->hasTime($deadline,2.0)){
                     try{
                         $service->ensureSchema();
@@ -44,7 +44,7 @@ final class CronMaintenanceCoordinator
             });
             $out['classes']['mira']=$this->runClass('mira',6.0,2.0,function(float $deadline):array{
                 if(!$this->hasTime($deadline,1.0))return ['ran'=>false,'deferred'=>true,'reason'=>'local_deadline'];
-                $service=new LiveRanksService($this->analytics,$this->repository,new ChessApi($this->repository));$status=$service->identityAttributionStatus();
+                $api=new ChessApi($this->repository);$api->setDeadlineAt($deadline);$service=new LiveRanksService($this->analytics,$this->repository,$api);$status=$service->identityAttributionStatus();
                 if(empty($status['stale']))return ['ran'=>false,'reason'=>'current','identity_attribution'=>$status];
                 if(!$this->hasTime($deadline,4.0))return ['ran'=>false,'deferred'=>true,'reason'=>'insufficient_mira_slice','identity_attribution'=>$status];
                 return $service->rebuildIdentityAttributionIfNeeded($deadline);
