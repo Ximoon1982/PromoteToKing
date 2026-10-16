@@ -37,6 +37,7 @@ OVERLAY_FILES=(
   server/team-points-green/public/cron.php
   server/team-points/src/bootstrap.php
   server/team-points/src/CronMaintenanceCoordinator.php
+  server/team-points/src/FairPlayPriorityRunner.php
   server/team-points/bin/maintenance.php
   server/team-points/bin/cutover-blue-maintenance-cron.sh
   server/team-points/src/MiacService.php
