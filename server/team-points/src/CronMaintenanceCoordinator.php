@@ -14,14 +14,10 @@ final class CronMaintenanceCoordinator
     {
         $out=['mode'=>'cmdi-isolated','request_deadline_epoch_ms'=>(int)round($this->requestDeadlineAt*1000),'hard_return_reserve_seconds'=>$this->hardReturnReserve,'classes'=>[]];
         if($this->lane==='club'){
-            // v2.10.9.7 R3: AnalyticsBuilder refuses to start with <8s remaining.
-            // The old 7s/3s class was therefore mathematically incapable of rebuilding.
-            // Keep this fallback coherent at 10s/9s; the dedicated CLI convergence task
-            // is the guaranteed path when the Green worker leaves less request budget.
-            $out['classes']['analytics']=$this->runClass('analytics',10.0,9.0,function(float $deadline):array{
-                $builder=new AnalyticsBuilder($this->core,$this->analytics);
-                return $builder->refreshIfDue($this->clubSlug,300,$deadline)+['maintenance_class'=>'analytics'];
-            });
+            // Mature p2k_an_* analytics are exclusively owned by the dedicated
+            // analytics-convergence CLI worker. Keep this explicit in maintenance
+            // telemetry, but never spend the legacy Club lane budget rebuilding them.
+            $out['classes']['analytics']=['ran'=>false,'reason'=>'dedicated_convergence_owner'];
             $out['classes']['intelligence']=$this->runClass('intelligence',5.0,2.0,function(float $deadline):array{
                 if(!$this->hasTime($deadline,1.0))return ['ran'=>false,'deferred'=>true,'reason'=>'local_deadline'];
                 $service=new ClubIntelligenceService($this->core,$this->analytics,$this->clubSlug);$snapshot=$service->captureDailySnapshot();

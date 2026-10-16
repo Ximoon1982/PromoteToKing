@@ -324,13 +324,13 @@ final class GreenWorker
         $got=0;try{$got=(int)$this->repo->core->query("SELECT GET_LOCK('p2k_green_analytics_maintenance',0)")->fetchColumn();}catch(\Throwable $ignored){$got=0;}
         if($got!==1){$this->inc('analytics_maintenance_skipped_busy');return;}
         try{
-            // v2.10.6.16: the 30-second cadence introduced by v2.10.6.11 is too
-            // aggressive for rebuilds that can take several minutes. Keep live Green
-            // object projection immediate, but throttle full analytics materialization
-            // to a five-minute minimum and never let an opportunistic rebuild fail the
-            // finite Green worker after its lock has already been released.
+            // Green owns only the Green-native p2k_g_* analytics materialization here.
+            // Mature p2k_an_* compatibility analytics are owned by the dedicated
+            // analytics-convergence CLI worker so Green cannot start a second heavy
+            // AnalyticsBuilder rebuild after releasing its acquisition lock.
             try{$rebuilt=$this->timed('green_analytics',fn()=>$this->repo->maybeRebuildAnalytics($this->cycle,300));if($rebuilt)$this->inc('green_analytics_rebuilds');}catch(\Throwable $e){$this->inc('green_analytics_errors');}
-            try{$detail=$this->timed('compat_analytics',fn()=>(new GreenCompatibility($this->repo))->maybeRebuildAnalytics(300));$this->maintenance['compat_analytics']=$detail;if(!empty($detail['ran']))$this->inc('compat_analytics_rebuilds');else $this->inc('compat_analytics_skips');}catch(\Throwable $e){$this->inc('compat_analytics_errors');$this->maintenance['compat_analytics']=['ran'=>false,'reason'=>'error','error'=>$e->getMessage()];}
+            $this->maintenance['compat_analytics']=['ran'=>false,'reason'=>'dedicated_convergence_owner'];
+            $this->inc('compat_analytics_delegated');
         }finally{try{$this->repo->core->query("SELECT RELEASE_LOCK('p2k_green_analytics_maintenance')");}catch(\Throwable $ignored){}}
     }
 
