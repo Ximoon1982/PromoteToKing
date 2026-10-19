@@ -84,7 +84,7 @@ final class GreenWorker
     private function fetchIndex()
     {
         $r=$this->request('club_index','https://api.chess.com/pub/club/'.rawurlencode($this->repo->clubSlug).'/matches');
-        if((int)$r['status']!==200||!is_array($r['json']))return false;$x=$this->repo->upsertIndex($r['json']);$this->inc('index_matches_added',(int)$x['added']);return $x;
+        if((int)$r['status']!==200||!is_array($r['json']))return false;$x=$this->repo->upsertIndex($r['json']);$this->inc('index_matches_added',(int)$x['added']);$this->inc('index_missing_current_detected',(int)($x['missing_current_detected']??0));return $x;
     }
 
     private function fetchRoster(): bool

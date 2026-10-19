@@ -426,8 +426,22 @@ final class GreenRepository
                 if($tc==='daily'&&in_array($bucket,['registered','in_progress'],true))$this->armGfflMatch($id,'club_index_'.$bucket,45,false);
             }
         }
+        // A match that disappears from all three authoritative club-index buckets may
+        // have been cancelled while registered/in-progress. Absence alone is not
+        // enough to mutate canonical status: queue a hot detail verification and
+        // let storeMatch()/markMatchHttp() decide from the authoritative resource.
+        // This also remains safe for a transient index omission because a successful
+        // detail fetch simply preserves the live match facts.
+        $missingCurrent=0;
+        $current=$this->core->query("SELECT match_id FROM p2k_g_matches WHERE discovery_index=1 AND trusted_legacy=0 AND club_verified=1 AND time_class='daily' AND is_void=0 AND status IN ('registered','in_progress')");
+        foreach($current->fetchAll(PDO::FETCH_COLUMN)?:[] as $currentId){
+            $currentId=(int)$currentId;
+            if($currentId<=0||isset($seenIds[$currentId]))continue;
+            $this->armGfflMatch($currentId,'club_index_absent',100,true);
+            $missingCurrent++;
+        }
         $this->core->prepare('UPDATE p2k_g_state SET last_index_fetch=UTC_TIMESTAMP(),index_anchor_match_id=GREATEST(COALESCE(index_anchor_match_id,0),?),discovery_high_watermark=GREATEST(COALESCE(discovery_high_watermark,0),?) WHERE club_slug=?')->execute([$anchor,$highest,$this->clubSlug]);
-        return ['added'=>$added,'highest'=>$highest,'anchor'=>$anchor,'previous_watermark'=>$previousWatermark,'watermark_present'=>$previousWatermark>0&&isset($seenIds[$previousWatermark])];
+        return ['added'=>$added,'highest'=>$highest,'anchor'=>$anchor,'previous_watermark'=>$previousWatermark,'watermark_present'=>$previousWatermark>0&&isset($seenIds[$previousWatermark]),'missing_current_detected'=>$missingCurrent];
     }
 
     public function normalizeDailyDiscoveryWatermark(): array
