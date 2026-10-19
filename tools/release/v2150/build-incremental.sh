@@ -154,7 +154,8 @@ payload={
     {"version":"2.15.0","source_head":"05229163a970e16e443cb88c1df3eaeaf677b268"},
     {"version":"2.15.0","source_head":"dbe84511927e8751818a9812d2a2f95453d86d96"},
     {"version":"2.15.0","source_head":"168bc09316bcc20d81de16830c5a382234082911"},
-    {"version":"2.15.0","source_head":"62d11ee558b4c02931fe641cdfad93c99d87de60"}
+    {"version":"2.15.0","source_head":"62d11ee558b4c02931fe641cdfad93c99d87de60"},
+    {"version":"2.15.0","source_head":"4fe8c39d852ddf7f3cc590401d529cddbf7e4640"}
   ]
 }
 Path(out).write_text(json.dumps(payload,indent=2)+"\n")
@@ -176,9 +177,10 @@ Accepted public bases:
 - v2.15.0 at dbe84511927e8751818a9812d2a2f95453d86d96
 - v2.15.0 at 168bc09316bcc20d81de16830c5a382234082911
 - v2.15.0 at 62d11ee558b4c02931fe641cdfad93c99d87de60
+- v2.15.0 at 4fe8c39d852ddf7f3cc590401d529cddbf7e4640
 
 Contents:
-- Trophy modal mobile gutter correction.
+- Green current-match reconciliation verifies club-index disappearances before retiring cancelled matches.\n- Trophy modal mobile gutter correction.
 - Adaptive desktop Trophy modal layout based on artwork aspect ratio.
 - Full-viewport Trophy artwork viewer.
 - Club-points audit tool added in the current 2.15.0 branch.
