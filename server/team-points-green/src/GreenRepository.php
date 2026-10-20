@@ -493,18 +493,46 @@ final class GreenRepository
         $members=[];
         foreach (['weekly','monthly','all_time'] as $group) foreach (is_array($payload[$group] ?? null)?$payload[$group]:[] as $m) if (is_array($m)) $members[]=$m;
         foreach (is_array($payload['members'] ?? null)?$payload['members']:[] as $m) if (is_array($m)) $members[]=$m;
-        foreach ($members as $m) {
-            $u=trim((string)($m['username'] ?? '')); if ($u==='') continue; $k=strtolower($u); if(isset($seen[$k])) continue;$seen[$k]=true;
-            $join=is_numeric($m['joined']??null)?(int)$m['joined']:null;
-            $before=$this->core->prepare('SELECT id,username,current_member FROM p2k_g_players WHERE username_key=? LIMIT 1');$before->execute([$k]);$old=$before->fetch();
-            $q=$this->core->prepare('INSERT INTO p2k_g_players(username,username_key,current_member,joined_epoch,last_seen_roster_at,created_at,updated_at) VALUES(?,?,1,?,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE username=VALUES(username),current_member=1,joined_epoch=COALESCE(VALUES(joined_epoch),joined_epoch),left_at=NULL,last_seen_roster_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP()');
-            $q->execute([$u,$k,$join]);
-            $idq=$this->core->prepare('SELECT id FROM p2k_g_players WHERE username_key=?');$idq->execute([$k]);$id=(int)$idq->fetchColumn();
-            if(!is_array($old)){$new++;$this->recordMemberEvent('discovered',$id,$u,null,null,null,'green_roster',['joined_epoch'=>$join]);$this->recordMemberEvent('joined',$id,$u,null,null,null,'green_roster',['joined_epoch'=>$join]);}
-            elseif((int)($old['current_member']??0)!==1){$rejoined++;$this->recordMemberEvent('rejoined',$id,$u,null,null,null,'green_roster',['joined_epoch'=>$join]);$this->markDepartureProfileResult($u,200,['status'=>'active','source'=>'roster_rejoin']);}
+
+        // Normalize the authoritative roster once.  The previous implementation did
+        // SELECT + UPSERT + SELECT for every member (~14k DB round-trips for a 4.7k
+        // roster), which could hold the Green finite-cycle lock well beyond its 55s
+        // hard budget.  Snapshot existing rows in bounded chunks, bulk-upsert the
+        // roster, then recover IDs in bounded chunks for lifecycle-event emission.
+        $roster=[];
+        foreach($members as $m){
+            $u=trim((string)($m['username']??''));if($u==='')continue;$k=strtolower($u);if(isset($roster[$k]))continue;
+            $roster[$k]=['username'=>$u,'joined'=>is_numeric($m['joined']??null)?(int)$m['joined']:null];$seen[$k]=true;
         }
+        $keys=array_keys($roster);
+        $existing=[];
+        foreach(array_chunk($keys,500) as $chunk){
+            if(!$chunk)continue;$ph=implode(',',array_fill(0,count($chunk),'?'));
+            $q=$this->core->prepare("SELECT id,username,username_key,current_member FROM p2k_g_players WHERE username_key IN ({$ph})");
+            $q->execute($chunk);foreach($q->fetchAll()?:[] as $row)$existing[(string)$row['username_key']]=$row;
+        }
+
+        foreach(array_chunk($keys,250) as $chunk){
+            if(!$chunk)continue;$values=[];$args=[];
+            foreach($chunk as $k){$values[]='(?,?,1,?,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())';$args[]=$roster[$k]['username'];$args[]=$k;$args[]=$roster[$k]['joined'];}
+            $sql='INSERT INTO p2k_g_players(username,username_key,current_member,joined_epoch,last_seen_roster_at,created_at,updated_at) VALUES '.implode(',',$values)." ON DUPLICATE KEY UPDATE username=VALUES(username),current_member=1,joined_epoch=COALESCE(VALUES(joined_epoch),joined_epoch),left_at=NULL,last_seen_roster_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP()";
+            $this->core->prepare($sql)->execute($args);
+        }
+
+        $ids=[];
+        foreach(array_chunk($keys,500) as $chunk){
+            if(!$chunk)continue;$ph=implode(',',array_fill(0,count($chunk),'?'));
+            $q=$this->core->prepare("SELECT id,username_key FROM p2k_g_players WHERE username_key IN ({$ph})");
+            $q->execute($chunk);foreach($q->fetchAll()?:[] as $row)$ids[(string)$row['username_key']]=(int)$row['id'];
+        }
+        foreach($keys as $k){
+            $row=$roster[$k];$u=(string)$row['username'];$join=$row['joined'];$old=$existing[$k]??null;$id=(int)($ids[$k]??0);
+            if(!is_array($old)){$new++;$this->recordMemberEvent('discovered',$id?:null,$u,null,null,null,'green_roster',['joined_epoch'=>$join]);$this->recordMemberEvent('joined',$id?:null,$u,null,null,null,'green_roster',['joined_epoch'=>$join]);}
+            elseif((int)($old['current_member']??0)!==1){$rejoined++;$this->recordMemberEvent('rejoined',$id?:null,$u,null,null,null,'green_roster',['joined_epoch'=>$join]);$this->markDepartureProfileResult($u,200,['status'=>'active','source'=>'roster_rejoin']);}
+        }
+
         if ($seen) {
-            $keys=array_keys($seen);$ph=implode(',',array_fill(0,count($keys),'?'));
+            $ph=implode(',',array_fill(0,count($keys),'?'));
             $q=$this->core->prepare("SELECT p.id,p.username,p.username_key,i.canonical_username_key,i.canonical_username FROM p2k_g_players p LEFT JOIN p2k_g_identity_map i ON i.username_key=p.username_key AND i.trusted=1 WHERE p.current_member=1 AND p.username_key NOT IN ({$ph})");$q->execute($keys);$departing=$q->fetchAll()?:[];
             foreach($departing as $d){$canonical=strtolower((string)($d['canonical_username_key']??''));if($canonical!==''&&$canonical!==(string)$d['username_key']&&isset($seen[$canonical])){$renamed++;$this->recordMemberEvent('name_changed',(int)$d['id'],(string)$d['username'],(string)$d['username'],(string)($d['canonical_username']??$canonical),null,'trusted_identity');continue;}$left++;$this->recordMemberEvent('left',(int)$d['id'],(string)$d['username'],null,null,'pending','green_roster');}
             $this->core->prepare("UPDATE p2k_g_players SET current_member=0,left_at=COALESCE(left_at,UTC_TIMESTAMP()) WHERE current_member=1 AND username_key NOT IN ({$ph})")->execute($keys);

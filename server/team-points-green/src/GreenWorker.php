@@ -89,8 +89,12 @@ final class GreenWorker
 
     private function fetchRoster(): bool
     {
-        $r=$this->request('club_members','https://api.chess.com/pub/club/'.rawurlencode($this->repo->clubSlug).'/members');
-        if((int)$r['status']!==200||!is_array($r['json']))return false;$x=$this->repo->upsertRoster($r['json']);$this->inc('members_observed',(int)$x['observed']);$this->inc('members_new',(int)$x['new']);try{(new GreenCompatibility($this->repo))->projectMembers();}catch(\Throwable $e){$this->inc('compat_projection_errors');}return true;
+        $r=$this->timed('roster_http',fn()=>$this->request('club_members','https://api.chess.com/pub/club/'.rawurlencode($this->repo->clubSlug).'/members'));
+        if((int)$r['status']!==200||!is_array($r['json']))return false;
+        $x=$this->timed('roster_ingest',fn()=>$this->repo->upsertRoster($r['json']));
+        $this->inc('members_observed',(int)$x['observed']);$this->inc('members_new',(int)$x['new']);
+        try{$this->timed('roster_compat_projection',fn()=>(new GreenCompatibility($this->repo))->projectMembers());}catch(\Throwable $e){$this->inc('compat_projection_errors');}
+        return true;
     }
 
     private function fetchMatch(int $id,string $requestType='match_detail',bool $deepProbe=false): array
