@@ -96,19 +96,24 @@
       host.innerHTML = '<span class="p2k-storage-empty">Storage history will appear after measurements accumulate.</span>';
       return;
     }
-    const width = 960, height = 300, left = 58, right = 20, top = 18, bottom = 38;
+    const width = 960, height = 300, left = 78, right = 78, top = 18, bottom = 38;
     const coreQuota = Number(storage?.databases?.core?.quota_bytes || 0);
     const analyticsQuota = Number(storage?.databases?.analytics?.quota_bytes || 0);
     const fsQuota = Number(storage?.filesystem?.quota_bytes || 0);
-    const maxValue = Math.max(1, ...history.flatMap(r => [Number(r.core_bytes||0), Number(r.analytics_bytes||0), Number(r.filesystem_bytes||0)]), coreQuota, analyticsQuota, fsQuota);
+    const dbMax = Math.max(1, ...history.flatMap(r => [Number(r.core_bytes||0), Number(r.analytics_bytes||0)]), coreQuota, analyticsQuota);
+    const fsMax = Math.max(1, ...history.map(r => Number(r.filesystem_bytes||0)), fsQuota);
     const x = i => left + (history.length === 1 ? 0 : i * (width-left-right)/(history.length-1));
-    const y = v => top + (height-top-bottom) * (1 - Number(v||0)/maxValue);
-    const path = key => history.map((r,i) => `${i?'L':'M'}${x(i).toFixed(1)},${y(r[key]).toFixed(1)}`).join(' ');
-    const ticks = [0,.25,.5,.75,1].map(f => `<g><line class="grid" x1="${left}" x2="${width-right}" y1="${y(maxValue*f)}" y2="${y(maxValue*f)}"/><text class="axis" x="${left-8}" y="${y(maxValue*f)+4}" text-anchor="end">${esc(bytes(maxValue*f))}</text></g>`).join('');
+    const yDb = v => top + (height-top-bottom) * (1 - Number(v||0)/dbMax);
+    const yFs = v => top + (height-top-bottom) * (1 - Number(v||0)/fsMax);
+    const path = (key,y) => history.map((r,i) => `${i?'L':'M'}${x(i).toFixed(1)},${y(r[key]).toFixed(1)}`).join(' ');
+    const grid = [0,.25,.5,.75,1].map(f => `<line class="grid" x1="${left}" x2="${width-right}" y1="${yDb(dbMax*f)}" y2="${yDb(dbMax*f)}"/>`).join('');
+    const fsTicks = [0,.25,.5,.75,1].map(f => `<text class="axis" x="${left-8}" y="${yFs(fsMax*f)+4}" text-anchor="end">${esc(bytes(fsMax*f))}</text>`).join('');
+    const dbTicks = [0,.25,.5,.75,1].map(f => `<text class="axis" x="${width-right+8}" y="${yDb(dbMax*f)+4}" text-anchor="start">${esc(bytes(dbMax*f))}</text>`).join('');
+    const axisTitles = `<text class="axis" x="14" y="${top+12}" text-anchor="start">Filesystem</text><text class="axis" x="${width-14}" y="${top+12}" text-anchor="end">Databases</text>`;
     const labels = history.map((r,i) => (i===0 || i===history.length-1 || i%Math.max(1,Math.ceil(history.length/6))===0) ? `<text class="axis" x="${x(i)}" y="${height-12}" text-anchor="middle">${esc(r.week || r.month || r.date)}</text>` : '').join('');
-    const threshold = quota => quota ? `<line class="threshold80" x1="${left}" x2="${width-right}" y1="${y(quota*.8)}" y2="${y(quota*.8)}"/><line class="threshold100" x1="${left}" x2="${width-right}" y1="${y(quota)}" y2="${y(quota)}"/>` : '';
-    const dots = history.map((r,i) => `<circle data-storage-index="${i}" cx="${x(i)}" cy="${y(r.core_bytes)}" r="6" fill="transparent"/><circle data-storage-index="${i}" cx="${x(i)}" cy="${y(r.analytics_bytes)}" r="6" fill="transparent"/>`).join('');
-    host.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">${ticks}${threshold(Math.max(coreQuota,analyticsQuota))}<path class="series-core" d="${path('core_bytes')}"/><path class="series-analytics" d="${path('analytics_bytes')}"/><path class="series-filesystem" d="${path('filesystem_bytes')}"/>${dots}${labels}</svg><div class="p2k-storage-tooltip" hidden></div>`;
+    const threshold = quota => quota ? `<line class="threshold80" x1="${left}" x2="${width-right}" y1="${yDb(quota*.8)}" y2="${yDb(quota*.8)}"/><line class="threshold100" x1="${left}" x2="${width-right}" y1="${yDb(quota)}" y2="${yDb(quota)}"/>` : '';
+    const dots = history.map((r,i) => `<circle data-storage-index="${i}" cx="${x(i)}" cy="${yDb(r.core_bytes)}" r="6" fill="transparent"/><circle data-storage-index="${i}" cx="${x(i)}" cy="${yDb(r.analytics_bytes)}" r="6" fill="transparent"/><circle data-storage-index="${i}" cx="${x(i)}" cy="${yFs(r.filesystem_bytes)}" r="6" fill="transparent"/>`).join('');
+    host.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">${grid}${fsTicks}${dbTicks}${axisTitles}${threshold(Math.max(coreQuota,analyticsQuota))}<path class="series-core" d="${path('core_bytes',yDb)}"/><path class="series-analytics" d="${path('analytics_bytes',yDb)}"/><path class="series-filesystem" d="${path('filesystem_bytes',yFs)}"/>${dots}${labels}</svg><div class="p2k-storage-tooltip" hidden></div>`;
     const tip = host.querySelector('.p2k-storage-tooltip');
     let pinnedIndex = null;
     const showTip = dot => {
@@ -124,7 +129,6 @@
         if(pinnedIndex===index){pinnedIndex=null;tip.hidden=true;}else{pinnedIndex=index;showTip(dot);}
       });
     });
-    host.addEventListener('click', event => { if(event.target===host || event.target.tagName==='svg'){pinnedIndex=null;tip.hidden=true;} });
   }
 
   function renderProjection(name, projection) {

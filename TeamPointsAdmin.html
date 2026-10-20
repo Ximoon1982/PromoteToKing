@@ -274,7 +274,7 @@
       <div class="p2k-tp-status" id="storageStatus">Open this tab to measure storage.</div>
     </section>
     <section class="p2k-tp-card">
-      <div class="p2k-tp-card-head"><div><h2>Monthly storage evolution</h2><p>Month-end measurements are retained in Analytics. The filesystem series is apparent/path-summed size, not physical disk usage. Hover or tap the plot to inspect a month; the 80% and 100% database limits are shown against configured quotas.</p></div></div>
+      <div class="p2k-tp-card-head"><div><h2>Monthly storage evolution</h2><p>Month-end measurements are retained in Analytics. The apparent filesystem series uses its own left-hand scale; Core and Analytics DB use the right-hand scale. Filesystem size is path-summed, not physical disk usage. Hover or tap the plot to inspect a month; the 80% and 100% database limits are shown against configured database quotas.</p></div></div>
       <div class="p2k-storage-chart" id="storageHistoryChart" role="img" aria-label="Monthly database and apparent filesystem size evolution"><span class="p2k-storage-empty">Storage history will appear after measurements accumulate.</span></div>
       <div class="p2k-storage-legend"><span><i class="core"></i>Core DB</span><span><i class="analytics"></i>Analytics DB</span><span><i class="filesystem"></i>Apparent filesystem</span></div>
     </section>
