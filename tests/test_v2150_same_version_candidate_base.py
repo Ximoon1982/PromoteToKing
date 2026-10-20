@@ -21,3 +21,15 @@ def test_current_promoted_v2150_build_is_accepted():
 
 def test_green_public_v2150_build_is_accepted():
     assert '"version":"2.15.0","source_head":"1720731cea4f7b26b27ab5e7dd88f7272e658a20"' in BUILDER
+
+
+def test_all_changed_v2150_runtime_files_are_packaged():
+    required = [
+        "TeamPointsAdmin.html",
+        "assets/js/pages/team-points-admin.js",
+        "server/team-points-green/public/api.php",
+        "server/team-points-green/sql/core-schema.sql",
+        "server/team-points-green/src/GreenCompatibility.php",
+    ]
+    for path in required:
+        assert f"  {path}\\n" in BUILDER

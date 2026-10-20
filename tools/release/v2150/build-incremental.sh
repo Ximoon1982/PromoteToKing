@@ -20,18 +20,23 @@ OVERLAY_FILES=(
   ClubIntelligence.html
   TaskControl.html
   TournamentManagement.html
+  TeamPointsAdmin.html
   trophies/index.html
   assets/css/simulated-oauth.css
   assets/css/task-control.css
   assets/js/shared/real-oauth.js
   assets/js/pages/dashboard-v2.js
   assets/js/pages/task-control.js
+  assets/js/pages/team-points-admin.js
   assets/js/pages/club-intelligence.js
   assets/js/admin/admin-shell.js
   assets/js/admin/admin-session-controller.js
   assets/js/admin/trophy-gallery-v2150-modal-layout.js
   assets/trophy-gallery/trophy-gallery-v2150-mobile.css
   server/team-points-green/tools/audit-club-points.php
+  server/team-points-green/public/api.php
+  server/team-points-green/sql/core-schema.sql
+  server/team-points-green/src/GreenCompatibility.php
   server/team-points-green/src/GreenRepository.php
   server/team-points-green/src/GreenWorker.php
   server/team-points-green/public/cron.php
