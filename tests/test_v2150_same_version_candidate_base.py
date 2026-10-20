@@ -32,4 +32,4 @@ def test_all_changed_v2150_runtime_files_are_packaged():
         "server/team-points-green/src/GreenCompatibility.php",
     ]
     for path in required:
-        assert f"  {path}\\n" in BUILDER
+        assert f"  {path}\n" in BUILDER

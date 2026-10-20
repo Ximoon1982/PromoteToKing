@@ -26,8 +26,9 @@ def test_non_actionable_disagreement_remains_visible_but_cannot_livelock_cycle()
 
 
 def test_integrity_repair_includes_finished_boards_from_in_progress_matches():
-    assert "m.status IN ('in_progress','finished') AND b.state='finished'" in GREEN
-    assert "ORDER BY COALESCE(b.last_verified_at,'1970-01-01 00:00:00') ASC" in GREEN
+    green=read("server/team-points-green/src/GreenRepository.php")
+    assert "m.status IN ('in_progress','finished') AND b.state='finished'" in green
+    assert "ORDER BY COALESCE(b.last_verified_at,'1970-01-01 00:00:00') ASC" in green
 
 def test_daily_hall_switches_to_green_native_totals_after_cutover():
     repo=(ROOT/"server/team-points/src/Repository.php").read_text(encoding="utf-8")
