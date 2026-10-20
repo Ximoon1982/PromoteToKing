@@ -58,7 +58,9 @@ def test_green_title_profile_pipeline_and_csv_export():
     assert "title VARCHAR(8) NULL" in schema
     assert "$p['title']" in green
     assert "title=NULLIF(?,''" in green
-    assert "profile_checked_at IS NULL OR title IS NULL" in green
+    assert "profile_checked_at IS NULL OR title_checked_at IS NULL" in green
+    assert "title_checked_at=UTC_TIMESTAMP()" in green
+    assert "title_checked_at DATETIME NULL" in schema
     assert "p.account_status,p.title" in compat
     assert "PublicReadDatabase::source() === 'green'" in export
     assert "FROM p2k_g_players WHERE username_key IN" in export

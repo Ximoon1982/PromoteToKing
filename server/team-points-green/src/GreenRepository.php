@@ -32,7 +32,7 @@ final class GreenRepository
             'gffl_target_freshness_seconds','compat_analytics_rebuilt_at',
         ],
         'p2k_g_quick_board_cycle_items'=>['claim_count'],
-        'p2k_g_players'=>['title'],
+        'p2k_g_players'=>['title','title_checked_at'],
     ];
     private const RUNTIME_SCHEMA_INDEXES = [
         'p2k_g_matches'=>['idx_g_match_current','idx_g_match_eligibility','idx_g_match_discovered','idx_g_match_rating_cap'],
@@ -158,6 +158,7 @@ final class GreenRepository
     private function upgradeCoreSchema(): void
     {
         if(!$this->columnExists('p2k_g_players','title'))$this->core->exec("ALTER TABLE p2k_g_players ADD COLUMN title VARCHAR(8) NULL AFTER account_status");
+        if(!$this->columnExists('p2k_g_players','title_checked_at'))$this->core->exec("ALTER TABLE p2k_g_players ADD COLUMN title_checked_at DATETIME NULL AFTER title");
         $columns=[
             'index_time_class'=>"VARCHAR(32) NULL AFTER index_bucket",
             'index_result'=>"VARCHAR(24) NULL AFTER index_time_class",
@@ -1285,7 +1286,7 @@ final class GreenRepository
 
     public function nextProfileDue(): ?string
     {
-        $q=$this->core->query("SELECT username FROM p2k_g_players WHERE current_member=1 AND (profile_checked_at IS NULL OR title IS NULL) ORDER BY (profile_checked_at IS NULL) DESC,COALESCE(profile_checked_at,'1970-01-01'),id LIMIT 1");$v=$q->fetchColumn();return $v===false?null:(string)$v;
+        $q=$this->core->query("SELECT username FROM p2k_g_players WHERE current_member=1 AND (profile_checked_at IS NULL OR title_checked_at IS NULL) ORDER BY (profile_checked_at IS NULL) DESC,COALESCE(profile_checked_at,'1970-01-01'),id LIMIT 1");$v=$q->fetchColumn();return $v===false?null:(string)$v;
     }
     public function nextStatsUnseen(): ?string
     {
@@ -1309,7 +1310,7 @@ final class GreenRepository
 
     public function quickProfileProgress(): array
     {
-        $r=$this->core->query("SELECT COUNT(*) total,COALESCE(SUM(profile_checked_at IS NULL OR title IS NULL),0) due FROM p2k_g_players WHERE current_member=1")->fetch()?:[];
+        $r=$this->core->query("SELECT COUNT(*) total,COALESCE(SUM(profile_checked_at IS NULL OR title_checked_at IS NULL),0) due FROM p2k_g_players WHERE current_member=1")->fetch()?:[];
         $total=(int)($r['total']??0);$due=(int)($r['due']??0);
         $departure=(int)$this->core->query("SELECT COUNT(*) FROM p2k_g_member_events WHERE event_type='left' AND profile_status='pending'")->fetchColumn();
         return ['total'=>$total,'completed'=>max(0,$total-$due),'due'=>$due,'departure_due'=>$departure,'percent'=>$total>0?round(100*max(0,$total-$due)/$total,2):100.0];
@@ -1385,7 +1386,7 @@ final class GreenRepository
                 $this->core->beginTransaction();try{
                     $transient=$this->core->prepare('SELECT current_member,joined_epoch,last_seen_roster_at FROM p2k_g_players WHERE id=? FOR UPDATE');$transient->execute([(int)$row['id']]);$t=$transient->fetch()?:[];
                     $this->core->prepare('DELETE FROM p2k_g_players WHERE id=?')->execute([(int)$row['id']]);
-                    $this->core->prepare('UPDATE p2k_g_players SET username=?,username_key=?,current_member=?,joined_epoch=COALESCE(?,joined_epoch),left_at=NULL,last_seen_roster_at=COALESCE(?,last_seen_roster_at),profile_checked_at=UTC_TIMESTAMP(),account_status=?,title=NULLIF(?,''),country_url=?,avatar_url=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$username,$k,max((int)($o['current_member']??0),(int)($t['current_member']??0)),$t['joined_epoch']??null,$t['last_seen_roster_at']??null,$status,$title,$p['country']??null,$p['avatar']??null,(int)$o['id']]);
+                    $this->core->prepare('UPDATE p2k_g_players SET username=?,username_key=?,current_member=?,joined_epoch=COALESCE(?,joined_epoch),left_at=NULL,last_seen_roster_at=COALESCE(?,last_seen_roster_at),profile_checked_at=UTC_TIMESTAMP(),account_status=?,title=NULLIF(?,''),title_checked_at=UTC_TIMESTAMP(),country_url=?,avatar_url=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$username,$k,max((int)($o['current_member']??0),(int)($t['current_member']??0)),$t['joined_epoch']??null,$t['last_seen_roster_at']??null,$status,$title,$p['country']??null,$p['avatar']??null,(int)$o['id']]);
                     $this->core->prepare('INSERT INTO p2k_g_player_aliases(chess_player_id,username_key,username,first_seen_at,last_seen_at) VALUES(?,?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE username=VALUES(username),last_seen_at=UTC_TIMESTAMP()')->execute([$pid,$k,$username]);
                     // Stable player_id is authoritative for future Green rename observations.
                     $aliases=$this->core->prepare('SELECT username_key,username FROM p2k_g_player_aliases WHERE chess_player_id=?');$aliases->execute([$pid]);
@@ -1400,7 +1401,7 @@ final class GreenRepository
                     $this->core->commit();return ['changed'=>true,'rename'=>true];
                 }catch(\Throwable $e){if($this->core->inTransaction())$this->core->rollBack();throw $e;}}
         }
-        $this->core->prepare('UPDATE p2k_g_players SET chess_player_id=COALESCE(?,chess_player_id),account_status=?,title=NULLIF(?,''),country_url=?,avatar_url=?,profile_checked_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$pid,$status,$title,$p['country']??null,$p['avatar']??null,(int)$row['id']]);
+        $this->core->prepare('UPDATE p2k_g_players SET chess_player_id=COALESCE(?,chess_player_id),account_status=?,title=NULLIF(?,''),title_checked_at=UTC_TIMESTAMP(),country_url=?,avatar_url=?,profile_checked_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$pid,$status,$title,$p['country']??null,$p['avatar']??null,(int)$row['id']]);
         if($pid!==null){
             $this->core->prepare('INSERT INTO p2k_g_player_aliases(chess_player_id,username_key,username,first_seen_at,last_seen_at) VALUES(?,?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE username=VALUES(username),last_seen_at=UTC_TIMESTAMP()')->execute([$pid,$k,$username]);
             $this->core->prepare("INSERT INTO p2k_g_identity_map(username_key,username,canonical_username_key,canonical_username,chess_player_id,source,trusted,source_ref,imported_at) VALUES(?,?,?,?,?,'green_player_id',1,'player_id',UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE username=VALUES(username),chess_player_id=VALUES(chess_player_id),updated_at=UTC_TIMESTAMP()")->execute([$k,$username,$k,$username,$pid]);
@@ -1765,7 +1766,7 @@ final class GreenRepository
             $rows=$stage==='quick_boards'?$this->claimQuickBoardRows($ordinaryLimit,$owner,(int)($s['cycle_no']??0)):$this->claimBoardRows($ordinaryLimit,$owner);
             foreach($rows as $r)$push($urls,'board_detail',(string)$r['board_url'],['match_id'=>(int)$r['match_id'],'board_no'=>(int)$r['board_no']]);
         }elseif($ordinaryLimit>0 && in_array($stage,['seed_profiles','quick_profiles'],true)){
-            $q=$this->core->query("SELECT username FROM p2k_g_players WHERE current_member=1 AND (profile_checked_at IS NULL OR title IS NULL) ORDER BY (profile_checked_at IS NULL) DESC,COALESCE(profile_checked_at,'1970-01-01'),username_key LIMIT ".$ordinaryLimit);
+            $q=$this->core->query("SELECT username FROM p2k_g_players WHERE current_member=1 AND (profile_checked_at IS NULL OR title_checked_at IS NULL) ORDER BY (profile_checked_at IS NULL) DESC,COALESCE(profile_checked_at,'1970-01-01'),username_key LIMIT ".$ordinaryLimit);
             foreach($q->fetchAll(PDO::FETCH_COLUMN)?:[] as $u)$push($urls,'player_profile','https://api.chess.com/pub/player/'.rawurlencode((string)$u),['username'=>(string)$u]);
         }elseif($ordinaryLimit>0 && $stage==='seed_stats'){
             $q=$this->core->query("SELECT username FROM p2k_g_players WHERE current_member=1 AND stats_checked_at IS NULL ORDER BY username_key LIMIT ".$ordinaryLimit);
@@ -1785,7 +1786,7 @@ final class GreenRepository
         if(count($urls)<$limit && (int)($s['gffl_enabled']??1)===1){$seen=array_fill_keys(array_map(static fn($x)=>(string)($x['url']??''),$urls),true);foreach($this->gfflPlan($limit) as $r){$u=(string)$r['api_url'];if(isset($seen[$u]))continue;$push($urls,'gffl_match_detail',$u,['match_id'=>(int)$r['match_id'],'priority'=>(int)$r['priority'],'coalesced'=>(int)$r['coalesced_count']]);$seen[$u]=true;if(count($urls)>=$limit)break;}}
         $planner=$stage==='seed_matches'?$this->seedMatchPlannerState($browserOwner):($stage==='quick_boards'?$this->quickBoardCycleState((int)($s['cycle_no']??0),$browserOwner):($stage==='seed_boards'?$this->boardPlannerState($browserOwner):[]));
         if(in_array($stage,['seed_profiles','quick_profiles'],true)){
-            $due=(int)$this->core->query("SELECT COUNT(*) FROM p2k_g_players WHERE current_member=1 AND (profile_checked_at IS NULL OR title IS NULL)")->fetchColumn();
+            $due=(int)$this->core->query("SELECT COUNT(*) FROM p2k_g_players WHERE current_member=1 AND (profile_checked_at IS NULL OR title_checked_at IS NULL)")->fetchColumn();
             $planner=['planner_kind'=>'profiles','due_unhydrated'=>$due,'claimed_active'=>0,'eligible_now'=>$due,'claimed_by_owner'=>0];
         }elseif($stage==='seed_stats'){
             $due=(int)$this->core->query("SELECT COUNT(*) FROM p2k_g_players WHERE current_member=1 AND stats_checked_at IS NULL")->fetchColumn();
