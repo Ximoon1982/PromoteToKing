@@ -36,3 +36,15 @@ def test_lookup_wdl_uses_normalized_point_events_not_native_result_labels():
     assert "SUM(points=0) losses" in block
     assert "LOWER(result) IN ('draw'" not in block
     assert "LOWER(result) IN ('loss'" not in block
+
+
+def test_member_chronology_is_server_paginated_and_account_filterable():
+    api=(ROOT/"server/team-points-green/public/api.php").read_text(encoding="utf-8")
+    ui=(ROOT/"assets/js/pages/team-points-admin.js").read_text(encoding="utf-8")
+    html=(ROOT/"TeamPointsAdmin.html").read_text(encoding="utf-8")
+    assert "memberEventsPage($page,$perPage,$filters)" in api
+    assert "per_page:100" in ui
+    assert "memberChronologyPrevious" in ui and "memberChronologyNext" in ui
+    assert "memberChronologyAccountProfile" in html
+    assert "account_profiles" in GREEN
+    assert "profile_closure_reason" in GREEN

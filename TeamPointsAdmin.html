@@ -254,12 +254,14 @@
       <div class="p2k-tp-form" style="margin:.8rem 0">
         <div class="p2k-tp-field"><label for="memberChronologyMember">Member name</label><input class="p2k-tp-input" id="memberChronologyMember" type="search" placeholder="Current or former username" autocomplete="off"></div>
         <div class="p2k-tp-field"><label for="memberChronologyEventType">Event type</label><select class="p2k-tp-select" id="memberChronologyEventType"><option value="">All events</option><option value="joined">Joined</option><option value="rejoined">Rejoined</option><option value="left">Left</option><option value="name_changed">Name changed</option></select></div>
+        <div class="p2k-tp-field"><label for="memberChronologyAccountProfile">Account/profile</label><select class="p2k-tp-select" id="memberChronologyAccountProfile"><option value="">All account/profile states</option></select></div>
         <div class="p2k-tp-field"><label for="memberChronologyFrom">From (UTC)</label><input class="p2k-tp-input" id="memberChronologyFrom" type="date"></div>
         <div class="p2k-tp-field"><label for="memberChronologyTo">To (UTC)</label><input class="p2k-tp-input" id="memberChronologyTo" type="date"></div>
       </div>
       <div class="p2k-tp-actions" style="margin-bottom:.8rem"><button class="p2k-tp-button primary" id="memberChronologyApply" type="button">Apply filters</button><button class="p2k-tp-button" id="memberChronologyClear" type="button">Clear filters</button></div>
       <div class="p2k-tp-status" id="memberChronologyStatus">Open this tab to load member events.</div>
       <div class="p2k-tp-table-wrap"><table><thead><tr><th>Detected</th><th>Event</th><th>Member</th><th>Transition</th><th>Account/profile</th></tr></thead><tbody id="memberChronologyRows"><tr><td colspan="5">No chronology loaded.</td></tr></tbody></table></div>
+      <div class="p2k-tp-actions" id="memberChronologyPagination" style="margin-top:.8rem" hidden><button class="p2k-tp-button" id="memberChronologyPrevious" type="button">Previous</button><span class="p2k-tp-status" id="memberChronologyPageStatus"></span><button class="p2k-tp-button" id="memberChronologyNext" type="button">Next</button></div>
     </div>
   </section>
   <section data-panel="storage" role="tabpanel" hidden>

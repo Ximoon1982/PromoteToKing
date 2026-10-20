@@ -577,7 +577,7 @@ final class GreenRepository
     /** Chronology read model only: stored lifecycle events remain append-only/raw. */
     public function memberEvents(int $limit=200,array $filters=[]): array
     {
-        $limit=max(1,min(1000,$limit));
+        $limit=max(1,min(10000,$limit));
         $eventType=strtolower(trim((string)($filters['event_type']??'')));
         if(!in_array($eventType,['','joined','left','name_changed','rejoined'],true))$eventType='';
         $member=strtolower(trim(ltrim((string)($filters['member']??''),'@')));
@@ -610,6 +610,34 @@ final class GreenRepository
             $out[]=$event;if(count($out)>=$limit)break;
         }
         return $out;
+    }
+
+    private function memberEventAccountProfile(array $event): string
+    {
+        if((string)($event['event_type']??'')!=='left')return '';
+        $metadata=is_array($event['metadata']??null)?$event['metadata']:[];
+        $account=strtolower(trim((string)($metadata['profile_account_status']??$event['profile_status']??'pending')));
+        $reason=strtolower(trim((string)($metadata['profile_closure_reason']??'')));
+        if(($event['profile_status']??'')==='closed'&&$reason!==''&&!str_contains($account,':'))$account.=':'.$reason;
+        return $account;
+    }
+
+    public function memberEventsPage(int $page=1,int $perPage=100,array $filters=[]): array
+    {
+        $page=max(1,$page);$perPage=max(1,min(100,$perPage));
+        $accountFilter=strtolower(trim((string)($filters['account_profile']??'')));
+        $baseFilters=$filters;unset($baseFilters['account_profile']);
+        $all=$this->memberEvents(10000,$baseFilters);
+        $facets=[];$filtered=[];
+        foreach($all as $event){
+            $account=$this->memberEventAccountProfile($event);
+            if($account!=='')$facets[$account]=true;
+            if($accountFilter!==''&&$account!==$accountFilter)continue;
+            $filtered[]=$event;
+        }
+        $total=count($filtered);$pages=max(1,(int)ceil($total/$perPage));if($page>$pages)$page=$pages;
+        $offset=($page-1)*$perPage;$accountProfiles=array_keys($facets);sort($accountProfiles,SORT_NATURAL|SORT_FLAG_CASE);
+        return ['events'=>array_slice($filtered,$offset,$perPage),'pagination'=>['page'=>$page,'per_page'=>$perPage,'total'=>$total,'pages'=>$pages,'has_previous'=>$page>1,'has_next'=>$page<$pages],'account_profiles'=>$accountProfiles];
     }
 
     private function memberEventDateFilter(string $value): ?string

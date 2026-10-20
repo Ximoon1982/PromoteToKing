@@ -140,9 +140,10 @@ try {
         GreenConfig::json(['ok'=>true,'reference_only'=>true,'comparison'=>$cmp->summary()]);
     }
     if ($action === 'member-events') {
-        $limit=max(1,min(1000,(int)($_GET['limit']??250)));
-        $filters=['event_type'=>(string)($_GET['event_type']??''),'member'=>(string)($_GET['member']??''),'from'=>(string)($_GET['from']??''),'to'=>(string)($_GET['to']??'')];
-        GreenConfig::json(['ok'=>true,'events'=>$repo->memberEvents($limit,$filters),'filters'=>$filters]);
+        $page=max(1,(int)($_GET['page']??1));$perPage=max(1,min(100,(int)($_GET['per_page']??100)));
+        $filters=['event_type'=>(string)($_GET['event_type']??''),'member'=>(string)($_GET['member']??''),'from'=>(string)($_GET['from']??''),'to'=>(string)($_GET['to']??''),'account_profile'=>(string)($_GET['account_profile']??'')];
+        $result=$repo->memberEventsPage($page,$perPage,$filters);
+        GreenConfig::json(['ok'=>true]+$result+['filters'=>$filters]);
     }
     if ($action === 'member-lookup') {
         $username=trim((string)($_GET['username']??''));

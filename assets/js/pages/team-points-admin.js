@@ -15,7 +15,9 @@
     querySerial: 0,
     storage: null,
     storageLoaded: false,
-    memberEventsLoaded: false
+    memberEventsLoaded: false,
+    memberEventsPage: 1,
+    memberEventsPages: 1
   };
 
   const $ = id => document.getElementById(id);
@@ -513,6 +515,7 @@
     return {
       member: String($('memberChronologyMember')?.value || '').trim(),
       event_type: String($('memberChronologyEventType')?.value || '').trim(),
+      account_profile: String($('memberChronologyAccountProfile')?.value || '').trim(),
       from: String($('memberChronologyFrom')?.value || '').trim(),
       to: String($('memberChronologyTo')?.value || '').trim()
     };
@@ -539,11 +542,17 @@
     if(filters.from&&filters.to&&filters.from>filters.to){setMessage('memberChronologyStatus','The From date must not be after the To date.','error');return;}
     setMessage('memberChronologyStatus','Loading Green member chronology…');
     try{
-      const params={limit:1000};Object.entries(filters).forEach(([key,value])=>{if(value)params[key]=value;});
-      const d=await greenRequest('member-events',{params});const events=Array.isArray(d.events)?d.events:[];renderMemberChronology(events);state.memberEventsLoaded=true;
-      const pending=events.filter(e=>e.event_type==='left'&&e.profile_status==='pending').length;
-      const filtered=Object.values(filters).some(Boolean);
-      setMessage('memberChronologyStatus',`${number(events.length)} event${events.length===1?'':'s'} loaded${filtered?' for the current filters':''}${pending?` · ${number(pending)} departure profile check${pending===1?'':'s'} pending`:''}.`,pending?'':'success');
+      const params={page:state.memberEventsPage,per_page:100};Object.entries(filters).forEach(([key,value])=>{if(value)params[key]=value;});
+      const d=await greenRequest('member-events',{params}),events=Array.isArray(d.events)?d.events:[];renderMemberChronology(events);state.memberEventsLoaded=true;
+      const pg=d.pagination||{};state.memberEventsPage=Number(pg.page||1);state.memberEventsPages=Number(pg.pages||1);
+      const account=$('memberChronologyAccountProfile');
+      if(account){const selected=account.value,options=Array.isArray(d.account_profiles)?d.account_profiles:[];account.innerHTML='<option value="">All account/profile states</option>'+options.map(v=>`<option value="${esc(v)}">${esc(String(v).replaceAll('_',' '))}</option>`).join('');if(options.includes(selected))account.value=selected;}
+      const pager=$('memberChronologyPagination');if(pager)pager.hidden=Number(pg.total||0)<=100;
+      if($('memberChronologyPrevious'))$('memberChronologyPrevious').disabled=!pg.has_previous;
+      if($('memberChronologyNext'))$('memberChronologyNext').disabled=!pg.has_next;
+      if($('memberChronologyPageStatus'))$('memberChronologyPageStatus').textContent=`Page ${number(pg.page||1)} of ${number(pg.pages||1)} · ${number(pg.total||0)} events`;
+      const pending=events.filter(e=>e.event_type==='left'&&e.profile_status==='pending').length,filtered=Object.values(filters).some(Boolean);
+      setMessage('memberChronologyStatus',`${number(events.length)} event${events.length===1?'':'s'} loaded on this page${filtered?' for the current filters':''}${pending?` · ${number(pending)} visible departure profile check${pending===1?'':'s'} pending`:''}.`,pending?'':'success');
     }catch(error){setMessage('memberChronologyStatus',error.message||String(error),'error');}
   }
 
@@ -620,13 +629,16 @@
       window.location.href = 'server/team-points/public/members-insights-export.php';
     });
     $('memberChronologyRefresh')?.addEventListener('click', () => loadMemberChronology(true));
-    $('memberChronologyApply')?.addEventListener('click', () => { state.memberEventsLoaded=false; loadMemberChronology(true); });
+    $('memberChronologyApply')?.addEventListener('click', () => { state.memberEventsPage=1;state.memberEventsLoaded=false; loadMemberChronology(true); });
     $('memberChronologyClear')?.addEventListener('click', () => {
       ['memberChronologyMember','memberChronologyFrom','memberChronologyTo'].forEach(id => { if ($(id)) $(id).value=''; });
       if ($('memberChronologyEventType')) $('memberChronologyEventType').value='';
-      state.memberEventsLoaded=false; loadMemberChronology(true);
+      if ($('memberChronologyAccountProfile')) $('memberChronologyAccountProfile').value='';
+      state.memberEventsPage=1;state.memberEventsLoaded=false; loadMemberChronology(true);
     });
-    $('memberChronologyMember')?.addEventListener('keydown', event => { if (event.key==='Enter') { event.preventDefault(); state.memberEventsLoaded=false; loadMemberChronology(true); } });
+    $('memberChronologyMember')?.addEventListener('keydown', event => { if (event.key==='Enter') { event.preventDefault(); state.memberEventsPage=1;state.memberEventsLoaded=false; loadMemberChronology(true); } });
+    $('memberChronologyPrevious')?.addEventListener('click',()=>{if(state.memberEventsPage>1){state.memberEventsPage--;state.memberEventsLoaded=false;loadMemberChronology(true);}});
+    $('memberChronologyNext')?.addEventListener('click',()=>{if(state.memberEventsPage<state.memberEventsPages){state.memberEventsPage++;state.memberEventsLoaded=false;loadMemberChronology(true);}});
     $('tpQuery').addEventListener('click', queryDatabase);
     $('tpDownload').addEventListener('click', downloadCsv);
     $('tpClearSearch')?.addEventListener('click', () => {
