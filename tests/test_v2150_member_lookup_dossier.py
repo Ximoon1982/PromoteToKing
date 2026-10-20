@@ -27,3 +27,12 @@ def test_lookup_explicitly_displays_known_names_and_lifecycle_counts():
 def test_incremental_contains_member_lookup_backend_and_ui():
     assert "assets/js/admin/admin-shell.js" in BUILDER
     assert "server/team-points-green/src/GreenRepository.php" in BUILDER
+
+
+def test_lookup_wdl_uses_normalized_point_events_not_native_result_labels():
+    block = GREEN[GREEN.index("public function memberLookup"):GREEN.index("public function nextProfileDue")]
+    assert "SUM(points=1) wins" in block
+    assert "SUM(points=0.5) draws" in block
+    assert "SUM(points=0) losses" in block
+    assert "LOWER(result) IN ('draw'" not in block
+    assert "LOWER(result) IN ('loss'" not in block
