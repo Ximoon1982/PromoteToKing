@@ -17,3 +17,7 @@ def test_latest_promoted_v2150_build_is_accepted():
 
 def test_current_promoted_v2150_build_is_accepted():
     assert '"version":"2.15.0","source_head":"05229163a970e16e443cb88c1df3eaeaf677b268"' in BUILDER
+
+
+def test_green_public_v2150_build_is_accepted():
+    assert '"version":"2.15.0","source_head":"1720731cea4f7b26b27ab5e7dd88f7272e658a20"' in BUILDER
