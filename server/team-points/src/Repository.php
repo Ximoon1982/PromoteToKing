@@ -2206,9 +2206,59 @@ final class Repository
      * No schema change is required: all rankings are derived from the existing
      * member and point-event tables.
      */
+
+    private function greenHallMemberStats(array $keys): array
+    {
+        $keys=array_values(array_unique(array_filter(array_map(static fn($v)=>strtolower(trim((string)$v)),$keys))));
+        if(!$keys)return [];
+        $out=[];
+        foreach(array_chunk($keys,200) as $chunk){
+            $ph=implode(',',array_fill(0,count($chunk),'?'));
+            $sql="SELECT COALESCE(i.canonical_username_key,e.username_key) username_key,MAX(COALESCE(i.canonical_username,e.username)) username,ROUND(COALESCE(SUM(e.points),0),1) points,COUNT(DISTINCT e.match_id) matches,COUNT(*) games,COALESCE(SUM(e.points=1.0),0) wins,COALESCE(SUM(e.points=0.5),0) draws,COALESCE(SUM(e.points=0.0),0) losses FROM p2k_g_point_events e JOIN p2k_g_matches m ON m.match_id=e.match_id LEFT JOIN p2k_g_identity_map i ON i.username_key=e.username_key WHERE COALESCE(i.canonical_username_key,e.username_key) IN ({$ph}) AND m.club_verified=1 AND m.time_class='daily' AND m.is_void=0 AND m.status IN ('registered','in_progress','finished') GROUP BY COALESCE(i.canonical_username_key,e.username_key)";
+            $q=$this->pdo->prepare($sql);$q->execute($chunk);foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $row)$out[(string)$row['username_key']]=$row;
+        }
+        return $out;
+    }
+
+    private function greenNativeHallOfFame(string $clubSlug,string $rankKey='',string $memberSearch='',int $page=1,int $pageSize=25): array
+    {
+        $a=$this->analytics();$page=max(1,$page);$pageSize=max(10,min(50,$pageSize));$definitions=$this->hallRankDefinitions();
+        $tot=$a->query("SELECT COUNT(*) members,ROUND(COALESCE(SUM(points),0),1) points FROM p2k_g_player_totals");$totals=$tot->fetch(PDO::FETCH_ASSOC)?:[];
+        $leader=$a->query("SELECT username,points FROM p2k_g_player_totals ORDER BY points DESC,username_key ASC LIMIT 1")->fetch(PDO::FETCH_ASSOC)?:null;
+        $summaries=[];
+        foreach($definitions as $definition){$min=(float)$definition['minimum'];$max=$definition['maximum'];$where='points>=?';$params=[$min];if($max!==null){$where.=' AND points<?';$params[]=(float)$max;}
+            $q=$a->prepare("SELECT COUNT(*) members FROM p2k_g_player_totals WHERE {$where}");$q->execute($params);$count=(int)$q->fetchColumn();
+            $q=$a->prepare("SELECT username,points FROM p2k_g_player_totals WHERE {$where} ORDER BY points DESC,username_key ASC LIMIT 1");$q->execute($params);$top=$q->fetch(PDO::FETCH_ASSOC)?:null;
+            $summaries[]=array_merge($definition,['members'=>$count,'top_member'=>$top['username']??null,'top_points'=>$top===null?null:(float)$top['points']]);
+        }
+        $payload=['total_members'=>(int)($totals['members']??0),'total_points'=>(float)($totals['points']??0),'leader'=>$leader?['username'=>(string)$leader['username'],'points'=>(float)$leader['points']]:null,'ranks'=>$summaries,'data_source'=>'green_native_analytics'];
+        $selected=null;$found=null;$foundDefinition=null;$categoryPosition=null;
+        if($memberSearch!==''){
+            $needle=\p2k_tp_username_key($memberSearch);
+            $q=$a->prepare("SELECT username_key,username,points,finished_games games FROM p2k_g_player_totals WHERE username_key=? OR username LIKE ? ORDER BY (username_key=?) DESC,points DESC,username_key ASC LIMIT 1");$q->execute([$needle,'%'.$memberSearch.'%',$needle]);$found=$q->fetch(PDO::FETCH_ASSOC)?:null;
+            if($found){
+                $live=$this->greenHallMemberStats([(string)$found['username_key']]);$detail=$live[(string)$found['username_key']]??[];
+                $foundDefinition=$this->hallRankForPoints((float)$found['points']);$position=$a->prepare('SELECT 1+COUNT(*) FROM p2k_g_player_totals WHERE points>? OR (points=? AND username_key<?)');$position->execute([(float)$found['points'],(float)$found['points'],(string)$found['username_key']]);$teamPosition=(int)$position->fetchColumn();
+                $min=(float)($foundDefinition['minimum']??0);$max=$foundDefinition['maximum']??null;$sql='SELECT 1+COUNT(*) FROM p2k_g_player_totals WHERE points>=?';$params=[$min];if($max!==null){$sql.=' AND points<?';$params[]=(float)$max;}$sql.=' AND (points>? OR (points=? AND username_key<?))';array_push($params,(float)$found['points'],(float)$found['points'],(string)$found['username_key']);$position=$a->prepare($sql);$position->execute($params);$categoryPosition=(int)$position->fetchColumn();
+                $payload['search']=['query'=>$memberSearch,'found'=>true,'member'=>['username'=>(string)($detail['username']??$found['username']),'points'=>(float)($detail['points']??$found['points']),'matches'=>(int)($detail['matches']??0),'games'=>(int)($detail['games']??$found['games']??0),'wins'=>(int)($detail['wins']??0),'draws'=>(int)($detail['draws']??0),'losses'=>(int)($detail['losses']??0),'team_position'=>$teamPosition,'category_position'=>$categoryPosition,'rank'=>$foundDefinition]];
+                if(($foundDefinition['key']??'')!=='unranked'){$selected=$foundDefinition;$page=max(1,(int)ceil($categoryPosition/$pageSize));}
+            } else $payload['search']=['query'=>$memberSearch,'found'=>false,'member'=>null];
+        }
+        if($selected===null&&$rankKey!==''){foreach($definitions as $d)if($d['key']===$rankKey){$selected=$d;break;}if($selected===null)throw new ApiException('Unknown Hall of Fame rank.',400,'UNKNOWN_HALL_RANK');}
+        if($selected!==null){
+            $min=(float)$selected['minimum'];$max=$selected['maximum'];$where='points>=?';$params=[$min];if($max!==null){$where.=' AND points<?';$params[]=(float)$max;}$q=$a->prepare("SELECT COUNT(*) FROM p2k_g_player_totals WHERE {$where}");$q->execute($params);$total=(int)$q->fetchColumn();$pages=max(1,(int)ceil($total/$pageSize));$page=min($page,$pages);$offset=($page-1)*$pageSize;
+            $q=$a->prepare("SELECT username_key,username,points,finished_games games,1+(SELECT COUNT(*) FROM p2k_g_player_totals x WHERE x.points>p.points OR (x.points=p.points AND x.username_key<p.username_key)) team_position FROM p2k_g_player_totals p WHERE {$where} ORDER BY points DESC,username_key ASC LIMIT {$pageSize} OFFSET {$offset}");$q->execute($params);$raw=$q->fetchAll(PDO::FETCH_ASSOC)?:[];$keys=array_map(static fn(array $r):string=>(string)$r['username_key'],$raw);$details=$this->greenHallMemberStats($keys);$rows=[];
+            foreach($raw as $i=>$r){$d=$details[(string)$r['username_key']]??[];$rows[]=['username'=>(string)($d['username']??$r['username']),'points'=>(float)($d['points']??$r['points']),'matches'=>(int)($d['matches']??0),'games'=>(int)($d['games']??$r['games']??0),'wins'=>(int)($d['wins']??0),'draws'=>(int)($d['draws']??0),'losses'=>(int)($d['losses']??0),'team_position'=>(int)$r['team_position'],'category_position'=>$offset+$i+1,'rank'=>$selected];}
+            $payload['selected_rank']=array_merge($selected,['members'=>$total]);$payload['members']=$rows;$payload['pagination']=['page'=>$page,'page_size'=>$pageSize,'total_rows'=>$total,'total_pages'=>$pages];
+        }
+        return $payload;
+    }
+
     public function publicHallOfFame(string $clubSlug, string $rankKey = '', string $memberSearch = '', int $page = 1, int $pageSize = 25): array
     {
-        $clubSlug=$this->resolveDataClubSlug($clubSlug);$a=$this->analytics();$page=max(1,$page);$pageSize=max(10,min(50,$pageSize));$definitions=$this->hallRankDefinitions();
+        $clubSlug=$this->resolveDataClubSlug($clubSlug);
+        if(PublicReadDatabase::source()==='green')return $this->greenNativeHallOfFame($clubSlug,$rankKey,$memberSearch,$page,$pageSize);
+$a=$this->analytics();$page=max(1,$page);$pageSize=max(10,min(50,$pageSize));$definitions=$this->hallRankDefinitions();
         $tot=$a->prepare('SELECT COUNT(*) members,ROUND(COALESCE(SUM(points),0),1) points FROM p2k_an_player_totals WHERE club_slug=? AND current_member=1');$tot->execute([$clubSlug]);$totals=$tot->fetch(PDO::FETCH_ASSOC)?:[];
         $leaderQ=$a->prepare('SELECT username,points FROM p2k_an_player_totals WHERE club_slug=? AND current_member=1 ORDER BY points DESC,username_key ASC LIMIT 1');$leaderQ->execute([$clubSlug]);$leader=$leaderQ->fetch(PDO::FETCH_ASSOC)?:null;
         $summaries=[];
