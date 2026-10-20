@@ -33,3 +33,7 @@ def test_all_changed_v2150_runtime_files_are_packaged():
     ]
     for path in required:
         assert f"  {path}\n" in BUILDER
+
+
+def test_immediately_previous_promoted_v2150_candidate_is_accepted():
+    assert '"version":"2.15.0","source_head":"3776ecdd6b91b67816f5fa3853e763ac5b5d7f98"' in BUILDER

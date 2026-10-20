@@ -161,7 +161,8 @@ payload={
     {"version":"2.15.0","source_head":"168bc09316bcc20d81de16830c5a382234082911"},
     {"version":"2.15.0","source_head":"62d11ee558b4c02931fe641cdfad93c99d87de60"},
     {"version":"2.15.0","source_head":"4fe8c39d852ddf7f3cc590401d529cddbf7e4640"},
-    {"version":"2.15.0","source_head":"1720731cea4f7b26b27ab5e7dd88f7272e658a20"}
+    {"version":"2.15.0","source_head":"1720731cea4f7b26b27ab5e7dd88f7272e658a20"},
+    {"version":"2.15.0","source_head":"3776ecdd6b91b67816f5fa3853e763ac5b5d7f98"}
   ]
 }
 Path(out).write_text(json.dumps(payload,indent=2)+"\n")
@@ -185,6 +186,7 @@ Accepted public bases:
 - v2.15.0 at 62d11ee558b4c02931fe641cdfad93c99d87de60
 - v2.15.0 at 4fe8c39d852ddf7f3cc590401d529cddbf7e4640
 - v2.15.0 at 1720731cea4f7b26b27ab5e7dd88f7272e658a20
+- v2.15.0 at 3776ecdd6b91b67816f5fa3853e763ac5b5d7f98
 
 Contents:
 - Green current-match reconciliation verifies club-index disappearances before retiring cancelled matches.\n- Trophy modal mobile gutter correction.
