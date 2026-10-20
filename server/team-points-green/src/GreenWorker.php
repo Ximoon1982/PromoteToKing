@@ -241,7 +241,10 @@ final class GreenWorker
         }
         if($stage==='quick_discovered'){
             while($this->timeLeft()&&($id=$this->repo->nextUnknownMatch())!==null)$this->fetchMatch($id);
-            if($this->repo->unknownMatchCount()>0)return;$this->repo->stage('quick_matches');$stage='quick_matches';
+            // Only block the finite Quick cycle for discovered work that is actionable
+            // now.  A fresh index/detail disagreement, retry cooldown or another active
+            // claimant must not strand the cycle in quick_discovered indefinitely.
+            if($this->repo->hasUnknownMatch())return;$this->repo->stage('quick_matches');$stage='quick_matches';
         }
         if($stage==='quick_matches'){
             while($this->timeLeft()&&($id=$this->repo->nextActiveDueForCycle($cycleStart))!==null)$this->fetchMatch($id);

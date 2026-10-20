@@ -924,7 +924,29 @@ final class GreenRepository
 
     public function hasUnknownMatch(): bool
     {
-        return (int)$this->core->query("SELECT COUNT(*) FROM p2k_g_matches WHERE (retry_after IS NULL OR retry_after<=UTC_TIMESTAMP()) AND (((status='unknown') AND (payload_hash IS NULL OR last_verified_at IS NULL OR last_verified_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 10 MINUTE))) OR (((index_bucket='in_progress' AND status='registered') OR (index_bucket='finished' AND status IN ('registered','in_progress'))) AND (last_verified_at IS NULL OR last_verified_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 10 MINUTE))))")->fetchColumn()>0;
+        // Keep this predicate aligned with claimMatchRows(false): the finite Quick
+        // phase must wait only when there is a match-detail item it could actually
+        // claim now. Fresh disagreements remain visible to maintenance/GFFL but do
+        // not livelock quick_discovered.
+        $sql="SELECT COUNT(*) FROM p2k_g_matches m
+            LEFT JOIN p2k_g_work_claims c
+              ON c.object_type='match_detail'
+             AND CAST(c.object_key AS UNSIGNED)=m.match_id
+             AND c.claim_until>UTC_TIMESTAMP()
+            WHERE c.object_key IS NULL
+              AND (m.retry_after IS NULL OR m.retry_after<=UTC_TIMESTAMP())
+              AND (
+                (m.status='unknown' AND (m.payload_hash IS NULL OR m.last_verified_at IS NULL OR m.last_verified_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 10 MINUTE)))
+                OR (
+                  (
+                    (m.index_bucket='in_progress' AND m.status<>'in_progress')
+                    OR (m.index_bucket='finished' AND m.status IN ('registered','in_progress','unknown'))
+                    OR (m.index_time_class IS NOT NULL AND m.index_time_class<>'' AND COALESCE(m.time_class,'')<>m.index_time_class)
+                  )
+                  AND (m.last_verified_at IS NULL OR m.last_verified_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 2 MINUTE))
+                )
+              )";
+        return (int)$this->core->query($sql)->fetchColumn()>0;
     }
 
     public function activeMatchIds(): array { return array_map('intval',$this->core->query("SELECT match_id FROM p2k_g_matches WHERE status='in_progress' ORDER BY match_id DESC")->fetchAll(PDO::FETCH_COLUMN)?:[]); }
