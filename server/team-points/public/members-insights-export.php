@@ -84,16 +84,32 @@ try {
         $keys = array_values(array_filter(array_map(static fn(array $row): string => (string)($row['username_key'] ?? ''), $rows)));
         $meta = [];
         if ($keys !== []) {
+            $greenMeta = PublicReadDatabase::source() === 'green';
             foreach (array_chunk($keys, 100) as $chunk) {
                 $marks = implode(',', array_fill(0, count($chunk), '?'));
-                $q = $repository->core()->prepare(
-                    'SELECT username_key,player_id,joined_at,daily_rating,chess960_rating,rating_updated_at,
-                            player_matches_checked_at,player_matches_observed_at,stats_checked_at,stats_observed_at,
-                            profile_observed_at,country_code,profile_status'.$titleColumn.',profile_url,avatar_url,profile_updated_at,
-                            first_seen_at,last_seen_at
-                     FROM p2k_tp_members WHERE club_slug=? AND username_key IN (' . $marks . ')'
-                );
-                $q->execute(array_merge([$club], $chunk));
+                if ($greenMeta) {
+                    $q = $repository->core()->prepare(
+                        "SELECT username_key,chess_player_id AS player_id,FROM_UNIXTIME(joined_epoch) AS joined_at,daily_rating,chess960_rating,
+                                stats_checked_at AS rating_updated_at,profile_checked_at AS player_matches_checked_at,
+                                NULL AS player_matches_observed_at,stats_checked_at,NULL AS stats_observed_at,
+                                profile_checked_at AS profile_observed_at,
+                                CASE WHEN country_url IS NULL OR country_url='' THEN NULL ELSE UPPER(SUBSTRING_INDEX(country_url,'/',-1)) END country_code,
+                                account_status AS profile_status,title,
+                                CONCAT('https://www.chess.com/member/',username_key) profile_url,avatar_url,
+                                profile_checked_at AS profile_updated_at,created_at AS first_seen_at,updated_at AS last_seen_at
+                         FROM p2k_g_players WHERE username_key IN (" . $marks . ")"
+                    );
+                    $q->execute($chunk);
+                } else {
+                    $q = $repository->core()->prepare(
+                        'SELECT username_key,player_id,joined_at,daily_rating,chess960_rating,rating_updated_at,
+                                player_matches_checked_at,player_matches_observed_at,stats_checked_at,stats_observed_at,
+                                profile_observed_at,country_code,profile_status'.$titleColumn.',profile_url,avatar_url,profile_updated_at,
+                                first_seen_at,last_seen_at
+                         FROM p2k_tp_members WHERE club_slug=? AND username_key IN (' . $marks . ')'
+                    );
+                    $q->execute(array_merge([$club], $chunk));
+                }
                 while (($m = $q->fetch(PDO::FETCH_ASSOC)) !== false) $meta[(string)$m['username_key']] = $m;
             }
         }

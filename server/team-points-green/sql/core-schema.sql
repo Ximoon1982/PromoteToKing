@@ -200,6 +200,7 @@ CREATE TABLE IF NOT EXISTS p2k_g_players (
   joined_epoch BIGINT NULL,
   left_at DATETIME NULL,
   account_status VARCHAR(40) NULL,
+  title VARCHAR(8) NULL,
   country_url VARCHAR(255) NULL,
   avatar_url VARCHAR(512) NULL,
   daily_rating INT NULL,

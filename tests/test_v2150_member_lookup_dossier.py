@@ -48,3 +48,18 @@ def test_member_chronology_is_server_paginated_and_account_filterable():
     assert "memberChronologyAccountProfile" in html
     assert "account_profiles" in GREEN
     assert "profile_closure_reason" in GREEN
+
+
+def test_green_title_profile_pipeline_and_csv_export():
+    green=(ROOT/"server/team-points-green/src/GreenRepository.php").read_text(encoding="utf-8")
+    schema=(ROOT/"server/team-points-green/sql/core-schema.sql").read_text(encoding="utf-8")
+    compat=(ROOT/"server/team-points-green/src/GreenCompatibility.php").read_text(encoding="utf-8")
+    export=(ROOT/"server/team-points/public/members-insights-export.php").read_text(encoding="utf-8")
+    assert "title VARCHAR(8) NULL" in schema
+    assert "$p['title']" in green
+    assert "title=NULLIF(?,''" in green
+    assert "profile_checked_at IS NULL OR title IS NULL" in green
+    assert "p.account_status,p.title" in compat
+    assert "PublicReadDatabase::source() === 'green'" in export
+    assert "FROM p2k_g_players WHERE username_key IN" in export
+    assert "account_status AS profile_status,title" in export
