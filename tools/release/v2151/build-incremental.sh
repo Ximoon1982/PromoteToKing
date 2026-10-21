@@ -11,7 +11,7 @@ HEAD="$(git -C "$ROOT" rev-parse HEAD)"
 BUILD_ID="v2151-challenge-activity-filters"
 BASE_HEAD="0bafb17000c118d0a40feaa5e9c5bba65bbf9b84"
 
-[[ "$(cat "$ROOT/VERSION")" == "2.15.0" ]] || { echo 'VERSION must be 2.15.0' >&2; exit 1; }
+[[ "$(cat "$ROOT/VERSION")" == "2.15.1" ]] || { echo 'VERSION must be 2.15.1' >&2; exit 1; }
 git -C "$ROOT" merge-base --is-ancestor "$BASE_HEAD" "$HEAD" || { echo "HEAD must descend from qualified v2.15.0 $BASE_HEAD" >&2; exit 1; }
 
 OVERLAY_FILES=(
