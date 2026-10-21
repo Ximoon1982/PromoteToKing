@@ -262,6 +262,7 @@
       clear.disabled = running;
       file.disabled = running;
       input.disabled = running;
+      if (options.setControlsDisabled) options.setControlsDisabled(running);
       updateServerListControls();
     }
 
@@ -277,7 +278,7 @@
       copy.disabled = state.results.length === 0;
       download.disabled = state.results.length === 0;
       matches.textContent = String(state.results.length);
-      invalid.textContent = String(state.invalidInputs.length + state.detailRows.filter(line => line.startsWith("INVALID DATA:")).length);
+      invalid.textContent = String(state.invalidInputs.length + state.detailRows.filter(line => line.startsWith("INVALID DATA:") || line.startsWith("ENDPOINT ERROR:")).length);
     }
 
     function resetResults() {
@@ -343,8 +344,19 @@
       updateButtons(true);
 
       const context = options.makeContext ? options.makeContext() : {};
-      if (cutoffBox && context.cutoff) {
-        cutoffBox.textContent = `Six-month cutoff: ${formatDate(context.cutoff)} (UTC)`;
+      if (options.validateContext) {
+        const contextError = options.validateContext(context);
+        if (contextError) {
+          state.controller = null;
+          updateButtons(false);
+          setStatus(contextError, "error");
+          current.textContent = "Ready.";
+          return;
+        }
+      }
+      if (cutoffBox) {
+        if (options.contextSummary) cutoffBox.textContent = options.contextSummary(context);
+        else if (context.cutoff) cutoffBox.textContent = `Six-month cutoff: ${formatDate(context.cutoff)} (UTC)`;
       }
 
       try {
@@ -525,51 +537,261 @@
     csvRow: item => [item.url, item.reason || "Request error"]
   });
 
+  function activityElement(id) { return document.getElementById(id); }
+
+  function activityNumber(id, fallback, minimum = 0, integer = true) {
+    const value = Number(activityElement(id)?.value);
+    const safe = Number.isFinite(value) ? Math.max(minimum, value) : fallback;
+    return integer ? Math.floor(safe) : safe;
+  }
+
+  function activityCriterion(enabledId, operatorId, valueId, fallback = 0, integer = true) {
+    return {
+      enabled: Boolean(activityElement(enabledId)?.checked),
+      operator: activityElement(operatorId)?.value || "lte",
+      value: activityNumber(valueId, fallback, 0, integer)
+    };
+  }
+
+  function activityCutoffSeconds(amount, unit, now) {
+    if (unit === "months") {
+      const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      cutoff.setUTCMonth(cutoff.getUTCMonth() - amount);
+      return cutoff.getTime() / 1000;
+    }
+    return (now.getTime() / 1000) - amount * 86400;
+  }
+
+  function activityCompare(actual, operator, expected) {
+    if (!Number.isFinite(actual)) return false;
+    if (operator === "lt") return actual < expected;
+    if (operator === "lte") return actual <= expected;
+    if (operator === "eq") return actual === expected;
+    if (operator === "gte") return actual >= expected;
+    return actual > expected;
+  }
+
+  function activityOperatorSymbol(operator) {
+    return ({ lt:"<", lte:"≤", eq:"=", gte:"≥", gt:">" })[operator] || operator;
+  }
+
+  function activitySettings() {
+    const now = new Date();
+    const registration = activityCriterion("p2kActivityRegistrationEnabled","p2kActivityRegistrationOperator","p2kActivityRegistrationValue",0,true);
+    const progress = activityCriterion("p2kActivityProgressEnabled","p2kActivityProgressOperator","p2kActivityProgressValue",0,true);
+    const started = activityCriterion("p2kActivityStartedEnabled","p2kActivityStartedOperator","p2kActivityStartedValue",0,true);
+    started.window = activityNumber("p2kActivityStartedWindow",6,1,true);
+    started.unit = activityElement("p2kActivityStartedUnit")?.value === "days" ? "days" : "months";
+    started.cutoffSeconds = activityCutoffSeconds(started.window, started.unit, now);
+
+    const average = {
+      enabled: Boolean(activityElement("p2kActivityAverageEnabled")?.checked),
+      countOperator: activityElement("p2kActivityAverageCountOperator")?.value || "gte",
+      countValue: activityNumber("p2kActivityAverageCountValue",1,0,true),
+      boardsOperator: activityElement("p2kActivityAverageBoardsOperator")?.value || "gte",
+      boardsValue: activityNumber("p2kActivityAverageBoardsValue",10,0,false),
+      window: activityNumber("p2kActivityAverageWindow",90,1,true),
+      unit: activityElement("p2kActivityAverageUnit")?.value === "months" ? "months" : "days"
+    };
+    average.cutoffSeconds = activityCutoffSeconds(average.window, average.unit, now);
+
+    const boardSize = {
+      enabled: Boolean(activityElement("p2kActivityBoardSizeEnabled")?.checked),
+      countOperator: activityElement("p2kActivityBoardSizeCountOperator")?.value || "gte",
+      countValue: activityNumber("p2kActivityBoardSizeCountValue",1,0,true),
+      boardsOperator: activityElement("p2kActivityBoardSizeBoardsOperator")?.value || "gte",
+      boardsValue: activityNumber("p2kActivityBoardSizeBoardsValue",10,0,false),
+      window: activityNumber("p2kActivityBoardSizeWindow",90,1,true),
+      unit: activityElement("p2kActivityBoardSizeUnit")?.value === "months" ? "months" : "days"
+    };
+    boardSize.cutoffSeconds = activityCutoffSeconds(boardSize.window, boardSize.unit, now);
+
+    const enabledCount = [registration,progress,started,average,boardSize].filter(item => item.enabled).length;
+    return {
+      now, combine: activityElement("p2kActivityCombine")?.value === "any" ? "any" : "all",
+      registration, progress, started, average, boardSize, enabledCount
+    };
+  }
+
+  function activityContextSummary(context) {
+    const s = context.settings;
+    const parts = [];
+    if (s.started.enabled) parts.push(`started: last ${s.started.window} ${s.started.unit}`);
+    if (s.average.enabled) parts.push(`average boards: last ${s.average.window} ${s.average.unit}`);
+    if (s.boardSize.enabled) parts.push(`board-size matches: last ${s.boardSize.window} ${s.boardSize.unit}`);
+    return parts.length ? `Frozen run windows — ${parts.join(" · ")}` : "Current-state criteria only; no historical window enabled.";
+  }
+
+  function activityControlsDisabled(disabled) {
+    document.querySelectorAll("#p2kActivityFilters input, #p2kActivityFilters select").forEach(control => {
+      control.disabled = disabled;
+    });
+  }
+
+  function activityDescribeError(slug, endpoint, error) {
+    const described = window.P2K_API_CLIENT?.describeError?.(error) || {
+      category: "unknown", status: Number(error?.status) || 0, retryable: true, message: error?.message || String(error)
+    };
+    const status = Number(described.status) || 0;
+    const label = status ? `HTTP ${status}` : String(described.category || "request error");
+    const message = described.message || error?.message || String(error);
+    const confirmed = [401,403,404,410].includes(status) || ["not-found","forbidden"].includes(described.category);
+    return {
+      temporary: !confirmed && described.retryable !== false,
+      detail: confirmed
+        ? `ENDPOINT ERROR: ${clubURL(slug)} — ${endpoint} endpoint ${label}: ${message}`
+        : `TEMPORARY FAILURE: ${clubURL(slug)} — ${endpoint} endpoint ${label}: ${message}`,
+      reason: `${endpoint} endpoint ${label}`,
+      apiStatus: endpoint === "club" ? label : "200",
+      matchesStatus: endpoint === "matches" ? label : ""
+    };
+  }
+
+  async function activityBoardRows(index, cutoffSeconds, signal) {
+    const started = [...matchesArray(index, "in_progress"), ...matchesArray(index, "finished")];
+    const recent = started.filter(match => {
+      const timestamp = matchStartTimestamp(match);
+      return timestamp !== null && timestamp >= cutoffSeconds;
+    });
+    if (!recent.length) return [];
+    const batch = await window.P2K_API_CLIENT.processPriority(
+      recent,
+      async summary => {
+        let boards = matchBoards(summary);
+        if (boards === null) {
+          const detailURL = String(summary?.["@id"] || "").trim();
+          if (!detailURL) throw new Error("A recent match has no @id, so its board count cannot be loaded");
+          boards = matchBoards(await fetchJSON(detailURL, signal));
+        }
+        if (boards === null) throw new Error("A recent match has no usable board count");
+        return { started: matchStartTimestamp(summary), boards };
+      },
+      { signal, getKey: summary => String(summary?.["@id"] || summary?.url || "") }
+    );
+    if (batch.cancelled || signal.aborted) throw new StopError();
+    if (batch.failures.length) throw batch.failures[0].error;
+    return batch.succeeded.map(entry => entry.value);
+  }
+
   buildRunner("p2kActivity", async (slug, signal, context) => {
-    let data;
+    const settings = context.settings;
+
+    let profile;
     try {
-      data = await fetchJSON(apiURL(slug, "/matches"), signal);
+      profile = await fetchJSON(apiURL(slug), signal, { networkOnly: true });
     } catch (error) {
       if (error instanceof StopError) throw error;
+      const issue = activityDescribeError(slug, "club", error);
+      return { match:false, ...issue };
+    }
+    const validProfile = typeof profile?.name === "string" || typeof profile?.url === "string" || typeof profile?.["@id"] === "string";
+    if (!validProfile) {
+      return { match:false, reason:"Invalid club response", apiStatus:"invalid", detail:`INVALID DATA: ${clubURL(slug)} — club endpoint returned an invalid response` };
+    }
+
+    let data;
+    try {
+      data = await fetchJSON(apiURL(slug, "/matches"), signal, { networkOnly: true });
+    } catch (error) {
+      if (error instanceof StopError) throw error;
+      const issue = activityDescribeError(slug, "matches", error);
+      issue.apiStatus = "200";
+      return { match:false, ...issue };
+    }
+
+    const registered = matchesArray(data, "registered");
+    const inProgress = matchesArray(data, "in_progress");
+    const finished = matchesArray(data, "finished");
+    const startedRecords = [...inProgress, ...finished];
+    const needsDates = settings.started.enabled || settings.average.enabled || settings.boardSize.enabled;
+    const undated = needsDates ? startedRecords.filter(match => matchStartTimestamp(match) === null) : [];
+    if (undated.length) {
       return {
-        match: false,
-        reason: "Request error",
-        detail: `INVALID DATA: ${clubURL(slug)} — ${error.message || error}`
+        match:false, apiStatus:"200", matchesStatus:"200",
+        reason:"Missing match start_time",
+        detail:`INVALID DATA: ${clubURL(slug)} — ${undated.length} started match${undated.length === 1 ? " has" : "es have"} no valid start_time required by the enabled historical criteria`
       };
     }
 
-    const registered = Array.isArray(data?.registered) ? data.registered : [];
-    const inProgress = [
-      ...(Array.isArray(data?.in_progress) ? data.in_progress : []),
-      ...(Array.isArray(data?.on_going) ? data.on_going : [])
-    ];
-    const finished = Array.isArray(data?.finished) ? data.finished : [];
-    const timestamps = finished.map(item => Number(item?.start_time));
-    const missingDates = finished.length > 0 && timestamps.some(value => !Number.isFinite(value) || value <= 0);
-
-    if (missingDates) {
-      return {
-        match: false,
-        reason: "Missing finished-match start_time",
-        detail: `INVALID DATA: ${clubURL(slug)} — one or more finished matches have no valid start_time`
-      };
+    const outcomes = [];
+    if (settings.registration.enabled) {
+      const pass = activityCompare(registered.length, settings.registration.operator, settings.registration.value);
+      outcomes.push({ key:"registration", pass, observed:registered.length,
+        text:`registration ${registered.length} ${activityOperatorSymbol(settings.registration.operator)} ${settings.registration.value}` });
+    }
+    if (settings.progress.enabled) {
+      const pass = activityCompare(inProgress.length, settings.progress.operator, settings.progress.value);
+      outcomes.push({ key:"in_progress", pass, observed:inProgress.length,
+        text:`in progress ${inProgress.length} ${activityOperatorSymbol(settings.progress.operator)} ${settings.progress.value}` });
     }
 
-    const cutoffSeconds = context.cutoff.getTime() / 1000;
-    const recentFinished = timestamps.some(value => value >= cutoffSeconds);
-    const inactive = registered.length === 0 && inProgress.length === 0 && !recentFinished;
+    let startedCount = null;
+    if (settings.started.enabled) {
+      startedCount = startedRecords.filter(match => matchStartTimestamp(match) >= settings.started.cutoffSeconds).length;
+      const pass = activityCompare(startedCount, settings.started.operator, settings.started.value);
+      outcomes.push({ key:"started", pass, observed:startedCount,
+        text:`started ${startedCount} ${activityOperatorSymbol(settings.started.operator)} ${settings.started.value} in ${settings.started.window} ${settings.started.unit}` });
+    }
+
+    let boardRows = [];
+    if (settings.average.enabled || settings.boardSize.enabled) {
+      const cutoffs = [];
+      if (settings.average.enabled) cutoffs.push(settings.average.cutoffSeconds);
+      if (settings.boardSize.enabled) cutoffs.push(settings.boardSize.cutoffSeconds);
+      try {
+        boardRows = await activityBoardRows(data, Math.min(...cutoffs), signal);
+      } catch (error) {
+        if (error instanceof StopError) throw error;
+        return {
+          match:false, apiStatus:"200", matchesStatus:"200",
+          reason:"Unable to load board history",
+          detail:`INVALID DATA: ${clubURL(slug)} — unable to evaluate board criteria: ${error?.message || error}`
+        };
+      }
+    }
+
+    let averageMatchCount = null, averageBoards = null;
+    if (settings.average.enabled) {
+      const rows = boardRows.filter(row => row.started >= settings.average.cutoffSeconds);
+      averageMatchCount = rows.length;
+      averageBoards = rows.length ? rows.reduce((sum,row) => sum + row.boards,0) / rows.length : null;
+      const countPass = activityCompare(averageMatchCount, settings.average.countOperator, settings.average.countValue);
+      const averagePass = averageBoards !== null && activityCompare(averageBoards, settings.average.boardsOperator, settings.average.boardsValue);
+      outcomes.push({ key:"average_boards", pass:countPass && averagePass, observed:averageBoards,
+        text:`${averageMatchCount} matches ${activityOperatorSymbol(settings.average.countOperator)} ${settings.average.countValue} and average ${averageBoards === null ? "n/a" : averageBoards.toFixed(1)} boards ${activityOperatorSymbol(settings.average.boardsOperator)} ${settings.average.boardsValue} in ${settings.average.window} ${settings.average.unit}` });
+    }
+
+    let boardSizeMatchCount = null;
+    if (settings.boardSize.enabled) {
+      const rows = boardRows.filter(row => row.started >= settings.boardSize.cutoffSeconds);
+      boardSizeMatchCount = rows.filter(row => activityCompare(row.boards, settings.boardSize.boardsOperator, settings.boardSize.boardsValue)).length;
+      const pass = activityCompare(boardSizeMatchCount, settings.boardSize.countOperator, settings.boardSize.countValue);
+      outcomes.push({ key:"board_size", pass, observed:boardSizeMatchCount,
+        text:`${boardSizeMatchCount} matches with boards ${activityOperatorSymbol(settings.boardSize.boardsOperator)} ${settings.boardSize.boardsValue}; count ${activityOperatorSymbol(settings.boardSize.countOperator)} ${settings.boardSize.countValue} in ${settings.boardSize.window} ${settings.boardSize.unit}` });
+    }
+
+    const matched = settings.combine === "any" ? outcomes.some(item => item.pass) : outcomes.every(item => item.pass);
+    const passed = outcomes.filter(item => item.pass).map(item => item.key).join("|");
     return {
-      match: inactive,
-      reason: inactive ? "No registration, ongoing, or recent finished match" : "Active",
-      registered: registered.length,
-      inProgress: inProgress.length,
-      recentFinished
+      match: matched,
+      reason: matched ? `Matched ${settings.combine === "any" ? "at least one" : "all"} enabled criteria` : "Activity filters not matched",
+      apiStatus:"200", matchesStatus:"200",
+      registered:registered.length, inProgress:inProgress.length, startedCount,
+      averageMatchCount, averageBoards, boardSizeMatchCount, matchedCriteria:passed,
+      detail: matched ? "" : undefined
     };
   }, {
-    makeContext: () => ({ cutoff: sixMonthCutoff() }),
-    filename: "inactive-clubs.csv",
-    csvHeaders: ["club_url", "registered_matches", "in_progress_matches", "recent_finished_match"],
-    csvRow: item => [item.url, item.registered ?? 0, item.inProgress ?? 0, item.recentFinished ? "yes" : "no"]
+    makeContext: () => ({ settings: activitySettings() }),
+    validateContext: context => context.settings.enabledCount > 0 ? "" : "Enable at least one activity criterion.",
+    contextSummary: activityContextSummary,
+    setControlsDisabled: activityControlsDisabled,
+    filename: "club-activity-filter-results.csv",
+    csvHeaders: ["club_url","club_api_status","matches_api_status","registered_matches","in_progress_matches","recent_started_matches","average_window_matches","average_boards","board_size_qualifying_matches","matched_criteria"],
+    csvRow: item => [
+      item.url, item.apiStatus || "", item.matchesStatus || "", item.registered ?? "", item.inProgress ?? "",
+      item.startedCount ?? "", item.averageMatchCount ?? "", item.averageBoards === null || item.averageBoards === undefined ? "" : item.averageBoards.toFixed(2),
+      item.boardSizeMatchCount ?? "", item.matchedCriteria || ""
+    ]
   });
 
 

@@ -87,7 +87,7 @@
 <div class="p2k-cla-note">Requests use the shared adaptive Chess.com transport: real OAuth can process the batch in parallel and backs off automatically when Chess.com signals pressure; anonymous or simulated OAuth remains serial. A known Chess.com endpoint is checked first; when that preflight fails, the batch is not classified.</div>
 </section>
 <section aria-labelledby="p2kActivityCheckerTab" class="p2k-cla-tab-panel" data-p2k-panel="activity" hidden="" id="p2kActivityCheckerPanel" role="tabpanel">
-<p class="p2k-cla-intro">Paste or upload a club list. The result contains clubs with no match in registration, no match in progress, and no finished match that started within the previous six calendar months.</p>
+<p class="p2k-cla-intro">Paste or upload a club list, then combine configurable activity criteria. The defaults reproduce the previous inactivity check: no registration, no match in progress, and no match started during the previous six calendar months. The club API endpoint is validated separately before activity is evaluated.</p>
 <fieldset class="p2k-filter-group">
 <legend>Club list input</legend>
 <div class="p2k-cla-input-grid">
@@ -103,10 +103,40 @@
 <input accept=".txt,.csv,text/plain,text/csv" class="p2k-cla-file-input" id="p2kActivityFile" type="file"/>
 <label class="p2k-cla-file-button" for="p2kActivityFile">Choose file</label>
 <div class="p2k-cla-file-name" id="p2kActivityFileName">No file selected</div>
-<p class="p2k-cla-file-hint">A club with missing finished-match dates is kept out of the inactive result and shown in the error list.</p>
+<p class="p2k-cla-file-hint">Board details are fetched only when an enabled board criterion needs a board count that is absent from the club match summary.</p>
 </div>
 </div>
 </div>
+</fieldset>
+<fieldset class="p2k-filter-group" id="p2kActivityFilters">
+<legend>Activity filters</legend>
+<div class="p2k-cla-activity-mode">
+<label class="p2k-cla-label" for="p2kActivityCombine">Club must satisfy</label>
+<select class="p2k-cla-text-input" id="p2kActivityCombine"><option value="all" selected>All enabled criteria</option><option value="any">Any enabled criterion</option></select>
+</div>
+<div class="p2k-cla-criteria">
+<div class="p2k-cla-criterion">
+<label class="p2k-cla-criterion-enable"><input id="p2kActivityRegistrationEnabled" type="checkbox" checked/> <strong>Registration matches</strong></label>
+<div class="p2k-cla-criterion-controls"><select class="p2k-cla-operator" id="p2kActivityRegistrationOperator"><option value="lt">&lt;</option><option value="lte" selected>≤</option><option value="eq">=</option><option value="gte">≥</option><option value="gt">&gt;</option></select><input class="p2k-cla-number-input" id="p2kActivityRegistrationValue" min="0" step="1" type="number" value="0"/></div>
+</div>
+<div class="p2k-cla-criterion">
+<label class="p2k-cla-criterion-enable"><input id="p2kActivityProgressEnabled" type="checkbox" checked/> <strong>Matches in progress</strong></label>
+<div class="p2k-cla-criterion-controls"><select class="p2k-cla-operator" id="p2kActivityProgressOperator"><option value="lt">&lt;</option><option value="lte" selected>≤</option><option value="eq">=</option><option value="gte">≥</option><option value="gt">&gt;</option></select><input class="p2k-cla-number-input" id="p2kActivityProgressValue" min="0" step="1" type="number" value="0"/></div>
+</div>
+<div class="p2k-cla-criterion">
+<label class="p2k-cla-criterion-enable"><input id="p2kActivityStartedEnabled" type="checkbox" checked/> <strong>Matches started</strong></label>
+<div class="p2k-cla-criterion-controls p2k-cla-criterion-controls-wide"><select class="p2k-cla-operator" id="p2kActivityStartedOperator"><option value="lt">&lt;</option><option value="lte" selected>≤</option><option value="eq">=</option><option value="gte">≥</option><option value="gt">&gt;</option></select><input class="p2k-cla-number-input" id="p2kActivityStartedValue" min="0" step="1" type="number" value="0"/><span>during last</span><input class="p2k-cla-number-input" id="p2kActivityStartedWindow" min="1" step="1" type="number" value="6"/><select class="p2k-cla-operator p2k-cla-unit" id="p2kActivityStartedUnit"><option value="days">days</option><option value="months" selected>months</option></select></div>
+</div>
+<div class="p2k-cla-criterion">
+<label class="p2k-cla-criterion-enable"><input id="p2kActivityAverageEnabled" type="checkbox"/> <strong>Recent average board activity</strong></label>
+<div class="p2k-cla-criterion-controls p2k-cla-criterion-controls-wide"><span>matches</span><select class="p2k-cla-operator" id="p2kActivityAverageCountOperator"><option value="lt">&lt;</option><option value="lte">≤</option><option value="eq">=</option><option value="gte" selected>≥</option><option value="gt">&gt;</option></select><input class="p2k-cla-number-input" id="p2kActivityAverageCountValue" min="0" step="1" type="number" value="1"/><span>and average boards</span><select class="p2k-cla-operator" id="p2kActivityAverageBoardsOperator"><option value="lt">&lt;</option><option value="lte">≤</option><option value="eq">=</option><option value="gte" selected>≥</option><option value="gt">&gt;</option></select><input class="p2k-cla-number-input" id="p2kActivityAverageBoardsValue" min="0" step="0.1" type="number" value="10"/><span>during last</span><input class="p2k-cla-number-input" id="p2kActivityAverageWindow" min="1" step="1" type="number" value="90"/><select class="p2k-cla-operator p2k-cla-unit" id="p2kActivityAverageUnit"><option value="days" selected>days</option><option value="months">months</option></select></div>
+</div>
+<div class="p2k-cla-criterion">
+<label class="p2k-cla-criterion-enable"><input id="p2kActivityBoardSizeEnabled" type="checkbox"/> <strong>Matches by individual board size</strong></label>
+<div class="p2k-cla-criterion-controls p2k-cla-criterion-controls-wide"><span>number of matches</span><select class="p2k-cla-operator" id="p2kActivityBoardSizeCountOperator"><option value="lt">&lt;</option><option value="lte">≤</option><option value="eq">=</option><option value="gte" selected>≥</option><option value="gt">&gt;</option></select><input class="p2k-cla-number-input" id="p2kActivityBoardSizeCountValue" min="0" step="1" type="number" value="1"/><span>where boards</span><select class="p2k-cla-operator" id="p2kActivityBoardSizeBoardsOperator"><option value="lt">&lt;</option><option value="lte">≤</option><option value="eq">=</option><option value="gte" selected>≥</option><option value="gt">&gt;</option></select><input class="p2k-cla-number-input" id="p2kActivityBoardSizeBoardsValue" min="0" step="1" type="number" value="10"/><span>during last</span><input class="p2k-cla-number-input" id="p2kActivityBoardSizeWindow" min="1" step="1" type="number" value="90"/><select class="p2k-cla-operator p2k-cla-unit" id="p2kActivityBoardSizeUnit"><option value="days" selected>days</option><option value="months">months</option></select></div>
+</div>
+</div>
+<div class="p2k-cla-help">Use All enabled criteria for AND logic or Any enabled criterion for OR logic. At least one criterion must remain enabled.</div>
 <div class="p2k-cla-actions">
 <button class="p2k-main-button" disabled="" id="p2kActivityStart" type="button">Start checking</button>
 <button class="p2k-cla-secondary-button" disabled="" id="p2kActivityPause" type="button">Pause</button>
@@ -118,30 +148,18 @@
 <div class="p2k-cla-summary-grid">
 <div class="p2k-cla-stat"><span>Unique clubs</span><strong id="p2kActivityTotal">0</strong></div>
 <div class="p2k-cla-stat"><span>Checked</span><strong id="p2kActivityChecked">0</strong></div>
-<div class="p2k-cla-stat"><span>Inactive clubs</span><strong id="p2kActivityMatches">0</strong></div>
+<div class="p2k-cla-stat"><span>Matching clubs</span><strong id="p2kActivityMatches">0</strong></div>
 <div class="p2k-cla-stat"><span>Request/data errors</span><strong id="p2kActivityInvalid">0</strong></div>
 </div>
-<div class="p2k-cla-progress-wrap">
-<div class="p2k-progress-track"><div class="p2k-progress-bar" id="p2kActivityProgress"></div></div>
-<div class="p2k-cla-current" id="p2kActivityCurrent">Ready.</div>
-</div>
-<div class="p2k-status p2k-cla-status" id="p2kActivityStatus">Load a list and start checking.</div>
+<div class="p2k-cla-progress-wrap"><div class="p2k-progress-track"><div class="p2k-progress-bar" id="p2kActivityProgress"></div></div><div class="p2k-cla-current" id="p2kActivityCurrent">Ready.</div></div>
+<div class="p2k-status p2k-cla-status" id="p2kActivityStatus">Load a list, choose criteria and start checking.</div>
 <div class="p2k-cla-cutoff" id="p2kActivityCutoff"></div>
 <div class="p2k-cla-result-block">
-<div class="p2k-cla-result-heading">
-<div class="p2k-cla-result-title">Clubs meeting all inactivity conditions</div>
-<div class="p2k-cla-output-actions">
-<button class="p2k-cla-secondary-button" disabled="" id="p2kActivityCopy" type="button">Copy URLs</button>
-<button class="p2k-cla-secondary-button" disabled="" id="p2kActivityDownload" type="button">Download CSV</button>
+<div class="p2k-cla-result-heading"><div class="p2k-cla-result-title">Clubs matching the enabled activity filters</div><div class="p2k-cla-output-actions"><button class="p2k-cla-secondary-button" disabled="" id="p2kActivityCopy" type="button">Copy URLs</button><button class="p2k-cla-secondary-button" disabled="" id="p2kActivityDownload" type="button">Download CSV</button></div></div>
+<textarea class="p2k-cla-output" id="p2kActivityOutput" placeholder="Matching club URLs will appear here." readonly=""></textarea>
 </div>
-</div>
-<textarea class="p2k-cla-output" id="p2kActivityOutput" placeholder="Inactive club URLs will appear here." readonly=""></textarea>
-</div>
-<details class="p2k-cla-errors">
-<summary>Request and data errors</summary>
-<textarea class="p2k-cla-output" id="p2kActivityDetails" placeholder="Unclassifiable clubs will appear here." readonly=""></textarea>
-</details>
-<div class="p2k-cla-note">The six-month cutoff is fixed when a new run starts. A finished match counts as recent when its <code>start_time</code> is on or after the cutoff.</div>
+<details class="p2k-cla-errors"><summary>Endpoint, request and data details</summary><textarea class="p2k-cla-output" id="p2kActivityDetails" placeholder="404/restricted/request/data errors and unclassifiable clubs will appear here." readonly=""></textarea></details>
+<div class="p2k-cla-note">Cutoffs are frozen when a run starts. “Started” means in-progress/on-going plus finished matches with a valid <code>start_time</code>. The club endpoint is checked separately before the match endpoint; HTTP failures are documented and not treated as activity-filter matches.</div>
 </section>
 
 <section aria-labelledby="p2kRecommendationTab" class="p2k-cla-tab-panel" data-p2k-panel="recommendation" id="p2kRecommendationPanel" role="tabpanel">
