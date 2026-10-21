@@ -34,6 +34,7 @@ jobs:
           ROOT="$RUNNER_TEMP/v2151/PromoteToKing_v2.15.1_INCREMENTAL_FROM_2.15.0"
           unzip -t "$ZIP"
           test -s "$ROOT/CANDIDATE_RELEASE.json"
+          grep -Fq '"version": "2.15.1"' "$ROOT/CANDIDATE_RELEASE.json"
           test -s "$ROOT/CANDIDATE_PAYLOAD.sha256"
           test -s "$ROOT/RECOVERY_PLANE.sha256"
           grep -Fxq "ChallengeListAssistant.html" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"

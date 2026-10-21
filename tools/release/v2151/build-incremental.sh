@@ -106,8 +106,8 @@ for path in "${OVERLAY_FILES[@]}" "${RECOVERY_FILES[@]}"; do
   cp -p "$ROOT/$path" "$DIR/payload/$path"
 done
 
-CACHE_KEY="$(python3 "$ROOT/tools/release/static_asset_cache_key.py" key --version 2.15.0 --source-head "$HEAD" --build-id "$BUILD_ID")"
-python3 "$ROOT/tools/release/static_asset_cache_key.py" stamp --root "$DIR/payload" --version 2.15.0 --source-head "$HEAD" --build-id "$BUILD_ID" >/dev/null
+CACHE_KEY="$(python3 "$ROOT/tools/release/static_asset_cache_key.py" key --version 2.15.1 --source-head "$HEAD" --build-id "$BUILD_ID")"
+python3 "$ROOT/tools/release/static_asset_cache_key.py" stamp --root "$DIR/payload" --version 2.15.1 --source-head "$HEAD" --build-id "$BUILD_ID" >/dev/null
 
 grep -Fq "$CACHE_KEY" "$DIR/payload/ui-v2.html"
 grep -Fq "$CACHE_KEY" "$DIR/payload/ClubIntelligence.html"
@@ -149,7 +149,7 @@ import json,sys
 out,head,cache_key,build_id,manifest_sha=sys.argv[1:]
 payload={
   "schema_version":1,
-  "version":"2.15.0",
+  "version":"2.15.1",
   "source_head":head,
   "cache_key":cache_key,
   "build_id":build_id,
