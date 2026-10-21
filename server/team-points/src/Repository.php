@@ -3482,9 +3482,110 @@ $a=$this->analytics();$page=max(1,$page);$pageSize=max(10,min(50,$pageSize));$de
             'summary'=>['total_members'=>(int)$summary['total_members'],'current_members'=>(int)$summary['current_members'],'former_members'=>(int)$summary['former_members'],'active_members'=>(int)$summary['active_members'],'currently_playing'=>(int)$summary['currently_playing'],'team_points'=>round((float)$summary['team_points'],1)],'range'=>['start'=>$startDate?:null,'end'=>$endDate?:null]];
     }
 
+    /** Green-authoritative Members Insights: roster membership comes from Green Core;
+     * Analytics rows are optional enrichment and may legitimately lag a fresh roster. */
+    private function publicGreenMemberInsightsMaterialized(string $clubSlug,int $page,int $pageSize,string $search,string $filter,array $wanted,string $sort,int $direction,bool $includeSecondary=true,array $activityStatuses=[]): array
+    {
+        $coreWhere=[];$coreParams=[];
+        if($search!==''){$coreWhere[]='username LIKE ?';$coreParams[]='%'.$search.'%';}
+        if($wanted!==[]){$coreWhere[]='username_key IN ('.implode(',',array_fill(0,count($wanted),'?')).')';array_push($coreParams,...$wanted);}
+        if($filter==='current')$coreWhere[]='current_member=1';
+        elseif($filter==='former')$coreWhere[]='current_member=0';
+        $whereSql=$coreWhere===[]?'':' WHERE '.implode(' AND ',$coreWhere);
+        $q=$this->pdo->prepare("SELECT username_key,username,current_member,created_at first_seen_at,updated_at last_seen_at,daily_rating,chess960_rating,stats_checked_at rating_updated_at FROM p2k_g_players{$whereSql} ORDER BY username_key");
+        $q->execute($coreParams);$members=$q->fetchAll(PDO::FETCH_ASSOC)?:[];
+        if($members===[])return ['rows'=>[],'pagination'=>['page'=>1,'page_size'=>$pageSize,'total_rows'=>0,'total_pages'=>1],'range'=>['start'=>null,'end'=>null],'materialized'=>true,'green_membership_authoritative'=>true];
+
+        $keys=array_map(static fn(array $r):string=>(string)$r['username_key'],$members);
+        $totals=[];$live=[];$achievements=[];
+        $a=$this->analytics();
+        foreach(array_chunk($keys,250) as $chunk){
+            $marks=implode(',',array_fill(0,count($chunk),'?'));
+            $params=array_merge([$clubSlug],$chunk);
+            $t=$a->prepare("SELECT * FROM p2k_an_player_totals WHERE club_slug=? AND username_key IN ({$marks})");
+            $t->execute($params);foreach($t->fetchAll(PDO::FETCH_ASSOC)?:[] as $r)$totals[(string)$r['username_key']]=$r;
+            try{
+                $l=$a->prepare("SELECT username_key,total_points,arena_count,best_rank FROM p2k_lr_players WHERE club_slug=? AND username_key IN ({$marks})");
+                $l->execute($params);foreach($l->fetchAll(PDO::FETCH_ASSOC)?:[] as $r)$live[(string)$r['username_key']]=$r;
+            }catch(\Throwable){}
+            try{
+                $ac=$a->prepare("SELECT username_key,COUNT(*) achievement_count FROM p2k_an_achievement_unlocks WHERE club_slug=? AND username_key IN ({$marks}) GROUP BY username_key");
+                $ac->execute($params);foreach($ac->fetchAll(PDO::FETCH_ASSOC)?:[] as $r)$achievements[(string)$r['username_key']]=(int)$r['achievement_count'];
+            }catch(\Throwable){}
+        }
+
+        $currentMatches=[];
+        foreach(array_chunk($keys,250) as $chunk){
+            $marks=implode(',',array_fill(0,count($chunk),'?'));
+            $sql="SELECT COALESCE(im.canonical_username_key,mp.username_key) username_key,COUNT(DISTINCT mp.match_id) current_matches
+                  FROM p2k_g_match_players mp
+                  JOIN p2k_g_matches m ON m.match_id=mp.match_id
+                  LEFT JOIN p2k_g_identity_map im ON im.username_key=mp.username_key
+                  WHERE COALESCE(im.canonical_username_key,mp.username_key) IN ({$marks})
+                    AND mp.is_p2k=1 AND m.club_verified=1 AND m.time_class='daily' AND m.is_void=0
+                    AND m.status IN ('registered','in_progress')
+                  GROUP BY COALESCE(im.canonical_username_key,mp.username_key)";
+            $cq=$this->pdo->prepare($sql);$cq->execute($chunk);
+            foreach($cq->fetchAll(PDO::FETCH_ASSOC)?:[] as $r)$currentMatches[(string)$r['username_key']]=(int)$r['current_matches'];
+        }
+
+        $rows=[];
+        foreach($members as $m){
+            $key=(string)$m['username_key'];$p=$totals[$key]??[];$l=$live[$key]??[];
+            $games=(int)($p['games']??0);$wins=(int)($p['wins']??0);$points=(float)($p['points']??0);
+            $lastActivity=$p['last_game_at']??null;
+            $row=[
+                'username_key'=>$key,'username'=>(string)$m['username'],'current_member'=>(bool)$m['current_member'],
+                'first_seen_at'=>$m['first_seen_at']??null,'last_seen_at'=>$m['last_seen_at']??null,
+                'daily_rating'=>$m['daily_rating']===null?($p['daily_rating']??null):(int)$m['daily_rating'],
+                'chess960_rating'=>$m['chess960_rating']===null?($p['chess960_rating']??null):(int)$m['chess960_rating'],
+                'rating_updated_at'=>$m['rating_updated_at']??($p['rating_updated_at']??null),
+                'last_standard_game_at'=>$p['last_standard_game_at']??null,'last_chess960_game_at'=>$p['last_chess960_game_at']??null,
+                'points'=>$points,'matches'=>(int)($p['matches']??0),'games'=>$games,'wins'=>$wins,
+                'draws'=>(int)($p['draws']??0),'losses'=>(int)($p['losses']??0),
+                'win_rate'=>$games?round(100*$wins/$games,1):0.0,'points_per_game'=>$games?round($points/$games,3):0.0,
+                'first_activity'=>$p['first_game_at']??null,'last_activity'=>$lastActivity,'activity_status'=>self::memberActivityStatus($lastActivity),
+                'current_matches'=>(int)($currentMatches[$key]??0),'live_points'=>(float)($l['total_points']??0),
+                'live_arenas'=>(int)($l['arena_count']??0),'live_best_rank'=>$l['best_rank']??null,
+                'achievement_count'=>(int)($achievements[$key]??0),'daily_rank'=>$this->hallRankForPoints($points),
+                'analytics_available'=>isset($totals[$key])
+            ];
+            if($filter==='active'&&$games<=0)continue;
+            if($filter==='milestones'&&$points<=0&&(float)$row['live_points']<=0&&(int)$row['achievement_count']<=0)continue;
+            if($activityStatuses!==[]&&!in_array($row['activity_status'],$activityStatuses,true))continue;
+            $rows[]=$row;
+        }
+
+        $sortValue=static function(array $r,string $sort):mixed{
+            return match($sort){
+                'username'=>$r['username'],'matches'=>$r['matches'],'games'=>$r['games'],'wins'=>$r['wins'],'draws'=>$r['draws'],'losses'=>$r['losses'],
+                'win_rate'=>$r['win_rate'],'points_per_game'=>$r['points_per_game'],'first_activity'=>$r['first_activity']??'',
+                'last_activity'=>$r['last_activity']??'','current_matches'=>$r['current_matches'],'live_points'=>$r['live_points'],
+                'achievement_count'=>$r['achievement_count'],'daily_rating'=>$r['daily_rating']??-1,'chess960_rating'=>$r['chess960_rating']??-1,
+                'last_standard_game_at'=>$r['last_standard_game_at']??'','last_chess960_game_at'=>$r['last_chess960_game_at']??'',
+                default=>$r['points']
+            };
+        };
+        usort($rows,static function(array $x,array $y)use($sort,$direction,$sortValue):int{
+            $a=$sortValue($x,$sort);$b=$sortValue($y,$sort);$cmp=is_string($a)||is_string($b)?strnatcasecmp((string)$a,(string)$b):($a<=>$b);
+            if($cmp===0)$cmp=strcasecmp((string)$x['username'],(string)$y['username']);
+            return $direction===1?$cmp:-$cmp;
+        });
+
+        $totalRows=count($rows);$totalPages=max(1,(int)ceil($totalRows/$pageSize));$page=min(max(1,$page),$totalPages);$offset=($page-1)*$pageSize;
+        $pageRows=array_slice($rows,$offset,$pageSize);
+        if(!$includeSecondary)return ['rows'=>$pageRows,'pagination'=>['page'=>$page,'page_size'=>$pageSize,'total_rows'=>$totalRows,'total_pages'=>$totalPages],'range'=>['start'=>null,'end'=>null],'materialized'=>true,'green_membership_authoritative'=>true];
+
+        $currentMembers=0;$activeMembers=0;$teamPoints=0.0;foreach($rows as $r){if(!empty($r['current_member']))$currentMembers++;if((int)$r['games']>0)$activeMembers++;$teamPoints+=(float)$r['points'];}
+        return ['rows'=>$pageRows,'pagination'=>['page'=>$page,'page_size'=>$pageSize,'total_rows'=>$totalRows,'total_pages'=>$totalPages],
+            'summary'=>['total_members'=>$totalRows,'current_members'=>$currentMembers,'former_members'=>$totalRows-$currentMembers,'active_members'=>$activeMembers,'currently_playing'=>count(array_filter($rows,static fn(array $r):bool=>(int)$r['current_matches']>0)),'team_points'=>round($teamPoints,1)],
+            'analytics'=>['monthly_activity'=>[],'rank_distribution'=>[]],'range'=>['start'=>null,'end'=>null],'materialized'=>true,'green_membership_authoritative'=>true];
+    }
+
     /** Fast all-time Members Insights path using materialized Analytics and SQL pagination. */
     private function publicMemberInsightsMaterialized(string $clubSlug,int $page,int $pageSize,string $search,string $filter,array $wanted,string $sort,int $direction,bool $includeSecondary=true,array $activityStatuses=[]): array
     {
+        if(PublicReadDatabase::source()==='green')return $this->publicGreenMemberInsightsMaterialized($clubSlug,$page,$pageSize,$search,$filter,$wanted,$sort,$direction,$includeSecondary,$activityStatuses);
         $a=$this->analytics();$validAchievementKeys=$this->achievementCatalogSqlList();$where=['p.club_slug=?'];$params=[$clubSlug];
         if($search!==''){$where[]='p.username LIKE ?';$params[]='%'.$search.'%';}
         if($wanted!==[]){$where[]='p.username_key IN ('.implode(',',array_fill(0,count($wanted),'?')).')';array_push($params,...$wanted);}

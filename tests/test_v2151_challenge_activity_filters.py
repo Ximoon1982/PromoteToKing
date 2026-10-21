@@ -64,3 +64,15 @@ def test_v2151_package_is_cumulative_and_contains_activity_runtime():
     assert 'server/team-points-green/src/GreenCompatibility.php' in BUILDER
     assert '"version":"2.15.0","source_head":"3776ecdd6b91b67816f5fa3853e763ac5b5d7f98"' in BUILDER
     assert '"version":"2.15.0","source_head":"0bafb17000c118d0a40feaa5e9c5bba65bbf9b84"' in BUILDER
+
+
+def test_green_membership_is_authoritative_for_member_table_and_csv_population():
+    repo=(ROOT/"server/team-points/src/Repository.php").read_text(encoding="utf-8")
+    export=(ROOT/"server/team-points/public/members-insights-export.php").read_text(encoding="utf-8")
+    assert "publicGreenMemberInsightsMaterialized" in repo
+    assert "FROM p2k_g_players" in repo
+    assert "green_membership_authoritative" in repo
+    assert "analytics_available" in repo
+    assert "if(PublicReadDatabase::source()==='green')return $this->publicGreenMemberInsightsMaterialized" in repo
+    assert "$repository->publicMemberInsights" in export
+    assert "FROM p2k_g_players WHERE username_key IN" in export
