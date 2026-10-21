@@ -34,8 +34,8 @@ OVERLAY_FILES=(
   assets/js/pages/club-intelligence.js
   assets/js/admin/admin-shell.js
   assets/js/admin/admin-session-controller.js
-  assets/js/admin/trophy-gallery-v2151-modal-layout.js
-  assets/trophy-gallery/trophy-gallery-v2151-mobile.css
+  assets/js/admin/trophy-gallery-v2150-modal-layout.js
+  assets/trophy-gallery/trophy-gallery-v2150-mobile.css
   server/team-points-green/tools/audit-club-points.php
   server/team-points-green/public/api.php
   server/team-points-green/sql/core-schema.sql
@@ -58,7 +58,7 @@ OVERLAY_FILES=(
   server/team-points/public/members-insights-export.php
   server/team-points/public/intelligence.php
   server/team-points/sql/core-schema.sql
-  server/team-points/sql/core-migration-v2.15.1.sql
+  server/team-points/sql/core-migration-v2.15.0.sql
   server/tournaments/src/TournamentService.php
   server/shared/MatchAssistantUsage.php
 )
@@ -113,12 +113,12 @@ grep -Fq "$CACHE_KEY" "$DIR/payload/ui-v2.html"
 grep -Fq "$CACHE_KEY" "$DIR/payload/ClubIntelligence.html"
 grep -Fq "$CACHE_KEY" "$DIR/payload/trophies/index.html"
 grep -Fq "$CACHE_KEY" "$DIR/payload/ChallengeListAssistant.html"
-grep -Fq 'trophy-gallery-v2151-modal-layout.js' "$DIR/payload/ui-v2.html"
-grep -Fq 'trophy-gallery-v2151-mobile.css' "$DIR/payload/ui-v2.html"
-grep -Fq 'trophy-gallery-v2151-modal-layout.js' "$DIR/payload/trophies/index.html"
-grep -Fq 'trophy-gallery-v2151-mobile.css' "$DIR/payload/trophies/index.html"
-grep -Fq 'LANDSCAPE_RATIO = 1.10' "$DIR/payload/assets/js/admin/trophy-gallery-v2151-modal-layout.js"
-grep -Fq 'height: 100dvh !important' "$DIR/payload/assets/trophy-gallery/trophy-gallery-v2151-mobile.css"
+grep -Fq 'trophy-gallery-v2150-modal-layout.js' "$DIR/payload/ui-v2.html"
+grep -Fq 'trophy-gallery-v2150-mobile.css' "$DIR/payload/ui-v2.html"
+grep -Fq 'trophy-gallery-v2150-modal-layout.js' "$DIR/payload/trophies/index.html"
+grep -Fq 'trophy-gallery-v2150-mobile.css' "$DIR/payload/trophies/index.html"
+grep -Fq 'LANDSCAPE_RATIO = 1.10' "$DIR/payload/assets/js/admin/trophy-gallery-v2150-modal-layout.js"
+grep -Fq 'height: 100dvh !important' "$DIR/payload/assets/trophy-gallery/trophy-gallery-v2150-mobile.css"
 
 printf '%s\n' "$HEAD" > "$DIR/SOURCE_HEAD.txt"
 printf '%s\n' "$CACHE_KEY" > "$DIR/ASSET_CACHE_KEY.txt"
