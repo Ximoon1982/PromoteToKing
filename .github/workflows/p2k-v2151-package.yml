@@ -27,6 +27,12 @@ jobs:
           php -l server/team-points-green/src/GreenCompatibility.php
           php -l server/team-points-green/public/api.php
           php -l server/team-points/public/members-insights-export.php
+          php -l server/team-points/bin/analytics-convergence.php
+          php -l server/team-points/bin/maintenance.php
+          php -l server/team-points/public/insights-health.php
+          php tests/team_points_maintenance_cutover_v2150_test.php
+          bash -n server/team-points/bin/install-analytics-convergence-cron.sh
+          bash -n server/team-points/bin/cutover-blue-maintenance-cron.sh
       - name: Build v2.15.1 incremental candidate
         run: |
           bash tools/release/v2151/build-incremental.sh "$RUNNER_TEMP/v2151"
@@ -41,6 +47,12 @@ jobs:
           grep -Fxq "assets/css/challenge-list-assistant.css" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fxq "assets/js/pages/challenge-list-assistant.js" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fxq "TeamPointsAdmin.html" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fxq "server/team-points/bin/analytics-convergence.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fxq "server/team-points/bin/install-analytics-convergence-cron.sh" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fxq "server/team-points/bin/maintenance.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fxq "server/team-points/public/insights-health.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fq "PublicReadDatabase::core()" "$ROOT/payload/server/team-points/bin/analytics-convergence.php"
+          grep -Fq "PublicReadDatabase::analytics()" "$ROOT/payload/server/team-points/bin/maintenance.php"
           grep -Fq '"source_head": "3776ecdd6b91b67816f5fa3853e763ac5b5d7f98"' "$ROOT/CANDIDATE_RELEASE.json"
           grep -Fq '"source_head": "0bafb17000c118d0a40feaa5e9c5bba65bbf9b84"' "$ROOT/CANDIDATE_RELEASE.json"
           grep -Fxq "$(git rev-parse HEAD)" "$ROOT/SOURCE_HEAD.txt"
