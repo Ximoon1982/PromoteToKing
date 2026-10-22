@@ -12,7 +12,7 @@ $must(str_contains($worker,'new FairPlayPriorityRunner'),'Maintenance worker mus
 $must(str_contains($worker,"['club','player']")&&str_contains($worker,"['player','club']"),'Maintenance worker must alternate Club/Player first priority.');
 $must(str_contains($worker,'new CronMaintenanceCoordinator'),'Maintenance worker must run the existing bounded maintenance coordinator.');
 $must(str_contains($worker,'PublicReadDatabase::core()')&&str_contains($worker,'PublicReadDatabase::analytics()'),'Maintenance worker must write the Green production database pair.');
-$must(!str_contains($worker,'Database::core()')&&!str_contains($worker,'Database::analytics()'),'Maintenance worker must never target the legacy/Blue database abstraction.');
+$must(!preg_match('/(?<!PublicRead)Database::core\\(/',$worker)&&!preg_match('/(?<!PublicRead)Database::analytics\\(/',$worker),'Maintenance worker must never target the legacy/Blue database abstraction.');
 $must(!str_contains($worker,'upgradeExistingSchema'),'Maintenance worker must never perform schema migration inside its bounded runtime.');
 $must(str_contains($worker,"getenv('P2K_MAINT_TRACE')==='1'"),'Maintenance worker must support opt-in stage tracing for shared-host diagnostics.');
 $must(str_contains($worker,'SET SESSION max_statement_time'),'Maintenance worker must install an early database statement budget.');
@@ -34,7 +34,7 @@ $must(str_contains($coord,"runClass('storage'"),'Storage metrics maintenance mus
 
 $convergence=$read('server/team-points/bin/analytics-convergence.php');
 $must(str_contains($convergence,'PublicReadDatabase::core()')&&str_contains($convergence,'PublicReadDatabase::analytics()'),'Analytics convergence must target Green production databases.');
-$must(!str_contains($convergence,'Database::core()')&&!str_contains($convergence,'Database::analytics()'),'Analytics convergence must never target the legacy/Blue database abstraction.');
+$must(!preg_match('/(?<!PublicRead)Database::core\\(/',$convergence)&&!preg_match('/(?<!PublicRead)Database::analytics\\(/',$convergence),'Analytics convergence must never target the legacy/Blue database abstraction.');
 $installer=$read('server/team-points/bin/install-analytics-convergence-cron.sh');
 $must(str_contains($installer,'team-points-analytics-active.sh'),'Analytics CRON must use an active-slot resolver.');
 $must(str_contains($installer,'runtime-trees'),'Analytics resolver must follow Release Control public runtime trees.');
