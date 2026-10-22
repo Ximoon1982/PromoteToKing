@@ -56,4 +56,14 @@ $must(str_contains($cutover,'team-points-analytics-active.sh'),'Cutover must ver
 $must(str_contains($cutover,'restoring previous crontab'),'Cutover must rollback automatically on verification failure.');
 $must(str_contains($cutover,'crontab-before-p2k-maintenance-'),'Cutover must save the pre-change crontab.');
 
-echo "PASS v2.15.0 Blue maintenance retirement cutover contract\n";
+$repo=$read('server/team-points/src/Repository.php');
+$healthStart=strpos($repo,'public function publicInsightsHealth');
+$healthEnd=strpos($repo,'public function opponentAdminRows',$healthStart);
+$health=substr($repo,$healthStart,$healthEnd-$healthStart);
+$must(str_contains($health,'sourceWatermark($clubSlug)'),'Insights health must compare the current production source watermark.');
+$must(str_contains($health,"'status'=>$analyticsStatus"),'Insights health must expose stale/error Analytics status.');
+$must(str_contains($health,"'watermark_matches'=>$allMatches"),'Insights health must expose watermark convergence.');
+$must(str_contains($health,"'certified'=>"),'Insights health must expose an overall certification state.');
+$must(str_contains($health,'last_roster_fetch')&&str_contains($health,'last_index_fetch'),'Insights health must check Green roster and club-index freshness.');
+
+echo "PASS v2.15.1 post-Blue production routing and freshness contract\n";

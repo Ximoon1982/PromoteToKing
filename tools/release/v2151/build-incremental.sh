@@ -60,6 +60,7 @@ OVERLAY_FILES=(
   server/team-points/public/members-insights.php
   server/team-points/public/members-insights-export.php
   server/team-points/public/intelligence.php
+  server/team-points/public/insights-health.php
   server/team-points/sql/core-schema.sql
   server/team-points/sql/core-migration-v2.15.0.sql
   server/tournaments/src/TournamentService.php

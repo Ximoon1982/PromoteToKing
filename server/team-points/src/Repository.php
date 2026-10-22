@@ -4002,16 +4002,93 @@ $a=$this->analytics();$page=max(1,$page);$pageSize=max(10,min(50,$pageSize));$de
 
     public function publicInsightsHealth(string $clubSlug): array
     {
-        $clubSlug=$this->resolveDataClubSlug($clubSlug);$checks=[];
-        $definitions=[
-            ['key'=>'team','label'=>'Team Insights','role'=>'analytics','table'=>'p2k_tp_insight_daily','date'=>'computed_at'],
-            ['key'=>'members','label'=>'Members Insights','role'=>'core','table'=>'p2k_tp_members','date'=>'last_seen_at'],
-            ['key'=>'matches','label'=>'Match Insights','role'=>'core','table'=>'p2k_tp_match_metadata','date'=>'last_verified_at'],
-            ['key'=>'opponents','label'=>'Opponent Insights','role'=>'analytics','table'=>'p2k_an_opponent_stats','date'=>'updated_at'],
-            ['key'=>'live','label'=>'Live ranks','role'=>'analytics','table'=>'p2k_lr_players','date'=>'updated_at'],
+        $clubSlug=$this->resolveDataClubSlug($clubSlug);
+        $analytics=$this->analytics();
+        $now=time();
+        $age=static function(?string $value) use($now): ?int {
+            if($value===null||trim($value)==='')return null;
+            $ts=strtotime($value.' UTC');return $ts===false?null:max(0,$now-$ts);
+        };
+        $builder=new AnalyticsBuilder($this->pdo,$analytics);
+        $currentWatermark=$builder->sourceWatermark($clubSlug);
+        $achievementWatermark=$builder->achievementSourceWatermark($clubSlug);
+        $refresh=[];
+        try{
+            $q=$analytics->prepare("SELECT domain_key,source_watermark,refreshed_at,row_count,last_error FROM p2k_an_refresh_state WHERE club_slug=? AND domain_key IN ('all','achievements')");
+            $q->execute([$clubSlug]);
+            foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $row)$refresh[(string)$row['domain_key']]=$row;
+        }catch(\Throwable){}
+
+        $all=$refresh['all']??[];
+        $ach=$refresh['achievements']??[];
+        $allMatches=(string)($all['source_watermark']??'')!=='' && hash_equals((string)$all['source_watermark'],$currentWatermark);
+        $achMatches=(string)($ach['source_watermark']??'')!=='' && hash_equals((string)$ach['source_watermark'],$achievementWatermark);
+        $allAge=$age(isset($all['refreshed_at'])?(string)$all['refreshed_at']:null);
+        $achAge=$age(isset($ach['refreshed_at'])?(string)$ach['refreshed_at']:null);
+
+        $analyticsStatus=trim((string)($all['last_error']??''))!==''?'error':(!$allMatches?'stale':((int)($all['row_count']??0)<=0?'empty':'healthy'));
+        $achievementStatus=trim((string)($ach['last_error']??''))!==''?'error':(!$achMatches?'stale':((int)($ach['row_count']??0)<=0?'empty':'healthy'));
+
+        $checks=[
+            [
+                'key'=>'analytics','label'=>'Compatibility Analytics convergence','status'=>$analyticsStatus,
+                'rows'=>(int)($all['row_count']??0),'last_update'=>$all['refreshed_at']??null,'age_seconds'=>$allAge,
+                'source'=>'Green Core → Green Analytics','watermark_current'=>$currentWatermark,
+                'watermark_materialized'=>$all['source_watermark']??null,'watermark_matches'=>$allMatches,
+                'message'=>trim((string)($all['last_error']??''))!==''?(string)$all['last_error']:(!$allMatches?'Green production Core is newer than the materialized Analytics projection.':null),
+            ],
+            [
+                'key'=>'achievements','label'=>'Achievement materialization','status'=>$achievementStatus,
+                'rows'=>(int)($ach['row_count']??0),'last_update'=>$ach['refreshed_at']??null,'age_seconds'=>$achAge,
+                'source'=>'Green production Analytics','watermark_current'=>$achievementWatermark,
+                'watermark_materialized'=>$ach['source_watermark']??null,'watermark_matches'=>$achMatches,
+                'message'=>trim((string)($ach['last_error']??''))!==''?(string)$ach['last_error']:(!$achMatches?'Achievement sources are newer than the materialized achievement projection.':null),
+            ],
         ];
-        foreach($definitions as $d){try{$pdo=$d['role']==='analytics'?$this->analytics():$this->pdo;$q=$pdo->prepare("SELECT COUNT(*) rows_count,MAX({$d['date']}) updated_at FROM {$d['table']} WHERE club_slug=?");$q->execute([$clubSlug]);$r=$q->fetch()?:[];$count=(int)($r['rows_count']??0);$checks[]=['key'=>$d['key'],'label'=>$d['label'],'status'=>$count>0?'healthy':'empty','rows'=>$count,'last_update'=>$r['updated_at']??null,'source'=>$d['role'].' database'];}catch(\Throwable $e){$checks[]=['key'=>$d['key'],'label'=>$d['label'],'status'=>'error','rows'=>0,'last_update'=>null,'source'=>$d['role'].' database','message'=>$e->getMessage()];}}
-        return ['checks'=>$checks,'healthy'=>count(array_filter($checks,static fn(array $r):bool=>$r['status']==='healthy')),'total'=>count($checks),'architecture'=>'core+analytics'];
+
+        $greenState=[];
+        try{
+            $q=$this->pdo->prepare('SELECT last_roster_fetch,last_index_fetch,last_worker_finish,last_worker_status,last_error FROM p2k_g_state WHERE club_slug=? LIMIT 1');
+            $q->execute([$clubSlug]);$greenState=$q->fetch(PDO::FETCH_ASSOC)?:[];
+        }catch(\Throwable){}
+        $rosterAge=$age(isset($greenState['last_roster_fetch'])?(string)$greenState['last_roster_fetch']:null);
+        $indexAge=$age(isset($greenState['last_index_fetch'])?(string)$greenState['last_index_fetch']:null);
+        $workerAge=$age(isset($greenState['last_worker_finish'])?(string)$greenState['last_worker_finish']:null);
+        $memberCount=0;$matchCount=0;
+        try{$memberCount=(int)$this->pdo->query('SELECT COUNT(*) FROM p2k_g_players')->fetchColumn();}catch(\Throwable){}
+        try{$matchCount=(int)$this->pdo->query("SELECT COUNT(*) FROM p2k_g_matches WHERE club_verified=1 AND time_class='daily'")->fetchColumn();}catch(\Throwable){}
+        $workerError=trim((string)($greenState['last_error']??''));
+        $workerStatus=$workerError!==''?'error':(($workerAge===null||$workerAge>900)?'stale':'healthy');
+        $checks[]=['key'=>'green-worker','label'=>'Green acquisition worker','status'=>$workerStatus,'rows'=>$matchCount,'last_update'=>$greenState['last_worker_finish']??null,'age_seconds'=>$workerAge,'source'=>'Green Core','message'=>$workerError!==''?$workerError:($workerStatus==='stale'?'No recent Green worker completion is recorded.':null)];
+        $checks[]=['key'=>'members','label'=>'Member roster','status'=>$memberCount<=0?'empty':(($rosterAge===null||$rosterAge>7200)?'stale':'healthy'),'rows'=>$memberCount,'last_update'=>$greenState['last_roster_fetch']??null,'age_seconds'=>$rosterAge,'source'=>'Green Core'];
+        $checks[]=['key'=>'matches','label'=>'Club match index','status'=>$matchCount<=0?'empty':(($indexAge===null||$indexAge>1800)?'stale':'healthy'),'rows'=>$matchCount,'last_update'=>$greenState['last_index_fetch']??null,'age_seconds'=>$indexAge,'source'=>'Green Core'];
+
+        foreach([
+            ['key'=>'team','label'=>'Team Insights daily materialization','table'=>'p2k_tp_insight_daily','date'=>'computed_at'],
+            ['key'=>'opponents','label'=>'Opponent Insights materialization','table'=>'p2k_an_opponent_stats','date'=>'updated_at'],
+        ] as $d){
+            try{
+                $q=$analytics->prepare("SELECT COUNT(*) rows_count,MAX({$d['date']}) updated_at FROM {$d['table']} WHERE club_slug=?");
+                $q->execute([$clubSlug]);$r=$q->fetch(PDO::FETCH_ASSOC)?:[];$count=(int)($r['rows_count']??0);
+                $status=$count<=0?'empty':($analyticsStatus==='healthy'?'healthy':$analyticsStatus);
+                $checks[]=['key'=>$d['key'],'label'=>$d['label'],'status'=>$status,'rows'=>$count,'last_update'=>$r['updated_at']??null,'age_seconds'=>$age(isset($r['updated_at'])?(string)$r['updated_at']:null),'source'=>'Green Analytics','watermark_matches'=>$allMatches];
+            }catch(\Throwable $e){$checks[]=['key'=>$d['key'],'label'=>$d['label'],'status'=>'error','rows'=>0,'last_update'=>null,'age_seconds'=>null,'source'=>'Green Analytics','message'=>$e->getMessage()];}
+        }
+
+        try{
+            $q=$analytics->prepare('SELECT COUNT(*) rows_count,MAX(updated_at) updated_at FROM p2k_lr_players WHERE club_slug=?');$q->execute([$clubSlug]);$r=$q->fetch(PDO::FETCH_ASSOC)?:[];$count=(int)($r['rows_count']??0);
+            $checks[]=['key'=>'live','label'=>'Live ranks','status'=>$count>0?'healthy':'empty','rows'=>$count,'last_update'=>$r['updated_at']??null,'age_seconds'=>$age(isset($r['updated_at'])?(string)$r['updated_at']:null),'source'=>'Green Analytics / MCA'];
+        }catch(\Throwable $e){$checks[]=['key'=>'live','label'=>'Live ranks','status'=>'error','rows'=>0,'last_update'=>null,'age_seconds'=>null,'source'=>'Green Analytics / MCA','message'=>$e->getMessage()];}
+
+        $healthy=count(array_filter($checks,static fn(array $r):bool=>$r['status']==='healthy'));
+        $stale=count(array_filter($checks,static fn(array $r):bool=>$r['status']==='stale'));
+        $errors=count(array_filter($checks,static fn(array $r):bool=>in_array($r['status'],['error','empty'],true)));
+        return [
+            'checks'=>$checks,'healthy'=>$healthy,'stale'=>$stale,'errors'=>$errors,'total'=>count($checks),
+            'architecture'=>'green-production-core+analytics',
+            'certified'=>$stale===0&&$errors===0&&$analyticsStatus==='healthy'&&$achievementStatus==='healthy',
+            'watermarks'=>['analytics_current'=>$currentWatermark,'analytics_materialized'=>$all['source_watermark']??null,'achievements_current'=>$achievementWatermark,'achievements_materialized'=>$ach['source_watermark']??null],
+        ];
     }
 
     public function opponentAdminRows(string $clubSlug): array
