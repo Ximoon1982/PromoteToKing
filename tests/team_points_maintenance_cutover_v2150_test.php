@@ -16,6 +16,8 @@ $must(!preg_match('/(?<!PublicRead)Database::core\\(/',$worker)&&!preg_match('/(
 $must(!str_contains($worker,'upgradeExistingSchema'),'Maintenance worker must never perform schema migration inside its bounded runtime.');
 $must(str_contains($worker,"getenv('P2K_MAINT_TRACE')==='1'"),'Maintenance worker must support opt-in stage tracing for shared-host diagnostics.');
 $must(str_contains($worker,'SET SESSION max_statement_time'),'Maintenance worker must install an early database statement budget.');
+$fairEndpoint=$read('server/team-points/public/fair-play-maintenance.php');
+$must(str_contains($fairEndpoint,'PublicReadDatabase::core()')&&str_contains($fairEndpoint,'PublicReadDatabase::analytics()'),'Manual Fair Play maintenance must target Green production.');
 $priority=$read('server/team-points/src/FairPlayPriorityRunner.php');
 $must(str_contains($priority,'$this->api->setDeadlineAt($deadline);'),'Fair Play priority Chess API calls must inherit the maintenance deadline.');
 $must(!str_contains($worker,'new Worker('),'Maintenance worker must not run legacy Blue acquisition.');
@@ -65,5 +67,9 @@ $must(str_contains($health,"'status'=>$analyticsStatus"),'Insights health must e
 $must(str_contains($health,"'watermark_matches'=>$allMatches"),'Insights health must expose watermark convergence.');
 $must(str_contains($health,"'certified'=>"),'Insights health must expose an overall certification state.');
 $must(str_contains($health,'last_roster_fetch')&&str_contains($health,'last_index_fetch'),'Insights health must check Green roster and club-index freshness.');
+
+$audit=$read('server/team-points/bin/post-cutover-audit.php');
+$must(str_contains($audit,'PublicReadDatabase::core()')&&str_contains($audit,'analytics_watermark'),'Post-cutover audit must inspect Green production and Analytics convergence.');
+$must(str_contains($audit,"'key'=>'current_members'")&&str_contains($audit,"'key'=>'club_points'")&&str_contains($audit,"'key'=>'player_points'"),'Post-cutover audit must compare core user-facing totals.');
 
 echo "PASS v2.15.1 post-Blue production routing and freshness contract\n";

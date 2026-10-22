@@ -2,13 +2,13 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../src/bootstrap.php';
 
-use P2K\TeamPoints\{ApiException,Auth,ChessApi,Database,FairPlayReconciliationService,Http,Repository};
+use P2K\TeamPoints\{ApiException,Auth,ChessApi,FairPlayReconciliationService,Http,PublicReadDatabase,Repository};
 
 try {
     Auth::requireAdmin();
     $config=p2k_tp_config();
     $club=strtolower((string)($config['app']['club_slug']??'promote-to-king'));
-    $core=Database::core();$repo=new Repository($core,Database::analytics());
+    $core=PublicReadDatabase::core();$repo=new Repository($core,PublicReadDatabase::analytics());
     $api=new ChessApi($repo);
     $svc=new FairPlayReconciliationService($core,$repo,$api,$club);
     $action=strtolower(trim((string)($_GET['action']??'status')));

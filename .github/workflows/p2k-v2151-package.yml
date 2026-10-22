@@ -30,6 +30,8 @@ jobs:
           php -l server/team-points/bin/analytics-convergence.php
           php -l server/team-points/bin/maintenance.php
           php -l server/team-points/public/insights-health.php
+          php -l server/team-points/public/fair-play-maintenance.php
+          php -l server/team-points/bin/post-cutover-audit.php
           php tests/team_points_maintenance_cutover_v2150_test.php
           bash -n server/team-points/bin/install-analytics-convergence-cron.sh
           bash -n server/team-points/bin/cutover-blue-maintenance-cron.sh
@@ -51,6 +53,8 @@ jobs:
           grep -Fxq "server/team-points/bin/install-analytics-convergence-cron.sh" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fxq "server/team-points/bin/maintenance.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fxq "server/team-points/public/insights-health.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fxq "server/team-points/public/fair-play-maintenance.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fxq "server/team-points/bin/post-cutover-audit.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fq "PublicReadDatabase::core()" "$ROOT/payload/server/team-points/bin/analytics-convergence.php"
           grep -Fq "PublicReadDatabase::analytics()" "$ROOT/payload/server/team-points/bin/maintenance.php"
           grep -Fq '"source_head": "3776ecdd6b91b67816f5fa3853e763ac5b5d7f98"' "$ROOT/CANDIDATE_RELEASE.json"
