@@ -80,3 +80,14 @@ def test_green_membership_is_authoritative_for_member_table_and_csv_population()
 
 def test_member_export_fix_accepts_promoted_v2151_predecessor():
     assert '"version":"2.15.1","source_head":"04b1f2cb2ef36dd50780e1efaa51ae69a19c407c"' in BUILDER
+
+
+def test_green_member_summary_and_ranks_use_green_roster_not_analytics_membership():
+    repo=(ROOT/"server/team-points/src/Repository.php").read_text(encoding="utf-8")
+    endpoint=(ROOT/"server/team-points/public/members-insights.php").read_text(encoding="utf-8")
+    block=repo[repo.index("public function publicMemberInsightsSection"):repo.index("/** Public all-match opponent balance")]
+    assert "FROM p2k_g_players" in block
+    assert "WHERE current_member=1 ORDER BY username_key" in block
+    assert "green_membership_authoritative" in block
+    assert "points[(string)$key]??0" in block
+    assert "members-insights-green-roster-v2|" in endpoint

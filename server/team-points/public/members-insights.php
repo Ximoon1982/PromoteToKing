@@ -33,7 +33,7 @@ try {
 
     $generation = $repository->publicReadGenerationToken($club, true, true);
     $cache = new ResponseCache(is_array($config['storage'] ?? null) ? $config['storage'] : []);
-    $key = 'members-insights|' . $club . '|' . $generation . '|' . hash('sha256', json_encode($options, JSON_UNESCAPED_SLASHES));
+    $key = 'members-insights-green-roster-v2|' . $club . '|' . $generation . '|' . hash('sha256', json_encode($options, JSON_UNESCAPED_SLASHES));
 
     $builder = static function () use ($repository, $club, $options, $section, $cache, $generation): array {
         $meta = ['ok' => true, 'meta' => $repository->publicReadMeta($club)];

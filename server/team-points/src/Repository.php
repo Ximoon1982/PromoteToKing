@@ -3150,6 +3150,14 @@ $a=$this->analytics();$page=max(1,$page);$pageSize=max(10,min(50,$pageSize));$de
         }
         $a=$this->analytics();
         if($section==='summary'){
+            if(PublicReadDatabase::source()==='green'){
+                $membership=$this->pdo->query("SELECT COUNT(*) total_members,COALESCE(SUM(current_member=1),0) current_members,COALESCE(SUM(current_member=0),0) former_members FROM p2k_g_players")->fetch(PDO::FETCH_ASSOC)?:[];
+                $aq=$a->prepare('SELECT COALESCE(SUM(games>0),0) active_members,ROUND(COALESCE(SUM(points),0),1) team_points FROM p2k_an_player_totals WHERE club_slug=?');$aq->execute([$clubSlug]);$analyticsSummary=$aq->fetch(PDO::FETCH_ASSOC)?:[];
+                $playing=$this->pdo->query("SELECT COUNT(DISTINCT COALESCE(im.canonical_username_key,mp.username_key)) FROM p2k_g_match_players mp JOIN p2k_g_matches m ON m.match_id=mp.match_id LEFT JOIN p2k_g_identity_map im ON im.username_key=mp.username_key WHERE mp.is_p2k=1 AND m.club_verified=1 AND m.time_class='daily' AND m.is_void=0 AND m.status IN ('registered','in_progress')");
+                $activity=$a->prepare("SELECT DATE_FORMAT(month_start,'%Y-%m') month,COUNT(DISTINCT username_key) active_members,SUM(games) games,ROUND(SUM(points_x2)/2,1) points FROM p2k_an_player_monthly WHERE club_slug=? GROUP BY month ORDER BY month");$activity->execute([$clubSlug]);
+                $monthly=array_map(static fn(array $r):array=>['month'=>(string)$r['month'],'active_members'=>(int)$r['active_members'],'games'=>(int)$r['games'],'points'=>(float)$r['points']],$activity->fetchAll()?:[]);
+                return ['summary'=>['total_members'=>(int)($membership['total_members']??0),'current_members'=>(int)($membership['current_members']??0),'former_members'=>(int)($membership['former_members']??0),'active_members'=>(int)($analyticsSummary['active_members']??0),'currently_playing'=>(int)$playing->fetchColumn(),'team_points'=>(float)($analyticsSummary['team_points']??0)],'analytics'=>['monthly_activity'=>$monthly],'range'=>['start'=>null,'end'=>null],'green_membership_authoritative'=>true];
+            }
             $sq=$a->prepare('SELECT COUNT(*) total_members,SUM(current_member=1) current_members,SUM(current_member=0) former_members,SUM(games>0) active_members,ROUND(COALESCE(SUM(points),0),1) team_points FROM p2k_an_player_totals WHERE club_slug=?');$sq->execute([$clubSlug]);$summary=$sq->fetch(PDO::FETCH_ASSOC)?:[];
             $playing=$this->pdo->prepare("SELECT COUNT(DISTINCT p.username_key) FROM p2k_tp_participations p JOIN p2k_tp_match_metadata m ON m.club_slug=p.club_slug AND m.match_id=p.match_id WHERE p.club_slug=? AND m.is_void=0 AND m.status IN ('registered','in_progress')");$playing->execute([$clubSlug]);
             $activity=$a->prepare("SELECT DATE_FORMAT(month_start,'%Y-%m') month,COUNT(DISTINCT username_key) active_members,SUM(games) games,ROUND(SUM(points_x2)/2,1) points FROM p2k_an_player_monthly WHERE club_slug=? GROUP BY month ORDER BY month");$activity->execute([$clubSlug]);
@@ -3157,6 +3165,20 @@ $a=$this->analytics();$page=max(1,$page);$pageSize=max(10,min(50,$pageSize));$de
             return ['summary'=>['total_members'=>(int)($summary['total_members']??0),'current_members'=>(int)($summary['current_members']??0),'former_members'=>(int)($summary['former_members']??0),'active_members'=>(int)($summary['active_members']??0),'currently_playing'=>(int)$playing->fetchColumn(),'team_points'=>(float)($summary['team_points']??0)],'analytics'=>['monthly_activity'=>$monthly],'range'=>['start'=>null,'end'=>null]];
         }
         if($section==='ranks'){
+            if(PublicReadDatabase::source()==='green'){
+                $members=$this->pdo->query("SELECT username_key FROM p2k_g_players WHERE current_member=1 ORDER BY username_key")->fetchAll(PDO::FETCH_COLUMN)?:[];
+                $points=[];
+                foreach(array_chunk(array_map('strval',$members),250) as $chunk){
+                    if($chunk===[])continue;
+                    $marks=implode(',',array_fill(0,count($chunk),'?'));
+                    $q=$a->prepare("SELECT username_key,points FROM p2k_an_player_totals WHERE club_slug=? AND username_key IN ({$marks})");
+                    $q->execute(array_merge([$clubSlug],$chunk));
+                    foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $r)$points[(string)$r['username_key']]=(float)$r['points'];
+                }
+                $counts=[];foreach($members as $key){$rank=$this->hallRankForPoints((float)($points[(string)$key]??0));$name=(string)($rank['name']??'Unranked');$counts[$name]=($counts[$name]??0)+1;}
+                $rows=[];foreach($counts as $name=>$count)$rows[]=['rank'=>$name,'members'=>(int)$count];usort($rows,static fn(array $x,array $y):int=>$y['members']<=>$x['members']?:strcmp($x['rank'],$y['rank']));
+                return ['analytics'=>['rank_distribution'=>$rows],'range'=>['start'=>null,'end'=>null],'green_membership_authoritative'=>true];
+            }
             $q=$a->prepare('SELECT points FROM p2k_an_player_totals WHERE club_slug=? AND current_member=1');$q->execute([$clubSlug]);$counts=[];foreach($q->fetchAll(PDO::FETCH_COLUMN)?:[] as $v){$rank=$this->hallRankForPoints((float)$v);$name=(string)($rank['name']??'Unranked');$counts[$name]=($counts[$name]??0)+1;}$rows=[];foreach($counts as $name=>$count)$rows[]=['rank'=>$name,'members'=>(int)$count];usort($rows,static fn(array $x,array $y):int=>$y['members']<=>$x['members']?:strcmp($x['rank'],$y['rank']));return ['analytics'=>['rank_distribution'=>$rows],'range'=>['start'=>null,'end'=>null]];
         }
         // Table-only all-time path. Reuse the optimized SQL paginator, then discard its secondary analytics.
