@@ -166,7 +166,8 @@ payload={
     {"version":"2.15.0","source_head":"4fe8c39d852ddf7f3cc590401d529cddbf7e4640"},
     {"version":"2.15.0","source_head":"1720731cea4f7b26b27ab5e7dd88f7272e658a20"},
     {"version":"2.15.0","source_head":"3776ecdd6b91b67816f5fa3853e763ac5b5d7f98"},
-    {"version":"2.15.0","source_head":"0bafb17000c118d0a40feaa5e9c5bba65bbf9b84"}
+    {"version":"2.15.0","source_head":"0bafb17000c118d0a40feaa5e9c5bba65bbf9b84"},
+    {"version":"2.15.1","source_head":"04b1f2cb2ef36dd50780e1efaa51ae69a19c407c"}
   ]}
 Path(out).write_text(json.dumps(payload,indent=2)+"\n")
 PY
@@ -190,6 +191,7 @@ Accepted public bases:
 - v2.15.0 at 1720731cea4f7b26b27ab5e7dd88f7272e658a20
 - v2.15.0 at 3776ecdd6b91b67816f5fa3853e763ac5b5d7f98
 - v2.15.0 at 0bafb17000c118d0a40feaa5e9c5bba65bbf9b84
+- v2.15.1 at 04b1f2cb2ef36dd50780e1efaa51ae69a19c407c
 
 Contents:
 - Challenge Assistant activity checker supports configurable AND/OR criteria for registration, in-progress, recent-started, average-board activity and individual board-size match counts.

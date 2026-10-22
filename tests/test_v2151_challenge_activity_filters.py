@@ -76,3 +76,7 @@ def test_green_membership_is_authoritative_for_member_table_and_csv_population()
     assert "if(PublicReadDatabase::source()==='green')return $this->publicGreenMemberInsightsMaterialized" in repo
     assert "$repository->publicMemberInsights" in export
     assert "FROM p2k_g_players WHERE username_key IN" in export
+
+
+def test_member_export_fix_accepts_promoted_v2151_predecessor():
+    assert '"version":"2.15.1","source_head":"04b1f2cb2ef36dd50780e1efaa51ae69a19c407c"' in BUILDER
