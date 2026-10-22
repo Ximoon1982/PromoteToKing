@@ -91,3 +91,7 @@ def test_green_member_summary_and_ranks_use_green_roster_not_analytics_membershi
     assert "green_membership_authoritative" in block
     assert "points[(string)$key]??0" in block
     assert "members-insights-green-roster-v2|" in endpoint
+
+
+def test_v2151_package_contains_members_insights_endpoint_for_cache_invalidation():
+    assert "server/team-points/public/members-insights.php" in BUILDER

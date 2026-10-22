@@ -55,6 +55,7 @@ OVERLAY_FILES=(
   server/team-points/public/player-stats.php
   server/team-points/public/player-cards.php
   server/team-points/public/opponent-icons.php
+  server/team-points/public/members-insights.php
   server/team-points/public/members-insights-export.php
   server/team-points/public/intelligence.php
   server/team-points/sql/core-schema.sql
