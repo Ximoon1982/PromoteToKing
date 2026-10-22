@@ -47,6 +47,8 @@ OVERLAY_FILES=(
   server/team-points/src/CronMaintenanceCoordinator.php
   server/team-points/src/FairPlayPriorityRunner.php
   server/team-points/bin/maintenance.php
+  server/team-points/bin/install-analytics-convergence-cron.sh
+  server/team-points/bin/analytics-convergence.php
   server/team-points/bin/cutover-blue-maintenance-cron.sh
   server/team-points/src/MiacService.php
   server/team-points/src/MemberInsightsTableService.php

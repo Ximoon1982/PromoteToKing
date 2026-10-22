@@ -10,15 +10,15 @@ require_once dirname(__DIR__).'/src/bootstrap.php';
 
 use P2K\TeamPoints\ChessApi;
 use P2K\TeamPoints\CronMaintenanceCoordinator;
-use P2K\TeamPoints\Database;
+use P2K\TeamPoints\PublicReadDatabase;
 use P2K\TeamPoints\FairPlayPriorityRunner;
 use P2K\TeamPoints\Repository;
 
 $seconds=max(25,min(50,(int)($argv[1]??45)));
 $started=microtime(true);
 $hardDeadline=$started+$seconds;
-$core=Database::core();
-$analytics=Database::analytics();
+$core=PublicReadDatabase::core();
+$analytics=PublicReadDatabase::analytics();
 $repository=new Repository($core,$analytics);
 $trace=getenv('P2K_MAINT_TRACE')==='1';
 $traceStage=static function(string $stage) use($trace,$started):void{
@@ -44,8 +44,11 @@ if((int)$q->fetchColumn()!==1){
 
 $out=[
     'ok'=>true,
-    'version'=>'2.15.0',
+    'version'=>'2.15.1',
     'club_slug'=>$club,
+    'database_route'=>'green-production',
+    'core_database'=>(string)$core->query('SELECT DATABASE()')->fetchColumn(),
+    'analytics_database'=>(string)$analytics->query('SELECT DATABASE()')->fetchColumn(),
     'fair_play_priority'=>null,
     'lane_order'=>[],
     'lanes'=>[],

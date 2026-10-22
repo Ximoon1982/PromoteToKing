@@ -108,4 +108,19 @@ echo "SUCCESS: Team Points maintenance cutover installed."
 echo "Backup: $BACKUP"
 echo "Removed legacy Blue acquisition schedules: club=$CLUB_COUNT player=$PLAYER_COUNT"
 echo "Preserved P2K schedules: tournaments=$TOURNAMENT_COUNT match-tracking=$TRACKING_COUNT"
+ANALYTICS_INSTALLER="$ROOT/server/team-points/bin/install-analytics-convergence-cron.sh"
+[[ -x "$ANALYTICS_INSTALLER" ]] || chmod +x "$ANALYTICS_INSTALLER"
+if ! "$ANALYTICS_INSTALLER" "$ROOT"; then
+  echo "ERROR: Analytics convergence CRON installation failed; restoring previous crontab." >&2
+  crontab "$CURRENT"
+  exit 3
+fi
+ANALYTICS_COUNT="$(crontab -l 2>/dev/null | grep -F -c "$HOME/.p2k/team-points-analytics-active.sh" || true)"
+if [[ "$ANALYTICS_COUNT" -ne 1 ]]; then
+  echo "ERROR: Analytics convergence CRON verification failed; restoring previous crontab." >&2
+  crontab "$CURRENT"
+  exit 4
+fi
+
 echo "Installed maintenance schedule: every 5 minutes at minute 3, using active-slot resolver $HELPER"
+echo "Installed/verified Green Analytics convergence schedule: every minute via active-slot resolver."
