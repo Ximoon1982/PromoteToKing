@@ -731,7 +731,7 @@ final class AnalyticsBuilder
         // cannot mask a newly available historical event date.
         try{
             $mcaKeys=[];foreach(AchievementCatalog::all() as $item){$cat=(string)($item['category']??'');if($cat==='live-ranks'||str_starts_with($cat,'mca-'))$mcaKeys[]=(string)$item['key'];}
-            if($mcaKeys){$placeholders=implode(',',array_fill(0,count($mcaKeys),'?'));$del=$this->analytics->prepare("DELETE FROM p2k_an_achievement_unlocks WHERE club_slug=? AND achievement_key IN ($placeholders)");$del->execute(array_merge([$clubSlug],$mcaKeys));foreach(array_keys($seen) as $id){foreach($mcaKeys as $key)if(str_ends_with($id,"\0".$key)){unset($seen[$id]);break;}}}
+            if($mcaKeys){$placeholders=implode(',',array_fill(0,count($mcaKeys),'?'));$del=$this->analytics->prepare("DELETE FROM p2k_an_achievement_unlocks WHERE club_slug=?{$analyticsTargetClause} AND achievement_key IN ($placeholders)");$del->execute(array_merge($analyticsArgs,$mcaKeys));foreach(array_keys($seen) as $id){foreach($mcaKeys as $key)if(str_ends_with($id,"\0".$key)){unset($seen[$id]);break;}}}
             $sql="SELECT COALESCE(a.canonical_username_key,s.raw_username_key) username_key,f.id file_id,f.original_name,
                          COALESCE(f.effective_event_date,DATE(f.uploaded_at)) event_date,
                          COALESCE(f.event_date_precision,'upload-fallback') event_date_precision,
