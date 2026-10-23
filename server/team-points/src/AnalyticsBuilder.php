@@ -302,7 +302,7 @@ final class AnalyticsBuilder
     private function rebuildPlayerMonthly(string $clubSlug): int
     {
         $this->analytics->prepare('DELETE FROM p2k_an_player_monthly WHERE club_slug=?')->execute([$clubSlug]);
-        $q=$this->core->prepare("SELECT COALESCE(im.canonical_username_key,u.username_key) username_key,COALESCE(MAX(im.canonical_username),MAX(u.username)) username,CAST(DATE_FORMAT(g.game_end_utc,'%Y-%m-01') AS DATE) month_start,COALESCE(SUM(g.points_x2),0) points_x2,COUNT(DISTINCT b.match_id) matches,COUNT(*) games,COALESCE(SUM(g.points_x2=2),0) wins,COALESCE(SUM(g.points_x2=1),0) draws,COALESCE(SUM(g.points_x2=0),0) losses,MIN(g.game_end_utc) first_game_at,MAX(g.game_end_utc) last_game_at FROM p2k_tp_games g JOIN p2k_tp_boards b ON b.board_id=g.board_id JOIN p2k_tp_members u ON u.member_id=b.member_id LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0 JOIN p2k_tp_match_metadata m ON m.club_slug=u.club_slug AND m.match_id=b.match_id WHERE u.club_slug=? AND m.is_void=0 GROUP BY COALESCE(im.canonical_username_key,u.username_key),CAST(DATE_FORMAT(g.game_end_utc,'%Y-%m-01') AS DATE) ORDER BY month_start,username_key");
+        $q=$this->core->prepare("SELECT COALESCE(im.canonical_username_key,u.username_key) username_key,COALESCE(MAX(im.canonical_username),MAX(u.username)) username,CAST(DATE_FORMAT(g.game_end_utc,'%Y-%m-01') AS DATE) month_start,COALESCE(SUM(g.points_x2),0) points_x2,COUNT(DISTINCT b.match_id) matches,COUNT(*) games,COALESCE(SUM(g.points_x2=2),0) wins,COALESCE(SUM(g.points_x2=1),0) draws,COALESCE(SUM(g.points_x2=0),0) losses,MIN(g.game_end_utc) first_game_at,MAX(g.game_end_utc) last_game_at FROM p2k_tp_games g JOIN p2k_tp_boards b ON b.board_id=g.board_id JOIN p2k_tp_members u ON u.member_id=b.member_id LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0 JOIN p2k_tp_match_metadata m ON m.club_slug=u.club_slug AND m.match_id=b.match_id WHERE u.club_slug=? AND m.is_void=0{$coreTargetClause} GROUP BY COALESCE(im.canonical_username_key,u.username_key),CAST(DATE_FORMAT(g.game_end_utc,'%Y-%m-01') AS DATE) ORDER BY month_start,username_key");
         $q->execute([$clubSlug]);$prefix="INSERT INTO p2k_an_player_monthly(club_slug,username_key,username,month_start,points_x2,matches,games,wins,draws,losses,first_game_at,last_game_at,updated_at) VALUES ";$count=0;$batch=[];$now=gmdate('Y-m-d H:i:s');
         while($r=$q->fetch(PDO::FETCH_ASSOC)){$batch[]=[$clubSlug,$r['username_key'],$r['username'],$r['month_start'],(int)$r['points_x2'],(int)$r['matches'],(int)$r['games'],(int)$r['wins'],(int)$r['draws'],(int)$r['losses'],$r['first_game_at'],$r['last_game_at'],$now];$count++;if(count($batch)>=300){$this->executeAnalyticsInsertBatch($prefix,13,$batch);$batch=[];}}
         $this->executeAnalyticsInsertBatch($prefix,13,$batch);
@@ -412,8 +412,24 @@ final class AnalyticsBuilder
         }
     }
 
-    private function rebuildAchievements(string $clubSlug): int
+    private function rebuildAchievements(string $clubSlug, ?array $targetUsers = null): int
     {
+        $targetKeys = [];
+        if (is_array($targetUsers)) {
+            foreach ($targetUsers as $targetUser) {
+                $key = \p2k_tp_username_key((string)$targetUser);
+                if ($key !== '') $targetKeys[$key] = true;
+            }
+            $targetKeys = array_keys($targetKeys);
+            sort($targetKeys, SORT_STRING);
+        }
+        $targetSet = $targetKeys === [] ? null : array_fill_keys($targetKeys, true);
+        $targetMarks = $targetKeys === [] ? '' : implode(',', array_fill(0, count($targetKeys), '?'));
+        $coreTargetClause = $targetKeys === [] ? '' : " AND COALESCE(im.canonical_username_key,u.username_key) IN ($targetMarks)";
+        $mcaTargetClause = $targetKeys === [] ? '' : " AND COALESCE(a.canonical_username_key,s.raw_username_key) IN ($targetMarks)";
+        $analyticsTargetClause = $targetKeys === [] ? '' : " AND username_key IN ($targetMarks)";
+        $coreArgs = array_merge([$clubSlug], $targetKeys);
+        $analyticsArgs = array_merge([$clubSlug], $targetKeys);
         // v2.8.3 could persist YYYY-MM-01 synthetic tournament dates with precision
         // tournament-period. Clear those legacy placeholders up front. Exact dates are
         // restored below only when an authoritative tournament finishAt is available.
@@ -448,9 +464,9 @@ final class AnalyticsBuilder
         try {
             $existingQuery = $this->analytics->prepare(
                 "SELECT username_key,achievement_key,earned_at,earned_at_precision,source_type,source_name,source_url
-                 FROM p2k_an_achievement_unlocks WHERE club_slug=?"
+                 FROM p2k_an_achievement_unlocks WHERE club_slug=?{$analyticsTargetClause}"
             );
-            $existingQuery->execute([$clubSlug]);
+            $existingQuery->execute($analyticsArgs);
             while ($existingRow = $existingQuery->fetch(PDO::FETCH_ASSOC)) {
                 $existingUnlocks[(string)$existingRow['username_key']."\0".(string)$existingRow['achievement_key']] = [
                     'earned_at'=>$existingRow['earned_at']!==null?(string)$existingRow['earned_at']:null,
@@ -485,8 +501,8 @@ final class AnalyticsBuilder
         );
         $canonical=[];try{$cq=$this->core->prepare('SELECT username_key,canonical_username_key FROM p2k_miac_canonical_map WHERE club_slug=? AND conflict=0');$cq->execute([$clubSlug]);foreach($cq->fetchAll(PDO::FETCH_ASSOC)?:[] as $cr)$canonical[(string)$cr['username_key']]=(string)$cr['canonical_username_key'];}catch(\Throwable){}
         $seen = [];
-        $record = static function(string $user,string $key,?string $when,string $precision='derived',?string $sourceType=null,?string $sourceName=null,?string $sourceUrl=null) use ($unlock,$clubSlug,$catalog,&$seen,$canonical,&$existingUnlocks): void {
-            $user=$canonical[$user]??$user;if (!isset($catalog[$key])) return;
+        $record = static function(string $user,string $key,?string $when,string $precision='derived',?string $sourceType=null,?string $sourceName=null,?string $sourceUrl=null) use ($unlock,$clubSlug,$catalog,&$seen,$canonical,&$existingUnlocks,$targetSet): void {
+            $user=$canonical[$user]??$user;if ($targetSet!==null&&!isset($targetSet[$user])) return;if (!isset($catalog[$key])) return;
             $sourceUrl=\p2k_tp_chess_web_url($sourceUrl,(string)($sourceType??''));
             $id = $user . "\0" . $key;
             if (isset($seen[$id])) return;
@@ -550,10 +566,10 @@ final class AnalyticsBuilder
              LEFT JOIN p2k_tp_games g ON g.board_id=b.board_id
              LEFT JOIN p2k_tp_opponent_aliases oa ON oa.club_slug=m.club_slug AND oa.alias_slug=m.opponent_slug
              LEFT JOIN p2k_tp_opponents o ON o.club_slug=m.club_slug AND o.opponent_slug=COALESCE(oa.canonical_slug,m.opponent_slug)
-             WHERE u.club_slug=? AND m.is_void=0 GROUP BY COALESCE(im.canonical_username_key,u.username_key),m.match_id,m.match_name,m.match_url,m.is_league,m.start_time,m.end_time,m.status,m.rules,m.board_count,COALESCE(oa.canonical_slug,m.opponent_slug),m.result,m.p2k_score,m.opponent_score,o.country_code,event_at
+             WHERE u.club_slug=? AND m.is_void=0{$coreTargetClause} GROUP BY COALESCE(im.canonical_username_key,u.username_key),m.match_id,m.match_name,m.match_url,m.is_league,m.start_time,m.end_time,m.status,m.rules,m.board_count,COALESCE(oa.canonical_slug,m.opponent_slug),m.result,m.p2k_score,m.opponent_score,o.country_code,event_at
              ORDER BY username_key,event_at,m.match_id"
         );
-        $q->execute([$clubSlug]);
+        $q->execute($coreArgs);
         $state=[];
         while($r=$q->fetch(PDO::FETCH_ASSOC)){
             $u=(string)$r['username_key']; $at=$r['event_at']!==null?(string)$r['event_at']:null;
@@ -643,12 +659,12 @@ final class AnalyticsBuilder
                  LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0
                  JOIN p2k_tp_match_metadata m ON m.club_slug=u.club_slug AND m.match_id=b.match_id
                  LEFT JOIN p2k_tp_games g ON g.board_id=b.board_id
-                 WHERE u.club_slug=? AND m.is_void=0 AND m.start_time IS NOT NULL AND m.start_time<=UTC_TIMESTAMP()
+                 WHERE u.club_slug=? AND m.is_void=0{$coreTargetClause} AND m.start_time IS NOT NULL AND m.start_time<=UTC_TIMESTAMP()
                    AND m.status IN ('in_progress','finished')
                  GROUP BY b.board_id,COALESCE(im.canonical_username_key,u.username_key),m.match_id,m.match_name,m.match_url,m.status,m.start_time,b.finished_game_count
                  ORDER BY username_key,m.start_time,m.match_id"
             );
-            $q->execute([$clubSlug]);$events=[];
+            $q->execute($coreArgs);$events=[];
             foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $r){
                 $stored=(int)($r['stored_games']??0);$status=(string)$r['status'];
                 if($status==='finished'&&$stored<2)continue;
@@ -669,9 +685,9 @@ final class AnalyticsBuilder
              FROM p2k_tp_games g JOIN p2k_tp_boards b ON b.board_id=g.board_id JOIN p2k_tp_members u ON u.member_id=b.member_id
              LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0
              JOIN p2k_tp_match_metadata m ON m.club_slug=u.club_slug AND m.match_id=b.match_id
-             WHERE u.club_slug=? AND m.is_void=0 ORDER BY username_key,g.game_end_utc,g.game_row_id"
+             WHERE u.club_slug=? AND m.is_void=0{$coreTargetClause} ORDER BY username_key,g.game_end_utc,g.game_row_id"
         );
-        $q->execute([$clubSlug]); $state=[];
+        $q->execute($coreArgs); $state=[];
         $pointThresholds=['daily-pawn'=>20,'daily-knight'=>40,'daily-bishop'=>100,'daily-rook'=>200,'daily-queen'=>300,'daily-king'=>500,'daily-bronze-king'=>1000,'daily-silver-king'=>2000,'daily-gold-king'=>3000,'daily-platinum-king'=>4000,'daily-amethyst-king'=>6000,'daily-topaz-king'=>8000,'daily-emerald-king'=>11000,'daily-sapphire-king'=>14000,'daily-ruby-king'=>17000,'daily-diamond-king'=>20000];
         while($r=$q->fetch(PDO::FETCH_ASSOC)){
             $u=(string)$r['username_key']; $at=(string)$r['game_end_utc']; $px=(int)$r['points_x2'];
@@ -697,8 +713,8 @@ final class AnalyticsBuilder
 
         // Single-match two-game performance uses only boards with both finished games stored.
         try{
-            $q=$this->core->prepare("SELECT COALESCE(im.canonical_username_key,u.username_key) username_key,m.match_name,m.match_url,MAX(g.game_end_utc) event_at,COUNT(g.game_row_id) stored_games,SUM(g.points_x2) points_x2,SUM(CASE WHEN g.points_x2=1 THEN 1 ELSE 0 END) draws FROM p2k_tp_boards b JOIN p2k_tp_members u ON u.member_id=b.member_id LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0 JOIN p2k_tp_match_metadata m ON m.club_slug=u.club_slug AND m.match_id=b.match_id JOIN p2k_tp_games g ON g.board_id=b.board_id WHERE u.club_slug=? AND m.is_void=0 GROUP BY b.board_id,COALESCE(im.canonical_username_key,u.username_key),m.match_name,m.match_url HAVING stored_games>=2 ORDER BY username_key,event_at,b.board_id");
-            $q->execute([$clubSlug]);foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $r){$u=(string)$r['username_key'];$at=(string)$r['event_at'];$points=(int)$r['points_x2'];$draws=(int)$r['draws'];if($points>=3)$record($u,'match-score-15',$at,'board-complete','match',(string)$r['match_name'],(string)$r['match_url']);if($points>=4)$record($u,'match-score-20',$at,'board-complete','match',(string)$r['match_name'],(string)$r['match_url']);if($draws>=2)$record($u,'match-two-draws',$at,'board-complete','match',(string)$r['match_name'],(string)$r['match_url']);}
+            $q=$this->core->prepare("SELECT COALESCE(im.canonical_username_key,u.username_key) username_key,m.match_name,m.match_url,MAX(g.game_end_utc) event_at,COUNT(g.game_row_id) stored_games,SUM(g.points_x2) points_x2,SUM(CASE WHEN g.points_x2=1 THEN 1 ELSE 0 END) draws FROM p2k_tp_boards b JOIN p2k_tp_members u ON u.member_id=b.member_id LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0 JOIN p2k_tp_match_metadata m ON m.club_slug=u.club_slug AND m.match_id=b.match_id JOIN p2k_tp_games g ON g.board_id=b.board_id WHERE u.club_slug=? AND m.is_void=0{$coreTargetClause} GROUP BY b.board_id,COALESCE(im.canonical_username_key,u.username_key),m.match_name,m.match_url HAVING stored_games>=2 ORDER BY username_key,event_at,b.board_id");
+            $q->execute($coreArgs);foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $r){$u=(string)$r['username_key'];$at=(string)$r['event_at'];$points=(int)$r['points_x2'];$draws=(int)$r['draws'];if($points>=3)$record($u,'match-score-15',$at,'board-complete','match',(string)$r['match_name'],(string)$r['match_url']);if($points>=4)$record($u,'match-score-20',$at,'board-complete','match',(string)$r['match_name'],(string)$r['match_url']);if($draws>=2)$record($u,'match-two-draws',$at,'board-complete','match',(string)$r['match_name'],(string)$r['match_url']);}
         }catch(\Throwable){}
 
         // Membership seniority has an exact threshold date when first_seen is known.
@@ -726,10 +742,10 @@ final class AnalyticsBuilder
                   FROM p2k_lr_source_rows s
                   JOIN p2k_lr_files f ON f.club_slug=s.club_slug AND f.id=s.file_id
                   LEFT JOIN p2k_lr_attributions a ON a.club_slug=s.club_slug AND a.file_id=s.file_id AND a.source_row_no=s.source_row_no AND a.conflict=0
-                  WHERE s.club_slug=? AND f.status='processed'
+                  WHERE s.club_slug=? AND f.status='processed'{$mcaTargetClause}
                   GROUP BY COALESCE(a.canonical_username_key,s.raw_username_key),f.id,f.original_name,f.effective_event_date,f.uploaded_at,f.event_date_precision
                   ORDER BY username_key,event_date,f.id";
-            $q=$this->analytics->prepare($sql);$q->execute([$clubSlug]);$mcaState=[];
+            $q=$this->analytics->prepare($sql);$q->execute($analyticsArgs);$mcaState=[];
             foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $r){
                 $u=(string)$r['username_key'];if($u==='')continue;
                 if(!isset($mcaState[$u]))$mcaState[$u]=['points'=>0.0,'arenas'=>0,'top10'=>0,'top3'=>0,'firsts'=>0,'best_streak'=>0,'max_wins'=>0];
@@ -788,8 +804,8 @@ final class AnalyticsBuilder
             $byKey=[];foreach(AchievementCatalog::all() as $item)$byKey[(string)$item['key']]=(string)$item['category'];
             $eligible=AchievementCatalog::eligibleBreadthCategories();$eligibleSet=array_fill_keys($eligible,true);
             $legacyEligible=AchievementCatalog::legacyBreadthCategories();$legacySet=array_fill_keys($legacyEligible,true);$legacyAllTarget=count($legacyEligible);
-            $q=$this->analytics->prepare("SELECT username_key,achievement_key,COALESCE(earned_at,first_recorded_at) event_at FROM p2k_an_achievement_unlocks WHERE club_slug=? ORDER BY username_key,event_at,achievement_key");
-            $q->execute([$clubSlug]);$cats=[];$legacyCats=[];
+            $q=$this->analytics->prepare("SELECT username_key,achievement_key,COALESCE(earned_at,first_recorded_at) event_at FROM p2k_an_achievement_unlocks WHERE club_slug=?{$analyticsTargetClause} ORDER BY username_key,event_at,achievement_key");
+            $q->execute($analyticsArgs);$cats=[];$legacyCats=[];
             foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $r){$category=$byKey[(string)$r['achievement_key']]??'';if($category==='')continue;$u=(string)$r['username_key'];$at=(string)$r['event_at'];if(isset($eligibleSet[$category])&&(!isset($cats[$u][$category])||strcmp($at,(string)$cats[$u][$category])<0))$cats[$u][$category]=$at;if(isset($legacySet[$category])&&(!isset($legacyCats[$u][$category])||strcmp($at,(string)$legacyCats[$u][$category])<0))$legacyCats[$u][$category]=$at;}
             foreach(array_unique(array_merge(array_keys($cats),array_keys($legacyCats))) as $u){
                 $legacyDates=array_values($legacyCats[$u]??[]);sort($legacyDates,SORT_STRING);$legacyCount=count($legacyDates);
@@ -807,8 +823,8 @@ final class AnalyticsBuilder
         // achievements themselves are excluded so an unlock can never advance its own ladder.
         try{
             $byKey=[];foreach(AchievementCatalog::all() as $item)$byKey[(string)$item['key']]=(string)$item['category'];
-            $q=$this->analytics->prepare("SELECT username_key,achievement_key,COALESCE(earned_at,first_recorded_at) event_at FROM p2k_an_achievement_unlocks WHERE club_slug=? ORDER BY username_key,event_at,achievement_key");
-            $q->execute([$clubSlug]);$counts=[];$owned=[];
+            $q=$this->analytics->prepare("SELECT username_key,achievement_key,COALESCE(earned_at,first_recorded_at) event_at FROM p2k_an_achievement_unlocks WHERE club_slug=?{$analyticsTargetClause} ORDER BY username_key,event_at,achievement_key");
+            $q->execute($analyticsArgs);$counts=[];$owned=[];
             foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $r){$key=(string)$r['achievement_key'];if(($byKey[$key]??'')==='achievement-collector')continue;$u=(string)$r['username_key'];if(isset($owned[$u][$key]))continue;$owned[$u][$key]=true;$counts[$u]=($counts[$u]??0)+1;$n=$counts[$u];foreach([[25,'collector-25'],[50,'collector-50'],[75,'collector-75'],[100,'collector-100'],[125,'collector-125']] as $m)if($n===$m[0])$record($u,$m[1],(string)$r['event_at'],'achievement-count-threshold');}
         }catch(\Throwable){}
         return count($seen);
