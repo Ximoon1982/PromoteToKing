@@ -21,30 +21,8 @@ try{
     $budget=max(1.0,$deadline-microtime(true)-1.0);$value=number_format(min(30.0,$budget),3,'.','');
     foreach([$core,$analytics] as $pdo){try{$pdo->exec('SET SESSION max_statement_time='.$value);}catch(Throwable){}}
     $builder=new AnalyticsBuilder($core,$analytics);
-    $state=[];
-    try{
-        $q=$analytics->prepare("SELECT domain_key,source_watermark,refreshed_at FROM p2k_an_refresh_state WHERE club_slug=? AND domain_key IN ('all','achievements')");
-        $q->execute([$club]);
-        foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $r)$state[(string)$r['domain_key']]=$r;
-    }catch(Throwable){}
-    $achievementCurrent=$builder->achievementSourceWatermark($club);
-    $achievementStored=(string)($state['achievements']['source_watermark']??'');
-    $achievementStale=$achievementStored===''||!hash_equals($achievementStored,$achievementCurrent);
-    $allRefreshed=strtotime((string)($state['all']['refreshed_at']??'1970-01-01').' UTC')?:0;
-    $achievementRefreshed=strtotime((string)($state['achievements']['refreshed_at']??'1970-01-01').' UTC')?:0;
-    $achievements=['ran'=>false,'refresh_deferred'=>true,'reason'=>'not_due'];
-    $result=['ran'=>false,'refresh_deferred'=>true,'reason'=>'not_due'];
-    $order=$achievementStale&&$achievementRefreshed<=$allRefreshed?['achievements','all']:['all','achievements'];
-    foreach($order as $domain){
-        if($deadline-microtime(true)<10.0){
-            if($domain==='all')$result=['ran'=>false,'refresh_deferred'=>true,'reason'=>'deadline'];
-            else $achievements=['ran'=>false,'refresh_deferred'=>true,'reason'=>'deadline'];
-            continue;
-        }
-        if($domain==='all')$result=$builder->refreshIfDue($club,300,$deadline);
-        else $achievements=$builder->refreshAchievementsIfDue($club,21600,$deadline);
-    }
-    fwrite(STDOUT,json_encode(['ok'=>true,'version'=>'2.15.1','database_route'=>'green-production','core_database'=>(string)$core->query('SELECT DATABASE()')->fetchColumn(),'analytics_database'=>(string)$analytics->query('SELECT DATABASE()')->fetchColumn(),'elapsed_ms'=>(int)round((microtime(true)-$started)*1000),'order'=>$order,'result'=>$result,'achievements'=>$achievements],JSON_UNESCAPED_SLASHES).PHP_EOL);
+    $result=$builder->refreshIfDue($club,300,$deadline);
+    fwrite(STDOUT,json_encode(['ok'=>true,'version'=>'2.15.1','database_route'=>'green-production','core_database'=>(string)$core->query('SELECT DATABASE()')->fetchColumn(),'analytics_database'=>(string)$analytics->query('SELECT DATABASE()')->fetchColumn(),'elapsed_ms'=>(int)round((microtime(true)-$started)*1000),'result'=>$result,'achievement_owner'=>'team-points-maintenance-player-lane'],JSON_UNESCAPED_SLASHES).PHP_EOL);
 } finally {
     foreach([$core,$analytics] as $pdo){try{$pdo->exec('SET SESSION max_statement_time=0');}catch(Throwable){}}
     try{$r=$core->prepare('SELECT RELEASE_LOCK(?)');$r->execute([$lock]);}catch(Throwable){}
