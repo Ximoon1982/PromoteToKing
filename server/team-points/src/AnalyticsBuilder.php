@@ -156,50 +156,216 @@ final class AnalyticsBuilder
         }
     }
 
+    /** @return string[] canonical username keys whose achievement inputs changed since the supplied UTC timestamp. */
+    private function achievementUsersForSweep(string $clubSlug, ?string $since): array
+    {
+        $clubSlug=strtolower(trim($clubSlug));
+        $users=[];
+        $add=static function(mixed $value) use (&$users): void {
+            $key=\p2k_tp_username_key((string)$value);
+            if($key!=='')$users[$key]=true;
+        };
+        $allUsers=function() use($clubSlug,$add): array {
+            $q=$this->core->prepare("SELECT DISTINCT COALESCE(im.canonical_username_key,u.username_key) username_key
+                FROM p2k_tp_members u
+                LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0
+                WHERE u.club_slug=? ORDER BY username_key");
+            $q->execute([$clubSlug]);
+            foreach($q->fetchAll(PDO::FETCH_COLUMN)?:[] as $u)$add($u);
+            return array_keys($GLOBALS['__p2k_unused']??[]);
+        };
+
+        if($since===null||$since===''){
+            $q=$this->core->prepare("SELECT DISTINCT COALESCE(im.canonical_username_key,u.username_key) username_key
+                FROM p2k_tp_members u
+                LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0
+                WHERE u.club_slug=?");
+            $q->execute([$clubSlug]);
+            foreach($q->fetchAll(PDO::FETCH_COLUMN)?:[] as $u)$add($u);
+            $out=array_keys($users);sort($out,SORT_STRING);return $out;
+        }
+
+        // Identity remaps can affect every historical achievement attribution.
+        try{
+            $q=$this->core->prepare("SELECT updated_at FROM p2k_miac_state WHERE club_slug=? LIMIT 1");
+            $q->execute([$clubSlug]);
+            $updated=(string)($q->fetchColumn()?:'');
+            if($updated!==''&&strcmp($updated,$since)>0){
+                $q=$this->core->prepare("SELECT DISTINCT COALESCE(im.canonical_username_key,u.username_key) username_key
+                    FROM p2k_tp_members u
+                    LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0
+                    WHERE u.club_slug=?");
+                $q->execute([$clubSlug]);
+                foreach($q->fetchAll(PDO::FETCH_COLUMN)?:[] as $u)$add($u);
+                $out=array_keys($users);sort($out,SORT_STRING);return $out;
+            }
+        }catch(\Throwable){}
+
+        $coreQueries=[
+            "SELECT DISTINCT COALESCE(im.canonical_username_key,u.username_key) username_key
+             FROM p2k_tp_members u
+             LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0
+             WHERE u.club_slug=? AND u.first_seen_at>?",
+            "SELECT DISTINCT COALESCE(im.canonical_username_key,u.username_key) username_key
+             FROM p2k_tp_match_metadata m
+             JOIN p2k_tp_boards b ON b.match_id=m.match_id
+             JOIN p2k_tp_members u ON u.member_id=b.member_id AND u.club_slug=m.club_slug
+             LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0
+             WHERE m.club_slug=? AND m.updated_at>?",
+            "SELECT DISTINCT COALESCE(im.canonical_username_key,u.username_key) username_key
+             FROM p2k_tp_games g
+             JOIN p2k_tp_boards b ON b.board_id=g.board_id
+             JOIN p2k_tp_members u ON u.member_id=b.member_id
+             LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0
+             WHERE u.club_slug=? AND g.verified_at>?",
+            "SELECT DISTINCT COALESCE(im.canonical_username_key,u.username_key) username_key
+             FROM p2k_tp_boards b
+             JOIN p2k_tp_members u ON u.member_id=b.member_id
+             LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0
+             WHERE u.club_slug=? AND (b.first_discovered_at>? OR b.rating_captured_at>? OR b.completed_at>?)",
+            "SELECT DISTINCT COALESCE(im.canonical_username_key,u.username_key) username_key
+             FROM p2k_tp_opponents o
+             JOIN p2k_tp_match_metadata m ON m.club_slug=o.club_slug AND m.opponent_slug=o.opponent_slug
+             JOIN p2k_tp_boards b ON b.match_id=m.match_id
+             JOIN p2k_tp_members u ON u.member_id=b.member_id AND u.club_slug=m.club_slug
+             LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0
+             WHERE o.club_slug=? AND o.profile_updated_at>?"
+        ];
+        foreach($coreQueries as $index=>$sql){
+            try{
+                $q=$this->core->prepare($sql);
+                $args=$index===3?[$clubSlug,$since,$since,$since]:[$clubSlug,$since];
+                $q->execute($args);
+                foreach($q->fetchAll(PDO::FETCH_COLUMN)?:[] as $u)$add($u);
+            }catch(\Throwable){}
+        }
+
+        try{
+            $q=$this->analytics->prepare("SELECT username_key FROM p2k_lr_players WHERE club_slug=? AND updated_at>?");
+            $q->execute([$clubSlug,$since]);
+            foreach($q->fetchAll(PDO::FETCH_COLUMN)?:[] as $u)$add($u);
+        }catch(\Throwable){}
+
+        try{
+            $q=$this->analytics->prepare("SELECT DISTINCT COALESCE(a.canonical_username_key,s.raw_username_key) username_key
+                FROM p2k_lr_source_rows s
+                JOIN p2k_lr_files f ON f.club_slug=s.club_slug AND f.id=s.file_id
+                LEFT JOIN p2k_lr_attributions a ON a.club_slug=s.club_slug AND a.file_id=s.file_id AND a.source_row_no=s.source_row_no AND a.conflict=0
+                WHERE s.club_slug=? AND (COALESCE(f.event_date_updated_at,'1970-01-01 00:00:00')>? OR COALESCE(f.processed_at,'1970-01-01 00:00:00')>?)");
+            $q->execute([$clubSlug,$since,$since]);
+            foreach($q->fetchAll(PDO::FETCH_COLUMN)?:[] as $u)$add($u);
+        }catch(\Throwable){}
+
+        $tournamentArchive=dirname(__DIR__,3).'/data/tournaments/archive.json';
+        $sinceEpoch=strtotime($since.' UTC')?:0;
+        if(is_file($tournamentArchive)&&@filemtime($tournamentArchive)>$sinceEpoch){
+            $archive=json_decode((string)@file_get_contents($tournamentArchive),true);
+            foreach(is_array($archive['tournaments']??null)?$archive['tournaments']:[] as $t){
+                if(!is_array($t)||strtolower((string)($t['status']??''))!=='finished')continue;
+                foreach(['gold','silver','bronze'] as $medal)foreach(is_array(($t['podium']??[])[$medal]??null)?$t['podium'][$medal]:[] as $name)$add($name);
+            }
+        }
+
+        $out=array_keys($users);sort($out,SORT_STRING);return $out;
+    }
+
     public function refreshAchievementsIfDue(string $clubSlug, int $minimumSeconds = 21600, ?float $deadlineAt = null): array
     {
         [$marker,$lockPath] = $this->runtimeRefreshPaths($clubSlug, 'achievements');
         $minimumSeconds = max(1800, $minimumSeconds);
         $last = $this->readCompletedEpoch($marker);
+        $queuePath=preg_replace('/\.json$/D','-queue.json',$marker)?:($marker.'.queue.json');
+        $currentWatermark=$this->achievementSourceWatermark($clubSlug);
+        $storedWatermark='';$storedRefreshedAt=null;
+        try{
+            $q=$this->analytics->prepare("SELECT source_watermark,refreshed_at FROM p2k_an_refresh_state WHERE club_slug=? AND domain_key='achievements' LIMIT 1");
+            $q->execute([$clubSlug]);$r=$q->fetch(PDO::FETCH_ASSOC)?:[];
+            $storedWatermark=(string)($r['source_watermark']??'');
+            $storedRefreshedAt=isset($r['refreshed_at'])?(string)$r['refreshed_at']:null;
+        }catch(\Throwable){}
 
-        // The filesystem interval is only a throttle when the persisted achievement
-        // watermark already matches the current sources/logic. A release logic-token
-        // change must force a rebuild immediately instead of waiting up to six hours.
-        $currentWatermark = $this->achievementSourceWatermark($clubSlug);
-        $storedWatermark = '';
-        try {
-            $q = $this->analytics->prepare("SELECT source_watermark FROM p2k_an_refresh_state WHERE club_slug=? AND domain_key='achievements' LIMIT 1");
-            $q->execute([$clubSlug]);
-            $storedWatermark = (string)($q->fetchColumn() ?: '');
-        } catch (\Throwable) {}
-        if ($storedWatermark === $currentWatermark && $last > 0 && time() - $last < $minimumSeconds) {
+        $queued=is_file($queuePath);
+        if(!$queued&&$storedWatermark===$currentWatermark&&$last>0&&time()-$last<$minimumSeconds){
             return ['ran'=>false,'last_epoch'=>$last,'watermark'=>$currentWatermark];
         }
+        if(!$queued&&$storedWatermark!==''&&$storedWatermark!==$currentWatermark&&$last>0&&time()-$last<$minimumSeconds){
+            return ['ran'=>false,'last_epoch'=>$last,'refresh_deferred'=>true,'reason'=>'source_coalescing','coalesce_seconds'=>$minimumSeconds];
+        }
 
-        $handle = @fopen($lockPath, 'c+');
-        if ($handle === false || !@flock($handle, LOCK_EX | LOCK_NB)) {
-            if (is_resource($handle)) @fclose($handle);
+        $handle=@fopen($lockPath,'c+');
+        if($handle===false||!@flock($handle,LOCK_EX|LOCK_NB)){
+            if(is_resource($handle))@fclose($handle);
             return ['ran'=>false,'last_epoch'=>$last,'refresh_in_progress'=>true];
         }
-        try {
-            // Recheck after the lock in case another request refreshed while we waited.
-            $last = $this->readCompletedEpoch($marker);
-            $currentWatermark = $this->achievementSourceWatermark($clubSlug);
-            $storedWatermark = '';
-            try {
-                $q = $this->analytics->prepare("SELECT source_watermark FROM p2k_an_refresh_state WHERE club_slug=? AND domain_key='achievements' LIMIT 1");
-                $q->execute([$clubSlug]);
-                $storedWatermark = (string)($q->fetchColumn() ?: '');
-            } catch (\Throwable) {}
-            if ($storedWatermark === $currentWatermark && $last > 0 && time() - $last < $minimumSeconds) {
-                return ['ran'=>false,'last_epoch'=>$last,'watermark'=>$currentWatermark];
+        try{
+            if($deadlineAt!==null&&$deadlineAt-microtime(true)<8.0)return ['ran'=>false,'last_epoch'=>$last,'refresh_deferred'=>true,'reason'=>'deadline'];
+
+            $queue=null;
+            if(is_file($queuePath)){
+                $decoded=json_decode((string)@file_get_contents($queuePath),true);
+                if(is_array($decoded)&&is_array($decoded['targets']??null))$queue=$decoded;
             }
-            if($deadlineAt!==null && $deadlineAt-microtime(true)<10.0)return ['ran'=>false,'last_epoch'=>$last,'refresh_deferred'=>true,'reason'=>'deadline'];
-            $result = $this->refreshAchievementsIfNeeded($clubSlug);
-            @file_put_contents($marker, json_encode(['completed_epoch'=>time(),'result'=>$result], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE), LOCK_EX);
-            return ['ran'=>true] + $result;
-        } finally {
-            @flock($handle, LOCK_UN);
+            if(!is_array($queue)){
+                $currentWatermark=$this->achievementSourceWatermark($clubSlug);
+                $targets=$this->achievementUsersForSweep($clubSlug,$storedRefreshedAt);
+                if($storedWatermark!==$currentWatermark&&$targets===[]){
+                    // Unknown relevant source change: fall back to a safe chunked all-user sweep,
+                    // never to one unbounded historical rebuild.
+                    $targets=$this->achievementUsersForSweep($clubSlug,null);
+                }
+                $queue=[
+                    'watermark'=>$currentWatermark,
+                    'source_since'=>$storedRefreshedAt,
+                    'targets'=>$targets,
+                    'cursor'=>0,
+                    'created_at'=>gmdate(DATE_ATOM),
+                ];
+                @file_put_contents($queuePath,json_encode($queue,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE),LOCK_EX);
+            }
+
+            $targets=array_values(array_filter(array_map('strval',$queue['targets']??[])));
+            $cursor=max(0,(int)($queue['cursor']??0));
+            $total=count($targets);
+            if($cursor<$total){
+                $batch=array_slice($targets,$cursor,20);
+                $batchStarted=microtime(true);
+                $rows=$this->rebuildAchievements($clubSlug,$batch);
+                $cursor+=count($batch);
+                $queue['cursor']=$cursor;
+                $queue['last_batch_rows']=$rows;
+                $queue['last_batch_elapsed_ms']=(int)round((microtime(true)-$batchStarted)*1000);
+                $queue['updated_at']=gmdate(DATE_ATOM);
+                @file_put_contents($queuePath,json_encode($queue,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE),LOCK_EX);
+                if($cursor<$total){
+                    return ['ran'=>true,'partial'=>true,'processed'=>$cursor,'total'=>$total,'remaining'=>$total-$cursor,'batch_size'=>count($batch),'batch_rows'=>$rows,'batch_elapsed_ms'=>$queue['last_batch_elapsed_ms'],'watermark'=>(string)$queue['watermark']];
+                }
+            }
+
+            $watermark=(string)($queue['watermark']??$currentWatermark);
+            $countQ=$this->analytics->prepare("SELECT COUNT(*) FROM p2k_an_achievement_unlocks WHERE club_slug=?");
+            $countQ->execute([$clubSlug]);$rowCount=(int)$countQ->fetchColumn();
+            $q=$this->analytics->prepare(
+                "INSERT INTO p2k_an_refresh_state(club_slug,domain_key,source_watermark,refreshed_at,row_count,last_error)
+                 VALUES(?,'achievements',?,UTC_TIMESTAMP(),?,NULL)
+                 ON DUPLICATE KEY UPDATE source_watermark=VALUES(source_watermark),refreshed_at=UTC_TIMESTAMP(),row_count=VALUES(row_count),last_error=NULL"
+            );
+            $q->execute([$clubSlug,$watermark,$rowCount]);
+            @unlink($queuePath);
+            $result=['refreshed'=>true,'watermark'=>$watermark,'achievement_rows'=>$rowCount,'processed'=>$total,'total'=>$total,'incremental'=>true];
+            @file_put_contents($marker,json_encode(['completed_epoch'=>time(),'result'=>$result],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE),LOCK_EX);
+            return ['ran'=>true]+$result;
+        }catch(\Throwable $exception){
+            try{
+                $q=$this->analytics->prepare(
+                    "INSERT INTO p2k_an_refresh_state(club_slug,domain_key,source_watermark,refreshed_at,row_count,last_error)
+                     VALUES(?,'achievements',NULL,UTC_TIMESTAMP(),0,?)
+                     ON DUPLICATE KEY UPDATE last_error=VALUES(last_error)"
+                );
+                $q->execute([$clubSlug,substr($exception->getMessage(),0,60000)]);
+            }catch(\Throwable){}
+            throw $exception;
+        }finally{
+            @flock($handle,LOCK_UN);
             @fclose($handle);
         }
     }
