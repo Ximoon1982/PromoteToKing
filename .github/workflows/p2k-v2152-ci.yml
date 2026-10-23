@@ -1,0 +1,25 @@
+name: P2K v2.15.2 CI
+
+on:
+  push:
+    branches:
+      - release/v2.15.2
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax and recruitment history store
+        run: |
+          php -l server/team-points/src/RecruitmentHistoryStore.php
+          php -l server/team-points/public/recruitment-history.php
+          php tests/recruitment_history_v2152_test.php
+      - name: Recruitment history integration
+        run: |
+          python3 tests/test_v2152_recruitment_history.py
+      - name: Existing match recruitment core tests
+        run: |
+          node tests/recruit_match_v2_core.test.js
+          python3 tests/test_recruit_match_v2.py
