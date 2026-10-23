@@ -118,17 +118,42 @@ final class FairPlayReconciliationService
     /** @return list<string> */
     public static function matchFairPlayRemovals(array $match): array
     {
-        $all=self::normalizeRemovalList($match['fair_play_removals']??[]);
-        $teams=$match['teams']??null;
-        if (is_array($teams)) {
-            foreach ($teams as $team) {
-                if (!is_array($team)) continue;
-                $all=array_merge($all,self::normalizeRemovalList($team['fair_play_removals']??[]));
-            }
+        $all=[];
+        foreach (is_array($match['teams']??null)?$match['teams']:[] as $team) {
+            if (!is_array($team)) continue;
+            $all=array_merge($all,self::normalizeRemovalList($team['fair_play_removals']??[]));
         }
         $all=array_values(array_unique($all));
         sort($all,SORT_STRING);
         return $all;
+    }
+
+    /** @return array{club:list<string>,opponent:list<string>} */
+    public static function matchFairPlayRemovalSides(array $match,string $clubSlug): array
+    {
+        $club=[];$opponent=[];
+        foreach (is_array($match['teams']??null)?$match['teams']:[] as $team) {
+            if (!is_array($team)) continue;
+            $list=self::normalizeRemovalList($team['fair_play_removals']??[]);
+            if (self::teamMatchesClub($team,$clubSlug)) $club=array_merge($club,$list);
+            else $opponent=array_merge($opponent,$list);
+        }
+        $club=array_values(array_unique($club));sort($club,SORT_STRING);
+        $opponent=array_values(array_unique($opponent));sort($opponent,SORT_STRING);
+        return ['club'=>$club,'opponent'=>$opponent];
+    }
+
+    private static function teamMatchesClub(array $team,string $clubSlug): bool
+    {
+        $clubSlug=strtolower(trim($clubSlug));
+        foreach (['@id','url'] as $field) {
+            $value=rtrim(strtolower(trim((string)($team[$field]??''))),'/');
+            if ($value==='') continue;
+            $path=trim((string)(parse_url($value,PHP_URL_PATH)?:''),'/');
+            $parts=$path===''?[]:explode('/',$path);
+            if ($value==="https://api.chess.com/pub/club/{$clubSlug}" || ($parts!==[] && strtolower((string)end($parts))===$clubSlug)) return true;
+        }
+        return false;
     }
 
     public static function rawPointsX2(string $resultCode): int
@@ -147,16 +172,22 @@ final class FairPlayReconciliationService
         $eligibleStatus=in_array($status,['in_progress','ongoing','started','finished','complete','completed'],true);
         if (!$eligibleStatus) return ['ran'=>false,'reason'=>'status_not_eligible','status'=>$status];
 
-        $incoming=self::matchFairPlayRemovals($match);
+        $incoming=self::matchFairPlayRemovalSides($match,$this->clubSlug);
         $prior=$this->matchState($matchId);
-        $stored=[];
+        $stored=['club'=>[],'opponent'=>[]];
         if (is_array($prior)) {
-            $decoded=json_decode((string)($prior['removals_json']??'[]'),true);
-            $stored=self::normalizeRemovalList(is_array($decoded)?$decoded:[]);
+            $decoded=json_decode((string)($prior['removals_json']??'{}'),true);
+            if (is_array($decoded) && (array_key_exists('club',$decoded)||array_key_exists('opponent',$decoded))) {
+                $stored['club']=self::normalizeRemovalList($decoded['club']??[]);
+                $stored['opponent']=self::normalizeRemovalList($decoded['opponent']??[]);
+            }
         }
-        $removals=array_values(array_unique(array_merge($stored,$incoming)));
-        sort($removals,SORT_STRING);
-        $removed=array_fill_keys($removals,true);
+        $clubRemovals=array_values(array_unique(array_merge($stored['club'],$incoming['club'])));
+        $opponentRemovals=array_values(array_unique(array_merge($stored['opponent'],$incoming['opponent'])));
+        sort($clubRemovals,SORT_STRING);sort($opponentRemovals,SORT_STRING);
+        $clubRemoved=array_fill_keys($clubRemovals,true);
+        $opponentRemoved=array_fill_keys($opponentRemovals,true);
+        $storedRemovals=['club'=>$clubRemovals,'opponent'=>$opponentRemovals];
 
         $games=$this->gamesForMatch($matchId);
         $affected=0;$corrected=0;$pointsAddedX2=0;$changed=false;
@@ -164,16 +195,32 @@ final class FairPlayReconciliationService
         foreach($games as $game) {
             $raw=self::rawPointsX2((string)$game['result_code']);
             $rawScoreX2 += $raw;
+            $member=p2k_tp_username_key((string)($game['member_username_key']??''));
             $opponent=p2k_tp_username_key((string)($game['opponent_username']??''));
-            if ($opponent==='' || !isset($removed[$opponent])) continue;
-            $affected++;
+            $effective=$raw;
+            $isAffected=false;
+            if ($member!=='' && isset($clubRemoved[$member])) {
+                $effective=0;
+                $isAffected=true;
+            } elseif ($opponent!=='' && isset($opponentRemoved[$opponent])) {
+                $effective=2;
+                $isAffected=true;
+            }
             $before=(int)$game['points_x2'];
-            $effective=2;
-            $adj=$this->core->prepare("INSERT INTO p2k_tp_fair_play_game_adjustments(game_row_id,club_slug,match_id,board_id,opponent_username,raw_points_x2,effective_points_x2,applied_at,last_verified_at)
-                VALUES(?,?,?,?,?,?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP())
-                ON DUPLICATE KEY UPDATE opponent_username=VALUES(opponent_username),raw_points_x2=VALUES(raw_points_x2),effective_points_x2=VALUES(effective_points_x2),last_verified_at=UTC_TIMESTAMP()");
-            $adj->execute([(int)$game['game_row_id'],$this->clubSlug,$matchId,(int)$game['board_id'],(string)$game['opponent_username'],$raw,$effective]);
-            if ($before!==$effective) {
+            $hadAdjustment=(int)($game['had_fair_play_adjustment']??0)===1;
+
+            if ($isAffected) {
+                $affected++;
+                $adj=$this->core->prepare("INSERT INTO p2k_tp_fair_play_game_adjustments(game_row_id,club_slug,match_id,board_id,opponent_username,raw_points_x2,effective_points_x2,applied_at,last_verified_at)
+                    VALUES(?,?,?,?,?,?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP())
+                    ON DUPLICATE KEY UPDATE opponent_username=VALUES(opponent_username),raw_points_x2=VALUES(raw_points_x2),effective_points_x2=VALUES(effective_points_x2),last_verified_at=UTC_TIMESTAMP()");
+                $adj->execute([(int)$game['game_row_id'],$this->clubSlug,$matchId,(int)$game['board_id'],(string)$game['opponent_username'],$raw,$effective]);
+            } elseif ($hadAdjustment) {
+                $d=$this->core->prepare('DELETE FROM p2k_tp_fair_play_game_adjustments WHERE game_row_id=?');
+                $d->execute([(int)$game['game_row_id']]);
+            }
+
+            if ($before!==$effective && ($isAffected || $hadAdjustment)) {
                 $u=$this->core->prepare('UPDATE p2k_tp_games SET points_x2=?,verified_at=UTC_TIMESTAMP() WHERE game_row_id=?');
                 $u->execute([$effective,(int)$game['game_row_id']]);
                 if ($u->rowCount()>0) {$corrected++;$pointsAddedX2+=($effective-$before);$changed=true;}
@@ -190,12 +237,14 @@ final class FairPlayReconciliationService
         $q=$this->core->prepare("INSERT INTO p2k_tp_fair_play_match_state(club_slug,match_id,removals_json,source_status,checked_at,finalized_at,backfill_version,affected_games,corrected_games,points_added_x2,raw_score_x2,effective_score_x2,official_score_x2,mismatch_before_x2,mismatch_after_x2,last_error)
             VALUES(?,?,?,?,UTC_TIMESTAMP(),?, ?,?,?,?,?,?,?,?,?,NULL)
             ON DUPLICATE KEY UPDATE removals_json=VALUES(removals_json),source_status=VALUES(source_status),checked_at=UTC_TIMESTAMP(),finalized_at=COALESCE(finalized_at,VALUES(finalized_at)),backfill_version=GREATEST(backfill_version,VALUES(backfill_version)),affected_games=VALUES(affected_games),corrected_games=corrected_games+VALUES(corrected_games),points_added_x2=points_added_x2+VALUES(points_added_x2),raw_score_x2=VALUES(raw_score_x2),effective_score_x2=VALUES(effective_score_x2),official_score_x2=VALUES(official_score_x2),mismatch_before_x2=VALUES(mismatch_before_x2),mismatch_after_x2=VALUES(mismatch_after_x2),last_error=NULL");
-        $q->execute([$this->clubSlug,$matchId,json_encode($removals,JSON_UNESCAPED_SLASHES),$status,$finalized?gmdate('Y-m-d H:i:s'):null,$backfillVersion,$affected,$corrected,$pointsAddedX2,$rawScoreX2,$effectiveScoreX2,$officialScoreX2,$beforeMismatch,$afterMismatch]);
+        $q->execute([$this->clubSlug,$matchId,json_encode($storedRemovals,JSON_UNESCAPED_SLASHES),$status,$finalized?gmdate('Y-m-d H:i:s'):null,$backfillVersion,$affected,$corrected,$pointsAddedX2,$rawScoreX2,$effectiveScoreX2,$officialScoreX2,$beforeMismatch,$afterMismatch]);
 
         if ($changed) $this->touchGeneration();
         return [
-            'ran'=>true,'match_id'=>$matchId,'status'=>$status,'fair_play_removals'=>$removals,
-            'has_removals'=>$removals!==[],'affected_games'=>$affected,'corrected_games'=>$corrected,
+            'ran'=>true,'match_id'=>$matchId,'status'=>$status,
+            'fair_play_removals'=>['club'=>$clubRemovals,'opponent'=>$opponentRemovals],
+            'has_removals'=>$clubRemovals!==[]||$opponentRemovals!==[],
+            'affected_games'=>$affected,'corrected_games'=>$corrected,
             'points_added'=>$pointsAddedX2/2,'raw_score'=>$rawScoreX2/2,'effective_score'=>$effectiveScoreX2/2,
             'official_score'=>$officialScoreX2===null?null:$officialScoreX2/2,
             'mismatch_before'=>$beforeMismatch===null?null:$beforeMismatch/2,
@@ -260,7 +309,7 @@ final class FairPlayReconciliationService
 
     private function gamesForMatch(int $matchId): array
     {
-        $q=$this->core->prepare("SELECT g.game_row_id,g.board_id,g.result_code,g.points_x2,b.opponent_username FROM p2k_tp_games g JOIN p2k_tp_boards b ON b.board_id=g.board_id JOIN p2k_tp_members u ON u.member_id=b.member_id WHERE u.club_slug=? AND b.match_id=? ORDER BY b.board_no,g.sequence_no");
+        $q=$this->core->prepare("SELECT g.game_row_id,g.board_id,g.result_code,g.points_x2,u.username_key member_username_key,b.opponent_username,CASE WHEN a.game_row_id IS NULL THEN 0 ELSE 1 END had_fair_play_adjustment FROM p2k_tp_games g JOIN p2k_tp_boards b ON b.board_id=g.board_id JOIN p2k_tp_members u ON u.member_id=b.member_id LEFT JOIN p2k_tp_fair_play_game_adjustments a ON a.game_row_id=g.game_row_id WHERE u.club_slug=? AND b.match_id=? ORDER BY b.board_no,g.sequence_no");
         $q->execute([$this->clubSlug,$matchId]);return $q->fetchAll(PDO::FETCH_ASSOC)?:[];
     }
 
