@@ -1,0 +1,51 @@
+name: P2K v2.15.2 package
+
+on:
+  push:
+    branches: [release/v2.15.2]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Run v2.15.2 recruitment regressions
+        run: |
+          php -l server/team-points/src/RecruitmentHistoryStore.php
+          php -l server/team-points/public/recruitment-history.php
+          php tests/recruitment_history_v2152_test.php
+          python3 tests/test_v2152_recruitment_history.py
+          node --check assets/js/pages/recruit-match.js
+          node --check assets/js/pages/recruit-match-v2121-bootstrap.js
+          node tests/recruit_match_v2_core.test.js
+          python3 tests/test_recruit_match_v2.py
+          bash -n tools/release/v2152/build-incremental.sh
+          bash -n tools/release/v2152/prepare-candidate-preview-v2.15.2.sh
+      - name: Build v2.15.2 incremental candidate
+        run: |
+          bash tools/release/v2152/build-incremental.sh "$RUNNER_TEMP/v2152"
+          ZIP="$RUNNER_TEMP/v2152/PromoteToKing_v2.15.2_INCREMENTAL_FROM_2.15.1.zip"
+          ROOT="$RUNNER_TEMP/v2152/PromoteToKing_v2.15.2_INCREMENTAL_FROM_2.15.1"
+          unzip -t "$ZIP"
+          grep -Fq '"version": "2.15.2"' "$ROOT/CANDIDATE_RELEASE.json"
+          grep -Fq '"source_head": "8c0e52b58efee658d72bf9786a89568cd21af930"' "$ROOT/CANDIDATE_RELEASE.json"
+          grep -Fxq "RecruitMatch.html" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fxq "assets/css/recruit-match.css" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fxq "assets/js/pages/recruit-match.js" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fxq "server/team-points/src/RecruitmentHistoryStore.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fxq "server/team-points/public/recruitment-history.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fq "DEFAULT_PAGE_SIZE = 10" "$ROOT/payload/server/team-points/src/RecruitmentHistoryStore.php"
+          grep -Fq "archiveRecruitment(match,state.resultCsv)" "$ROOT/payload/assets/js/pages/recruit-match.js"
+          grep -Fxq "$(git rev-parse HEAD)" "$ROOT/SOURCE_HEAD.txt"
+          sha256sum "$ZIP"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PromoteToKing-v2.15.2-incremental-${{ github.sha }}
+          path: ${{ runner.temp }}/v2152/PromoteToKing_v2.15.2_INCREMENTAL_FROM_2.15.1.zip
+          if-no-files-found: error
+          retention-days: 30
