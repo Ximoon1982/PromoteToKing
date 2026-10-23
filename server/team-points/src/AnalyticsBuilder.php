@@ -165,16 +165,6 @@ final class AnalyticsBuilder
             $key=\p2k_tp_username_key((string)$value);
             if($key!=='')$users[$key]=true;
         };
-        $allUsers=function() use($clubSlug,$add): array {
-            $q=$this->core->prepare("SELECT DISTINCT COALESCE(im.canonical_username_key,u.username_key) username_key
-                FROM p2k_tp_members u
-                LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0
-                WHERE u.club_slug=? ORDER BY username_key");
-            $q->execute([$clubSlug]);
-            foreach($q->fetchAll(PDO::FETCH_COLUMN)?:[] as $u)$add($u);
-            return array_keys($GLOBALS['__p2k_unused']??[]);
-        };
-
         if($since===null||$since===''){
             $q=$this->core->prepare("SELECT DISTINCT COALESCE(im.canonical_username_key,u.username_key) username_key
                 FROM p2k_tp_members u
