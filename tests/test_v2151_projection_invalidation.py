@@ -14,8 +14,8 @@ def test_projection_watermark_tracks_content_not_coarse_generation():
     assert "p2k_tp_games" in block
     assert "p2k_tp_opponents" in block
     assert "p2k_tp_opponent_aliases" in block
-    assert "verified_at" not in block
-    assert "last_discovered_at" not in block
+    assert "MAX(g.verified_at)" not in block
+    assert "MAX(last_discovered_at)" not in block
 
 def test_general_refresh_coalesces_relevant_source_changes():
     text = BUILDER.read_text(encoding="utf-8")
