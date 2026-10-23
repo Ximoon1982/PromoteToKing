@@ -47,6 +47,8 @@ OVERLAY_FILES=(
   server/team-points/src/CronMaintenanceCoordinator.php
   server/team-points/src/AnalyticsBuilder.php
   server/team-points/src/FairPlayPriorityRunner.php
+  server/team-points/src/FairPlayReconciliationService.php
+  server/team-points/src/StorageMetricsService.php
   server/team-points/bin/maintenance.php
   server/team-points/bin/install-analytics-convergence-cron.sh
   server/team-points/bin/analytics-convergence.php
