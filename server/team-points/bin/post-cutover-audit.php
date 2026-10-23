@@ -43,8 +43,8 @@ $checks=[
  ['key'=>'club_points','pass'=>abs($greenClubPoints-$analyticsClubPoints)<0.001,'green'=>$greenClubPoints,'analytics'=>$analyticsClubPoints,'delta'=>$analyticsClubPoints-$greenClubPoints],
  ['key'=>'analytics_watermark','pass'=>$allMatch&&trim((string)($all['last_error']??''))==='','current'=>$currentWatermark,'materialized'=>$all['source_watermark']??null,'refreshed_at'=>$all['refreshed_at']??null,'last_error'=>$all['last_error']??null],
  ['key'=>'achievement_watermark','pass'=>$achMatch&&trim((string)($ach['last_error']??''))==='','current'=>$currentAchievementWatermark,'materialized'=>$ach['source_watermark']??null,'refreshed_at'=>$ach['refreshed_at']??null,'last_error'=>$ach['last_error']??null],
- ['key'=>'team_insights','pass'=>(int)($insight['rows_count']??0)>0,'rows'=>(int)($insight['rows_count']??0),'latest_activity_date'=>$insight['latest_activity_date']??null,'latest_computed_at'=>$insight['latest_computed_at']??null],
- ['key'=>'opponent_insights','pass'=>(int)($opponents['rows_count']??0)>0,'rows'=>(int)($opponents['rows_count']??0),'latest_updated_at'=>$opponents['latest_updated_at']??null],
+ ['key'=>'team_insights','pass'=>(int)($insight['rows_count']??0)>0&&((strtotime((string)($insight['latest_computed_at']??''))?:0)+300>=(strtotime((string)($all['refreshed_at']??''))?:0)),'rows'=>(int)($insight['rows_count']??0),'latest_activity_date'=>$insight['latest_activity_date']??null,'latest_computed_at'=>$insight['latest_computed_at']??null,'analytics_refreshed_at'=>$all['refreshed_at']??null],
+ ['key'=>'opponent_insights','pass'=>(int)($opponents['rows_count']??0)>0&&((strtotime((string)($opponents['latest_updated_at']??''))?:0)+300>=(strtotime((string)($all['refreshed_at']??''))?:0)),'rows'=>(int)($opponents['rows_count']??0),'latest_updated_at'=>$opponents['latest_updated_at']??null,'analytics_refreshed_at'=>$all['refreshed_at']??null],
 ];
 $failed=count(array_filter($checks,static fn(array $c):bool=>empty($c['pass'])));
 $out=['ok'=>$failed===0,'version'=>'2.15.1','club_slug'=>$club,'generated_at'=>gmdate(DATE_ATOM),'failed_checks'=>$failed,'green_state'=>$greenState,'checks'=>$checks];
