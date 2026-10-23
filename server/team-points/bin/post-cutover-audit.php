@@ -24,13 +24,13 @@ $greenCurrent=(int)$one($core,"SELECT COUNT(*) FROM p2k_g_players WHERE current_
 $compatCurrent=(int)$one($core,"SELECT COUNT(*) FROM p2k_tp_members WHERE club_slug=? AND current_member=1",[$club]);
 $greenMatches=(int)$one($core,"SELECT COUNT(*) FROM p2k_g_matches WHERE club_verified=1 AND time_class='daily' AND is_void=0");
 $compatMatches=(int)$one($core,"SELECT COUNT(*) FROM p2k_tp_match_metadata WHERE club_slug=? AND is_void=0",[$club]);
-$greenPoint=row($core,"SELECT ROUND(COALESCE(SUM(e.points),0),1) points,COUNT(*) games,COALESCE(SUM(e.points=1.0),0) wins,COALESCE(SUM(e.points=0.5),0) draws,COALESCE(SUM(e.points=0.0),0) losses FROM p2k_g_point_events e JOIN p2k_g_matches m ON m.match_id=e.match_id WHERE m.club_verified=1 AND m.time_class='daily' AND m.is_void=0 AND m.status IN ('registered','in_progress','finished')");
-$analyticsPoint=row($analytics,"SELECT ROUND(COALESCE(SUM(points),0),1) points,COALESCE(SUM(games),0) games,COALESCE(SUM(wins),0) wins,COALESCE(SUM(draws),0) draws,COALESCE(SUM(losses),0) losses FROM p2k_an_player_totals WHERE club_slug=?",[$club]);
+$greenPoint=$row($core,"SELECT ROUND(COALESCE(SUM(e.points),0),1) points,COUNT(*) games,COALESCE(SUM(e.points=1.0),0) wins,COALESCE(SUM(e.points=0.5),0) draws,COALESCE(SUM(e.points=0.0),0) losses FROM p2k_g_point_events e JOIN p2k_g_matches m ON m.match_id=e.match_id WHERE m.club_verified=1 AND m.time_class='daily' AND m.is_void=0 AND m.status IN ('registered','in_progress','finished')");
+$analyticsPoint=$row($analytics,"SELECT ROUND(COALESCE(SUM(points),0),1) points,COALESCE(SUM(games),0) games,COALESCE(SUM(wins),0) wins,COALESCE(SUM(draws),0) draws,COALESCE(SUM(losses),0) losses FROM p2k_an_player_totals WHERE club_slug=?",[$club]);
 $greenClubPoints=(float)$one($core,"SELECT COALESCE(SUM(CASE WHEN scoring_eligible=1 THEN competition_points ELSE 0 END),0) FROM p2k_g_matches WHERE club_verified=1 AND time_class='daily' AND is_void=0");
 $analyticsClubPoints=(float)$one($analytics,"SELECT COALESCE(MAX(club_points),0) FROM p2k_tp_club_totals WHERE club_slug=?",[$club]);
-$insight=row($analytics,"SELECT COUNT(*) rows_count,MAX(activity_date) latest_activity_date,MAX(computed_at) latest_computed_at FROM p2k_tp_insight_daily WHERE club_slug=?",[$club]);
-$opponents=row($analytics,"SELECT COUNT(*) rows_count,MAX(updated_at) latest_updated_at FROM p2k_an_opponent_stats WHERE club_slug=?",[$club]);
-$greenState=row($core,"SELECT cycle_no,last_worker_finish,last_worker_status,last_roster_fetch,last_index_fetch,compat_analytics_rebuilt_at,last_error FROM p2k_g_state WHERE club_slug=? LIMIT 1",[$club]);
+$insight=$row($analytics,"SELECT COUNT(*) rows_count,MAX(activity_date) latest_activity_date,MAX(computed_at) latest_computed_at FROM p2k_tp_insight_daily WHERE club_slug=?",[$club]);
+$opponents=$row($analytics,"SELECT COUNT(*) rows_count,MAX(updated_at) latest_updated_at FROM p2k_an_opponent_stats WHERE club_slug=?",[$club]);
+$greenState=$row($core,"SELECT cycle_no,last_worker_finish,last_worker_status,last_roster_fetch,last_index_fetch,compat_analytics_rebuilt_at,last_error FROM p2k_g_state WHERE club_slug=? LIMIT 1",[$club]);
 $all=$refresh['all']??[];$ach=$refresh['achievements']??[];
 $allMatch=(string)($all['source_watermark']??'')!==''&&hash_equals((string)$all['source_watermark'],$currentWatermark);
 $achMatch=(string)($ach['source_watermark']??'')!==''&&hash_equals((string)$ach['source_watermark'],$currentAchievementWatermark);
