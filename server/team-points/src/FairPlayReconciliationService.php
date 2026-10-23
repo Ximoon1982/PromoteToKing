@@ -205,26 +205,12 @@ final class FairPlayReconciliationService
             } catch(\Throwable $e) {$errors[]='match '.(int)$id.': '.$e->getMessage();}
         }
 
-        if ($processed<$maxMatches && ($deadline===null || microtime(true)+1.5<$deadline)) {
-            $state=$this->backfillState();
-            if (($state['status']??'running')==='running') {
-                $remaining=$maxMatches-$processed;
-                $cursor=max(0,(int)($state['cursor_match_id']??0));
-                $q=$this->core->prepare("SELECT m.match_id FROM p2k_tp_match_metadata m WHERE m.club_slug=? AND m.status='finished' AND m.match_id>? ORDER BY m.match_id ASC LIMIT {$remaining}");
-                $q->execute([$this->clubSlug,$cursor]);$ids=array_map('intval',$q->fetchAll(PDO::FETCH_COLUMN)?:[]);
-                if($ids===[]) $this->markBackfillComplete();
-                foreach($ids as $id) {
-                    if ($deadline!==null && microtime(true)+1.5>=$deadline) break;
-                    try {
-                        $match=$this->api->json('https://api.chess.com/pub/match/'.$id,true);
-                        $r=$this->applyMatchPayload($id,$match,true,true);$processed++;$backfilled++;$corrected+=(int)($r['corrected_games']??0);$pointsAdded+=(float)($r['points_added']??0);
-                        $this->advanceBackfill($id,$r);
-                    } catch(\Throwable $e) {$errors[]='backfill '.$id.': '.$e->getMessage();$this->recordBackfillError($e->getMessage());break;}
-                }
-            }
-        }
+        // Historical Fair Play backfill is intentionally retired from automatic
+        // maintenance after the Blue→Green cutover. Routine maintenance checks active
+        // matches and the coordinator's single newly-finished match only. Historical
+        // backfill remains available solely through explicit admin controls/tools.
 
-        return ['ran'=>true,'processed_matches'=>$processed,'live_matches_checked'=>$live,'finished_matches_backfilled'=>$backfilled,'corrected_games'=>$corrected,'points_added'=>$pointsAdded,'errors'=>$errors,'status'=>$this->status()];
+        return ['ran'=>true,'processed_matches'=>$processed,'live_matches_checked'=>$live,'finished_matches_backfilled'=>0,'historical_backfill_auto'=>false,'corrected_games'=>$corrected,'points_added'=>$pointsAdded,'errors'=>$errors,'status'=>$this->status()+['historical_backfill_auto'=>false]];
     }
 
     public function status(): array
