@@ -76,7 +76,7 @@ final class AnalyticsBuilder
             'projection:' . $this->sourceWatermark($clubSlug),
         ];
         try {
-            $q = $this->analytics->prepare("SELECT CONCAT(COUNT(*),'|',COALESCE(BIT_XOR(CRC32(CONCAT_WS('|',username_key,COALESCE(points,0),COALESCE(games,0),COALESCE(wins,0),COALESCE(draws,0),COALESCE(losses,0)))),0)) FROM p2k_lr_players WHERE club_slug=?");
+            $q = $this->analytics->prepare("SELECT CONCAT(COUNT(*),'|',COALESCE(BIT_XOR(CRC32(CONCAT_WS('|',username_key,COALESCE(total_points,0),COALESCE(total_games,0),COALESCE(total_wins,0),COALESCE(total_draws,0),COALESCE(total_losses,0),COALESCE(arena_count,0),COALESCE(first_place_count,0),COALESCE(top3_count,0),COALESCE(top10_count,0)))),0)) FROM p2k_lr_players WHERE club_slug=?");
             $q->execute([$clubSlug]);
             $parts[] = 'live:' . (string)$q->fetchColumn();
             $fq=$this->analytics->prepare("SELECT CONCAT(COUNT(*),'|',COALESCE(MAX(event_date_updated_at),'1970-01-01 00:00:00'),'|',COALESCE(MAX(effective_event_date),'1970-01-01')) FROM p2k_lr_files WHERE club_slug=?");
