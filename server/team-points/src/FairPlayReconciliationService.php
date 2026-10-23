@@ -235,7 +235,7 @@ final class FairPlayReconciliationService
         $state=$this->backfillState();
         $totalQ=$this->core->prepare("SELECT COUNT(*) FROM p2k_tp_match_metadata WHERE club_slug=? AND status='finished'");$totalQ->execute([$this->clubSlug]);$total=(int)$totalQ->fetchColumn();
         $checkedQ=$this->core->prepare('SELECT COUNT(*) FROM p2k_tp_fair_play_match_state WHERE club_slug=? AND backfill_version>=?');$checkedQ->execute([$this->clubSlug,self::BACKFILL_VERSION]);$checked=(int)$checkedQ->fetchColumn();
-        $remainingQ=$this->core->prepare('SELECT COUNT(*) FROM p2k_tp_fair_play_match_state WHERE club_slug=? AND mismatch_after_x2 IS NOT NULL AND mismatch_after_x2<>0');$remainingQ->execute([$this->clubSlug]);
+        $remainingQ=$this->core->prepare('SELECT COUNT(*) FROM p2k_tp_fair_play_match_state WHERE club_slug=? AND finalized_at IS NOT NULL AND mismatch_after_x2 IS NOT NULL AND mismatch_after_x2<>0');$remainingQ->execute([$this->clubSlug]);
         return $state+['backfill_version'=>self::BACKFILL_VERSION,'finished_matches_total'=>$total,'finished_matches_checked'=>$checked,'finished_matches_remaining'=>max(0,$total-$checked),'current_unresolved_score_mismatches'=>(int)$remainingQ->fetchColumn()];
     }
 
