@@ -14,50 +14,80 @@ final class AnalyticsBuilder
 {
     public function __construct(private PDO $core, private PDO $analytics) {}
 
+    /**
+     * Fingerprint only data that feeds the public Analytics projections.
+     *
+     * The Green compatibility layer has a deliberately coarse core_generation which
+     * also advances for acquisition/verification bookkeeping. Using it directly made
+     * unrelated Green work invalidate every Analytics table. These compact signatures
+     * track projection content instead, restoring the pre-cutover invalidation model.
+     */
     public function sourceWatermark(string $clubSlug): string
     {
         $clubSlug = strtolower(trim($clubSlug));
+        $parts = [
+            'logic:projection-v2151-content-v1',
+            'logic:canonical-score-outcomes-v2810',
+            'logic:opponent-coverage-results-v1',
+        ];
         try {
-            $q=$this->core->prepare('SELECT core_generation FROM p2k_tp_state WHERE club_slug=? LIMIT 1');
-            $q->execute([$clubSlug]);
-            $generation=(int)($q->fetchColumn()?:0);
-            $iq=$this->core->prepare('SELECT identity_map_generation FROM p2k_miac_state WHERE club_slug=? LIMIT 1');$iq->execute([$clubSlug]);$identity=(int)($iq->fetchColumn()?:0);
-            if($generation>0)return 'generation:' . $generation . '|identity:' . $identity . '|logic:canonical-score-outcomes-v2810|logic:opponent-coverage-results-v1';
+            $iq=$this->core->prepare('SELECT identity_map_generation FROM p2k_miac_state WHERE club_slug=? LIMIT 1');
+            $iq->execute([$clubSlug]);
+            $parts[]='identity:'.(int)($iq->fetchColumn()?:0);
         } catch (\Throwable) {
-            // Pre-v2.8.5 fallback only; upgraded installations use the O(1) generation row.
+            $parts[]='identity:0';
         }
-        $parts = ['logic:canonical-score-outcomes-v2810|logic:opponent-coverage-results-v1'];try{$iq=$this->core->prepare('SELECT identity_map_generation FROM p2k_miac_state WHERE club_slug=? LIMIT 1');$iq->execute([$clubSlug]);$parts[]='identity:'.(int)($iq->fetchColumn()?:0);}catch(\Throwable){$parts[]='identity:0';}
+
         $queries = [
-            "SELECT CONCAT(COUNT(*),'|',COALESCE(MAX(last_seen_at),'1970-01-01 00:00:00')) FROM p2k_tp_members WHERE club_slug=?",
-            "SELECT CONCAT(COUNT(*),'|',COALESCE(MAX(updated_at),'1970-01-01 00:00:00')) FROM p2k_tp_match_metadata WHERE club_slug=?",
-            "SELECT CONCAT(COUNT(*),'|',COALESCE(MAX(last_discovered_at),'1970-01-01 00:00:00')) FROM p2k_tp_boards b JOIN p2k_tp_members u ON u.member_id=b.member_id WHERE u.club_slug=?",
-            "SELECT CONCAT(COUNT(*),'|',COALESCE(MAX(verified_at),'1970-01-01 00:00:00')) FROM p2k_tp_games g JOIN p2k_tp_boards b ON b.board_id=g.board_id JOIN p2k_tp_members u ON u.member_id=b.member_id WHERE u.club_slug=?",
+            // Public player totals depend on roster status and rating values, not profile-check timestamps.
+            "SELECT CONCAT(COUNT(*),'|',COALESCE(SUM(current_member),0),'|',COALESCE(SUM(COALESCE(daily_rating,0)),0),'|',COALESCE(SUM(COALESCE(chess960_rating,0)),0),'|',COALESCE(MAX(member_id),0)) FROM p2k_tp_members WHERE club_slug=?",
+            // Match/daily/opponent projections depend on canonical match outcomes and scores.
+            "SELECT CONCAT(COUNT(*),'|',COALESCE(MAX(match_id),0),'|',COALESCE(SUM(status='registered'),0),'|',COALESCE(SUM(status='in_progress'),0),'|',COALESCE(SUM(status='finished'),0),'|',COALESCE(SUM(is_void),0),'|',COALESCE(SUM(board_count),0),'|',COALESCE(SUM(p2k_score*2),0),'|',COALESCE(SUM(opponent_score*2),0),'|',COALESCE(SUM(competition_points),0),'|',COALESCE(SUM(result='win'),0),'|',COALESCE(SUM(result='draw'),0),'|',COALESCE(SUM(result='loss'),0),'|',COALESCE(MAX(start_time),'1970-01-01 00:00:00'),'|',COALESCE(MAX(end_time),'1970-01-01 00:00:00')) FROM p2k_tp_match_metadata WHERE club_slug=?",
+            // Board ratings feed match facts; discovery/check timestamps deliberately do not.
+            "SELECT CONCAT(COUNT(*),'|',COALESCE(MAX(b.board_id),0),'|',COALESCE(SUM(COALESCE(b.p2k_rating,0)),0),'|',COALESCE(SUM(COALESCE(b.opponent_rating,0)),0),'|',COALESCE(SUM(b.finished_game_count),0)) FROM p2k_tp_boards b JOIN p2k_tp_members u ON u.member_id=b.member_id WHERE u.club_slug=?",
+            // Game aggregates catch additions and result corrections without depending on verified_at.
+            "SELECT CONCAT(COUNT(*),'|',COALESCE(MAX(g.game_row_id),0),'|',COALESCE(SUM(g.points_x2),0),'|',COALESCE(SUM(g.points_x2=2),0),'|',COALESCE(SUM(g.points_x2=1),0),'|',COALESCE(SUM(g.points_x2=0),0),'|',COALESCE(MAX(g.game_end_utc),'1970-01-01 00:00:00')) FROM p2k_tp_games g JOIN p2k_tp_boards b ON b.board_id=g.board_id JOIN p2k_tp_members u ON u.member_id=b.member_id WHERE u.club_slug=?",
+            // Opponent aliases/profile values are small enough for a content checksum.
+            "SELECT CONCAT(COUNT(*),'|',COALESCE(BIT_XOR(CRC32(CONCAT_WS('|',opponent_slug,display_name,COALESCE(club_url,''),COALESCE(country_code,''),disabled))),0)) FROM p2k_tp_opponents WHERE club_slug=?",
+            "SELECT CONCAT(COUNT(*),'|',COALESCE(BIT_XOR(CRC32(CONCAT_WS('|',alias_slug,canonical_slug,COALESCE(alias_name,'')))),0)) FROM p2k_tp_opponent_aliases WHERE club_slug=?",
         ];
         foreach ($queries as $sql) {
-            $q = $this->core->prepare($sql);
-            $q->execute([$clubSlug]);
-            $parts[] = (string)$q->fetchColumn();
+            try {
+                $q=$this->core->prepare($sql);
+                $q->execute([$clubSlug]);
+                $parts[]=(string)$q->fetchColumn();
+            } catch (\Throwable $e) {
+                $parts[]='unavailable:'.get_class($e);
+            }
         }
-        return hash('sha256', implode(';', $parts));
+        return 'projection:' . hash('sha256', implode(';', $parts));
     }
 
-    /** Achievement sources evolve independently from the Core-derived Insights projections. */
+    /** Achievement sources evolve independently from general Insights bookkeeping. */
     public function achievementSourceWatermark(string $clubSlug): string
     {
         $clubSlug = strtolower(trim($clubSlug));
-        $parts = ['logic:achievement-v2108-canonical-counts', 'logic:mca-event-date-v1', 'logic:tournament-achievement-date-v3', 'core:' . $this->sourceWatermark($clubSlug)];
+        $parts = [
+            'logic:achievement-v2108-canonical-counts',
+            'logic:mca-event-date-v1',
+            'logic:tournament-achievement-date-v3',
+            // Match/game/member content is relevant to achievements, while Green
+            // acquisition generations and verification timestamps are not.
+            'projection:' . $this->sourceWatermark($clubSlug),
+        ];
         try {
-            $q = $this->analytics->prepare("SELECT CONCAT(COUNT(*),'|',COALESCE(MAX(updated_at),'1970-01-01 00:00:00')) FROM p2k_lr_players WHERE club_slug=?");
+            $q = $this->analytics->prepare("SELECT CONCAT(COUNT(*),'|',COALESCE(BIT_XOR(CRC32(CONCAT_WS('|',username_key,COALESCE(points,0),COALESCE(games,0),COALESCE(wins,0),COALESCE(draws,0),COALESCE(losses,0)))),0)) FROM p2k_lr_players WHERE club_slug=?");
             $q->execute([$clubSlug]);
             $parts[] = 'live:' . (string)$q->fetchColumn();
             $fq=$this->analytics->prepare("SELECT CONCAT(COUNT(*),'|',COALESCE(MAX(event_date_updated_at),'1970-01-01 00:00:00'),'|',COALESCE(MAX(effective_event_date),'1970-01-01')) FROM p2k_lr_files WHERE club_slug=?");
-            $fq->execute([$clubSlug]);$parts[]='mca-dates:'.(string)$fq->fetchColumn();
+            $fq->execute([$clubSlug]);
+            $parts[]='mca-dates:'.(string)$fq->fetchColumn();
         } catch (\Throwable) {
             $parts[] = 'live:unavailable';
         }
         $tournamentArchive = dirname(__DIR__, 3) . '/data/tournaments/archive.json';
         $parts[] = is_file($tournamentArchive) ? 'tournaments:' . (string)@filemtime($tournamentArchive) . '|' . (string)@filesize($tournamentArchive) : 'tournaments:none';
-        return hash('sha256', implode(';', $parts));
+        return 'achievements:' . hash('sha256', implode(';', $parts));
     }
 
     private function runtimeRefreshPaths(string $clubSlug, string $domain = 'all'): array
