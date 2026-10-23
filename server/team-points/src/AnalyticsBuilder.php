@@ -437,18 +437,18 @@ final class AnalyticsBuilder
             $cleanup = $this->analytics->prepare(
                 "UPDATE p2k_an_achievement_unlocks
                  SET earned_at=NULL, earned_at_precision='tournament-pending', last_verified_at=UTC_TIMESTAMP()
-                 WHERE club_slug=? AND source_type='tournament' AND earned_at_precision='tournament-period'"
+                 WHERE club_slug=?{$analyticsTargetClause} AND source_type='tournament' AND earned_at_precision='tournament-period'"
             );
-            $cleanup->execute([$clubSlug]);
+            $cleanup->execute($analyticsArgs);
         } catch (\Throwable) {}
 
         // v2.10.8: remove only the two proven transient v2.9.3 breadth identities.
         // Never delete arbitrary unknown achievement keys: historical identities remain durable.
         try {
             $cleanup = $this->analytics->prepare(
-                "DELETE FROM p2k_an_achievement_unlocks WHERE club_slug=? AND achievement_key IN ('groups-1','groups-20')"
+                "DELETE FROM p2k_an_achievement_unlocks WHERE club_slug=?{$analyticsTargetClause} AND achievement_key IN ('groups-1','groups-20')"
             );
-            $cleanup->execute([$clubSlug]);
+            $cleanup->execute($analyticsArgs);
         } catch (\Throwable) {}
 
         $catalog = [];
