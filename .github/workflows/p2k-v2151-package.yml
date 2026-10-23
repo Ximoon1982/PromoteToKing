@@ -20,7 +20,7 @@ jobs:
         run: python3 -m pip install --disable-pip-version-check pytest
       - name: Run v2.15.1 regressions
         run: |
-          python3 -m pytest -q tests/test_v2151_challenge_activity_filters.py tests/test_v2150_trophy_modal_layout.py tests/test_v2150_task_control_tab_isolation.py tests/test_v2150_admin_profile_preview.py tests/test_v2150_preview_read_only_reads.py tests/test_v2150_player_title.py tests/test_v2150_tournament_discovery.py tests/test_v2150_tournament_monthly_cutoff.py tests/test_v2150_member_lookup_dossier.py tests/test_v2150_traffic_match_assistant.py tests/test_v2150_time_control_display.py tests/test_v2150_members_csv_resource_guard.py tests/test_v2150_storage_dual_axis.py tests/test_v2150_green_quick_discovered_livelock.py tests/test_v2150_green_roster_batching.py tests/test_v2150_green_cancelled_index_reconciliation.py tests/test_v2151_post_cutover_audit.py tests/test_v2151_analytics_achievement_convergence.py tests/test_v2151_post_cutover_insights_freshness.py tests/test_v2151_analytics_batch_writes.py tests/test_v2151_projection_invalidation.py tests/test_v2151_incremental_achievement_maintenance.py tests/test_v2151_achievement_target_scope.py
+          python3 -m pytest -q tests/test_v2151_challenge_activity_filters.py tests/test_v2150_trophy_modal_layout.py tests/test_v2150_task_control_tab_isolation.py tests/test_v2150_admin_profile_preview.py tests/test_v2150_preview_read_only_reads.py tests/test_v2150_player_title.py tests/test_v2150_tournament_discovery.py tests/test_v2150_tournament_monthly_cutoff.py tests/test_v2150_member_lookup_dossier.py tests/test_v2150_traffic_match_assistant.py tests/test_v2150_time_control_display.py tests/test_v2150_members_csv_resource_guard.py tests/test_v2150_storage_dual_axis.py tests/test_v2150_green_quick_discovered_livelock.py tests/test_v2150_green_roster_batching.py tests/test_v2150_green_cancelled_index_reconciliation.py tests/test_v2151_post_cutover_audit.py tests/test_v2151_analytics_achievement_convergence.py tests/test_v2151_post_cutover_insights_freshness.py tests/test_v2151_analytics_batch_writes.py tests/test_v2151_projection_invalidation.py tests/test_v2151_incremental_achievement_maintenance.py tests/test_v2151_achievement_target_scope.py tests/test_v2151_analytics_helper_runtime_resolver.py
           node --check assets/js/pages/challenge-list-assistant.js
           node --check assets/js/shared/real-oauth.js
           php -l server/team-points-green/src/GreenRepository.php
@@ -65,6 +65,7 @@ jobs:
           grep -Fq "array_slice(\$targets,\$cursor,20)" "$ROOT/payload/server/team-points/src/AnalyticsBuilder.php"
           grep -Fq "historical_backfill_auto" "$ROOT/payload/server/team-points/src/FairPlayReconciliationService.php"
           grep -Fq "SELECT DATABASE()" "$ROOT/payload/server/team-points/src/StorageMetricsService.php"
+          grep -Fq 'rtrim((string)$argv[2]' "$ROOT/payload/server/team-points/bin/install-analytics-convergence-cron.sh"
           grep -Fq "PublicReadDatabase::analytics()" "$ROOT/payload/server/team-points/bin/maintenance.php"
           grep -Fq '"source_head": "3776ecdd6b91b67816f5fa3853e763ac5b5d7f98"' "$ROOT/CANDIDATE_RELEASE.json"
           grep -Fq '"source_head": "0bafb17000c118d0a40feaa5e9c5bba65bbf9b84"' "$ROOT/CANDIDATE_RELEASE.json"
