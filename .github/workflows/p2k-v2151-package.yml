@@ -35,6 +35,7 @@ jobs:
           php -l server/team-points/public/fair-play-maintenance.php
           php -l server/team-points/bin/post-cutover-audit.php
           php tests/team_points_maintenance_cutover_v2150_test.php
+          php tests/fair_play_reconciliation_v21096_test.php
           bash -n server/team-points/bin/install-analytics-convergence-cron.sh
           bash -n server/team-points/bin/cutover-blue-maintenance-cron.sh
       - name: Build v2.15.1 incremental candidate
@@ -64,6 +65,8 @@ jobs:
           grep -Fq "projection-v2151-content-v1" "$ROOT/payload/server/team-points/src/AnalyticsBuilder.php"
           grep -Fq "array_slice(\$targets,\$cursor,20)" "$ROOT/payload/server/team-points/src/AnalyticsBuilder.php"
           grep -Fq "historical_backfill_auto" "$ROOT/payload/server/team-points/src/FairPlayReconciliationService.php"
+          grep -Fq "matchFairPlayRemovals" "$ROOT/payload/server/team-points/src/FairPlayReconciliationService.php"
+          grep -Fq "finalized_at IS NOT NULL" "$ROOT/payload/server/team-points/src/FairPlayReconciliationService.php"
           grep -Fq "SELECT DATABASE()" "$ROOT/payload/server/team-points/src/StorageMetricsService.php"
           grep -Fq 'rtrim((string)\$argv[2]' "$ROOT/payload/server/team-points/bin/install-analytics-convergence-cron.sh"
           grep -Fq 'echo \$m," ",\$r,PHP_EOL;' "$ROOT/payload/server/team-points/bin/install-analytics-convergence-cron.sh"
