@@ -391,6 +391,34 @@ final class AnalyticsBuilder
 
         $catalog = [];
         foreach (AchievementCatalog::all() as $item) $catalog[(string)$item['key']] = true;
+
+        // Normal convergence must be delta-oriented. A full historical scan can
+        // rediscover tens of thousands of already-persisted unlocks; rewriting every
+        // one of them made the nominal 15-second maintenance slice run for minutes.
+        // Cache only the substantive persisted fields and skip an upsert when applying
+        // the existing merge rules would leave those fields unchanged. The domain
+        // watermark, not last_verified_at on each row, is the freshness authority.
+        $existingUnlocks = [];
+        try {
+            $existingQuery = $this->analytics->prepare(
+                "SELECT username_key,achievement_key,earned_at,earned_at_precision,source_type,source_name,source_url
+                 FROM p2k_an_achievement_unlocks WHERE club_slug=?"
+            );
+            $existingQuery->execute([$clubSlug]);
+            while ($existingRow = $existingQuery->fetch(PDO::FETCH_ASSOC)) {
+                $existingUnlocks[(string)$existingRow['username_key']."\0".(string)$existingRow['achievement_key']] = [
+                    'earned_at'=>$existingRow['earned_at']!==null?(string)$existingRow['earned_at']:null,
+                    'earned_at_precision'=>$existingRow['earned_at_precision']!==null?(string)$existingRow['earned_at_precision']:null,
+                    'source_type'=>$existingRow['source_type']!==null?(string)$existingRow['source_type']:null,
+                    'source_name'=>$existingRow['source_name']!==null?(string)$existingRow['source_name']:null,
+                    'source_url'=>$existingRow['source_url']!==null?(string)$existingRow['source_url']:null,
+                ];
+            }
+        } catch (\Throwable) {
+            // Falling back to the established upsert path is safe, just slower.
+            $existingUnlocks = [];
+        }
+
         $unlock = $this->analytics->prepare(
             "INSERT INTO p2k_an_achievement_unlocks(club_slug,username_key,achievement_key,earned_at,earned_at_precision,source_type,source_name,source_url,first_recorded_at,last_verified_at)
              VALUES(?,?,?,?,?,?,?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP())
@@ -411,12 +439,52 @@ final class AnalyticsBuilder
         );
         $canonical=[];try{$cq=$this->core->prepare('SELECT username_key,canonical_username_key FROM p2k_miac_canonical_map WHERE club_slug=? AND conflict=0');$cq->execute([$clubSlug]);foreach($cq->fetchAll(PDO::FETCH_ASSOC)?:[] as $cr)$canonical[(string)$cr['username_key']]=(string)$cr['canonical_username_key'];}catch(\Throwable){}
         $seen = [];
-        $record = static function(string $user,string $key,?string $when,string $precision='derived',?string $sourceType=null,?string $sourceName=null,?string $sourceUrl=null) use ($unlock,$clubSlug,$catalog,&$seen,$canonical): void {
+        $record = static function(string $user,string $key,?string $when,string $precision='derived',?string $sourceType=null,?string $sourceName=null,?string $sourceUrl=null) use ($unlock,$clubSlug,$catalog,&$seen,$canonical,&$existingUnlocks): void {
             $user=$canonical[$user]??$user;if (!isset($catalog[$key])) return;
             $sourceUrl=\p2k_tp_chess_web_url($sourceUrl,(string)($sourceType??''));
             $id = $user . "\0" . $key;
             if (isset($seen[$id])) return;
+
+            $before=$existingUnlocks[$id]??null;
+            if(is_array($before)){
+                $beforePrecision=(string)($before['earned_at_precision']??'');
+                if($precision==='tournament-finish'){
+                    $nextEarned=$when;
+                    $nextPrecision='tournament-finish';
+                }elseif($precision==='tournament-pending'&&$beforePrecision!=='tournament-finish'){
+                    $nextEarned=null;
+                    $nextPrecision='tournament-pending';
+                }else{
+                    $nextEarned=$before['earned_at']??$when;
+                    $nextPrecision=$before['earned_at_precision'];
+                }
+                if($sourceType==='tournament'){
+                    $nextSourceType=$sourceType;$nextSourceName=$sourceName;$nextSourceUrl=$sourceUrl;
+                }else{
+                    $nextSourceType=$before['source_type']??$sourceType;
+                    $nextSourceName=$before['source_name']??$sourceName;
+                    $nextSourceUrl=$before['source_url']??$sourceUrl;
+                }
+                if(
+                    $nextEarned===$before['earned_at'] &&
+                    $nextPrecision===$before['earned_at_precision'] &&
+                    $nextSourceType===$before['source_type'] &&
+                    $nextSourceName===$before['source_name'] &&
+                    $nextSourceUrl===$before['source_url']
+                ){
+                    $seen[$id]=true;
+                    return;
+                }
+            }
+
             $unlock->execute([$clubSlug,$user,$key,$when,$precision,$sourceType,$sourceName,$sourceUrl]);
+            $existingUnlocks[$id]=[
+                'earned_at'=>$when,
+                'earned_at_precision'=>$precision,
+                'source_type'=>$sourceType,
+                'source_name'=>$sourceName,
+                'source_url'=>$sourceUrl,
+            ];
             $seen[$id] = true;
         };
         $leagueFromName = static function(string $name): ?string {
