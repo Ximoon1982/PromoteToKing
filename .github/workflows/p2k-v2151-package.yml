@@ -66,6 +66,8 @@ jobs:
           grep -Fq "array_slice(\$targets,\$cursor,20)" "$ROOT/payload/server/team-points/src/AnalyticsBuilder.php"
           grep -Fq "historical_backfill_auto" "$ROOT/payload/server/team-points/src/FairPlayReconciliationService.php"
           grep -Fq "matchFairPlayRemovals" "$ROOT/payload/server/team-points/src/FairPlayReconciliationService.php"
+          grep -Fq "matchFairPlayRemovalSides" "$ROOT/payload/server/team-points/src/FairPlayReconciliationService.php"
+          grep -Fq "member_username_key" "$ROOT/payload/server/team-points/src/FairPlayReconciliationService.php"
           grep -Fq "finalized_at IS NOT NULL" "$ROOT/payload/server/team-points/src/FairPlayReconciliationService.php"
           grep -Fq "SELECT DATABASE()" "$ROOT/payload/server/team-points/src/StorageMetricsService.php"
           grep -Fq 'rtrim((string)\$argv[2]' "$ROOT/payload/server/team-points/bin/install-analytics-convergence-cron.sh"
