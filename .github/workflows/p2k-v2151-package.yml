@@ -29,6 +29,8 @@ jobs:
           php -l server/team-points/public/members-insights-export.php
           php -l server/team-points/bin/analytics-convergence.php
           php -l server/team-points/bin/maintenance.php
+          php -l server/team-points/src/FairPlayReconciliationService.php
+          php -l server/team-points/src/StorageMetricsService.php
           php -l server/team-points/public/insights-health.php
           php -l server/team-points/public/fair-play-maintenance.php
           php -l server/team-points/bin/post-cutover-audit.php
@@ -51,6 +53,8 @@ jobs:
           grep -Fxq "TeamPointsAdmin.html" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fxq "server/team-points/bin/analytics-convergence.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fxq "server/team-points/src/AnalyticsBuilder.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fxq "server/team-points/src/FairPlayReconciliationService.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fxq "server/team-points/src/StorageMetricsService.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fxq "server/team-points/bin/install-analytics-convergence-cron.sh" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fxq "server/team-points/bin/maintenance.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fxq "server/team-points/public/insights-health.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
@@ -59,6 +63,8 @@ jobs:
           grep -Fq "PublicReadDatabase::core()" "$ROOT/payload/server/team-points/bin/analytics-convergence.php"
           grep -Fq "projection-v2151-content-v1" "$ROOT/payload/server/team-points/src/AnalyticsBuilder.php"
           grep -Fq "array_slice(\$targets,\$cursor,20)" "$ROOT/payload/server/team-points/src/AnalyticsBuilder.php"
+          grep -Fq "historical_backfill_auto" "$ROOT/payload/server/team-points/src/FairPlayReconciliationService.php"
+          grep -Fq "SELECT DATABASE()" "$ROOT/payload/server/team-points/src/StorageMetricsService.php"
           grep -Fq "PublicReadDatabase::analytics()" "$ROOT/payload/server/team-points/bin/maintenance.php"
           grep -Fq '"source_head": "3776ecdd6b91b67816f5fa3853e763ac5b5d7f98"' "$ROOT/CANDIDATE_RELEASE.json"
           grep -Fq '"source_head": "0bafb17000c118d0a40feaa5e9c5bba65bbf9b84"' "$ROOT/CANDIDATE_RELEASE.json"
