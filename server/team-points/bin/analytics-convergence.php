@@ -20,8 +20,11 @@ if((int)$q->fetchColumn()!==1){fwrite(STDOUT,json_encode(['ok'=>true,'busy'=>tru
 try{
     $budget=max(1.0,$deadline-microtime(true)-1.0);$value=number_format(min(30.0,$budget),3,'.','');
     foreach([$core,$analytics] as $pdo){try{$pdo->exec('SET SESSION max_statement_time='.$value);}catch(Throwable){}}
-    $result=(new AnalyticsBuilder($core,$analytics))->refreshIfDue($club,300,$deadline);
-    fwrite(STDOUT,json_encode(['ok'=>true,'version'=>'2.15.1','database_route'=>'green-production','core_database'=>(string)$core->query('SELECT DATABASE()')->fetchColumn(),'analytics_database'=>(string)$analytics->query('SELECT DATABASE()')->fetchColumn(),'elapsed_ms'=>(int)round((microtime(true)-$started)*1000),'result'=>$result],JSON_UNESCAPED_SLASHES).PHP_EOL);
+    $builder=new AnalyticsBuilder($core,$analytics);
+    $result=$builder->refreshIfDue($club,300,$deadline);
+    $achievements=['ran'=>false,'refresh_deferred'=>true,'reason'=>'deadline'];
+    if($deadline-microtime(true)>=10.0)$achievements=$builder->refreshAchievementsIfDue($club,21600,$deadline);
+    fwrite(STDOUT,json_encode(['ok'=>true,'version'=>'2.15.1','database_route'=>'green-production','core_database'=>(string)$core->query('SELECT DATABASE()')->fetchColumn(),'analytics_database'=>(string)$analytics->query('SELECT DATABASE()')->fetchColumn(),'elapsed_ms'=>(int)round((microtime(true)-$started)*1000),'result'=>$result,'achievements'=>$achievements],JSON_UNESCAPED_SLASHES).PHP_EOL);
 } finally {
     foreach([$core,$analytics] as $pdo){try{$pdo->exec('SET SESSION max_statement_time=0');}catch(Throwable){}}
     try{$r=$core->prepare('SELECT RELEASE_LOCK(?)');$r->execute([$lock]);}catch(Throwable){}
