@@ -34,6 +34,13 @@ $greenState=$row($core,"SELECT cycle_no,last_worker_finish,last_worker_status,la
 $all=$refresh['all']??[];$ach=$refresh['achievements']??[];
 $allMatch=(string)($all['source_watermark']??'')!==''&&hash_equals((string)$all['source_watermark'],$currentWatermark);
 $achMatch=(string)($ach['source_watermark']??'')!==''&&hash_equals((string)$ach['source_watermark'],$currentAchievementWatermark);
+$now=time();
+$allRefreshedAt=strtotime((string)($all['refreshed_at']??'').' UTC')?:0;
+$achRefreshedAt=strtotime((string)($ach['refreshed_at']??'').' UTC')?:0;
+$allAge=$allRefreshedAt>0?max(0,$now-$allRefreshedAt):PHP_INT_MAX;
+$achAge=$achRefreshedAt>0?max(0,$now-$achRefreshedAt):PHP_INT_MAX;
+$allFresh=$allMatch||$allAge<=900;
+$achFresh=$achMatch||$achAge<=28800;
 
 $checks=[
  ['key'=>'database_route','pass'=>true,'green_core'=>(string)$core->query('SELECT DATABASE()')->fetchColumn(),'green_analytics'=>(string)$analytics->query('SELECT DATABASE()')->fetchColumn()],
@@ -41,8 +48,8 @@ $checks=[
  ['key'=>'matches','pass'=>$greenMatches===$compatMatches,'green'=>$greenMatches,'compatibility'=>$compatMatches,'delta'=>$compatMatches-$greenMatches],
  ['key'=>'player_points','pass'=>abs((float)($greenPoint['points']??0)-(float)($analyticsPoint['points']??0))<0.001,'green'=>$greenPoint,'analytics'=>$analyticsPoint],
  ['key'=>'club_points','pass'=>abs($greenClubPoints-$analyticsClubPoints)<0.001,'green'=>$greenClubPoints,'analytics'=>$analyticsClubPoints,'delta'=>$analyticsClubPoints-$greenClubPoints],
- ['key'=>'analytics_watermark','pass'=>$allMatch&&trim((string)($all['last_error']??''))==='','current'=>$currentWatermark,'materialized'=>$all['source_watermark']??null,'refreshed_at'=>$all['refreshed_at']??null,'last_error'=>$all['last_error']??null],
- ['key'=>'achievement_watermark','pass'=>$achMatch&&trim((string)($ach['last_error']??''))==='','current'=>$currentAchievementWatermark,'materialized'=>$ach['source_watermark']??null,'refreshed_at'=>$ach['refreshed_at']??null,'last_error'=>$ach['last_error']??null],
+ ['key'=>'analytics_watermark','pass'=>$allFresh&&trim((string)($all['last_error']??''))==='','exact'=>$allMatch,'age_seconds'=>$allAge,'freshness_limit_seconds'=>900,'current'=>$currentWatermark,'materialized'=>$all['source_watermark']??null,'refreshed_at'=>$all['refreshed_at']??null,'last_error'=>$all['last_error']??null],
+ ['key'=>'achievement_watermark','pass'=>$achFresh&&trim((string)($ach['last_error']??''))==='','exact'=>$achMatch,'age_seconds'=>$achAge,'freshness_limit_seconds'=>28800,'current'=>$currentAchievementWatermark,'materialized'=>$ach['source_watermark']??null,'refreshed_at'=>$ach['refreshed_at']??null,'last_error'=>$ach['last_error']??null],
  ['key'=>'team_insights','pass'=>(int)($insight['rows_count']??0)>0&&((strtotime((string)($insight['latest_computed_at']??''))?:0)+300>=(strtotime((string)($all['refreshed_at']??''))?:0)),'rows'=>(int)($insight['rows_count']??0),'latest_activity_date'=>$insight['latest_activity_date']??null,'latest_computed_at'=>$insight['latest_computed_at']??null,'analytics_refreshed_at'=>$all['refreshed_at']??null],
  ['key'=>'opponent_insights','pass'=>(int)($opponents['rows_count']??0)>0&&((strtotime((string)($opponents['latest_updated_at']??''))?:0)+300>=(strtotime((string)($all['refreshed_at']??''))?:0)),'rows'=>(int)($opponents['rows_count']??0),'latest_updated_at'=>$opponents['latest_updated_at']??null,'analytics_refreshed_at'=>$all['refreshed_at']??null],
 ];
