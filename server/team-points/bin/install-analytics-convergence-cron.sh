@@ -22,7 +22,7 @@ set -euo pipefail
 ROOT=$(printf '%q' "$ROOT")
 PHP_BIN=$(printf '%q' "$PHP_BIN")
 CONFIG="\$ROOT/server/team-points/config/config.local.php"
-RUNTIME="\$("\$PHP_BIN" -r '\$c=require \$argv[1]; \$r=rtrim((string)((\$c["storage"]["runtime_dir"]??"")),"/\\\\"); echo \$r!==""?\$r:dirname(dirname(dirname(\$argv[1])))."/data/runtime-v280";' "\$CONFIG")"
+RUNTIME="\$("\$PHP_BIN" -r '\$c=require \$argv[1]; \$r=rtrim((string)((\$c["storage"]["runtime_dir"]??"")),"/\\\\"); echo \$r!==""?\$r:rtrim((string)\$argv[2],"/\\\\")."/data/runtime-v280";' "\$CONFIG" "\$ROOT")"
 STATE="\$RUNTIME/release-control/state.json"; MODE="direct-root"; RELEASE=""
 if [[ -f "\$STATE" ]]; then
   read -r MODE RELEASE < <("\$PHP_BIN" -r '\$s=json_decode((string)file_get_contents(\$argv[1]),true); \$m=(string)(\$s["mode"]??"direct-root"); \$r=(string)(\$s["public_release"]??""); if(\$m==="slots"&&!preg_match("/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}\$/D",\$r)) exit(3); echo \$m," ",\$r;' "\$STATE")
