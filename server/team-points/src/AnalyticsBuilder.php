@@ -221,6 +221,18 @@ final class AnalyticsBuilder
         }
     }
 
+    private function executeAnalyticsInsertBatch(string $prefix, int $width, array $rows): void
+    {
+        if ($rows === []) return;
+        $tuple = '(' . implode(',', array_fill(0, $width, '?')) . ')';
+        $sql = $prefix . implode(',', array_fill(0, count($rows), $tuple));
+        $params = [];
+        foreach ($rows as $row) {
+            foreach ($row as $value) $params[] = $value;
+        }
+        $this->analytics->prepare($sql)->execute($params);
+    }
+
     private function rebuildMatchFacts(string $clubSlug): int
     {
         $this->analytics->prepare('DELETE FROM p2k_an_match_facts WHERE club_slug=?')->execute([$clubSlug]);
@@ -244,16 +256,14 @@ final class AnalyticsBuilder
              WHERE m.club_slug=? ORDER BY m.match_id"
         );
         $q->execute([$clubSlug]);
-        $ins=$this->analytics->prepare(
-            "INSERT INTO p2k_an_match_facts(club_slug,match_id,match_name,match_url,status,rules,time_control,is_league,start_time,end_time,duration_seconds,
-                    board_count,p2k_score,opponent_score,p2k_avg_rating,opponent_avg_rating,rated_board_count,max_rating,first_discovered_at,result,competition_points,is_void,opponent_slug,opponent_name,opponent_url,updated_at)
-             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-        );
-        $count=0;
+        $prefix="INSERT INTO p2k_an_match_facts(club_slug,match_id,match_name,match_url,status,rules,time_control,is_league,start_time,end_time,duration_seconds,board_count,p2k_score,opponent_score,p2k_avg_rating,opponent_avg_rating,rated_board_count,max_rating,first_discovered_at,result,competition_points,is_void,opponent_slug,opponent_name,opponent_url,updated_at) VALUES ";
+        $count=0;$batch=[];
         while($r=$q->fetch(PDO::FETCH_ASSOC)){
-            $ins->execute([$r['club_slug'],$r['match_id'],$r['match_name'],$r['match_url'],$r['status'],$r['rules'],$r['time_control'],(int)$r['is_league'],$r['start_time'],$r['end_time'],$r['duration_seconds'],$r['board_count'],$r['p2k_score'],$r['opponent_score'],$r['p2k_avg_rating'],$r['opponent_avg_rating'],$r['rated_board_count'],$r['max_rating'],$r['first_discovered_at'],$r['result'],$r['competition_points'],(int)$r['is_void'],$r['opponent_slug'],$r['opponent_name'],$r['opponent_url'],$r['updated_at']]);
+            $batch[] = [$r['club_slug'],$r['match_id'],$r['match_name'],$r['match_url'],$r['status'],$r['rules'],$r['time_control'],(int)$r['is_league'],$r['start_time'],$r['end_time'],$r['duration_seconds'],$r['board_count'],$r['p2k_score'],$r['opponent_score'],$r['p2k_avg_rating'],$r['opponent_avg_rating'],$r['rated_board_count'],$r['max_rating'],$r['first_discovered_at'],$r['result'],$r['competition_points'],(int)$r['is_void'],$r['opponent_slug'],$r['opponent_name'],$r['opponent_url'],$r['updated_at']];
             $count++;
+            if(count($batch)>=200){$this->executeAnalyticsInsertBatch($prefix,26,$batch);$batch=[];}
         }
+        $this->executeAnalyticsInsertBatch($prefix,26,$batch);
         return $count;
     }
 
@@ -261,8 +271,9 @@ final class AnalyticsBuilder
     {
         $this->analytics->prepare('DELETE FROM p2k_an_player_monthly WHERE club_slug=?')->execute([$clubSlug]);
         $q=$this->core->prepare("SELECT COALESCE(im.canonical_username_key,u.username_key) username_key,COALESCE(MAX(im.canonical_username),MAX(u.username)) username,CAST(DATE_FORMAT(g.game_end_utc,'%Y-%m-01') AS DATE) month_start,COALESCE(SUM(g.points_x2),0) points_x2,COUNT(DISTINCT b.match_id) matches,COUNT(*) games,COALESCE(SUM(g.points_x2=2),0) wins,COALESCE(SUM(g.points_x2=1),0) draws,COALESCE(SUM(g.points_x2=0),0) losses,MIN(g.game_end_utc) first_game_at,MAX(g.game_end_utc) last_game_at FROM p2k_tp_games g JOIN p2k_tp_boards b ON b.board_id=g.board_id JOIN p2k_tp_members u ON u.member_id=b.member_id LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0 JOIN p2k_tp_match_metadata m ON m.club_slug=u.club_slug AND m.match_id=b.match_id WHERE u.club_slug=? AND m.is_void=0 GROUP BY COALESCE(im.canonical_username_key,u.username_key),CAST(DATE_FORMAT(g.game_end_utc,'%Y-%m-01') AS DATE) ORDER BY month_start,username_key");
-        $q->execute([$clubSlug]);$ins=$this->analytics->prepare("INSERT INTO p2k_an_player_monthly(club_slug,username_key,username,month_start,points_x2,matches,games,wins,draws,losses,first_game_at,last_game_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP())");$count=0;
-        while($r=$q->fetch(PDO::FETCH_ASSOC)){$ins->execute([$clubSlug,$r['username_key'],$r['username'],$r['month_start'],(int)$r['points_x2'],(int)$r['matches'],(int)$r['games'],(int)$r['wins'],(int)$r['draws'],(int)$r['losses'],$r['first_game_at'],$r['last_game_at']]);$count++;}
+        $q->execute([$clubSlug]);$prefix="INSERT INTO p2k_an_player_monthly(club_slug,username_key,username,month_start,points_x2,matches,games,wins,draws,losses,first_game_at,last_game_at,updated_at) VALUES ";$count=0;$batch=[];$now=gmdate('Y-m-d H:i:s');
+        while($r=$q->fetch(PDO::FETCH_ASSOC)){$batch[]=[$clubSlug,$r['username_key'],$r['username'],$r['month_start'],(int)$r['points_x2'],(int)$r['matches'],(int)$r['games'],(int)$r['wins'],(int)$r['draws'],(int)$r['losses'],$r['first_game_at'],$r['last_game_at'],$now];$count++;if(count($batch)>=300){$this->executeAnalyticsInsertBatch($prefix,13,$batch);$batch=[];}}
+        $this->executeAnalyticsInsertBatch($prefix,13,$batch);
         return $count;
     }
 
@@ -270,8 +281,9 @@ final class AnalyticsBuilder
     {
         $this->analytics->prepare('DELETE FROM p2k_an_player_totals WHERE club_slug=?')->execute([$clubSlug]);
         $q=$this->core->prepare("SELECT COALESCE(im.canonical_username_key,u.username_key) username_key,COALESCE(MAX(im.canonical_username),MAX(u.username)) username,MAX(u.current_member) current_member,COALESCE(MAX(CASE WHEN u.current_member=1 THEN u.daily_rating END),MAX(u.daily_rating)) daily_rating,COALESCE(MAX(CASE WHEN u.current_member=1 THEN u.chess960_rating END),MAX(u.chess960_rating)) chess960_rating,MAX(u.rating_updated_at) rating_updated_at,COALESCE(SUM(g.points_x2),0)/2.0 points,COUNT(DISTINCT b.match_id) matches,COUNT(g.game_row_id) games,COALESCE(SUM(g.points_x2=2),0) wins,COALESCE(SUM(g.points_x2=1),0) draws,COALESCE(SUM(g.points_x2=0),0) losses,MIN(g.game_end_utc) first_game_at,MAX(g.game_end_utc) last_game_at,MAX(CASE WHEN LOWER(COALESCE(m.rules,'')) IN ('chess','standard') THEN g.game_end_utc END) last_standard_game_at,MAX(CASE WHEN LOWER(COALESCE(m.rules,'')) IN ('chess960','960') THEN g.game_end_utc END) last_chess960_game_at FROM p2k_tp_members u LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0 LEFT JOIN p2k_tp_boards b ON b.member_id=u.member_id LEFT JOIN p2k_tp_games g ON g.board_id=b.board_id LEFT JOIN p2k_tp_match_metadata m ON m.club_slug=u.club_slug AND m.match_id=b.match_id WHERE u.club_slug=? AND (m.match_id IS NULL OR m.is_void=0) GROUP BY COALESCE(im.canonical_username_key,u.username_key) ORDER BY username_key");
-        $q->execute([$clubSlug]);$insert=$this->analytics->prepare("INSERT INTO p2k_an_player_totals(club_slug,username_key,username,current_member,points,matches,games,wins,draws,losses,daily_rating,chess960_rating,rating_updated_at,first_game_at,last_game_at,last_standard_game_at,last_chess960_game_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP())");$count=0;
-        while($row=$q->fetch(PDO::FETCH_ASSOC)){$insert->execute([$clubSlug,$row['username_key'],$row['username'],(int)$row['current_member'],(float)$row['points'],(int)$row['matches'],(int)$row['games'],(int)$row['wins'],(int)$row['draws'],(int)$row['losses'],$row['daily_rating']===null?null:(int)$row['daily_rating'],$row['chess960_rating']===null?null:(int)$row['chess960_rating'],$row['rating_updated_at'],$row['first_game_at'],$row['last_game_at'],$row['last_standard_game_at'],$row['last_chess960_game_at']]);$count++;}return $count;
+        $q->execute([$clubSlug]);$prefix="INSERT INTO p2k_an_player_totals(club_slug,username_key,username,current_member,points,matches,games,wins,draws,losses,daily_rating,chess960_rating,rating_updated_at,first_game_at,last_game_at,last_standard_game_at,last_chess960_game_at,updated_at) VALUES ";$count=0;$batch=[];$now=gmdate('Y-m-d H:i:s');
+        while($row=$q->fetch(PDO::FETCH_ASSOC)){$batch[]=[$clubSlug,$row['username_key'],$row['username'],(int)$row['current_member'],(float)$row['points'],(int)$row['matches'],(int)$row['games'],(int)$row['wins'],(int)$row['draws'],(int)$row['losses'],$row['daily_rating']===null?null:(int)$row['daily_rating'],$row['chess960_rating']===null?null:(int)$row['chess960_rating'],$row['rating_updated_at'],$row['first_game_at'],$row['last_game_at'],$row['last_standard_game_at'],$row['last_chess960_game_at'],$now];$count++;if(count($batch)>=300){$this->executeAnalyticsInsertBatch($prefix,18,$batch);$batch=[];}}
+        $this->executeAnalyticsInsertBatch($prefix,18,$batch);return $count;
     }
 
     private function rebuildClubTotals(string $clubSlug): int
@@ -303,8 +315,9 @@ final class AnalyticsBuilder
         $q=$this->core->prepare("SELECT DATE(g.game_end_utc) d,COUNT(*) games_finished,COUNT(DISTINCT COALESCE(im.canonical_username_key,u.username_key)) unique_players FROM p2k_tp_games g JOIN p2k_tp_boards b ON b.board_id=g.board_id JOIN p2k_tp_members u ON u.member_id=b.member_id LEFT JOIN p2k_miac_canonical_map im ON im.club_slug=u.club_slug AND im.username_key=u.username_key AND im.conflict=0 JOIN p2k_tp_match_metadata m ON m.club_slug=u.club_slug AND m.match_id=b.match_id WHERE u.club_slug=? AND m.is_void=0 GROUP BY DATE(g.game_end_utc)");
         $q->execute([$clubSlug]);foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $r){$d=(string)$r['d'];$ensure($facts,$d);$facts[$d]['games_finished']=(int)$r['games_finished'];$facts[$d]['unique_players']=(int)$r['unique_players'];}
         ksort($facts);$this->analytics->prepare('DELETE FROM p2k_tp_insight_daily WHERE club_slug=?')->execute([$clubSlug]);
-        $ins=$this->analytics->prepare('INSERT INTO p2k_tp_insight_daily(club_slug,activity_date,matches_started,matches_finished,boards_started,boards_finished,games_finished,unique_players,club_points,computed_at) VALUES(?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP())');
-        foreach($facts as $d=>$r)$ins->execute([$clubSlug,$d,$r['matches_started'],$r['matches_finished'],$r['boards_started'],$r['boards_finished'],$r['games_finished'],$r['unique_players'],$r['club_points']]);
+        $prefix='INSERT INTO p2k_tp_insight_daily(club_slug,activity_date,matches_started,matches_finished,boards_started,boards_finished,games_finished,unique_players,club_points,computed_at) VALUES ';$batch=[];$now=gmdate('Y-m-d H:i:s');
+        foreach($facts as $d=>$r){$batch[]=[$clubSlug,$d,$r['matches_started'],$r['matches_finished'],$r['boards_started'],$r['boards_finished'],$r['games_finished'],$r['unique_players'],$r['club_points'],$now];if(count($batch)>=300){$this->executeAnalyticsInsertBatch($prefix,10,$batch);$batch=[];}}
+        $this->executeAnalyticsInsertBatch($prefix,10,$batch);
         $state=$this->analytics->prepare("INSERT INTO p2k_tp_insight_cache_state(club_slug,source_updated_at,refreshed_at,row_count,last_error) VALUES(?,UTC_TIMESTAMP(),UTC_TIMESTAMP(),?,NULL) ON DUPLICATE KEY UPDATE source_updated_at=VALUES(source_updated_at),refreshed_at=UTC_TIMESTAMP(),row_count=VALUES(row_count),last_error=NULL");
         $state->execute([$clubSlug,count($facts)]);return count($facts);
     }
@@ -327,8 +340,9 @@ final class AnalyticsBuilder
              WHERE m.club_slug=? AND m.is_void=0 AND m.opponent_slug IS NOT NULL AND m.opponent_slug<>'' GROUP BY COALESCE(a.canonical_slug,m.opponent_slug)"
         );
         $q->execute([$clubSlug]);
-        $ins=$this->analytics->prepare("INSERT INTO p2k_an_opponent_stats(club_slug,opponent_slug,display_name,club_url,disabled,matches,finished,wins,draws,losses,ongoing,registered,total_boards,our_points,their_points,first_match_at,last_match_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP())");
-        $count=0;while($r=$q->fetch(PDO::FETCH_ASSOC)){$ins->execute([$clubSlug,$r['opponent_slug'],$r['display_name'],$r['club_url'],(int)$r['disabled'],(int)$r['matches'],(int)$r['finished'],(int)$r['wins'],(int)$r['draws'],(int)$r['losses'],(int)$r['ongoing'],(int)$r['registered'],(int)$r['total_boards'],(float)$r['our_points'],(float)$r['their_points'],$r['first_match_at'],$r['last_match_at']]);$count++;}
+        $prefix="INSERT INTO p2k_an_opponent_stats(club_slug,opponent_slug,display_name,club_url,disabled,matches,finished,wins,draws,losses,ongoing,registered,total_boards,our_points,their_points,first_match_at,last_match_at,updated_at) VALUES ";$batch=[];$now=gmdate('Y-m-d H:i:s');
+        $count=0;while($r=$q->fetch(PDO::FETCH_ASSOC)){$batch[]=[$clubSlug,$r['opponent_slug'],$r['display_name'],$r['club_url'],(int)$r['disabled'],(int)$r['matches'],(int)$r['finished'],(int)$r['wins'],(int)$r['draws'],(int)$r['losses'],(int)$r['ongoing'],(int)$r['registered'],(int)$r['total_boards'],(float)$r['our_points'],(float)$r['their_points'],$r['first_match_at'],$r['last_match_at'],$now];$count++;if(count($batch)>=250){$this->executeAnalyticsInsertBatch($prefix,18,$batch);$batch=[];}}
+        $this->executeAnalyticsInsertBatch($prefix,18,$batch);
         return $count;
     }
     public function refreshAchievementsIfNeeded(string $clubSlug): array
