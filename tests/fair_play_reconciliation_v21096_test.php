@@ -13,6 +13,13 @@ $nested=FairPlayReconciliationService::matchFairPlayRemovals([
     ],
 ]);
 if($nested!==['opponentcheat','ownmember','secondopponent']) throw new RuntimeException('nested team removal extraction failed: '.json_encode($nested));
+$sides=FairPlayReconciliationService::matchFairPlayRemovalSides([
+    'teams'=>[
+        'team1'=>['@id'=>'https://api.chess.com/pub/club/promote-to-king','fair_play_removals'=>['OwnMember']],
+        'team2'=>['@id'=>'https://api.chess.com/pub/club/opponent-club','fair_play_removals'=>[['username'=>'OpponentCheat'],['url'=>'https://api.chess.com/pub/player/SecondOpponent']]],
+    ],
+], 'promote-to-king');
+if($sides!==['club'=>['ownmember'],'opponent'=>['opponentcheat','secondopponent']]) throw new RuntimeException('team-scoped fair-play extraction failed: '.json_encode($sides));
 if(FairPlayReconciliationService::rawPointsX2('win')!==2) throw new RuntimeException('win score');
 if(FairPlayReconciliationService::rawPointsX2('agreed')!==1) throw new RuntimeException('draw score');
 if(FairPlayReconciliationService::rawPointsX2('resigned')!==0) throw new RuntimeException('loss score');
