@@ -117,8 +117,10 @@ final class AnalyticsBuilder
         $currentWatermark=$this->sourceWatermark($clubSlug);$storedWatermark='';
         try{$q=$this->analytics->prepare("SELECT source_watermark FROM p2k_an_refresh_state WHERE club_slug=? AND domain_key='all' LIMIT 1");$q->execute([$clubSlug]);$storedWatermark=(string)($q->fetchColumn()?:'');}catch(\Throwable){}
         if ($storedWatermark===$currentWatermark && $last > 0 && time() - $last < $minimumSeconds) return ['ran'=>false,'last_epoch'=>$last,'watermark'=>$currentWatermark];
-        $generationCoalesce=max(15,min(300,(int)((\p2k_tp_config()['app']['analytics_generation_coalesce_seconds']??60))));
-        if($storedWatermark!==''&&$storedWatermark!==$currentWatermark&&$last>0&&time()-$last<$generationCoalesce)return ['ran'=>false,'last_epoch'=>$last,'refresh_deferred'=>true,'reason'=>'generation_coalescing','coalesce_seconds'=>$generationCoalesce];
+        // A relevant source change makes the projection due, but does not justify
+        // repeatedly rebuilding the entire historical projection while Green is busy.
+        // Coalesce changes for the normal five-minute convergence window.
+        if($storedWatermark!==''&&$storedWatermark!==$currentWatermark&&$last>0&&time()-$last<$minimumSeconds)return ['ran'=>false,'last_epoch'=>$last,'refresh_deferred'=>true,'reason'=>'source_coalescing','coalesce_seconds'=>$minimumSeconds];
 
         // Multiple dashboard/Insights requests can arrive together. Only one may rebuild;
         // all others keep serving the last committed Analytics snapshot instead of waiting
@@ -134,7 +136,7 @@ final class AnalyticsBuilder
             $currentWatermark=$this->sourceWatermark($clubSlug);$storedWatermark='';
             try{$q=$this->analytics->prepare("SELECT source_watermark FROM p2k_an_refresh_state WHERE club_slug=? AND domain_key='all' LIMIT 1");$q->execute([$clubSlug]);$storedWatermark=(string)($q->fetchColumn()?:'');}catch(\Throwable){}
             if ($storedWatermark===$currentWatermark && $last > 0 && time() - $last < $minimumSeconds) return ['ran'=>false,'last_epoch'=>$last,'watermark'=>$currentWatermark];
-            if($storedWatermark!==''&&$storedWatermark!==$currentWatermark&&$last>0&&time()-$last<$generationCoalesce)return ['ran'=>false,'last_epoch'=>$last,'refresh_deferred'=>true,'reason'=>'generation_coalescing','coalesce_seconds'=>$generationCoalesce];
+            if($storedWatermark!==''&&$storedWatermark!==$currentWatermark&&$last>0&&time()-$last<$minimumSeconds)return ['ran'=>false,'last_epoch'=>$last,'refresh_deferred'=>true,'reason'=>'source_coalescing','coalesce_seconds'=>$minimumSeconds];
             if($deadlineAt!==null && $deadlineAt-microtime(true)<8.0)return ['ran'=>false,'last_epoch'=>$last,'refresh_deferred'=>true,'reason'=>'deadline'];
             try {
                 $result = $this->refreshIfNeeded($clubSlug);
