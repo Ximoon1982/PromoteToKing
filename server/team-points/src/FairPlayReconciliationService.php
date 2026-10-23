@@ -115,6 +115,22 @@ final class FairPlayReconciliationService
         $keys=array_keys($out);sort($keys,SORT_STRING);return $keys;
     }
 
+    /** @return list<string> */
+    public static function matchFairPlayRemovals(array $match): array
+    {
+        $all=self::normalizeRemovalList($match['fair_play_removals']??[]);
+        $teams=$match['teams']??null;
+        if (is_array($teams)) {
+            foreach ($teams as $team) {
+                if (!is_array($team)) continue;
+                $all=array_merge($all,self::normalizeRemovalList($team['fair_play_removals']??[]));
+            }
+        }
+        $all=array_values(array_unique($all));
+        sort($all,SORT_STRING);
+        return $all;
+    }
+
     public static function rawPointsX2(string $resultCode): int
     {
         $result=strtolower(trim($resultCode));
@@ -131,7 +147,7 @@ final class FairPlayReconciliationService
         $eligibleStatus=in_array($status,['in_progress','ongoing','started','finished','complete','completed'],true);
         if (!$eligibleStatus) return ['ran'=>false,'reason'=>'status_not_eligible','status'=>$status];
 
-        $incoming=self::normalizeRemovalList($match['fair_play_removals']??[]);
+        $incoming=self::matchFairPlayRemovals($match);
         $prior=$this->matchState($matchId);
         $stored=[];
         if (is_array($prior)) {
