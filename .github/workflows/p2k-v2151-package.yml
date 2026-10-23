@@ -66,6 +66,7 @@ jobs:
           grep -Fq "historical_backfill_auto" "$ROOT/payload/server/team-points/src/FairPlayReconciliationService.php"
           grep -Fq "SELECT DATABASE()" "$ROOT/payload/server/team-points/src/StorageMetricsService.php"
           grep -Fq 'rtrim((string)\$argv[2]' "$ROOT/payload/server/team-points/bin/install-analytics-convergence-cron.sh"
+          grep -Fq 'echo \$m," ",\$r,PHP_EOL;' "$ROOT/payload/server/team-points/bin/install-analytics-convergence-cron.sh"
           grep -Fq "PublicReadDatabase::analytics()" "$ROOT/payload/server/team-points/bin/maintenance.php"
           grep -Fq '"source_head": "3776ecdd6b91b67816f5fa3853e763ac5b5d7f98"' "$ROOT/CANDIDATE_RELEASE.json"
           grep -Fq '"source_head": "0bafb17000c118d0a40feaa5e9c5bba65bbf9b84"' "$ROOT/CANDIDATE_RELEASE.json"
