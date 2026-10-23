@@ -58,9 +58,11 @@ final class StorageMetricsService
             $q=$pdo->query("SELECT COALESCE(SUM(data_length+index_length),0) bytes,COUNT(*) tables_count FROM information_schema.tables WHERE table_schema=DATABASE()");
             $row=$q->fetch(PDO::FETCH_ASSOC)?:[];
             $bytes=(int)($row['bytes']??0);$ratio=$quota>0?$bytes/$quota:null;
-            return ['available'=>true,'database'=>Database::databaseName($role),'bytes'=>$bytes,'quota_bytes'=>$quota,'ratio'=>$ratio,'percent'=>$ratio===null?null:round(100*$ratio,2),'status'=>$ratio!==null&&$ratio>=($this->config['storage']['storage_warning_ratio']??0.80)?'red':'green','tables'=>(int)($row['tables_count']??0),'error'=>null];
+            $databaseName=(string)$pdo->query('SELECT DATABASE()')->fetchColumn();
+            return ['available'=>true,'database'=>$databaseName,'bytes'=>$bytes,'quota_bytes'=>$quota,'ratio'=>$ratio,'percent'=>$ratio===null?null:round(100*$ratio,2),'status'=>$ratio!==null&&$ratio>=($this->config['storage']['storage_warning_ratio']??0.80)?'red':'green','tables'=>(int)($row['tables_count']??0),'error'=>null];
         } catch (\Throwable $e) {
-            return ['available'=>false,'database'=>Database::databaseName($role),'bytes'=>null,'quota_bytes'=>$quota,'ratio'=>null,'percent'=>null,'status'=>'unknown','tables'=>null,'error'=>$e->getMessage()];
+            $databaseName=null;try{$databaseName=$pdo instanceof PDO?(string)$pdo->query('SELECT DATABASE()')->fetchColumn():Database::databaseName($role);}catch(\Throwable){}
+            return ['available'=>false,'database'=>$databaseName,'bytes'=>null,'quota_bytes'=>$quota,'ratio'=>null,'percent'=>null,'status'=>'unknown','tables'=>null,'error'=>$e->getMessage()];
         }
     }
 
