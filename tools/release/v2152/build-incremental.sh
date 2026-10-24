@@ -78,6 +78,7 @@ OVERLAY_FILES=(
   assets/js/pages/recruit-match-v2121-bootstrap.js
   server/team-points/src/RecruitmentHistoryStore.php
   server/team-points/public/recruitment-history.php
+  server/team-points/public/hall-search.php
 )
 
 RECOVERY_FILES=(
