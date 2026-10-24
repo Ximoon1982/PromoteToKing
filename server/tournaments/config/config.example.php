@@ -7,6 +7,7 @@ return [
     'cron_candidate_batch_size' => 3,
     'cron_status_batch_size' => 4,
     'cron_podium_batch_size' => 1,
+    'cron_fair_play_batch_size' => 1,
     'known_tournaments' => [
         'promote-to-king-top-32-players-of-january-2026-knock-out',
     ],
