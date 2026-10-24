@@ -42,6 +42,10 @@ final class BrowseIndex
     private function build(array $archive): array
     {
         $tournaments=is_array($archive['tournaments']??null)?$archive['tournaments']:[];$excluded=[];foreach(is_array($archive['excludedMedalists']??null)?$archive['excludedMedalists']:[] as $raw){$name=strtolower(trim((string)(is_array($raw)?($raw['username']??$raw['name']??''):$raw)));if($name!=='')$excluded[$name]=true;}
+        // Hall of Fame tournament podiums and aggregate medal rankings must use
+        // the same exclusion set. Preserve the source archive unchanged and filter
+        // only the materialized browse view.
+        foreach($tournaments as &$t){if(!is_array($t))continue;$podium=is_array($t['podium']??null)?$t['podium']:[];foreach(['gold','silver','bronze'] as $medal){$values=is_array($podium[$medal]??null)?$podium[$medal]:[];$podium[$medal]=array_values(array_filter($values,static function($raw)use($excluded):bool{$name=strtolower(trim((string)(is_array($raw)?($raw['username']??$raw['name']??''):$raw)));return $name!==''&&!isset($excluded[$name]);}));}$t['podium']=$podium;}unset($t);
         $names=static fn($v):array=>array_values(array_filter(array_map(static fn($x):string=>trim((string)(is_array($x)?($x['username']??$x['name']??''):$x)),is_array($v)?$v:[])));
         $ranking=[];$players=[];$years=[];$summary=['total'=>count($tournaments),'finished'=>0,'in_progress'=>0,'registration'=>0,'medalists'=>0,'excluded'=>count($excluded)];
         foreach($tournaments as $idx=>$t){$status=strtolower((string)($t['status']??''));if($status==='finished')$summary['finished']++;elseif(str_contains($status,'progress'))$summary['in_progress']++;elseif(str_contains($status,'registration'))$summary['registration']++;$period=(string)($t['period']??$t['periodSort']??'');if(preg_match('/(20\d{2})/',$period,$m))$years[$m[1]]=true;
