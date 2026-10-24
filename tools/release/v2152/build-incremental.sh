@@ -69,6 +69,8 @@ OVERLAY_FILES=(
   server/team-points/sql/core-schema.sql
   server/team-points/sql/core-migration-v2.15.0.sql
   server/tournaments/src/TournamentService.php
+  server/tournaments/src/BrowseIndex.php
+  server/tournaments/config/config.example.php
   server/shared/MatchAssistantUsage.php
   RecruitMatch.html
   assets/css/recruit-match.css
