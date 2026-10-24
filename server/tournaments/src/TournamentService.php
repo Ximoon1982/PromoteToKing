@@ -78,7 +78,7 @@ final class TournamentService
             // stage and persists its cursor. This keeps HTTP cron calls below the
             // 60-second platform ceiling and prevents one slow podium analysis from
             // starving discovery and status maintenance.
-            $stages = ['discovery', 'status', 'podium'];
+            $stages = ['discovery', 'status', 'podium', 'fair_play'];
             $stageIndex = max(0, (int)($scanState['workerStageIndex'] ?? 0)) % count($stages);
             $workerStage = $mode === 'cron' ? $stages[$stageIndex] : 'status';
             $scanState['workerStage'] = $workerStage;
@@ -219,6 +219,47 @@ final class TournamentService
                 $scanState['podiumCursor'] = 0;
             }
 
+            // Periodically audit finished tournament medalists for Fair Play closures.
+            // This is intentionally staged away from discovery/status work so the
+            // 45-second IONOS budget remains bounded.
+            $fairPlayChecked = 0;
+            $fairPlayExcluded = 0;
+            if ($mode === 'cron' && $workerStage === 'fair_play') {
+                $finished = array_values(array_filter(array_keys($known), static function (string $slug) use ($known): bool {
+                    return strtolower((string)($known[$slug]['status'] ?? '')) === 'finished';
+                }));
+                sort($finished, SORT_NATURAL | SORT_FLAG_CASE);
+                $fairPlayLimit = max(1, min(3, (int)($this->config['cron_fair_play_batch_size'] ?? 1)));
+                $fairPlayCursor = max(0, (int)($scanState['fairPlayCursor'] ?? 0));
+                if ($finished !== []) {
+                    for ($offset = 0; $offset < min($fairPlayLimit, count($finished)); $offset++) {
+                        if (!$this->hasRequestBudget($deadline)) {
+                            $deadlineCheckpoint = true;
+                            break;
+                        }
+                        $position = ($fairPlayCursor + $offset) % count($finished);
+                        $slug = $finished[$position];
+                        try {
+                            $audit = $this->auditFinishedTournamentFairPlay($known[$slug], $deadline);
+                            $known[$slug] = $audit['tournament'];
+                            $archive['excludedMedalists'] = $this->mergeExcludedMedalists(
+                                is_array($archive['excludedMedalists'] ?? null) ? $archive['excludedMedalists'] : [],
+                                $audit['excluded']
+                            );
+                            $fairPlayChecked++;
+                            $fairPlayExcluded += count($audit['excluded']);
+                            if (!empty($audit['changed'])) $updated++;
+                        } catch (\Throwable $error) {
+                            $errors[] = ['slug' => $slug, 'message' => $error->getMessage(), 'stage' => 'fair_play'];
+                        }
+                    }
+                    $scanState['fairPlayCursor'] = ($fairPlayCursor + $fairPlayChecked) % count($finished);
+                } else {
+                    $scanState['fairPlayCursor'] = 0;
+                }
+                $scanState['lastFairPlayCheckAt'] = \p2k_tournament_now();
+            }
+
             if ($mode === 'cron') {
                 $scanState['workerStageCompletedAt'] = \p2k_tournament_now();
                 $scanState['workerStageIndex'] = ($stageIndex + 1) % count($stages);
@@ -250,6 +291,8 @@ final class TournamentService
                 'statusChecked' => $statusProcessed,
                 'statusCheckedAt' => $scanState['lastStatusCheckAt'],
                 'nextWorkerStage' => $scanState['nextWorkerStage'] ?? null,
+                'fairPlayChecked' => $fairPlayChecked,
+                'fairPlayExcluded' => $fairPlayExcluded,
             ];
             $this->save($archive);
 
@@ -267,6 +310,8 @@ final class TournamentService
                 'workerStage' => $workerStage,
                 'nextWorkerStage' => $scanState['nextWorkerStage'] ?? null,
                 'dailyCycle' => $scanState['dailyCycle'] ?? null,
+                'fairPlayChecked' => $fairPlayChecked,
+                'fairPlayExcluded' => $fairPlayExcluded,
             ];
         });
     }
@@ -607,6 +652,82 @@ final class TournamentService
         return $result;
     }
 
+    /**
+     * Recheck a finished tournament for podiumist Fair Play closures.
+     * The tournament fair_play_removals list is refreshed from the latest round
+     * groups; player profiles are also inspected for an explicit Fair Play label.
+     *
+     * @return array{tournament:array,excluded:list<array>,changed:bool}
+     */
+    private function auditFinishedTournamentFairPlay(array $tournament, ?float $deadline): array
+    {
+        $slug=trim((string)($tournament['slug']??''));
+        if($slug==='') return ['tournament'=>$tournament,'excluded'=>[],'changed'=>false];
+
+        $before=$tournament;
+        $removals=$this->names($tournament['fairPlayRemovals']??[]);
+        $root=$this->api()->get('https://api.chess.com/pub/tournament/'.rawurlencode($slug), 0, true);
+        if(is_array($root)){
+            $rounds=array_values(array_filter($root['rounds']??[],'is_string'));
+            $latest=$rounds!==[] ? (string)end($rounds) : '';
+            if($latest!=='' && $this->hasRequestBudget($deadline)){
+                $round=$this->api()->get($latest,0,true)??[];
+                foreach(array_values(array_filter($round['groups']??[],'is_string')) as $groupUrl){
+                    if(!$this->hasRequestBudget($deadline)) break;
+                    $group=$this->api()->get((string)$groupUrl,0,true)??[];
+                    $removals=array_merge($removals,$this->names($group['fair_play_removals']??[]));
+                }
+            }
+        }
+        $removals=$this->names($removals);
+        $tournament['fairPlayRemovals']=$removals;
+        $removedKeys=array_fill_keys(array_map('strtolower',$removals),true);
+
+        $excluded=[];
+        $podium=is_array($tournament['podium']??null)?$tournament['podium']:[];
+        foreach(['gold','silver','bronze'] as $medal){
+            foreach($this->names($podium[$medal]??[]) as $username){
+                $key=strtolower($username);
+                $reason=isset($removedKeys[$key])?'fair_play':'';
+                if($reason==='' && $this->hasRequestBudget($deadline)){
+                    $profile=$this->api()->get('https://api.chess.com/pub/player/'.rawurlencode($key),3600,true);
+                    if(is_array($profile) && self::profileClosureReason($profile)==='fair_play') $reason='fair_play';
+                }
+                if($reason!=='fair_play') continue;
+                $excluded[]=[
+                    'username'=>$username,
+                    'tournament'=>$slug,
+                    'medal'=>$medal,
+                    'reason'=>'fair_play',
+                    'checkedAt'=>\p2k_tournament_now(),
+                ];
+            }
+        }
+        return ['tournament'=>$tournament,'excluded'=>$excluded,'changed'=>$tournament!=$before||$excluded!==[]];
+    }
+
+    public static function profileClosureReason(array $profile): string
+    {
+        $values=[];
+        foreach(['status','account_status','closed_reason','reason'] as $field)$values[]=strtolower(trim((string)($profile[$field]??'')));
+        $text=implode(' ',$values);
+        return str_contains($text,'fair_play')||str_contains($text,'fair play')?'fair_play':'';
+    }
+
+    /** @param list<array> $existing @param list<array> $incoming @return list<array> */
+    private function mergeExcludedMedalists(array $existing,array $incoming): array
+    {
+        $map=[];
+        foreach(array_merge($existing,$incoming) as $row){
+            if(!is_array($row)) continue;
+            $username=trim((string)($row['username']??$row['name']??''));
+            $tournament=trim((string)($row['tournament']??''));
+            if($username===''||$tournament==='') continue;
+            $map[strtolower($username).'|'.strtolower($tournament)]=$row;
+        }
+        return array_values($map);
+    }
+
     private function playerPlacement(string $username, string $slug): int
     {
         $payload = $this->api()->get('https://api.chess.com/pub/player/' . rawurlencode(strtolower($username)) . '/tournaments', 86400, true);
@@ -719,7 +840,7 @@ final class TournamentService
 
     private function defaultScanState(): array
     {
-        return ['monthlyThrough' => null, 'quarterlyThrough' => null, 'christmasThrough' => null, 'lastSync' => null, 'statusCursor' => 0, 'podiumCursor' => 0, 'discoveryModel' => null];
+        return ['monthlyThrough' => null, 'quarterlyThrough' => null, 'christmasThrough' => null, 'lastSync' => null, 'statusCursor' => 0, 'podiumCursor' => 0, 'fairPlayCursor' => 0, 'lastFairPlayCheckAt' => null, 'discoveryModel' => null];
     }
 
     private function normalizeArchive(array $archive): array
