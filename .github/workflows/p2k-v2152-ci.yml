@@ -16,6 +16,9 @@ jobs:
           php -l server/team-points/src/RecruitmentHistoryStore.php
           php -l server/team-points/public/recruitment-history.php
           php tests/recruitment_history_v2152_test.php
+          php tests/tournament_hall_fair_play_v2152_test.php
+          php -l server/tournaments/src/TournamentService.php
+          php -l server/tournaments/src/BrowseIndex.php
       - name: Recruitment history integration
         run: |
           python3 tests/test_v2152_recruitment_history.py
