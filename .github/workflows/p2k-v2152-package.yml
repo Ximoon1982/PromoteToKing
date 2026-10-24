@@ -23,6 +23,7 @@ jobs:
           php -l server/tournaments/src/TournamentService.php
           php -l server/tournaments/src/BrowseIndex.php
           python3 tests/test_v2152_recruitment_history.py
+          python3 tests/test_v2152_hall_search_current_only.py
           node --check assets/js/pages/recruit-match.js
           node --check assets/js/pages/recruit-match-v2121-bootstrap.js
           node tests/recruit_match_v2_core.test.js
@@ -42,6 +43,8 @@ jobs:
           grep -Fxq "assets/js/pages/recruit-match.js" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fxq "server/team-points/src/RecruitmentHistoryStore.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fxq "server/team-points/public/recruitment-history.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fxq "server/team-points/public/hall-search.php" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fq "Hall of Fame search is a current-member lookup" "$ROOT/payload/server/team-points/public/hall-search.php"
           grep -Fq "DEFAULT_PAGE_SIZE = 10" "$ROOT/payload/server/team-points/src/RecruitmentHistoryStore.php"
           grep -Fq "archiveRecruitment(match,state.resultCsv)" "$ROOT/payload/assets/js/pages/recruit-match.js"
           grep -Fxq "$(git rev-parse HEAD)" "$ROOT/SOURCE_HEAD.txt"
