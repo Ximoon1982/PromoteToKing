@@ -27,6 +27,9 @@ OVERLAY_FILES=(
   assets/css/task-control.css
   assets/css/challenge-list-assistant.css
   assets/js/shared/real-oauth.js
+  assets/js/shared/upcoming-analysis-core.js
+  assets/js/shared/recruitment-lineup-core.js
+  AnalyzeMatches.htm
   assets/js/pages/dashboard-v2.js
   assets/js/pages/task-control.js
   assets/js/pages/challenge-list-assistant.js
