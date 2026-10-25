@@ -22,4 +22,17 @@ if(buckets[0].lower!==null||buckets[0].upper!==800)throw new Error('Bottom bucke
 const top=buckets[buckets.length-1];
 if(top.lower!==2000||top.upper!==null||top.rep!==2000)throw new Error('Top bucket must be 2000+');
 
+
+const hardMatch={settings:{min_team_players:4,max_team_players:4,min_rating:0,max_rating:3000}};
+const hardP2k={locked:false,players:[1300,1200,1100].map(rating=>({rating}))};
+const hardOpponent={players:[2600,2500,2400,2300].map(rating=>({rating}))};
+const hard=uut.recruitmentMetrics({match:hardMatch,p2kTeam:hardP2k,opponentTeam:hardOpponent,isLeague:true});
+if(!hard||hard.ready)throw new Error('Expected hard league match to require recruitment');
+if(hard.feasible!==true)throw new Error('Adaptive planner must always return an actionable target');
+if(!Number.isFinite(hard.count)||hard.count<1)throw new Error('Adaptive planner returned no recruitment count');
+if(!Array.isArray(hard.portfolioRatings)||hard.portfolioRatings.length!==hard.count)throw new Error('Adaptive planner returned no rating portfolio');
+if(Math.max(...hard.portfolioRatings)>2000)throw new Error('Adaptive fallback exceeded 2000+ top bucket');
+if(!Number.isFinite(hard.targetTier)||hard.targetTier<1||hard.targetTier>4)throw new Error('Adaptive planner returned no target tier');
+if(hard.targetTier===4)throw new Error('Hard case should require target relaxation, got decisive tier');
+
 console.log('PASS practical recruitment portfolio optimizer');
