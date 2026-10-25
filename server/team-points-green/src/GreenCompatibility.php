@@ -338,6 +338,39 @@ final class GreenCompatibility
         $up->execute([$club,$matchId,(string)($m['name']??''),$m['web_url'],$status,$status,$m['rules'],$m['time_control'],0,$m['start_epoch']?gmdate('Y-m-d H:i:s',(int)$m['start_epoch']):null,$m['end_epoch']?gmdate('Y-m-d H:i:s',(int)$m['end_epoch']):null,(int)($m['board_count']??0),(float)($m['p2k_score']??0),(float)($m['opponent_score']??0),$r['p2k_avg']??null,$r['opp_avg']??null,(int)($r['rated']??0),$r['max_rating']??null,$m['created_at'],$result,max(0,(int)($m['competition_points']??0)),(int)$m['is_void'],$slug,$m['opponent_name'],$m['opponent_url'],(string)($m['fact_source']??'green'),$m['last_verified_at'],$m['last_observed_at'],$m['last_observed_at'],null,$status==='finished'?($m['end_epoch']?gmdate('Y-m-d H:i:s',(int)$m['end_epoch']):$m['last_verified_at']):null]);
         if($slug){$this->green->core->prepare("INSERT INTO p2k_tp_opponents(club_slug,opponent_slug,display_name,club_url,first_seen_at,last_seen_at) VALUES(?,?,?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE display_name=COALESCE(NULLIF(VALUES(display_name),''),display_name),club_url=COALESCE(VALUES(club_url),club_url),last_seen_at=UTC_TIMESTAMP()")->execute([$club,$slug,(string)($m['opponent_name']??$slug),$m['opponent_url']]);}
 
+        // Never replace an already-valid compatibility match with a partial Green
+        // projection. A mutable Green refresh may temporarily have incomplete lineup
+        // rows while authoritative point events from older finished games still exist.
+        // Deleting first in that state makes player totals move backwards.
+        $authoritativeEventQ=$this->green->core->prepare(
+            "SELECT COUNT(DISTINCT CONCAT(board_no,'|',game_url))
+               FROM p2k_g_point_events
+              WHERE match_id=?"
+        );
+        $authoritativeEventQ->execute([$matchId]);
+        $authoritativeEventCount=(int)$authoritativeEventQ->fetchColumn();
+
+        $projectableEventCount=0;
+        foreach($projectedBoards as $pb){
+            $memberKey=strtolower(trim((string)($pb['canonical_username_key']??$pb['username_key']??'')));
+            if($memberKey==='')continue;
+            $gp=$this->canonicalGameProjection($matchId,(int)$pb['board_no'],$memberKey);
+            $projectableEventCount+=count($gp['rows']??[]);
+        }
+
+        if($projectableEventCount<$authoritativeEventCount){
+            return [
+                'projected'=>false,
+                'match_id'=>$matchId,
+                'reason'=>'partial_green_projection',
+                'authoritative_events'=>$authoritativeEventCount,
+                'projectable_events'=>$projectableEventCount,
+                'boards'=>count($projectedBoards),
+                'lineup_duplicates_resolved'=>(int)($projection['duplicates_resolved']??0),
+                'member_duplicates_resolved'=>(int)($projection['member_duplicates_resolved']??0),
+            ];
+        }
+
         // Rebuild only this match's compact board/game compatibility rows. Cascading delete removes old games.
         $this->green->core->prepare('DELETE b FROM p2k_tp_boards b JOIN p2k_tp_members u ON u.member_id=b.member_id WHERE u.club_slug=? AND b.match_id=?')->execute([$club,$matchId]);
         $boards=$projectedBoards;
