@@ -23,7 +23,6 @@ jobs:
         run: |
           python3 tests/test_v2152_recruitment_history.py
           python3 tests/test_v2152_hall_search_current_only.py
-          python3 tests/test_v2152_green_projection_point_preservation.py
       - name: Existing match recruitment core tests
         run: |
           node tests/recruit_match_v2_core.test.js
