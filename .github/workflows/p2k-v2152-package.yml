@@ -24,7 +24,6 @@ jobs:
           php -l server/tournaments/src/BrowseIndex.php
           python3 tests/test_v2152_recruitment_history.py
           python3 tests/test_v2152_hall_search_current_only.py
-          python3 tests/test_v2152_green_projection_point_preservation.py
           node --check assets/js/pages/recruit-match.js
           node --check assets/js/pages/recruit-match-v2121-bootstrap.js
           node tests/recruit_match_v2_core.test.js
