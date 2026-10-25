@@ -684,286 +684,210 @@
     };
   }
 
-  function recruitmentTargetReached(comparison, targetBoardCount, isLeagueMatch) {
+  function expectedScoreShare(p2kRatings, opponentRatings, maxPlayers) {
+    const p = Number.isFinite(maxPlayers) ? p2kRatings.slice(0, maxPlayers) : [...p2kRatings];
+    const o = Number.isFinite(maxPlayers) ? opponentRatings.slice(0, maxPlayers) : [...opponentRatings];
+    const count = Math.min(p.length, o.length);
+    if (!count) return .5;
+    let total = 0;
+    for (let i = 0; i < count; i += 1) total += eloExpectedScore(p[i], o[i]);
+    return total / count;
+  }
+
+  function recruitmentTargetReached(comparison, targetBoardCount, isLeagueMatch, scoreShare = null) {
     if (!comparison || comparison.boardCount < targetBoardCount) return false;
+    const expectedShare = Number.isFinite(scoreShare) ? scoreShare : .5;
 
     if (isLeagueMatch) {
-      const requiredNetBoardAdvantage = Math.min(
-        targetBoardCount,
-        Math.max(2, Math.ceil(targetBoardCount * .20))
-      );
-      const requiredAdvantagedBoards = Math.max(
-        requiredNetBoardAdvantage,
-        Math.ceil(targetBoardCount * .60)
-      );
-      return comparison.netBoardAdvantage >= requiredNetBoardAdvantage &&
-        comparison.p2kAdvantageBoards >= requiredAdvantagedBoards &&
-        comparison.p2kWinProbability >= LEAGUE_MINIMUM_WIN_PROBABILITY;
+      return comparison.p2kWinProbability >= LEAGUE_MINIMUM_WIN_PROBABILITY &&
+        expectedShare >= .55 &&
+        comparison.p2kAdvantageBoards > comparison.opponentAdvantageBoards;
     }
 
-    /* Friendly recruitment stops once P2K is at least as likely to win as the
-       opponent. The caller separately enforces the minimum-player requirement
-       and a P2K lineup count at least equal to the opponent's usable lineup. */
-    return comparison.p2kWinProbability >= comparison.opponentWinProbability;
+    return expectedShare >= .5 &&
+      comparison.p2kWinProbability >= comparison.opponentWinProbability;
   }
 
-  function friendlyPreferredCandidateFloor(opponentRatings, targetBoardCount, minimumRating, maximumRating) {
-    if (!Array.isArray(opponentRatings) || opponentRatings.length === 0) {
-      return Math.min(maximumRating, Math.max(minimumRating, FRIENDLY_RELIABILITY_RATING));
+  function recruitmentBuckets(bounds) {
+    const minimum = Math.max(0, Number(bounds?.minimum) || 0);
+    const maximum = Number.isFinite(bounds?.maximum) ? Number(bounds.maximum) : Number.POSITIVE_INFINITY;
+    const definitions = [
+      { rep: 800, lower: null, upper: 800, cost: 1.0 },
+      { rep: 900, lower: 800, upper: 1000, cost: 1.1 },
+      { rep: 1100, lower: 1000, upper: 1200, cost: 1.25 },
+      { rep: 1300, lower: 1200, upper: 1400, cost: 1.5 },
+      { rep: 1500, lower: 1400, upper: 1600, cost: 1.9 },
+      { rep: 1700, lower: 1600, upper: 1800, cost: 2.7 },
+      { rep: 1900, lower: 1800, upper: 2000, cost: 4.5 },
+      { rep: 2000, lower: 2000, upper: null, cost: 9.0 }
+    ];
+
+    return definitions
+      .filter(bucket => {
+        const bucketMinimum = bucket.lower === null ? 0 : bucket.lower;
+        const bucketMaximum = bucket.upper === null ? Number.POSITIVE_INFINITY : bucket.upper;
+        return bucketMaximum >= minimum && bucketMinimum <= maximum;
+      })
+      .map(bucket => ({
+        ...bucket,
+        rep: Math.max(minimum, Math.min(maximum, bucket.rep))
+      }));
+  }
+
+  function portfolioCandidates(count, buckets) {
+    const portfolios = [];
+    for (const bucket of buckets) {
+      portfolios.push({
+        ratings: Array.from({ length: count }, () => bucket.rep),
+        buckets: [bucket],
+        cost: count * bucket.cost
+      });
     }
 
-    const comparedCount = Math.max(1, Math.min(targetBoardCount, opponentRatings.length));
-    const topHalfCount = Math.max(1, Math.ceil(comparedCount / 2));
-    const topHalfBoundary = Number(opponentRatings[topHalfCount - 1]) || FRIENDLY_RELIABILITY_RATING;
-    const preferred = Math.max(
-      FRIENDLY_RELIABILITY_RATING,
-      topHalfBoundary + FRIENDLY_TOP_HALF_ENTRY_CUSHION
-    );
-    return Math.min(maximumRating, Math.max(minimumRating, Math.ceil(preferred / 25) * 25));
+    for (let lowerIndex = 0; lowerIndex < buckets.length; lowerIndex += 1) {
+      for (let upperIndex = lowerIndex + 1; upperIndex < buckets.length; upperIndex += 1) {
+        const lowerBucket = buckets[lowerIndex];
+        const upperBucket = buckets[upperIndex];
+        for (let upperCount = 1; upperCount < count; upperCount += 1) {
+          const lowerCount = count - upperCount;
+          portfolios.push({
+            ratings: [
+              ...Array.from({ length: lowerCount }, () => lowerBucket.rep),
+              ...Array.from({ length: upperCount }, () => upperBucket.rep)
+            ],
+            buckets: [lowerBucket, upperBucket],
+            cost: lowerCount * lowerBucket.cost + upperCount * upperBucket.cost
+          });
+        }
+      }
+    }
+    return portfolios;
   }
 
-  function recruitmentCandidateRatings(minimumRating, maximumRating, preferredFloor, isLeagueMatch) {
-    const ratings = [];
-    const appendRange = (start, end) => {
-      for (let rating = start; rating <= end; rating += 25) ratings.push(rating);
+  function portfolioDisplayBounds(portfolio) {
+    const buckets = Array.isArray(portfolio?.buckets) ? portfolio.buckets : [];
+    if (!buckets.length) return { lower: null, upper: null };
+    let lower = Number.POSITIVE_INFINITY;
+    let upper = Number.NEGATIVE_INFINITY;
+    let openLow = false;
+    let openHigh = false;
+    for (const bucket of buckets) {
+      if (bucket.lower === null) openLow = true;
+      else lower = Math.min(lower, bucket.lower);
+      if (bucket.upper === null) openHigh = true;
+      else upper = Math.max(upper, bucket.upper);
+    }
+    return {
+      lower: openLow ? null : (Number.isFinite(lower) ? lower : null),
+      upper: openHigh ? null : (Number.isFinite(upper) ? upper : null)
     };
-
-    if (isLeagueMatch) {
-      appendRange(minimumRating, maximumRating);
-      return ratings;
-    }
-
-    /* Prefer candidates who enter the upper half, then fall back lower only if needed. */
-    appendRange(preferredFloor, maximumRating);
-    if (preferredFloor > minimumRating) appendRange(minimumRating, preferredFloor - 25);
-    return ratings;
   }
 
   function buildRecruitmentRecommendation(match, p2kTeam, opponentTeam, bounds, maxPlayers, minPlayers, isLeagueMatch) {
     const p2kRatings = ratedPlayers(p2kTeam, bounds).map(player => player.rating);
     const opponentRatings = ratedPlayers(opponentTeam, bounds).map(player => player.rating);
-    const mandatoryMinimumPlayers = Math.max(
-      0,
-      Number.isFinite(Number(minPlayers))
-        ? Math.floor(Number(minPlayers))
-        : 0
-    );
+    const mandatoryMinimumPlayers = Math.max(0, Number.isFinite(Number(minPlayers)) ? Math.floor(Number(minPlayers)) : 0);
     const cappedMandatoryMinimum = Number.isFinite(maxPlayers)
       ? Math.min(maxPlayers, mandatoryMinimumPlayers)
       : mandatoryMinimumPlayers;
-    const missingForMinimum = Math.max(
-      0,
-      cappedMandatoryMinimum - p2kRatings.length
-    );
     const opponentCapacity = Number.isFinite(maxPlayers)
       ? Math.min(maxPlayers, opponentRatings.length)
       : opponentRatings.length;
-
-    /*
-     * League planning is cumulative: project both sides to min_players, ensure
-     * P2K has no player-count deficit, then test dominance and win probability
-     * on that complete projected lineup.
-     */
-    const targetBoardCount = isLeagueMatch
-      ? (Number.isFinite(maxPlayers)
-          ? Math.min(maxPlayers, Math.max(cappedMandatoryMinimum, opponentCapacity))
-          : Math.max(cappedMandatoryMinimum, opponentCapacity))
-      : opponentCapacity;
+    const targetBoardCount = Number.isFinite(maxPlayers)
+      ? Math.min(maxPlayers, Math.max(cappedMandatoryMinimum, opponentCapacity))
+      : Math.max(cappedMandatoryMinimum, opponentCapacity);
 
     const opponentProjection = (() => {
-      if (!isLeagueMatch || opponentRatings.length >= targetBoardCount) {
-        return {
-          ratings: [...opponentRatings],
-          addedPlayers: 0,
-          assumedRating: null
-        };
+      if (opponentRatings.length >= targetBoardCount) {
+        return { ratings: [...opponentRatings], addedPlayers: 0, assumedRating: null };
       }
-
       const current = [...opponentRatings].sort((a, b) => b - a);
-      const boundedFallback = Math.max(
+      const fallback = Math.max(
         bounds.minimum,
-        Math.min(
-          Number.isFinite(bounds.maximum) ? bounds.maximum : FRIENDLY_RELIABILITY_RATING,
-          FRIENDLY_RELIABILITY_RATING
-        )
+        Math.min(Number.isFinite(bounds.maximum) ? bounds.maximum : FRIENDLY_RELIABILITY_RATING, FRIENDLY_RELIABILITY_RATING)
       );
-      const averageRating = current.length > 0
-        ? current.reduce((sum, rating) => sum + rating, 0) / current.length
-        : boundedFallback;
-      const medianRating = current.length > 0
-        ? current[Math.floor(current.length / 2)]
-        : boundedFallback;
+      const average = current.length ? current.reduce((sum, rating) => sum + rating, 0) / current.length : fallback;
+      const median = current.length ? current[Math.floor(current.length / 2)] : fallback;
       const assumedRating = Math.max(
         bounds.minimum,
         Math.min(
-          Number.isFinite(bounds.maximum) ? bounds.maximum : 3000,
-          Math.ceil(Math.max(averageRating, medianRating) / 25) * 25
+          Number.isFinite(bounds.maximum) ? bounds.maximum : 2000,
+          Math.ceil(Math.max(average, median) / 100) * 100
         )
       );
-      const addedPlayers = Math.max(0, targetBoardCount - current.length);
       return {
         ratings: [
           ...current,
-          ...Array.from({ length: addedPlayers }, () => assumedRating)
+          ...Array.from({ length: targetBoardCount - current.length }, () => assumedRating)
         ].sort((a, b) => b - a),
-        addedPlayers,
+        addedPlayers: targetBoardCount - current.length,
         assumedRating
       };
     })();
 
-    const comparisonOpponentRatings = isLeagueMatch
-      ? opponentProjection.ratings
-      : opponentRatings;
-    const current = compareRecruitmentLineups(
-      p2kRatings,
-      comparisonOpponentRatings,
-      maxPlayers
-    );
-    const leagueNetBoardTarget = Math.min(
-      targetBoardCount,
-      Math.max(2, Math.ceil(targetBoardCount * .20))
-    );
+    const comparisonOpponentRatings = opponentProjection.ratings;
+    const current = compareRecruitmentLineups(p2kRatings, comparisonOpponentRatings, maxPlayers);
+    const currentExpectedShare = expectedScoreShare(p2kRatings, comparisonOpponentRatings, maxPlayers);
+    const missingForFullComparison = Math.max(0, targetBoardCount - p2kRatings.length);
     const leagueWinPercent = Math.round(LEAGUE_MINIMUM_WIN_PROBABILITY * 100);
     const targetLabel = isLeagueMatch
-      ? `at least ${targetBoardCount} eligible player${targetBoardCount === 1 ? "" : "s"} on each projected side, no P2K player-count deficit, a significant board advantage (at least +${leagueNetBoardTarget} net board${leagueNetBoardTarget === 1 ? "" : "s"} and 60% of boards ahead), and at least a ${leagueWinPercent}% projected win chance`
-      : "at least the match minimum, at least as many eligible players as the opponent's usable lineup, and a projected P2K win probability at least as high as the opponent's";
-    const opponentProjectionDetail = isLeagueMatch && opponentProjection.addedPlayers > 0
-      ? ` The opponent projection includes ${opponentProjection.addedPlayers} additional player${opponentProjection.addedPlayers === 1 ? "" : "s"} at approximately ${opponentProjection.assumedRating} to reach the match minimum.`
+      ? `at least ${targetBoardCount} eligible players, no player-count deficit, and a decisive projected advantage (at least 55% expected score and ${leagueWinPercent}% match-win probability)`
+      : `at least ${targetBoardCount} eligible players, no player-count deficit, and a balanced or advantageous projected lineup`;
+    const opponentProjectionDetail = opponentProjection.addedPlayers > 0
+      ? ` The opponent projection includes ${opponentProjection.addedPlayers} additional player${opponentProjection.addedPlayers === 1 ? "" : "s"} at approximately ${opponentProjection.assumedRating} so both sides are evaluated at the minimum viable board count.`
       : "";
 
     if (p2kTeam?.locked === true) {
-      return {
-        actionable: false,
-        needsRecruitment: false,
-        isLeagueMatch,
-        targetBoardCount,
-        current,
-        targetLabel,
-        summary: "Recruitment is unavailable because the P2K team is locked.",
-        detail: "The recommendation is informational only; registrations can no longer be added."
-      };
+      return { actionable: false, needsRecruitment: false, isLeagueMatch, targetBoardCount, current, targetLabel, summary: "Recruitment is unavailable because the P2K team is locked.", detail: "The recommendation is informational only; registrations can no longer be added." };
     }
-
-    if (targetBoardCount === 0 && missingForMinimum === 0) {
-      return {
-        actionable: false,
-        needsRecruitment: false,
-        isLeagueMatch,
-        targetBoardCount,
-        current,
-        targetLabel,
-        summary: "No recruitment recommendation is available yet.",
-        detail: "The opponent has no rating-eligible registered lineup to compare."
-      };
+    if (targetBoardCount === 0) {
+      return { actionable: false, needsRecruitment: false, isLeagueMatch, targetBoardCount, current, targetLabel, summary: "No recruitment recommendation is available yet.", detail: "There is no usable lineup to compare." };
     }
-
-    const missingForFullComparison = Math.max(
-      0,
-      targetBoardCount - p2kRatings.length,
-      missingForMinimum
-    );
-    const playerCountTargetReached = p2kRatings.length >= targetBoardCount;
     if (
-      missingForMinimum === 0 &&
-      playerCountTargetReached &&
-      recruitmentTargetReached(current, targetBoardCount, isLeagueMatch)
+      missingForFullComparison === 0 &&
+      recruitmentTargetReached(current, targetBoardCount, isLeagueMatch, currentExpectedShare)
     ) {
       return {
-        actionable: true,
-        needsRecruitment: false,
-        isLeagueMatch,
-        targetBoardCount,
-        current,
-        targetLabel,
+        actionable: true, needsRecruitment: false, isLeagueMatch, targetBoardCount, current, targetLabel,
         summary: "No recruitment needed: the target lineup balance is already reached.",
-        detail: `Current board balance: P2K ${current.p2kAdvantageBoards}, opponent ${current.opponentAdvantageBoards}, ` +
-          `${current.tiedBoards} tied across ${current.boardCount} paired board${current.boardCount === 1 ? "" : "s"}.` +
-          opponentProjectionDetail
+        detail: `Current board balance: P2K ${current.p2kAdvantageBoards}, opponent ${current.opponentAdvantageBoards}, ${current.tiedBoards} tied across ${current.boardCount} paired boards.` + opponentProjectionDetail
       };
     }
 
-    const observedTopRating = Math.max(
-      1800,
-      p2kRatings[0] || 0,
-      comparisonOpponentRatings[0] || 0
-    );
-    const maximumCandidateRating = Number.isFinite(bounds.maximum)
-      ? Math.min(3000, Math.floor(bounds.maximum / 25) * 25)
-      : Math.min(3000, Math.ceil((observedTopRating + 400) / 25) * 25);
-    const minimumCandidateRating = Math.min(
-      maximumCandidateRating,
-      Math.max(100, Math.ceil(bounds.minimum / 25) * 25)
-    );
+    const buckets = recruitmentBuckets(bounds);
     const maximumRecruitCount = Math.max(
       missingForFullComparison,
-      Math.min(
-        12,
-        Math.max(Number.isFinite(maxPlayers) ? Math.min(maxPlayers, 8) : 6, 1)
-      )
+      Math.min(12, Math.max(Number.isFinite(maxPlayers) ? Math.min(maxPlayers, 8) : 6, 1))
     );
+    let best = null;
 
-    let solution = null;
-    const preferredCandidateFloor = isLeagueMatch
-      ? minimumCandidateRating
-      : friendlyPreferredCandidateFloor(
-          comparisonOpponentRatings,
-          targetBoardCount,
-          minimumCandidateRating,
-          maximumCandidateRating
-        );
-    const candidateRatings = recruitmentCandidateRatings(
-      minimumCandidateRating,
-      maximumCandidateRating,
-      preferredCandidateFloor,
-      isLeagueMatch
-    );
+    for (let recruitCount = Math.max(1, missingForFullComparison); recruitCount <= maximumRecruitCount; recruitCount += 1) {
+      for (const portfolio of portfolioCandidates(recruitCount, buckets)) {
+        const projectedRatings = [...p2kRatings, ...portfolio.ratings].sort((a, b) => b - a);
+        if (projectedRatings.length < cappedMandatoryMinimum || projectedRatings.length < targetBoardCount) continue;
+        const projected = compareRecruitmentLineups(projectedRatings, comparisonOpponentRatings, maxPlayers);
+        const expectedShare = expectedScoreShare(projectedRatings, comparisonOpponentRatings, maxPlayers);
+        if (!recruitmentTargetReached(projected, targetBoardCount, isLeagueMatch, expectedShare)) continue;
 
-    const minimumRecruitCount = Math.max(1, missingForFullComparison);
-    for (
-      let recruitCount = minimumRecruitCount;
-      recruitCount <= maximumRecruitCount && !solution;
-      recruitCount += 1
-    ) {
-      for (const candidateRating of candidateRatings) {
-        const projectedRatings = [
-          ...p2kRatings,
-          ...Array.from({ length: recruitCount }, () => candidateRating)
-        ].sort((a, b) => b - a);
-        const projected = compareRecruitmentLineups(
-          projectedRatings,
-          comparisonOpponentRatings,
-          maxPlayers
-        );
-
-        const minimumReached =
-          projectedRatings.length >= cappedMandatoryMinimum;
-        const playerCountReached =
-          projectedRatings.length >= targetBoardCount;
-        const lineupTargetReached =
-          targetBoardCount === 0 ||
-          recruitmentTargetReached(
-            projected,
-            targetBoardCount,
-            isLeagueMatch
-          );
-        if (minimumReached && playerCountReached && lineupTargetReached) {
-          solution = { recruitCount, candidateRating, projected };
-          break;
+        /*
+         * Rating scarcity dominates headcount. This deliberately lets several
+         * attainable mid-rated recruits beat one exceptional 2000+ recruit.
+         * A tiny lineup-quality bonus breaks ties in favour of the stronger
+         * board-by-board result; headcount is only a secondary tie-break.
+         */
+        const qualityBonus = Math.max(-300, Math.min(300, projected.averageRatingDifference || 0)) * .0005;
+        const score = portfolio.cost + (recruitCount * .08) - qualityBonus;
+        if (
+          !best ||
+          score < best.score - 1e-9 ||
+          (Math.abs(score - best.score) <= 1e-9 && recruitCount < best.recruitCount)
+        ) {
+          best = { ...portfolio, recruitCount, projected, expectedShare, score };
         }
       }
     }
 
-    if (!solution) {
-      const fallbackCount = Math.max(1, missingForFullComparison);
-      const projectedRatings = [
-        ...p2kRatings,
-        ...Array.from({ length: fallbackCount }, () => maximumCandidateRating)
-      ].sort((a, b) => b - a);
-      const projected = compareRecruitmentLineups(
-        projectedRatings,
-        comparisonOpponentRatings,
-        maxPlayers
-      );
+    if (!best) {
       return {
         actionable: true,
         needsRecruitment: true,
@@ -971,25 +895,23 @@
         isLeagueMatch,
         targetBoardCount,
         current,
-        projected,
+        projected: current,
         targetLabel,
-        recruitCount: fallbackCount,
-        minimumRating: maximumCandidateRating,
-        maximumRating: Number.isFinite(bounds.maximum) ? bounds.maximum : null,
-        summary: `Recruit at least ${fallbackCount} of the strongest eligible player${fallbackCount === 1 ? "" : "s"} available.`,
-        detail: `Aim for ${targetLabel}. The current board balance is ${current.p2kAdvantageBoards}–${current.opponentAdvantageBoards}; ` +
-          `players rated around ${maximumCandidateRating}+ would provide the strongest available improvement, although the target is not guaranteed by the current model.` +
-          opponentProjectionDetail
+        recruitCount: Math.max(1, missingForFullComparison),
+        minimumRating: null,
+        maximumRating: null,
+        summary: "Competitive target not reachable with the tested recruitment envelope.",
+        detail: `P2K still needs at least ${Math.max(1, missingForFullComparison)} additional eligible player${Math.max(1, missingForFullComparison) === 1 ? "" : "s"} for the lineup-size requirement, but no tested portfolio from the up-to-800 through 2000+ buckets reaches the competitive target.` + opponentProjectionDetail
       };
     }
 
-    const rangeMaximum = Number.isFinite(bounds.maximum)
-      ? Math.min(bounds.maximum, solution.candidateRating + 99)
-      : solution.candidateRating + 99;
-    const countText = `${solution.recruitCount} eligible player${solution.recruitCount === 1 ? "" : "s"}`;
-    const ratingText = rangeMaximum > solution.candidateRating
-      ? `${solution.candidateRating}–${Math.floor(rangeMaximum)}`
-      : `${solution.candidateRating}+`;
+    const display = portfolioDisplayBounds(best);
+    const countText = `${best.recruitCount} eligible player${best.recruitCount === 1 ? "" : "s"}`;
+    const ratingText = display.lower === null
+      ? `up to ${display.upper}`
+      : display.upper === null
+        ? `${display.lower}+`
+        : `${display.lower}–${display.upper}`;
 
     return {
       actionable: true,
@@ -998,16 +920,16 @@
       isLeagueMatch,
       targetBoardCount,
       current,
-      projected: solution.projected,
+      projected: best.projected,
       targetLabel,
-      recruitCount: solution.recruitCount,
-      minimumRating: solution.candidateRating,
-      maximumRating: rangeMaximum,
+      recruitCount: best.recruitCount,
+      minimumRating: display.lower,
+      maximumRating: display.upper,
+      portfolioRatings: best.ratings,
+      expectedScoreShare: best.expectedShare,
+      maximumModeledRating: 2000,
       summary: `Recruit ${countText} rated approximately ${ratingText}.`,
-      detail: `This is the lowest tested recruitment profile reaching ${targetLabel}. ` +
-        `Projected board balance: P2K ${solution.projected.p2kAdvantageBoards}, opponent ${solution.projected.opponentAdvantageBoards}, ` +
-        `${solution.projected.tiedBoards} tied across ${solution.projected.boardCount} board${solution.projected.boardCount === 1 ? "" : "s"}.` +
-        opponentProjectionDetail
+      detail: `This practical portfolio is the lowest-scarcity tested plan reaching ${targetLabel}. Projected board balance: P2K ${best.projected.p2kAdvantageBoards}, opponent ${best.projected.opponentAdvantageBoards}, ${best.projected.tiedBoards} tied across ${best.projected.boardCount} boards.` + opponentProjectionDetail
     };
   }
 
