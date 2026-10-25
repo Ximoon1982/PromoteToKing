@@ -1217,9 +1217,6 @@
     if (!recommendation?.needsRecruitment || !Number.isFinite(recommendation.recruitCount)) {
       return recommendation?.summary || "No recruitment needed";
     }
-    if (recommendation.feasible === false) {
-      return recommendation.summary || "Competitive target not reachable with the tested recruitment envelope.";
-    }
     const count = recommendation.recruitCount;
     const need = `${count} player${count === 1 ? "" : "s"} ${recruitmentRatingPhrase(recommendation)} needed`;
     return includeStart
