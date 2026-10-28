@@ -24,8 +24,10 @@ jobs:
           php -l server/tournaments/src/BrowseIndex.php
           python3 tests/test_v2152_recruitment_history.py
           python3 tests/test_v2152_hall_search_current_only.py
+          python3 tests/test_v2152_events_showcase_mobile_performance.py
           node --check assets/js/shared/recruitment-lineup-core.js
           node --check assets/js/shared/upcoming-analysis-core.js
+          node --check assets/js/admin/events-showcase-v2122.js
           node tests/test_v2152_recruitment_portfolio_optimizer.js
           node --check assets/js/pages/recruit-match.js
           node --check assets/js/pages/recruit-match-v2121-bootstrap.js
@@ -47,6 +49,8 @@ jobs:
           grep -Fxq "AnalyzeMatches.htm" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fxq "assets/js/shared/upcoming-analysis-core.js" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fxq "assets/js/shared/recruitment-lineup-core.js" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fxq "assets/js/admin/events-showcase-v2122.js" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
+          grep -Fq "Preview loads on demand to keep the admin page responsive." "$ROOT/payload/assets/js/admin/events-showcase-v2122.js"
           grep -Fq "strongest practical lineup improvement" "$ROOT/payload/assets/js/shared/upcoming-analysis-core.js"
           ! grep -Fq "Competitive target not reachable" "$ROOT/payload/assets/js/shared/upcoming-analysis-core.js"
           grep -Fq "maximumModeledRating:2000" "$ROOT/payload/assets/js/shared/recruitment-lineup-core.js"
