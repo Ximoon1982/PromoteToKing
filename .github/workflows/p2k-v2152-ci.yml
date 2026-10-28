@@ -23,10 +23,12 @@ jobs:
         run: |
           python3 tests/test_v2152_recruitment_history.py
           python3 tests/test_v2152_hall_search_current_only.py
+          python3 tests/test_v2152_events_showcase_mobile_performance.py
       - name: Existing match recruitment core tests
         run: |
           node --check assets/js/shared/recruitment-lineup-core.js
           node --check assets/js/shared/upcoming-analysis-core.js
+          node --check assets/js/admin/events-showcase-v2122.js
           node tests/test_v2152_recruitment_portfolio_optimizer.js
           node tests/recruit_match_v2_core.test.js
           python3 tests/test_recruit_match_v2.py
