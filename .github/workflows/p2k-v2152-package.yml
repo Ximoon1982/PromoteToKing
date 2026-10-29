@@ -43,6 +43,7 @@ jobs:
           unzip -t "$ZIP"
           grep -Fq '"version": "2.15.2"' "$ROOT/CANDIDATE_RELEASE.json"
           grep -Fq '"source_head": "8c0e52b58efee658d72bf9786a89568cd21af930"' "$ROOT/CANDIDATE_RELEASE.json"
+          grep -Fq '"source_head": "d35bc3bc91d0ab8040dd006b20b24c5e96adcd3c"' "$ROOT/CANDIDATE_RELEASE.json"
           grep -Fxq "RecruitMatch.html" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fxq "assets/css/recruit-match.css" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
           grep -Fxq "assets/js/pages/recruit-match.js" "$ROOT/CANDIDATE_OVERLAY_PATHS.txt"
