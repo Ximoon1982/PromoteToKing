@@ -12,6 +12,10 @@ assert 'archiveRecruitment(match,state.resultCsv)' in js
 assert 'action=list&page=' in js
 assert 'action=download&id=' in js
 assert 'action=delete' in js
+assert 'P2K_TEAM_POINTS_CLIENT?.endpointRequest' in js
+assert 'requestKind:"recruitment-history"' in js
+assert 'method:"POST"' in js
+assert 'fetch(url,{method:"POST"' not in js
 assert 'p2kRecruitmentHistoryBody' in html
 assert 'Finished recruitments' in html
 assert 'DEFAULT_PAGE_SIZE = 10' in store
