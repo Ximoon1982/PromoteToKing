@@ -178,7 +178,8 @@ payload={
   "qualification_workflow":"P2K v2.15.2 package",
   "payload_manifest_sha256":manifest_sha,
   "accepted_public_builds":[
-    {"version":"2.15.1","source_head":"8c0e52b58efee658d72bf9786a89568cd21af930"}
+    {"version":"2.15.1","source_head":"8c0e52b58efee658d72bf9786a89568cd21af930"},
+    {"version":"2.15.2","source_head":"d35bc3bc91d0ab8040dd006b20b24c5e96adcd3c"}
   ]}
 Path(out).write_text(json.dumps(payload,indent=2)+"\n")
 PY
@@ -190,8 +191,9 @@ cat > "$DIR/README_INSTALL.txt" <<TXT
 Promote to King v2.15.2 cumulative incremental candidate package
 Source HEAD: $HEAD
 Static asset cache key: $CACHE_KEY
-Accepted public base:
+Accepted public bases:
 - v2.15.1 at 8c0e52b58efee658d72bf9786a89568cd21af930
+- v2.15.2 at d35bc3bc91d0ab8040dd006b20b24c5e96adcd3c
 
 Contents:
 - Match Recruitment archives the exact completed eligible-player CSV automatically.
