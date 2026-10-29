@@ -19,6 +19,7 @@
   const LEAGUE_MINIMUM_WIN_PROBABILITY = .65;
   const FRIENDLY_RELIABILITY_RATING = 1200;
   const FRIENDLY_TOP_HALF_ENTRY_CUSHION = 50;
+  const RECRUITMENT_FINALIST_LIMIT = 32;
 
   const root = document.getElementById("p2kUpcomingAnalyzer");
   const analyzeButton = document.getElementById("p2kAnalyzeButton");
@@ -628,22 +629,18 @@
     return numericRating - 25 - (shortfall * .25);
   }
 
-  function compareRecruitmentLineups(p2kRatings, opponentRatings, maxPlayers) {
-    const cappedP2K = Number.isFinite(maxPlayers)
-      ? p2kRatings.slice(0, maxPlayers)
-      : [...p2kRatings];
-    const cappedOpponent = Number.isFinite(maxPlayers)
-      ? opponentRatings.slice(0, maxPlayers)
-      : [...opponentRatings];
+  function compareRecruitmentLineupsCheap(p2kRatings, opponentRatings, maxPlayers) {
+    const cappedP2K = Number.isFinite(maxPlayers) ? p2kRatings.slice(0, maxPlayers) : p2kRatings;
+    const cappedOpponent = Number.isFinite(maxPlayers) ? opponentRatings.slice(0, maxPlayers) : opponentRatings;
     const boardCount = Math.min(cappedP2K.length, cappedOpponent.length);
     const topHalfBoardCount = Math.ceil(boardCount / 2);
-    const boardExpectedScores = [];
     let p2kAdvantageBoards = 0;
     let opponentAdvantageBoards = 0;
     let tiedBoards = 0;
     let ratingDelta = 0;
     let reliabilityAdjustedDelta = 0;
     let topHalfRatingDelta = 0;
+    let expectedScoreTotal = 0;
 
     for (let board = 0; board < boardCount; board += 1) {
       const difference = cappedP2K[board] - cappedOpponent[board];
@@ -655,14 +652,8 @@
       if (difference > 0) p2kAdvantageBoards += 1;
       else if (difference < 0) opponentAdvantageBoards += 1;
       else tiedBoards += 1;
-      boardExpectedScores.push(
-        eloExpectedScore(cappedP2K[board], cappedOpponent[board])
-      );
+      expectedScoreTotal += eloExpectedScore(cappedP2K[board], cappedOpponent[board]);
     }
-
-    const outcomeProbabilities = boardExpectedScores.length > 0
-      ? matchOutcomeProbabilities(boardExpectedScores)
-      : { p2kWin: 0, opponentWin: 0, draw: 1 };
 
     return {
       boardCount,
@@ -672,12 +663,25 @@
       tiedBoards,
       netBoardAdvantage: p2kAdvantageBoards - opponentAdvantageBoards,
       averageRatingDifference: boardCount > 0 ? ratingDelta / boardCount : 0,
-      reliabilityAdjustedAverageDifference: boardCount > 0
-        ? reliabilityAdjustedDelta / boardCount
-        : 0,
-      topHalfAverageRatingDifference: topHalfBoardCount > 0
-        ? topHalfRatingDelta / topHalfBoardCount
-        : 0,
+      reliabilityAdjustedAverageDifference: boardCount > 0 ? reliabilityAdjustedDelta / boardCount : 0,
+      topHalfAverageRatingDifference: topHalfBoardCount > 0 ? topHalfRatingDelta / topHalfBoardCount : 0,
+      expectedScoreShare: boardCount > 0 ? expectedScoreTotal / boardCount : .5
+    };
+  }
+
+  function compareRecruitmentLineups(p2kRatings, opponentRatings, maxPlayers) {
+    const cheap = compareRecruitmentLineupsCheap(p2kRatings, opponentRatings, maxPlayers);
+    const cappedP2K = Number.isFinite(maxPlayers) ? p2kRatings.slice(0, maxPlayers) : p2kRatings;
+    const cappedOpponent = Number.isFinite(maxPlayers) ? opponentRatings.slice(0, maxPlayers) : opponentRatings;
+    const boardExpectedScores = [];
+    for (let board = 0; board < cheap.boardCount; board += 1) {
+      boardExpectedScores.push(eloExpectedScore(cappedP2K[board], cappedOpponent[board]));
+    }
+    const outcomeProbabilities = boardExpectedScores.length > 0
+      ? matchOutcomeProbabilities(boardExpectedScores)
+      : { p2kWin: 0, opponentWin: 0, draw: 1 };
+    return {
+      ...cheap,
       p2kWinProbability: outcomeProbabilities.p2kWin,
       opponentWinProbability: outcomeProbabilities.opponentWin,
       drawProbability: outcomeProbabilities.draw
@@ -685,13 +689,7 @@
   }
 
   function expectedScoreShare(p2kRatings, opponentRatings, maxPlayers) {
-    const p = Number.isFinite(maxPlayers) ? p2kRatings.slice(0, maxPlayers) : [...p2kRatings];
-    const o = Number.isFinite(maxPlayers) ? opponentRatings.slice(0, maxPlayers) : [...opponentRatings];
-    const count = Math.min(p.length, o.length);
-    if (!count) return .5;
-    let total = 0;
-    for (let i = 0; i < count; i += 1) total += eloExpectedScore(p[i], o[i]);
-    return total / count;
+    return compareRecruitmentLineupsCheap(p2kRatings, opponentRatings, maxPlayers).expectedScoreShare;
   }
 
   function recruitmentTargetTier(comparison, targetBoardCount, isLeagueMatch, scoreShare = null, current = null, currentShare = .5) {
@@ -736,6 +734,20 @@
 
   function recruitmentTargetReached(comparison, targetBoardCount, isLeagueMatch, scoreShare = null) {
     return recruitmentTargetTier(comparison, targetBoardCount, isLeagueMatch, scoreShare) >= 4;
+  }
+
+  function cheapRecruitmentTargetTier(comparison, targetBoardCount, isLeagueMatch, current = null, currentShare = .5) {
+    if (!comparison || comparison.boardCount < targetBoardCount) return 0;
+    const expectedShare = comparison.expectedScoreShare;
+    if (isLeagueMatch) {
+      if (expectedShare >= .55 && comparison.p2kAdvantageBoards > comparison.opponentAdvantageBoards) return 4;
+      if (expectedShare >= .525 && comparison.netBoardAdvantage >= 0) return 3;
+      if (expectedShare >= .5) return 2;
+    } else if (expectedShare >= .5) {
+      return 4;
+    }
+    if (current && (expectedShare > currentShare + .002 || comparison.netBoardAdvantage > current.netBoardAdvantage)) return 1;
+    return 0;
   }
 
   function recruitmentBuckets(bounds) {
@@ -810,6 +822,30 @@
     return {
       lower: openLow ? null : (Number.isFinite(lower) ? lower : null),
       upper: openHigh ? null : (Number.isFinite(upper) ? upper : null)
+    };
+  }
+
+  function keepRecruitmentFinalist(list, candidate) {
+    list.push(candidate);
+    list.sort((a, b) => a.practicalScore - b.practicalScore || a.recruitCount - b.recruitCount);
+    if (list.length > RECRUITMENT_FINALIST_LIMIT) list.length = RECRUITMENT_FINALIST_LIMIT;
+  }
+
+  function exactRecruitmentCandidate(candidate, comparisonOpponentRatings, maxPlayers, targetBoardCount, isLeagueMatch, current, currentExpectedShare) {
+    const projected = compareRecruitmentLineups(candidate.projectedRatings, comparisonOpponentRatings, maxPlayers);
+    const expectedShare = candidate.cheap.expectedScoreShare;
+    const tier = recruitmentTargetTier(projected, targetBoardCount, isLeagueMatch, expectedShare, current, currentExpectedShare);
+    const quality =
+      ((expectedShare - currentExpectedShare) * 100) +
+      ((projected.p2kWinProbability - current.p2kWinProbability) * 12) +
+      ((projected.netBoardAdvantage - current.netBoardAdvantage) * .2);
+    return {
+      ...candidate,
+      projected,
+      expectedShare,
+      tier,
+      quality,
+      practicalScore: candidate.cost + (candidate.recruitCount * .08) - (quality * .12)
     };
   }
 
@@ -914,7 +950,7 @@
       missingForFullComparison,
       Math.min(Math.max(1, targetBoardCount), 24)
     );
-    const bestByTier = { 4: null, 3: null, 2: null, 1: null };
+    const finalists = { 4: [], 3: [], 2: [], 1: [] };
     let bestAny = null;
 
     for (
@@ -926,46 +962,34 @@
         const projectedRatings = [...p2kRatings, ...portfolio.ratings].sort((x, y) => y - x);
         if (projectedRatings.length < cappedMandatoryMinimum || projectedRatings.length < targetBoardCount) continue;
 
-        const projected = compareRecruitmentLineups(projectedRatings, comparisonOpponentRatings, maxPlayers);
-        const expectedShare = expectedScoreShare(projectedRatings, comparisonOpponentRatings, maxPlayers);
-        const tier = recruitmentTargetTier(
-          projected,
+        /*
+         * Candidate exploration deliberately avoids the O(boards²) exact
+         * match-outcome distribution. Thousands of portfolios receive only
+         * cheap board/Elo scoring; exact probabilities are reserved for a
+         * bounded finalist set below.
+         */
+        const cheap = compareRecruitmentLineupsCheap(projectedRatings, comparisonOpponentRatings, maxPlayers);
+        const tier = cheapRecruitmentTargetTier(
+          cheap,
           targetBoardCount,
           isLeagueMatch,
-          expectedShare,
           current,
           currentExpectedShare
         );
-
         const quality =
-          ((expectedShare - currentExpectedShare) * 100) +
-          ((projected.p2kWinProbability - current.p2kWinProbability) * 12) +
-          ((projected.netBoardAdvantage - current.netBoardAdvantage) * .2);
+          ((cheap.expectedScoreShare - currentExpectedShare) * 100) +
+          ((cheap.netBoardAdvantage - current.netBoardAdvantage) * .2);
         const practicalScore = portfolio.cost + (recruitCount * .08) - (quality * .12);
         const candidate = {
           ...portfolio,
           recruitCount,
-          projected,
-          expectedShare,
-          tier,
+          projectedRatings,
+          cheap,
           quality,
           practicalScore
         };
 
-        if (tier > 0) {
-          const previous = bestByTier[tier];
-          if (
-            !previous ||
-            practicalScore < previous.practicalScore - 1e-9 ||
-            (
-              Math.abs(practicalScore - previous.practicalScore) <= 1e-9 &&
-              recruitCount < previous.recruitCount
-            )
-          ) {
-            bestByTier[tier] = candidate;
-          }
-        }
-
+        if (tier > 0) keepRecruitmentFinalist(finalists[tier], candidate);
         if (
           !bestAny ||
           quality > bestAny.quality + 1e-9 ||
@@ -979,35 +1003,65 @@
       }
     }
 
-    let targetTier;
-    if (isLeagueMatch) {
-      targetTier = bestByTier[4] ? 4 :
-        bestByTier[3] ? 3 :
-          bestByTier[2] ? 2 :
-            bestByTier[1] ? 1 : 0;
-    } else {
-      targetTier = bestByTier[4] ? 4 :
-        bestByTier[1] ? 1 : 0;
+    const tierOrder = isLeagueMatch ? [4, 3, 2, 1] : [4, 1];
+    let best = null;
+    let targetTier = 0;
+    for (const wantedTier of tierOrder) {
+      for (const candidate of finalists[wantedTier]) {
+        const exact = exactRecruitmentCandidate(
+          candidate,
+          comparisonOpponentRatings,
+          maxPlayers,
+          targetBoardCount,
+          isLeagueMatch,
+          current,
+          currentExpectedShare
+        );
+        if (exact.tier >= wantedTier) {
+          best = exact;
+          targetTier = exact.tier;
+          break;
+        }
+      }
+      if (best) break;
     }
 
-    let best = targetTier > 0 ? bestByTier[targetTier] : bestAny;
+    if (!best && bestAny) {
+      best = exactRecruitmentCandidate(
+        bestAny,
+        comparisonOpponentRatings,
+        maxPlayers,
+        targetBoardCount,
+        isLeagueMatch,
+        current,
+        currentExpectedShare
+      );
+      targetTier = Math.max(1, best.tier);
+    }
 
     if (!best) {
       const strongestBucket = buckets[buckets.length - 1];
       const recruitCount = Math.max(1, missingForFullComparison);
       const ratings = Array.from({ length: recruitCount }, () => strongestBucket.rep);
       const projectedRatings = [...p2kRatings, ...ratings].sort((x, y) => y - x);
-      const projected = compareRecruitmentLineups(projectedRatings, comparisonOpponentRatings, maxPlayers);
-      best = {
+      const candidate = {
         ratings,
         buckets: [strongestBucket],
         cost: recruitCount * strongestBucket.cost,
         recruitCount,
-        projected,
-        expectedShare: expectedScoreShare(projectedRatings, comparisonOpponentRatings, maxPlayers),
-        tier: 1
+        projectedRatings,
+        cheap: compareRecruitmentLineupsCheap(projectedRatings, comparisonOpponentRatings, maxPlayers)
       };
-      targetTier = 1;
+      best = exactRecruitmentCandidate(
+        candidate,
+        comparisonOpponentRatings,
+        maxPlayers,
+        targetBoardCount,
+        isLeagueMatch,
+        current,
+        currentExpectedShare
+      );
+      targetTier = Math.max(1, best.tier);
     }
 
     const display = portfolioDisplayBounds(best);
@@ -3017,11 +3071,19 @@ ${MODE.includeCopy ? `            <button
       // Feed the shared scheduler with the full detail reservoir. Public/fake OAuth
       // remains serial; real OAuth lets the server-side adaptive gateway determine
       // the safe concurrency instead of hard-coding one match at a time.
+      let startedMatchAnalyses = 0;
       const detailBatch = await window.P2K_API_CLIENT.processPriority(
         registrationMatches,
         async reference => {
           if (signal.aborted) throw new CancellationError();
           const matchData = await loadJSON(reference["@id"], signal);
+          startedMatchAnalyses += 1;
+          setStatus(
+            `Processing match ${Math.min(startedMatchAnalyses, total)} of ${total}`,
+            "working",
+            total ? ((startedMatchAnalyses - 1) / total) * 100 : 100
+          );
+          await allowScreenUpdate();
           return analyzeMatch(matchData);
         },
         {
@@ -3149,6 +3211,7 @@ ${MODE.includeCopy ? `            <button
         retryReferences,
         async reference => {
           const matchData = await loadJSON(reference["@id"], signal, { networkOnly: true });
+          await allowScreenUpdate();
           return analyzeMatch(matchData);
         },
         {
@@ -3314,6 +3377,7 @@ ${MODE.includeCopy ? `            <button
       setStatus("Loading detailed match analysis…", "working", 12);
       await allowScreenUpdate();
       const matchData = await loadJSON(`https://api.chess.com/pub/match/${encodeURIComponent(matchId)}`, controller.signal);
+      await allowScreenUpdate();
       const analyzedMatch = analyzeMatch(matchData);
       if (!analyzedMatch) throw new Error("The two match teams could not be identified.");
       state.matches = [analyzedMatch];
