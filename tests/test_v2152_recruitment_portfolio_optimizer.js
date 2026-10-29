@@ -35,4 +35,16 @@ if(Math.max(...hard.portfolioRatings)>2000)throw new Error('Adaptive fallback ex
 if(!Number.isFinite(hard.targetTier)||hard.targetTier<1||hard.targetTier>4)throw new Error('Adaptive planner returned no target tier');
 if(hard.targetTier===4)throw new Error('Hard case should require target relaxation, got decisive tier');
 
+
+const stressMatch={settings:{min_team_players:24,max_team_players:24,min_rating:0,max_rating:3000}};
+const stressP2k={locked:false,players:Array.from({length:23},(_,i)=>({rating:900+(i%6)*100}))};
+const stressOpponent={players:Array.from({length:24},(_,i)=>({rating:2100-(i%5)*50}))};
+const stressStarted=process.hrtime.bigint();
+const stress=uut.recruitmentMetrics({match:stressMatch,p2kTeam:stressP2k,opponentTeam:stressOpponent,isLeague:true});
+const stressMs=Number(process.hrtime.bigint()-stressStarted)/1e6;
+if(!stress||stress.feasible!==true)throw new Error('Stress case must still return an actionable target');
+if(stress.finalistLimit!==32)throw new Error('Exact recruitment finalist work is not bounded to 32');
+if(stressMs>1500)throw new Error('Recruitment optimizer stress case took '+stressMs.toFixed(1)+'ms; expected <=1500ms');
+console.log('Recruitment optimizer 24-board stress: '+stressMs.toFixed(1)+'ms');
+
 console.log('PASS practical recruitment portfolio optimizer');
