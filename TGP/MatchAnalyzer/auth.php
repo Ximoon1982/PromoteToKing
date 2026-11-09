@@ -5,10 +5,16 @@ use P2K\TeamPoints\Auth;
 use P2K\TeamPoints\OAuthSession;
 use P2K\Shared\SharedChessGateway;
 function tgp_authorize(): array {
+    // Share the already-established P2KOAUTH identity, as in the standalone
+    // Super Bingo/TGP applications. authenticatedUsername(true) closes the
+    // OAuth PHP session AND restores its original session runtime.
     $session = OAuthSession::sessionInfo();
-    if (empty($session['authenticated']) || empty($session['real_oauth'])) return ['ok'=>false,'status'=>401,'code'=>'OAUTH_REQUIRED'];
-    if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
-    $username = strtolower(trim((string)($session['profile']['username'] ?? '')));
+    $username = OAuthSession::authenticatedUsername(true);
+    if (empty($session['authenticated']) || empty($session['real_oauth']) ||
+        $username === '' ||
+        !hash_equals($username, strtolower(trim((string)($session['profile']['username'] ?? ''))))) {
+        return ['ok'=>false,'status'=>401,'code'=>'OAUTH_REQUIRED'];
+    }
     if (!preg_match('/^[a-z0-9_-]{1,80}$/D', $username)) return ['ok'=>false,'status'=>401,'code'=>'OAUTH_IDENTITY_MISSING'];
     try {
         $config=p2k_tp_config();
