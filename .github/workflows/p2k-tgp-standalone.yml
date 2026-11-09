@@ -30,6 +30,7 @@ jobs:
           node --check TGP/MatchAnalyzer/assets/match-history-ui.js
           node --check TGP/MatchAnalyzer/assets/tgp-tracking.js
           bash -n TGP/MatchAnalyzer/install-standalone.sh
+          grep -Fq '/usr/bin/php8.5-cli' TGP/MatchAnalyzer/install-standalone.sh
           ! grep -Eq '(^|[[:space:]])(\.htaccess|PreviewRouter.php|PublicRouter.php)' TGP/MatchAnalyzer/install-standalone.sh || true
       - name: Build standalone ZIP without recovery plane
         run: |

@@ -11,7 +11,9 @@ DEST="$ROOT/TGP/MatchAnalyzer"
 for f in index.php auth.php MatchPolicy.php api/index.php template.html assets/tgp-tracking.js assets/analyze-match.js assets/match-history-ui.js; do
   [[ -f "$HERE/$f" ]] || { echo "Missing installer input $f" >&2; exit 1; }
 done
-for f in index.php auth.php MatchPolicy.php api/index.php; do php -l "$HERE/$f" >/dev/null; done
+PHP_CLI="/usr/bin/php8.5-cli"
+[[ -x "$PHP_CLI" ]] || { echo "Required PHP 8.5 CLI not found" >&2; exit 1; }
+for f in index.php auth.php MatchPolicy.php api/index.php; do "$PHP_CLI" -l "$HERE/$f" || exit 1; done
 if [[ -e "$DEST" && ! -d "$DEST" ]]; then echo "Target path is not a directory" >&2; exit 1; fi
 BACKUP="$ROOT/storage/tgp-match-analyzer-backups/$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$BACKUP" "$DEST"

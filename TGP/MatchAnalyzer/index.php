@@ -20,4 +20,8 @@ if (!$access['ok']) {
     exit;
 }
 header('Content-Type: text/html; charset=utf-8');
-readfile(__DIR__.'/template.html');
+$template=file_get_contents(__DIR__.'/template.html');
+if ($template === false) { http_response_code(503); exit('TGP analyzer template unavailable.'); }
+// Reuse the OAuth CSRF token from the already authorized page request.
+$token=htmlspecialchars((string)$access['csrf'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+echo str_replace('<!-- TGP_OAUTH_CSRF -->', '<meta name="tgp-oauth-csrf" content="'.$token.'">', $template);

@@ -12,8 +12,12 @@
     const response=await fetch(url,{method,credentials:"same-origin",cache:"no-store",
       headers:method==="POST"?{"Content-Type":"application/json","X-Club-Tools-Request":"tgp-track-match","X-P2K-OAuth-CSRF":csrf}:{},
       body:method==="POST"?JSON.stringify({match:id}):undefined});
-    const json=await response.json();
-    if(!response.ok||!json.ok)throw new Error(json?.error?.message||"Tracking service unavailable.");
+    const raw=await response.text();
+    let json=null;
+    try { json=raw ? JSON.parse(raw) : null; } catch (_) { /* invalid response */ }
+    if(!json || typeof json!=="object")
+      throw new Error("Tracking endpoint returned HTTP "+response.status+" without valid JSON.");
+    if(!response.ok||!json.ok)throw new Error(json?.error?.message||("Tracking service returned HTTP "+response.status+"."));
     return json;
   }
   async function refresh(id,match) {
@@ -33,10 +37,9 @@
       button.addEventListener("click",async()=>{
         button.disabled=true;label.textContent="Enabling monitoring… ";
         try {
-          const oauth=await fetch("/server/team-points/public/oauth.php?action=session",{cache:"no-store",credentials:"same-origin"});
-          const session=await oauth.json();
-          if(!oauth.ok||!session?.authenticated||!session?.csrf)throw new Error("Chess.com OAuth session expired.");
-          await send("POST",id,session.csrf);
+          const csrf=document.querySelector('meta[name="tgp-oauth-csrf"]')?.content||"";
+          if(!csrf)throw new Error("Authenticated token missing. Reload the analyzer.");
+          await send("POST",id,csrf);
           if(job!==serial)return;
           host.textContent="Match tracked. Initial registration snapshot stored.";
           const graph=document.querySelector('[data-p2k-match-history="'+id+'"]');

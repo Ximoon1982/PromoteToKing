@@ -6,23 +6,24 @@ require_once dirname(__DIR__, 3).'/api/_common.php';
 use P2K\TeamPoints\Auth;
 use P2K\TeamPoints\PreviewIsolation;
 header('Cache-Control: no-store, private');
+header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
-$access=tgp_authorize();
-if (!$access['ok']) api_error((int)$access['status'],(string)$access['code'],'The Golden Phoenix administrator authorization failed.');
-$method=strtoupper((string)($_SERVER['REQUEST_METHOD']??'GET'));
-if (!in_array($method,['GET','POST'],true)) { header('Allow: GET, POST'); api_error(405,'METHOD_NOT_ALLOWED','Use GET or POST.'); }
-if($method==='POST') {
-    Auth::enforceSameOrigin();
-    require_write_header('tgp-track-match');
-    $body=body_json(8192);
-    $csrf=trim((string)($_SERVER['HTTP_X_P2K_OAUTH_CSRF']??''));
-    if ($csrf==='' || !hash_equals((string)$access['csrf'],$csrf)) api_error(403,'OAUTH_CSRF','OAuth request validation failed.');
-    if (PreviewIsolation::active()) api_error(403,'PREVIEW_READ_ONLY','Tracking is disabled in preview.');
-    $id=match_id($body['match']??'');
-} else $id=match_id($_GET['match']??'');
-if (!preg_match('/^\d{1,12}$/D',$id)) api_error(400,'INVALID_MATCH_ID','Invalid match ID.');
-
 try {
+    $access=tgp_authorize();
+    if (!$access['ok']) api_error((int)$access['status'],(string)$access['code'],'The Golden Phoenix administrator authorization failed.');
+    $method=strtoupper((string)($_SERVER['REQUEST_METHOD']??'GET'));
+    if (!in_array($method,['GET','POST'],true)) { header('Allow: GET, POST'); api_error(405,'METHOD_NOT_ALLOWED','Use GET or POST.'); }
+    if($method==='POST') {
+        Auth::enforceSameOrigin();
+        require_write_header('tgp-track-match');
+        $body=body_json(8192);
+        $csrf=trim((string)($_SERVER['HTTP_X_P2K_OAUTH_CSRF']??''));
+        if ($csrf==='' || !hash_equals((string)$access['csrf'],$csrf)) api_error(403,'OAUTH_CSRF','OAuth request validation failed. Reload and retry.');
+        if (PreviewIsolation::active()) api_error(403,'PREVIEW_READ_ONLY','Tracking is disabled in preview.');
+        $id=match_id($body['match']??'');
+    } else $id=match_id($_GET['match']??'');
+    if (!preg_match('/^\d{1,12}$/D',$id)) api_error(400,'INVALID_MATCH_ID','Invalid match ID.');
+
     $match=chess_json(chess_match_url($id));
     if(!TgpMatchPolicy::containsClub($match))api_error(422,'NOT_TGP_MATCH','The Golden Phoenix does not participate in this match.');
     $registry=read_follow_registry();
@@ -32,6 +33,8 @@ try {
     if($tracked)json_response(200,['ok'=>true,'matchId'=>$id,'tracked'=>true,'alreadyTracked'=>true]);
     $stored=save_snapshot($match,true,'tgp-match-analyzer');
     json_response(201,['ok'=>true,'matchId'=>$id,'tracked'=>true,'captured'=>true,'trackedAt'=>$stored['trackedAt']??null]);
+} catch(\P2K\TeamPoints\ApiException $error) {
+    api_error($error->httpStatus,$error->errorCode,$error->getMessage());
 } catch(InvalidArgumentException $error) {
     api_error(400,'INVALID_MATCH',$error->getMessage());
 } catch(Throwable $error) {
