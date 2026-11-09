@@ -4,7 +4,7 @@
 
   const HOME_CONFIG = window.P2K_MATCH_HISTORY_HOME || {clubSlug:"promote-to-king",clubName:"Promote to King",shortName:"P2K"};
   const HOME_SLUG = String(HOME_CONFIG.clubSlug || "promote-to-king").toLowerCase();
-  const HOME_NAME = String(HOME_CONFIG.clubName || HOME_NAME);
+  const HOME_NAME = String(HOME_CONFIG.clubName || "Promote to King");
   const HOME_SHORT = String(HOME_CONFIG.shortName || "P2K");
   const HOME_COLOR = "#91e09a";
   const OPPONENT_COLOR = "#ff8b79";

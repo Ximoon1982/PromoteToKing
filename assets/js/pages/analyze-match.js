@@ -1911,7 +1911,7 @@
     const embedded = new URLSearchParams(window.location.search).get("embedded") === "1" || window.self !== window.top;
     standaloneLink.hidden = !embedded;
     try {
-      const url = new URL("AnalyzeMatch.html", window.location.href);
+      const url = new URL(TGP ? "/TGP/MatchAnalyzer/" : "AnalyzeMatch.html", window.location.href);
       if (state.matchId) url.searchParams.set("match", state.matchId);
       const selectedTeam = teamEntries(state.rawMatch).find(([key]) => key === state.selectedTeamKey)?.[1];
       const selectedSlug = teamClubSlug(selectedTeam) || state.preferredClubSlug;
@@ -2028,7 +2028,20 @@
       const entries = teamEntries(rawMatch);
       if (entries.length !== 2) throw new Error("The Chess.com API response does not contain two analyzable teams.");
       state.rawMatch = rawMatch;
-      const preferredKey = teamKeyForClub(rawMatch, TGP?.clubSlug || state.preferredClubSlug);
+      const preferredKey = TGP
+        ? teamEntries(rawMatch).find(([key, team]) =>
+            [team?.["@id"], team?.url].some(value => {
+              const url = String(value || "").trim();
+              if (!url) return false;
+              try {
+                const parsed = new URL(url);
+                return parsed.protocol === "https:" &&
+                  ["api.chess.com", "www.chess.com", "chess.com"].includes(parsed.hostname) &&
+                  /^\/(?:pub\/)?club\/the-golden-phoenix\/?$/i.test(parsed.pathname);
+              } catch (_) { return false; }
+            })
+          )?.[0] || null
+        : teamKeyForClub(rawMatch, state.preferredClubSlug);
       if (TGP && !preferredKey) throw new Error("This analyzer only accepts matches involving The Golden Phoenix.");
       state.selectedTeamKey = preferredKey || entries[0][0];
       state.preferredClubSlug = teamClubSlug(
