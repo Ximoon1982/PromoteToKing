@@ -1,0 +1,6 @@
+# Preserve live showcase state and any Chess.com response cache outside Git.
+/showcase.json
+/cache/*
+!/cache/.gitkeep
+*.tmp
+*.bak
