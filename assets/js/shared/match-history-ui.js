@@ -2,6 +2,10 @@
 (() => {
   "use strict";
 
+  const HOME_CONFIG = window.P2K_MATCH_HISTORY_HOME || {clubSlug:"promote-to-king",clubName:"Promote to King",shortName:"P2K"};
+  const HOME_SLUG = String(HOME_CONFIG.clubSlug || "promote-to-king").toLowerCase();
+  const HOME_NAME = String(HOME_CONFIG.clubName || HOME_NAME);
+  const HOME_SHORT = String(HOME_CONFIG.shortName || "P2K");
   const HOME_COLOR = "#91e09a";
   const OPPONENT_COLOR = "#ff8b79";
   const PROBABILITY_COLOR = "#9fd8ff";
@@ -61,8 +65,13 @@
 
   function preferredTeams(teams) {
     return [...teams].sort((left, right) => {
-      const leftHome = /promote[- ]to[- ]king/i.test(`${left.identity} ${left.name}`);
-      const rightHome = /promote[- ]to[- ]king/i.test(`${right.identity} ${right.name}`);
+      const isHome = team => {
+        const identity=String(team.identity || "").toLowerCase();
+        const slug=String(team.name || "").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+        return identity.endsWith("/club/"+HOME_SLUG) || identity.endsWith("/club/"+HOME_SLUG+"/") || slug===HOME_SLUG;
+      };
+      const leftHome=isHome(left);
+      const rightHome=isHome(right);
       return Number(rightHome) - Number(leftHome) || left.index - right.index;
     });
   }
@@ -77,7 +86,7 @@
     }));
     while (definitions.length < 2) {
       const index = definitions.length;
-      definitions.push({ identity: `team-${index}`, fallbackIndex: index, name: index === 0 ? "Promote to King" : "Opponent", key: index === 0 ? "p2kCount" : "opponentCount" });
+      definitions.push({ identity: `team-${index}`, fallbackIndex: index, name: index === 0 ? HOME_NAME : "Opponent", key: index === 0 ? "p2kCount" : "opponentCount" });
     }
     return definitions;
   }
@@ -138,7 +147,7 @@
     const rangeEnd = clamp(Number(options.end ?? (allPoints.length - 1)), rangeStart, allPoints.length - 1);
     const rows = allPoints.slice(rangeStart, rangeEnd + 1).map((point, offset) => ({ point, sourceIndex: rangeStart + offset }));
     const points = rows.map(row => row.point);
-    const homeName = String(allPoints.at(-1).teams[0]?.name || allPoints.at(-1).p2kName || "Promote to King");
+    const homeName = String(allPoints.at(-1).teams[0]?.name || allPoints.at(-1).p2kName || HOME_NAME);
     const opponentName = String(allPoints.at(-1).teams[1]?.name || allPoints.at(-1).opponentName || "Opponent");
     const width = large ? 1120 : 760;
     const height = large ? 470 : 350;
@@ -200,7 +209,7 @@
         `${homeName}: ${point.p2kCount} registered`,
         `${opponentName}: ${point.opponentCount} registered`,
         `Minimum required: ${point.minPlayers || 0}`,
-        `P2K win probability: ${(point.p2kWinProbability * 100).toFixed(1)}%`,
+        `${HOME_SHORT} win probability: ${(point.p2kWinProbability * 100).toFixed(1)}%`,
         "Click for lineup evolution"
       ].join(" | ");
       return `<g>
@@ -211,11 +220,11 @@
       </g>`;
     }).join("");
 
-    const heading = large ? "" : `<div class="p2k-chart-heading"><div class="p2k-chart-title">Lineup evolution and win-probability history<button type="button" class="p2k-info-mark p2k-info-button" aria-expanded="false" aria-controls="p2kSharedInfoPopover" aria-label="Recruitment tracking graph information" data-p2k-info-message="Stored UTC snapshots are plotted on a real time axis and the final point is refreshed from the current live Chess.com match sheet. The green/red lines show registrations and the blue line shows modeled P2K win probability.">i</button></div><div class="p2k-history-chart-actions"><button class="p2k-chart-expand p2k-history-expand" type="button" data-p2k-history-expand>View larger</button></div></div>`;
+    const heading = large ? "" : `<div class="p2k-chart-heading"><div class="p2k-chart-title">Lineup evolution and win-probability history<button type="button" class="p2k-info-mark p2k-info-button" aria-expanded="false" aria-controls="p2kSharedInfoPopover" aria-label="Recruitment tracking graph information" data-p2k-info-message="Stored UTC snapshots are plotted on a real time axis and the final point is refreshed from the current live Chess.com match sheet. The green/red lines show registrations and the blue line shows modeled ${HOME_SHORT} win probability.">i</button></div><div class="p2k-history-chart-actions"><button class="p2k-chart-expand p2k-history-expand" type="button" data-p2k-history-expand>View larger</button></div></div>`;
     return `${heading}
       <div class="p2k-chart-wrap p2k-history-chart-wrap">
         <div class="p2k-chart-scroll">
-          <svg class="p2k-chart-svg p2k-history-chart" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Registration history for ${escapeAttribute(homeName)} and ${escapeAttribute(opponentName)}, minimum required players, and P2K win probability">
+          <svg class="p2k-chart-svg p2k-history-chart" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Registration history for ${escapeAttribute(homeName)} and ${escapeAttribute(opponentName)}, minimum required players, and ${HOME_SHORT} win probability">
             ${grid}
             <line x1="${left}" y1="${top + plotHeight}" x2="${width - right}" y2="${top + plotHeight}" stroke="rgba(255,255,255,.22)" stroke-width="1" />
             ${minimumPath}
@@ -229,7 +238,7 @@
           <span><i class="p2k-chart-swatch" style="background:${HOME_COLOR}"></i>${escapeHTML(homeName)} registrations</span>
           <span><i class="p2k-chart-swatch" style="background:${OPPONENT_COLOR}"></i>${escapeHTML(opponentName)} registrations</span>
           <span><i class="p2k-chart-swatch p2k-history-minimum-swatch"></i>Minimum required</span>
-          <span><i class="p2k-chart-swatch p2k-history-probability-swatch"></i>P2K win probability</span>
+          <span><i class="p2k-chart-swatch p2k-history-probability-swatch"></i>${HOME_SHORT} win probability</span>
           <span><i class="p2k-chart-swatch p2k-history-live-swatch"></i>Current live lineup</span>
         </div>
         <div class="p2k-chart-note">Real UTC timescale · final point is the current live lineup · hover for exact values · click a point for changes.</div>
@@ -428,9 +437,9 @@
     const probability = 100 * Number(point.p2kWinProbability || 0);
     const previousProbability = previous ? 100 * Number(previous.p2kWinProbability || 0) : null;
     const delta = previousProbability === null ? null : probability - previousProbability;
-    const winRate = `<section class="p2k-history-winrate"><span>Modeled P2K win probability</span><strong>${probability.toFixed(1)}%</strong><small>${point.isLive ? "Current live model" : "Archived model"}${delta === null ? " · baseline" : ` · ${delta >= 0 ? "+" : ""}${delta.toFixed(1)} percentage points vs previous timeslot`}</small></section>`;
+    const winRate = `<section class="p2k-history-winrate"><span>Modeled ${HOME_SHORT} win probability</span><strong>${probability.toFixed(1)}%</strong><small>${point.isLive ? "Current live model" : "Archived model"}${delta === null ? " · baseline" : ` · ${delta >= 0 ? "+" : ""}${delta.toFixed(1)} percentage points vs previous timeslot`}</small></section>`;
     panel.querySelector(".p2k-history-details-columns").innerHTML = winRate + point.teams.slice(0, 2).map((team, teamIndex) => teamPanel(team, previous?.teams?.[teamIndex], index === 0)).join("");
-    panel.dataset.plainText = `${changesPlainText(point, previous, index, points.length)}\n\nModeled P2K win probability: ${probability.toFixed(1)}%${delta === null ? "" : ` (${delta >= 0 ? "+" : ""}${delta.toFixed(1)} pp vs previous)`}`;
+    panel.dataset.plainText = `${changesPlainText(point, previous, index, points.length)}\n\nModeled ${HOME_SHORT} win probability: ${probability.toFixed(1)}%${delta === null ? "" : ` (${delta >= 0 ? "+" : ""}${delta.toFixed(1)} pp vs previous)`}`;
     panel.dataset.index = String(index);
     panel._p2kPoints = points;
     panel.querySelector("[data-p2k-history-previous]").disabled = index <= 0;
@@ -453,7 +462,7 @@
   function openLargerChart(host, points, trigger) {
     const modal = window.P2K_UPCOMING_CHART_MODAL;
     if (!modal?.open || !Array.isArray(points) || !points.length) return;
-    const homeName = String(points.at(-1)?.teams?.[0]?.name || points.at(-1)?.p2kName || "Promote to King");
+    const homeName = String(points.at(-1)?.teams?.[0]?.name || points.at(-1)?.p2kName || HOME_NAME);
     const opponentName = String(points.at(-1)?.teams?.[1]?.name || points.at(-1)?.opponentName || "Opponent");
     modal.open({
       titleHTML: `Lineup evolution — ${escapeHTML(homeName)} vs ${escapeHTML(opponentName)}<button type="button" class="p2k-info-mark p2k-info-button" aria-expanded="false" aria-controls="p2kSharedInfoPopover" aria-label="Recruitment tracking graph information" data-p2k-info-message="The enlarged graph uses a real UTC timescale and ends with the current live lineup. Hover or tap for values and select a timeslot for player changes.">i</button>`,
@@ -485,7 +494,7 @@
     if (!id || typeof summarize !== "function") return;
     hostsInFlight.add(host);
     try {
-      const endpoint = window.P2K_SITE_CONFIG?.serverStorage?.matchHistoryEndpoint || "api/match-history/";
+      const endpoint = window.P2K_MATCH_HISTORY_HOME ? "/api/match-history/" : (window.P2K_SITE_CONFIG?.serverStorage?.matchHistoryEndpoint || "api/match-history/");
       const url = new URL(endpoint, window.location.href);
       url.searchParams.set("match", id);
       let snapshots = [];
@@ -513,7 +522,7 @@
           points.push({
             trackedAt: String(trackedAt || ""), isLive,
             teams,
-            p2kName: String(summary.p2kName || teams[0]?.name || "Promote to King"),
+            p2kName: String(summary.p2kName || teams[0]?.name || HOME_NAME),
             opponentName: String(summary.opponentName || teams[1]?.name || "Opponent"),
             p2kCount: teams[0]?.players?.length ?? Math.max(0, Number(summary.p2kCount) || 0),
             opponentCount: teams[1]?.players?.length ?? Math.max(0, Number(summary.opponentCount) || 0),

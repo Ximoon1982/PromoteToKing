@@ -3,6 +3,7 @@
   "use strict";
   if (window.P2K_ADMIN_ACCESS_READY && !(await window.P2K_ADMIN_ACCESS_READY)) return;
 
+  const TGP = window.P2K_TGP_ANALYZER || null;
   const REQUEST_ATTEMPTS = window.P2K_SITE_CONFIG?.api?.defaultAttempts || 3;
   const LEAGUE_ACRONYMS = [...(window.P2K_SITE_CONFIG?.leagueAcronyms || ["1WL", "TCMAC", "KOTML", "TMCL", "WKCL", "PCL", "CW"])];
 
@@ -1699,7 +1700,7 @@
   }
 
   window.P2K_MATCH_HISTORY_SUMMARIZER = rawMatch => {
-    const p2kKey = teamKeyForClub(rawMatch, window.P2K_SITE_CONFIG?.clubSlug || "promote-to-king");
+    const p2kKey = teamKeyForClub(rawMatch, TGP?.clubSlug || window.P2K_SITE_CONFIG?.clubSlug || "promote-to-king");
     if (!p2kKey) return null;
     const analysis = analyzePerspective(rawMatch, p2kKey);
     if (!analysis?.details) return null;
@@ -2011,6 +2012,7 @@
     matchInput.disabled = true;
     teamSelector.hidden = true;
     resultsBox.innerHTML = "";
+    if (TGP) window.P2K_TGP_TRACKING?.clear?.();
     setStatus(`Loading match ${matchId}…`, "working", 25);
 
     try {
@@ -2026,7 +2028,8 @@
       const entries = teamEntries(rawMatch);
       if (entries.length !== 2) throw new Error("The Chess.com API response does not contain two analyzable teams.");
       state.rawMatch = rawMatch;
-      const preferredKey = teamKeyForClub(rawMatch, state.preferredClubSlug);
+      const preferredKey = teamKeyForClub(rawMatch, TGP?.clubSlug || state.preferredClubSlug);
+      if (TGP && !preferredKey) throw new Error("This analyzer only accepts matches involving The Golden Phoenix.");
       state.selectedTeamKey = preferredKey || entries[0][0];
       state.preferredClubSlug = teamClubSlug(
         entries.find(([key]) => key === state.selectedTeamKey)?.[1]
@@ -2044,7 +2047,8 @@
       const boardText = state.startedMatchData
         ? ` ${state.startedMatchData.boards.length} boards projected from the match response; no board endpoints requested.`
         : "";
-      setStatus(`Match ${matchId} loaded.${boardText}${missingClubText} Select either team to change the analysis perspective.`, "success", 100);
+      setStatus(`Match ${matchId} loaded.${boardText}${TGP ? " Analysis from The Golden Phoenix perspective." : missingClubText + " Select either team to change the analysis perspective."}`, "success", 100);
+      if (TGP) void window.P2K_TGP_TRACKING?.refresh?.(matchId, rawMatch);
       document.title = `${rawMatch?.name || `Match ${matchId}`} — Open Match Analyzer`;
     } catch (error) {
       console.error(error);
@@ -2100,11 +2104,11 @@
   const initialReference = parameters.get("match") || parameters.get("id") || parameters.get("url");
   const initialClubReference = parameters.get("club") || parameters.get("team") || "";
   const lockedScopeReference = parameters.get("scope") || "";
-  state.lockedClubScope = Boolean(parseClubReference(lockedScopeReference));
-  state.preferredClubSlug = parseClubReference(lockedScopeReference) || parseClubReference(initialClubReference);
+  state.lockedClubScope = Boolean(TGP) || Boolean(parseClubReference(lockedScopeReference));
+  state.preferredClubSlug = TGP?.clubSlug || parseClubReference(lockedScopeReference) || parseClubReference(initialClubReference);
   if (initialReference) {
     matchInput.value = initialReference;
-    analyzeReference(initialReference, initialClubReference);
+    analyzeReference(initialReference, TGP?.clubSlug || initialClubReference);
   } else {
     matchInput.focus();
   }
