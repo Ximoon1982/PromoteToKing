@@ -1,6 +1,8 @@
 /* TGP add-to-monitoring UI; no P2K administrator credentials required. */
 (() => {
   "use strict";
+  window.P2K_TGP_ANALYZER = Object.freeze({clubSlug:"the-golden-phoenix",clubName:"The Golden Phoenix",shortName:"TGP"});
+  window.P2K_MATCH_HISTORY_HOME = window.P2K_TGP_ANALYZER;
   const host=document.getElementById("tgpTrackingControls");
   const base="/TGP/MatchAnalyzer/api/index.php";
   let serial=0;
