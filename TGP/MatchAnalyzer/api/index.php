@@ -47,17 +47,17 @@ try {
     // root routing policy. No cookies, CSRF tokens, or request body are logged.
     $logDir = root_dir().'/data/tgp-match-analyzer-diagnostics';
     $event = [
-        'utc'=>gmdate('Y-m-d\\TH:i:s\\Z'),
+        'utc'=>gmdate('Y-m-d\TH:i:s\Z'),
         'id'=>$diagnosticId,
         'phase'=>$phase,
         'exception'=>get_class($error),
-        'message'=>substr(str_replace(["\\r","\\n"], ' ', $error->getMessage()), 0, 450),
+        'message'=>substr(str_replace(["\r","\n"], ' ', $error->getMessage()), 0, 450),
     ];
     try {
         if (is_dir($logDir) || @mkdir($logDir, 0700, true)) {
             $file=$logDir.'/errors.jsonl';
             $new=!is_file($file);
-            if (@file_put_contents($file, json_encode($event, JSON_UNESCAPED_SLASHES)."\\n", FILE_APPEND | LOCK_EX)!==false && $new) @chmod($file, 0600);
+            if (@file_put_contents($file, json_encode($event, JSON_UNESCAPED_SLASHES)."\n", FILE_APPEND | LOCK_EX)!==false && $new) @chmod($file, 0600);
         }
     } catch(Throwable $ignored) { /* Diagnostics must not break API errors. */ }
     error_log('TGP match tracking ['.$diagnosticId.'] '.$phase.': '.$error->getMessage());
