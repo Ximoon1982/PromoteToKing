@@ -1,0 +1,65 @@
+name: TGP standalone Match Analyzer package
+
+on:
+  push:
+    branches: [release/v2.15.2]
+    paths:
+      - 'TGP/MatchAnalyzer/**'
+      - '.github/workflows/p2k-tgp-standalone.yml'
+      - 'tests/tgp_match_analyzer_*.php'
+      - 'tests/tgp_match_analyzer_*.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Standalone qualification
+        run: |
+          php -l TGP/MatchAnalyzer/index.php
+          php -l TGP/MatchAnalyzer/auth.php
+          php -l TGP/MatchAnalyzer/MatchPolicy.php
+          php -l TGP/MatchAnalyzer/api/index.php
+          php tests/tgp_match_analyzer_policy_test.php
+          node tests/tgp_match_analyzer_integration.test.js
+          node --check TGP/MatchAnalyzer/assets/analyze-match.js
+          node --check TGP/MatchAnalyzer/assets/match-history-ui.js
+          node --check TGP/MatchAnalyzer/assets/tgp-tracking.js
+          bash -n TGP/MatchAnalyzer/install-standalone.sh
+          ! grep -Eq '(^|[[:space:]])(\.htaccess|PreviewRouter.php|PublicRouter.php)' TGP/MatchAnalyzer/install-standalone.sh || true
+      - name: Build standalone ZIP without recovery plane
+        run: |
+          mkdir -p dist/P2K_TGP_MatchAnalyzer_STANDALONE
+          cp TGP/MatchAnalyzer/index.php dist/P2K_TGP_MatchAnalyzer_STANDALONE/
+          cp TGP/MatchAnalyzer/auth.php dist/P2K_TGP_MatchAnalyzer_STANDALONE/
+          cp TGP/MatchAnalyzer/MatchPolicy.php dist/P2K_TGP_MatchAnalyzer_STANDALONE/
+          cp TGP/MatchAnalyzer/template.html dist/P2K_TGP_MatchAnalyzer_STANDALONE/
+          cp TGP/MatchAnalyzer/install-standalone.sh dist/P2K_TGP_MatchAnalyzer_STANDALONE/
+          mkdir -p dist/P2K_TGP_MatchAnalyzer_STANDALONE/api dist/P2K_TGP_MatchAnalyzer_STANDALONE/assets
+          cp TGP/MatchAnalyzer/api/index.php dist/P2K_TGP_MatchAnalyzer_STANDALONE/api/
+          cp TGP/MatchAnalyzer/assets/{tgp-tracking.js,analyze-match.js,match-history-ui.js} dist/P2K_TGP_MatchAnalyzer_STANDALONE/assets/
+          cat > dist/P2K_TGP_MatchAnalyzer_STANDALONE/README_INSTALL.txt <<'TXT'
+          Standalone The Golden Phoenix Match Analyzer.
+          Runs as sibling application under /TGP/MatchAnalyzer/ and reuses P2K Chess.com P2KOAUTH.
+          Does not modify .htaccess, Release Control, public release slots, or sibling TGP tools.
+
+          Upload ZIP to your IONOS home, then run:
+            cd ~
+            unzip -o P2K_TGP_MatchAnalyzer_STANDALONE.zip
+            bash P2K_TGP_MatchAnalyzer_STANDALONE/install-standalone.sh /kunden/homepages/43/d141198007/htdocs/PromoteToKing
+
+          This directly installs only the standalone TGP app; it does not use candidate preview.
+          TXT
+          (cd dist && zip -X -qr P2K_TGP_MatchAnalyzer_STANDALONE.zip P2K_TGP_MatchAnalyzer_STANDALONE)
+          unzip -t dist/P2K_TGP_MatchAnalyzer_STANDALONE.zip
+          sha256sum dist/P2K_TGP_MatchAnalyzer_STANDALONE.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: P2K-TGP-MatchAnalyzer-standalone-${{ github.sha }}
+          path: dist/P2K_TGP_MatchAnalyzer_STANDALONE.zip
+          if-no-files-found: error
+          retention-days: 30
