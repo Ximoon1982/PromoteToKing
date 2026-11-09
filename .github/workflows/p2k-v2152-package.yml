@@ -39,6 +39,8 @@ jobs:
           php -l TGP/MatchAnalyzer/api/index.php
           php tests/tgp_match_analyzer_policy_test.php
           node tests/tgp_match_analyzer_integration.test.js
+          php tests/tgp_match_analyzer_routing_test.php
+          python3 -m py_compile server/release-control/tools/release-slot-paths.py
           bash -n tools/release/v2152/build-incremental.sh
           bash -n tools/release/v2152/prepare-candidate-preview-v2.15.2.sh
       - name: Build v2.15.2 incremental candidate

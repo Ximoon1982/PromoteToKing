@@ -60,7 +60,7 @@ function p2k_preview_relative_path(string $pathPart): string
     $relative = ltrim($decoded, '/');
     if ($relative === '') $relative = 'index.html';
     if (str_ends_with($relative, '/')) {
-        $relative .= preg_match('~^api/[^/]+/$~D', $relative) ? 'index.php' : 'index.html';
+        $relative .= $relative === 'TGP/MatchAnalyzer/' || preg_match('~^api/[^/]+/$~D', $relative) ? 'index.php' : 'index.html';
     }
     return ReleaseSlotPolicy::normalizeRelativePath($relative);
 }
@@ -211,6 +211,8 @@ if ($extension === 'php') {
     $allowed = false;
     if (!str_contains($relative, '/')) {
         $allowed = in_array($relative, ['MaxRatingBackfill.php','OAuthTest.php'], true);
+    } elseif ($relative === 'TGP/MatchAnalyzer/index.php' || $relative === 'TGP/MatchAnalyzer/api/index.php') {
+        $allowed = true;
     } elseif (preg_match('~^api/[^/]+/index\.php$~D', $relative)) {
         $allowed = true;
     } elseif (preg_match('~^server/[A-Za-z0-9._-]+/public/[A-Za-z0-9._-]+\.php$~D', $relative)) {

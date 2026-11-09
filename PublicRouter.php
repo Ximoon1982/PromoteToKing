@@ -31,7 +31,7 @@ function p2k_public_relative_path(string $pathPart): string
     if (preg_match('~^api/[^/]+/?$~D', $relative)) {
         $relative = rtrim($relative, '/') . '/index.php';
     } elseif (str_ends_with($relative, '/')) {
-        $relative .= 'index.html';
+        $relative .= $relative === 'TGP/MatchAnalyzer/' ? 'index.php' : 'index.html';
     }
     return ReleaseSlotPolicy::normalizeRelativePath($relative);
 }
@@ -43,6 +43,7 @@ function p2k_public_php_allowed(string $relative): bool
         return in_array($relative, ['MaxRatingBackfill.php', 'OAuthTest.php'], true);
     }
     if ($relative === 'auth/callback.php' || $relative === 'config/oauth-test.php') return true;
+    if (in_array($relative, ['TGP/MatchAnalyzer/index.php','TGP/MatchAnalyzer/api/index.php'], true)) return true;
     if (preg_match('~^api/[^/]+/index\\.php$~D', $relative)) return true;
     return (bool)preg_match('~^server/[A-Za-z0-9._-]+/public/[A-Za-z0-9._-]+\\.php$~D', $relative);
 }

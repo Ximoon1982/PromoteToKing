@@ -46,6 +46,12 @@ def included(relative_path: str) -> bool:
     if any(relative_path.startswith(prefix) for prefix in RECOVERY_PREFIXES):
         return False
     path = PurePosixPath(relative_path)
+    # TGP is a sibling project: only the dedicated MatchAnalyzer subtree belongs
+    # to P2K release slots, not any other Golden Phoenix file.
+    if relative_path.startswith("TGP/MatchAnalyzer/"):
+        if any(part.lower() in MUTABLE_SEGMENTS for part in path.parts[2:]):
+            return False
+        return not (".local." in path.name.lower() or path.name.startswith(".env"))
     if relative_path in ROOT_FILES | ROOT_PAGES:
         return True
     if "/" not in relative_path and relative_path.endswith(".sh") and relative_path.startswith(ROOT_RUNTIME_PREFIXES):
@@ -73,6 +79,18 @@ def installed_paths(root: Path) -> list[str]:
         candidate = root / relative
         if (candidate.is_file() or candidate.is_symlink()) and included(relative):
             paths.append(relative)
+
+    # Treat only the dedicated TGP MatchAnalyzer subtree as release-owned.
+    tgp_root = root / "TGP" / "MatchAnalyzer"
+    if tgp_root.is_dir():
+        for current, dirs, files in os.walk(tgp_root, topdown=True, followlinks=False):
+            current_path = Path(current)
+            dirs[:] = [name for name in dirs if name.lower() not in MUTABLE_SEGMENTS]
+            for name in files:
+                candidate = current_path / name
+                relative = candidate.relative_to(root).as_posix()
+                if included(relative):
+                    paths.append(relative)
 
     for immutable_root in sorted(IMMUTABLE_ROOTS):
         base = root / immutable_root
