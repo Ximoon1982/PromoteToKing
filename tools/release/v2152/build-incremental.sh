@@ -188,7 +188,8 @@ payload={
   "payload_manifest_sha256":manifest_sha,
   "accepted_public_builds":[
     {"version":"2.15.1","source_head":"8c0e52b58efee658d72bf9786a89568cd21af930"},
-    {"version":"2.15.2","source_head":"d35bc3bc91d0ab8040dd006b20b24c5e96adcd3c"}
+    {"version":"2.15.2","source_head":"d35bc3bc91d0ab8040dd006b20b24c5e96adcd3c"},
+    {"version":"2.15.2","source_head":"ed6e0a80774d3be1e7925d4385d458a0b2e25432"}
   ]}
 Path(out).write_text(json.dumps(payload,indent=2)+"\n")
 PY
