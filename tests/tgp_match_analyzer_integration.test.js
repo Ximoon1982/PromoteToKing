@@ -9,7 +9,7 @@ assert.match(t,/P2K_MATCH_HISTORY_HOME = window\.P2K_TGP_ANALYZER/);
 assert.match(api,/TgpMatchPolicy::containsClub\(\$match\)/);assert.match(api,/save_snapshot\(\$match,true,'tgp-match-analyzer'\)/);
 assert.match(api,/Auth::enforceSameOrigin/);assert.match(api,/hash_equals/);
 assert.match(auth,/Auth::clubProfileHasAdmin\(\$club,\$username\)/);
-assert.match(auth,/OAuthSession::authenticatedUsername\\(true\\)/);
+assert.ok(auth.includes('OAuthSession::authenticatedUsername(true)'));
 assert.ok(auth.includes("compat/PreviewIsolation.php"));
 const preview=read("TGP/MatchAnalyzer/compat/PreviewIsolation.php");
 assert.ok(preview.includes("public static function active()"));
