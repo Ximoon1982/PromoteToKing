@@ -17,7 +17,11 @@
     try { json=raw ? JSON.parse(raw) : null; } catch (_) { /* invalid response */ }
     if(!json || typeof json!=="object")
       throw new Error("Tracking endpoint returned HTTP "+response.status+" without valid JSON.");
-    if(!response.ok||!json.ok)throw new Error(json?.error?.message||("Tracking service returned HTTP "+response.status+"."));
+    if(!response.ok||!json.ok) {
+      const detail=json?.error?.message||("Tracking service returned HTTP "+response.status+".");
+      const ref=json?.diagnosticId ? " Reference: "+json.diagnosticId : "";
+      throw new Error(detail+ref);
+    }
     return json;
   }
   async function refresh(id,match) {
