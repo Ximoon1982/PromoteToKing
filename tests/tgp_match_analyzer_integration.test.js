@@ -16,6 +16,10 @@ assert.ok(preview.includes("public static function active()"));
 assert.ok(preview.includes("public static function mapWritablePath("));
 const installer=read("TGP/MatchAnalyzer/install-standalone.sh");
 assert.ok(installer.includes("compat/PreviewIsolation.php"));
+const copyLoop=installer.match(/for f in ([^\n]+); do\n  mkdir -p "\$DEST\/\$\(dirname "\$f"\)"/);
+assert.ok(copyLoop,"Standalone installer must contain destination copy loop");
+assert.ok(copyLoop[1].split(/\s+/).includes("compat/PreviewIsolation.php"),"Installer MUST actually copy compatibility class to destination");
+
 assert.match(html,/\/TGP\/MatchAnalyzer\/assets\/analyze-match\.js/);
 assert.match(html,/\/TGP\/MatchAnalyzer\/assets\/match-history-ui\.js/);
 assert.ok(!html.includes('id="p2kStandaloneLink"'));

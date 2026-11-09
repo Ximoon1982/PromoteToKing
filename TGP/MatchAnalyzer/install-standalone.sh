@@ -17,7 +17,7 @@ for f in index.php auth.php MatchPolicy.php api/index.php compat/PreviewIsolatio
 if [[ -e "$DEST" && ! -d "$DEST" ]]; then echo "Target path is not a directory" >&2; exit 1; fi
 BACKUP="$ROOT/storage/tgp-match-analyzer-backups/$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$BACKUP" "$DEST"
-for f in index.php auth.php MatchPolicy.php api/index.php template.html assets/tgp-tracking.js assets/analyze-match.js assets/match-history-ui.js; do
+for f in index.php auth.php MatchPolicy.php api/index.php template.html assets/tgp-tracking.js assets/analyze-match.js assets/match-history-ui.js compat/PreviewIsolation.php; do
   mkdir -p "$DEST/$(dirname "$f")"
   if [[ -f "$DEST/$f" ]]; then
     mkdir -p "$BACKUP/$(dirname "$f")"
