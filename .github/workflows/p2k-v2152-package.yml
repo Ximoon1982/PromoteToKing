@@ -41,6 +41,7 @@ jobs:
           node tests/tgp_match_analyzer_integration.test.js
           php tests/tgp_match_analyzer_routing_test.php
           python3 -m py_compile server/release-control/tools/release-slot-paths.py
+          python3 tests/tgp_preview_oauth_rewrite_test.py
           bash -n tools/release/v2152/build-incremental.sh
           bash -n tools/release/v2152/prepare-candidate-preview-v2.15.2.sh
       - name: Build v2.15.2 incremental candidate

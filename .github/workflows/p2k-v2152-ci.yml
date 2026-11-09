@@ -34,6 +34,7 @@ jobs:
           node tests/tgp_match_analyzer_integration.test.js
           php tests/tgp_match_analyzer_routing_test.php
           python3 -m py_compile server/release-control/tools/release-slot-paths.py
+          python3 tests/tgp_preview_oauth_rewrite_test.py
       - name: Existing match recruitment core tests
         run: |
           node --check assets/js/shared/recruitment-lineup-core.js

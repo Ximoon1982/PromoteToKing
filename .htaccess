@@ -35,13 +35,15 @@ DirectoryIndex index.html index.php
   RewriteCond %{QUERY_STRING} (^|&)action=login(&|$) [NC]
   RewriteRule ^server/team-points/public/oauth\.php$ /PublicRouter.php [L,QSA]
 
-  RewriteCond %{HTTP:Cookie} "(^|;[[:space:]]*)P2KRC_PREVIEW=" [NC]
-  RewriteCond %{REQUEST_URI} !^/(?:ReleaseControl\.php|PreviewRouter\.php|PublicRouter\.php|server/release-control(?:/|$)|auth/callback(?:\.php)?$|data(?:/|$)|logs(?:/|$)|storage(?:/|$)) [NC]
   # Only the TGP MatchAnalyzer subfolder is P2K-owned; other TGP tools remain separate.
   RewriteCond %{HTTP:Cookie} "(^|;[[:space:]]*)P2KRC_PREVIEW=" [NC]
   RewriteRule ^TGP/MatchAnalyzer(?:/|$) /PreviewRouter.php [L]
 
   # Only paths selected by the P2K release-slot surface may enter preview.
+  # Apply the preview cookie and callback exclusion to THIS general rule,
+  # never to the preceding TGP-specific rule.
+  RewriteCond %{HTTP:Cookie} "(^|;[[:space:]]*)P2KRC_PREVIEW=" [NC]
+  RewriteCond %{REQUEST_URI} !^/(?:ReleaseControl\.php|PreviewRouter\.php|PublicRouter\.php|server/release-control(?:/|$)|auth/callback(?:\.php)?$|data(?:/|$)|logs(?:/|$)|storage(?:/|$)) [NC]
   # Sibling projects hosted below the same web root must remain public.
   RewriteCond %{REQUEST_URI} ^/(?:$|(?:api|artwork|artwork-masters|assets|auth|config|resources|server|trophies)(?:/|$)|(?:VERSION|site-manifest\.json|AnalyzeMatch\.html|AnalyzeMatchModal\.html|AnalyzeMatches\.htm|ChallengeListAssistant\.html|ClubIntelligence\.html|DataReconciliation\.html|FindMatch\.htm|InsightsHealth\.html|LeagueSeasonCenter\.html|LiveRanks\.html|LiveRanksDemo\.html|MatchCreationAnalyzer\.htm|MaxRatingBackfill\.php|MigrationInstaller\.html|Opponents\.html|OpponentsDemo\.html|RecruitMatch\.html|RecruitmentAdmin\.html|RecruitmentDemandPlanner\.html|TaskControl\.html|TaskLogs\.html|TeamInsights\.html|TeamPointsAdmin\.html|TeamPointsMigration\.html|TournamentAchievementBadgesDemo\.html|TournamentManagement\.html|Tournaments\.html|UIv2RepresentativeDemo\.html|OAuthTest\.php|index\.html|ui-v2\.html)$) [NC]
   RewriteRule ^(?!PreviewRouter\.php$)(.*)$ /PreviewRouter.php [L]
