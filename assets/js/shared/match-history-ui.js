@@ -70,8 +70,8 @@
         const slug=String(team.name || "").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
         return identity.endsWith("/club/"+HOME_SLUG) || identity.endsWith("/club/"+HOME_SLUG+"/") || slug===HOME_SLUG;
       };
-      const leftHome=isHome(left);
-      const rightHome=isHome(right);
+      const leftHome=window.P2K_MATCH_HISTORY_HOME ? isHome(left) : /promote[- ]to[- ]king/i.test(`${left.identity} ${left.name}`);
+      const rightHome=window.P2K_MATCH_HISTORY_HOME ? isHome(right) : /promote[- ]to[- ]king/i.test(`${right.identity} ${right.name}`);
       return Number(rightHome) - Number(leftHome) || left.index - right.index;
     });
   }

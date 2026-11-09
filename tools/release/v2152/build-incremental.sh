@@ -16,6 +16,15 @@ git -C "$ROOT" merge-base --is-ancestor "$BASE_HEAD" "$HEAD" || { echo "HEAD mus
 
 OVERLAY_FILES=(
   VERSION
+  AnalyzeMatch.html
+  TGP/MatchAnalyzer/index.php
+  TGP/MatchAnalyzer/auth.php
+  TGP/MatchAnalyzer/MatchPolicy.php
+  TGP/MatchAnalyzer/template.html
+  TGP/MatchAnalyzer/api/index.php
+  TGP/MatchAnalyzer/assets/tgp-tracking.js
+  assets/js/pages/analyze-match.js
+  assets/js/shared/match-history-ui.js
   ui-v2.html
   ClubIntelligence.html
   TaskControl.html

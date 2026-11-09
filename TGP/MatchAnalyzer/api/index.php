@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__).'/auth.php';
+require_once dirname(__DIR__).'/MatchPolicy.php';
 require_once dirname(__DIR__, 3).'/api/_common.php';
 use P2K\TeamPoints\Auth;
 use P2K\TeamPoints\PreviewIsolation;
@@ -21,30 +22,14 @@ if($method==='POST') {
 } else $id=match_id($_GET['match']??'');
 if (!preg_match('/^\d{1,12}$/D',$id)) api_error(400,'INVALID_MATCH_ID','Invalid match ID.');
 
-function tgp_contains_club(array $match): bool {
-    $teams=$match['teams']??null;
-    if(!is_array($teams)||count($teams)!==2)return false;
-    foreach($teams as $team) {
-        if(!is_array($team))continue;
-        foreach(['@id','url'] as $field) {
-            $url=(string)($team[$field]??'');
-            if(!$url)continue;
-            $path=(string)(parse_url($url,PHP_URL_PATH)?:'');
-            if(preg_match('~/(?:pub/)?club/the-golden-phoenix/?$~iD',$path))return true;
-        }
-    }
-    return false;
-}
 try {
     $match=chess_json(chess_match_url($id));
-    if(!tgp_contains_club($match))api_error(422,'NOT_TGP_MATCH','The Golden Phoenix does not participate in this match.');
+    if(!TgpMatchPolicy::containsClub($match))api_error(422,'NOT_TGP_MATCH','The Golden Phoenix does not participate in this match.');
     $registry=read_follow_registry();
     $entry=$registry['matches'][$id]??null;
     $tracked=is_array($entry)&&!empty($entry['followed']);
     if($method==='GET') json_response(200,['ok'=>true,'matchId'=>$id,'tracked'=>$tracked,'hasHistory'=>latest_snapshot_record($id)!==null]);
     if($tracked)json_response(200,['ok'=>true,'matchId'=>$id,'tracked'=>true,'alreadyTracked'=>true]);
-    $status=strtolower(str_replace('-','_',trim((string)($match['status']??''))));
-    if(in_array($status,['finished','completed','complete'],true))api_error(409,'MATCH_FINISHED','Finished matches cannot be newly monitored.');
     $stored=save_snapshot($match,true,'tgp-match-analyzer');
     json_response(201,['ok'=>true,'matchId'=>$id,'tracked'=>true,'captured'=>true,'trackedAt'=>$stored['trackedAt']??null]);
 } catch(InvalidArgumentException $error) {

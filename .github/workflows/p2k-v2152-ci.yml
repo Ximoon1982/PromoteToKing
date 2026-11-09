@@ -24,6 +24,14 @@ jobs:
           python3 tests/test_v2152_recruitment_history.py
           python3 tests/test_v2152_hall_search_current_only.py
           python3 tests/test_v2152_events_showcase_mobile_performance.py
+      - name: TGP analyzer qualification
+        run: |
+          php -l TGP/MatchAnalyzer/index.php
+          php -l TGP/MatchAnalyzer/auth.php
+          php -l TGP/MatchAnalyzer/MatchPolicy.php
+          php -l TGP/MatchAnalyzer/api/index.php
+          php tests/tgp_match_analyzer_policy_test.php
+          node tests/tgp_match_analyzer_integration.test.js
       - name: Existing match recruitment core tests
         run: |
           node --check assets/js/shared/recruitment-lineup-core.js

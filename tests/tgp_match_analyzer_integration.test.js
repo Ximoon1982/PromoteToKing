@@ -1,0 +1,13 @@
+const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
+const read=p=>fs.readFileSync(path.join(__dirname,"..",p),"utf8");
+const a=read("assets/js/pages/analyze-match.js"),h=read("assets/js/shared/match-history-ui.js"),t=read("TGP/MatchAnalyzer/assets/tgp-tracking.js");
+const api=read("TGP/MatchAnalyzer/api/index.php"),auth=read("TGP/MatchAnalyzer/auth.php"),html=read("TGP/MatchAnalyzer/template.html"),original=read("AnalyzeMatch.html");
+for(const js of [a,h,t])new Function(js);
+assert.match(a,/if \(TGP && !preferredKey\)/);assert.match(a,/state\.lockedClubScope = Boolean\(TGP\)/);
+assert.match(h,/window\.P2K_MATCH_HISTORY_HOME \? isHome\(left\)/);
+assert.match(t,/P2K_MATCH_HISTORY_HOME = window\.P2K_TGP_ANALYZER/);
+assert.match(api,/TgpMatchPolicy::containsClub\(\$match\)/);assert.match(api,/save_snapshot\(\$match,true,'tgp-match-analyzer'\)/);
+assert.match(api,/Auth::enforceSameOrigin/);assert.match(api,/hash_equals/);
+assert.match(auth,/Auth::clubProfileHasAdmin\(\$club,\$username\)/);
+assert.ok(!html.includes("<script>"));assert.match(original,/analyze-match\.js\?v=2\.15\.2-tgpqual1/);
+console.log("TGP integration PASS");

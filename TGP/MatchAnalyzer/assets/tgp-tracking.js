@@ -24,9 +24,6 @@
       const status=await send("GET",id);
       if(job!==serial)return;
       if(status.tracked){host.textContent="Tracked by Promote to King match monitoring.";return;}
-      if(["finished","completed","complete"].includes(String(match?.status||"").toLowerCase().replace(/[ -]/g,"_"))){
-        host.textContent="This finished match is not being monitored.";return;
-      }
       host.replaceChildren();
       const label=document.createElement("span");
       label.textContent="This match is not currently monitored. ";
