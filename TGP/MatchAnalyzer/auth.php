@@ -1,6 +1,13 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__, 2).'/server/team-points/src/bootstrap.php';
+// The stable public P2K runtime may predate PreviewIsolation.php, while the
+// shared match-tracking helpers already call PreviewIsolation::active().
+// Provide the exact P2K implementation locally only when absent; never
+// modify the stable public source tree or weaken preview write protection.
+if (!class_exists(\P2K\TeamPoints\PreviewIsolation::class)) {
+    require_once __DIR__.'/compat/PreviewIsolation.php';
+}
 use P2K\TeamPoints\Auth;
 use P2K\TeamPoints\OAuthSession;
 use P2K\Shared\SharedChessGateway;

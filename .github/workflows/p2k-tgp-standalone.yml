@@ -24,6 +24,7 @@ jobs:
           php -l TGP/MatchAnalyzer/auth.php
           php -l TGP/MatchAnalyzer/MatchPolicy.php
           php -l TGP/MatchAnalyzer/api/index.php
+          php -l TGP/MatchAnalyzer/compat/PreviewIsolation.php
           php tests/tgp_match_analyzer_policy_test.php
           node tests/tgp_match_analyzer_integration.test.js
           node --check TGP/MatchAnalyzer/assets/analyze-match.js
@@ -42,6 +43,8 @@ jobs:
           cp TGP/MatchAnalyzer/install-standalone.sh dist/P2K_TGP_MatchAnalyzer_STANDALONE/
           mkdir -p dist/P2K_TGP_MatchAnalyzer_STANDALONE/api dist/P2K_TGP_MatchAnalyzer_STANDALONE/assets
           cp TGP/MatchAnalyzer/api/index.php dist/P2K_TGP_MatchAnalyzer_STANDALONE/api/
+          mkdir -p dist/P2K_TGP_MatchAnalyzer_STANDALONE/compat
+          cp TGP/MatchAnalyzer/compat/PreviewIsolation.php dist/P2K_TGP_MatchAnalyzer_STANDALONE/compat/
           cp TGP/MatchAnalyzer/assets/{tgp-tracking.js,analyze-match.js,match-history-ui.js} dist/P2K_TGP_MatchAnalyzer_STANDALONE/assets/
           cat > dist/P2K_TGP_MatchAnalyzer_STANDALONE/README_INSTALL.txt <<'TXT'
           Standalone The Golden Phoenix Match Analyzer.
