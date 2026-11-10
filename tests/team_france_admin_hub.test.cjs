@@ -24,7 +24,7 @@ const analyzer=fs.readFileSync(path.join(root,'MatchAnalyzer/template.html'),'ut
 assert(analyzer.includes('/TeamFrance/assets/upcoming-selector.js'));
 const home=fs.readFileSync(path.join(root,'home.html'),'utf8');
 for(const p of ['/TeamFrance/Widget/admin/','/TeamFrance/MatchAnalyzer/','/TeamFrance/MatchRecruitment/'])assert(home.includes(p));
-assert(home.includes('lang="fr"')&&home.includes('Outils d’administration'));
+assert(home.includes('lang="en"')&&home.includes('Administration tools'));
 const php=fs.readFileSync(path.join(root,'api/overview.php'),'utf8');assert(php.includes('team_france_authorize()'));assert(php.includes("['registered']"));assert(php.includes("'cache_ttl_seconds'=>60"));assert(!php.includes('Authorization: Bearer'));
 console.log('Team France administration / shared selector tests passed');}
 check().catch(e=>{console.error(e);process.exitCode=1});

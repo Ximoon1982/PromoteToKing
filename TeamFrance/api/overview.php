@@ -28,7 +28,7 @@ function tf_registered_matches(array $index): array {
         $id=tf_match_id($item);
         if($id===''||isset($seen[$id]))continue;
         $seen[$id]=true;
-        $out[]=['id'=>$id,'name'=>trim((string)($item['name']??''))?:'Match n°'.$id,
+        $out[]=['id'=>$id,'name'=>trim((string)($item['name']??''))?:'Match #'.$id,
             'startTime'=>is_numeric($item['start_time']??null)?(int)$item['start_time']:null,
             'url'=>'https://www.chess.com/club/matches/team-france/'.$id];
     }
@@ -47,18 +47,18 @@ function tf_admins(array $club): array {
     }
     natcasesort($names);return array_values($names);
 }
-if(($_SERVER['REQUEST_METHOD']??'GET')!=='GET')tf_overview_reply(405,['ok'=>false,'error'=>'Seule la méthode GET est autorisée.']);
+if(($_SERVER['REQUEST_METHOD']??'GET')!=='GET')tf_overview_reply(405,['ok'=>false,'error'=>'Only GET is allowed.']);
 $access=team_france_authorize();
-if(!$access['ok'])tf_overview_reply((int)$access['status'],['ok'=>false,'error'=>'Team France réservé aux administrateurs.']);
+if(!$access['ok'])tf_overview_reply((int)$access['status'],['ok'=>false,'error'=>'Team France administrator authorization is required.']);
 try {
     $app=(array)(p2k_tp_config()['app']??[]);
     $gateway=new SharedChessGateway(null,$app);
     $club=null;$index=null;$errors=[];
-    try{$club=$gateway->json('https://api.chess.com/pub/club/team-france',['consumer'=>'team-france-admin-overview','cache_ttl_seconds'=>300,'allow_stale_on_error'=>false]);if(!is_array($club))throw new RuntimeException('Réponse du club invalide.');}
-    catch(Throwable $e){error_log('Team France overview club: '.$e->getMessage());$errors[]='Le profil du club est momentanément indisponible.';}
-    try{$index=$gateway->json('https://api.chess.com/pub/club/team-france/matches',['consumer'=>'team-france-admin-overview','cache_ttl_seconds'=>60,'allow_stale_on_error'=>false]);if(!is_array($index))throw new RuntimeException('Liste des matchs invalide.');}
-    catch(Throwable $e){error_log('Team France overview matches: '.$e->getMessage());$errors[]='La liste des matchs est momentanément indisponible.';}
-    if($club===null&&$index===null)tf_overview_reply(503,['ok'=>false,'error'=>'Les données du club sont momentanément indisponibles.']);
+    try{$club=$gateway->json('https://api.chess.com/pub/club/team-france',['consumer'=>'team-france-admin-overview','cache_ttl_seconds'=>300,'allow_stale_on_error'=>false]);if(!is_array($club))throw new RuntimeException('Invalid club response.');}
+    catch(Throwable $e){error_log('Team France overview club: '.$e->getMessage());$errors[]='Club profile is temporarily unavailable.';}
+    try{$index=$gateway->json('https://api.chess.com/pub/club/team-france/matches',['consumer'=>'team-france-admin-overview','cache_ttl_seconds'=>60,'allow_stale_on_error'=>false]);if(!is_array($index))throw new RuntimeException('Invalid match index.');}
+    catch(Throwable $e){error_log('Team France overview matches: '.$e->getMessage());$errors[]='The club match list is temporarily unavailable.';}
+    if($club===null&&$index===null)tf_overview_reply(503,['ok'=>false,'error'=>'Chess.com club data is temporarily unavailable.']);
     $avatar=trim((string)($club['icon']??$club['image']??''));
     $validAvatar=preg_match('~^https://images\.chesscomfiles\.com/~i',$avatar)===1;
     $registered=$index!==null?tf_registered_matches($index):null;
@@ -77,4 +77,4 @@ try {
         'inProgressCount'=>is_array($index['in_progress']??null)?count($index['in_progress']):null,
         'asOf'=>gmdate(DATE_ATOM),'warnings'=>$errors
     ]);
-}catch(Throwable $e){error_log('Team France overview fatal: '.$e->getMessage());tf_overview_reply(503,['ok'=>false,'error'=>'Team France présentation du club momentanément indisponible.']);}
+}catch(Throwable $e){error_log('Team France overview fatal: '.$e->getMessage());tf_overview_reply(503,['ok'=>false,'error'=>'Team France club overview is temporarily unavailable.']);}

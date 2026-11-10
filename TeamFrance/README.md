@@ -1,23 +1,13 @@
-# Team France — portail et outils d’administration
+# Team France — admin hub and tools
 
-Le portail `/TeamFrance/` présente les informations du club, les administrateurs, les effectifs, les inscriptions ouvertes et les outils de gestion. Il exige une authentification OAuth Chess.com et le statut d’administrateur actuel de Team France.
+The `/TeamFrance/` home page is restricted to verified Team France administrators through the existing Chess.com OAuth session. It shows club details, the current administrator list, and team matches currently open for registration.
 
-Les trois outils associés sont :
+The matching administration tools are:
 
-- `/TeamFrance/Widget/admin/` — gestion de la présentation des matchs et du widget public (`/TeamFrance/Widget/`).
-- `/TeamFrance/MatchAnalyzer/` — analyse des inscriptions, des classements et de la composition des équipes.
-- `/TeamFrance/MatchRecruitment/` — recherche de joueurs éligibles, vérification actuelle des appartenances et export CSV.
+- `/TeamFrance/Widget/admin/` — Match Showcase and public Widget configuration.
+- `/TeamFrance/MatchAnalyzer/` — Team match lineup analysis and projections.
+- `/TeamFrance/MatchRecruitment/` — Member eligibility checks, CSV exports and request diagnostics.
 
-Les pages Analyseur et Recrutement présentent, sous le champ de référence, les matchs en différé dont les inscriptions sont ouvertes. Un bouton radio préremplit le champ ; la saisie manuelle demeure possible.
+The Analyzer and Recruitment Assistant use a shared upcoming-match radio selector. All UI text is English, with Team France's blue-white-red theme retained. Match titles and user data come unchanged from Chess.com.
 
-Les nouvelles pages utilisent le transport OAuth et la passerelle Chess.com déjà établis pour P2K, avec contrôle des droits Team France. L’identité graphique repose sur le bleu, le blanc et le rouge. Les textes du portail et des outils modifiés sont en français. Les titres des matchs issus de Chess.com ne sont pas traduits afin de préserver leur contenu original.
-
-## Installation incrémentale
-
-Depuis un dossier séparé de l’installation en production :
-
-```bash
-bash TeamFrance/install-admin-hub.sh /kunden/homepages/43/d141198007/htdocs/PromoteToKing
-```
-
-Le script conserve les données persistantes du Widget, les journaux de l’Analyseur, les listes de membres du Recrutement et tous les fichiers des applications TGP. Il sauvegarde les fichiers sources remplacés sous `storage/team-france-admin-hub-backups/`.
+Run `bash TeamFrance/install-admin-hub.sh /kunden/homepages/43/d141198007/htdocs/PromoteToKing` from an extracted installer outside the live directory. The installer backs up modified source files without overwriting persistent Widget data, analyzer history or recruitment snapshots.

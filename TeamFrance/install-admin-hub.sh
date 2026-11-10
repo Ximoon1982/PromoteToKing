@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# Installation incrémentale : portail, traduction, sélecteurs et recrutement Team France.
-# Aucun code TGP, P2K partagé ou état persistant du widget n'est remplacé.
+# Incremental installation: Team France admin hub, English interface, match selectors and recruitment.
+# No TGP code, shared P2K service, or persistent Widget state is overwritten.
 ROOT="${1:-/kunden/homepages/43/d141198007/htdocs/PromoteToKing}"
 ROOT="$(cd "$ROOT" && pwd -P)"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 PHP_CLI="${PHP_CLI:-/usr/bin/php8.5-cli}"
 if [[ ! -x "$PHP_CLI" ]]; then PHP_CLI="$(command -v php || true)"; fi
-[[ -n "$PHP_CLI" && -x "$PHP_CLI" ]] || { echo 'Interpréteur PHP CLI introuvable.' >&2; exit 1; }
-[[ -f "$ROOT/server/team-points/src/OAuthSession.php" && -d "$ROOT/TeamFrance/Widget" && -d "$ROOT/TeamFrance/MatchAnalyzer" ]] || { echo 'Installation PromoteToKing / TeamFrance invalide.' >&2; exit 1; }
-[[ "$HERE" != "$ROOT/TeamFrance" ]] || { echo 'Installez depuis un répertoire distinct de la destination.' >&2; exit 1; }
+[[ -n "$PHP_CLI" && -x "$PHP_CLI" ]] || { echo 'PHP CLI is not available.' >&2; exit 1; }
+[[ -f "$ROOT/server/team-points/src/OAuthSession.php" && -d "$ROOT/TeamFrance/Widget" && -d "$ROOT/TeamFrance/MatchAnalyzer" ]] || { echo 'Invalid PromoteToKing / TeamFrance installation.' >&2; exit 1; }
+[[ "$HERE" != "$ROOT/TeamFrance" ]] || { echo 'Run from an extracted folder outside the destination.' >&2; exit 1; }
 files=(
   index.php home.html README.md api/overview.php
-  assets/home.js assets/theme.css assets/widget-theme.css assets/localize.js
+  assets/home.js assets/theme.css assets/widget-theme.css
   assets/upcoming-selector.js assets/upcoming-selector.css
   Widget/admin/index.php Widget/index.php Widget/assets/admin.js Widget/assets/widget.js
   MatchAnalyzer/index.php MatchAnalyzer/template.html
@@ -24,7 +24,7 @@ files=(
   MatchRecruitment/data/.htaccess MatchRecruitment/data/.gitignore MatchRecruitment/data/.gitkeep
 )
 for f in "${files[@]}"; do
- [[ -f "$HERE/$f" ]] || { echo "Fichier manquant : $f" >&2; exit 1; }
+ [[ -f "$HERE/$f" ]] || { echo "Missing package file: $f" >&2; exit 1; }
  case "$f" in *.php) "$PHP_CLI" -l "$HERE/$f" >/dev/null ;; esac
 done
 bash -n "$HERE/install-admin-hub.sh"
@@ -45,7 +45,7 @@ for f in "${files[@]}"; do
 done
 mkdir -p "$ROOT/TeamFrance/MatchRecruitment/data"
 chmod 0770 "$ROOT/TeamFrance/MatchRecruitment/data" 2>/dev/null || true
-printf 'Portail Team France installé : %s/TeamFrance/\n' "$ROOT"
-printf 'Recrutement Team France : %s/TeamFrance/MatchRecruitment/\n' "$ROOT"
-printf 'Sauvegardes des fichiers remplacés : %s\n' "$BACKUP"
-printf 'Données Widget, historique Analyseur, cache Recrutement, services P2K et TGP conservés.\n'
+printf 'Team France admin hub installed: %s/TeamFrance/\n' "$ROOT"
+printf 'Team France recruitment: %s/TeamFrance/MatchRecruitment/\n' "$ROOT"
+printf 'Replaced source file backups: %s\n' "$BACKUP"
+printf 'Widget data, Analyzer history, Recruitment cache, P2K services and TGP files preserved.\n'

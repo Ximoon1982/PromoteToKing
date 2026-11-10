@@ -1,4 +1,4 @@
-name: Team France portail et outils en francais v2.15.3
+name: Team France English administration UI v2.15.3
 on:
   push:
     branches: [release/v2.15.3]
@@ -7,6 +7,7 @@ on:
       - 'tests/team_france_admin_hub.test.cjs'
       - 'tests/team_france_recruitment.test.cjs'
       - 'tests/team_france_security_test.php'
+      - 'tests/test_team_france_english_ui.py'
       - '.github/workflows/team-france-admin-hub-v2153.yml'
   workflow_dispatch:
 permissions:
@@ -21,11 +22,13 @@ jobs:
           find TeamFrance -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           find TeamFrance -type f -name '*.js' -print0 | xargs -0 -n1 node --check
           bash -n TeamFrance/install-admin-hub.sh
+          bash -n TeamFrance/install-english-ui.sh
       - name: Tests fonctionnels et confinement
         run: |
           php tests/team_france_security_test.php
           node tests/team_france_admin_hub.test.cjs
           node tests/team_france_recruitment.test.cjs
+          python3 tests/test_team_france_english_ui.py
           TF_ROSTER_SHAPE=structured node tests/team_france_recruitment.test.cjs
           TF_ROSTER_SHAPE=malformed node tests/team_france_recruitment.test.cjs
       - name: Installation double et preservation de l'etat
@@ -52,17 +55,17 @@ jobs:
           mkdir -p dist
           files=(
             TeamFrance/install-admin-hub.sh TeamFrance/index.php TeamFrance/home.html TeamFrance/README.md TeamFrance/api/overview.php
-            TeamFrance/assets/home.js TeamFrance/assets/theme.css TeamFrance/assets/widget-theme.css TeamFrance/assets/localize.js
+            TeamFrance/assets/home.js TeamFrance/assets/theme.css TeamFrance/assets/widget-theme.css
             TeamFrance/assets/upcoming-selector.js TeamFrance/assets/upcoming-selector.css
             TeamFrance/Widget/admin/index.php TeamFrance/Widget/index.php TeamFrance/Widget/assets/admin.js TeamFrance/Widget/assets/widget.js
             TeamFrance/MatchAnalyzer/index.php TeamFrance/MatchAnalyzer/template.html
           )
           while IFS= read -r file; do files+=("$file"); done < <(find TeamFrance/MatchRecruitment -type f ! -name 'install-standalone.sh' | sort)
-          zip -X -q dist/TeamFrance_Admin_Hub_Three_Tools_FR_v2153.zip "${files[@]}"
-          unzip -t dist/TeamFrance_Admin_Hub_Three_Tools_FR_v2153.zip
+          zip -X -q dist/TeamFrance_Admin_Hub_Three_Tools_EN_v2153.zip "${files[@]}"
+          unzip -t dist/TeamFrance_Admin_Hub_Three_Tools_EN_v2153.zip
       - uses: actions/upload-artifact@v4
         with:
           name: team-france-admin-hub-three-tools-v2153
-          path: dist/TeamFrance_Admin_Hub_Three_Tools_FR_v2153.zip
+          path: dist/TeamFrance_Admin_Hub_Three_Tools_EN_v2153.zip
           retention-days: 30
           if-no-files-found: error

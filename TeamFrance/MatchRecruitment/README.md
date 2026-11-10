@@ -1,10 +1,10 @@
-# Team France — Assistant de recrutement
+# Team France Match Recruitment Assistant
 
-Application autonome et privée sous `/TeamFrance/MatchRecruitment/`.
+Standalone administrator-only recruitment utility at `/TeamFrance/MatchRecruitment/`.
 
-- Réutilise l’authentification OAuth et vérifie les droits d’administration de Team France.
-- Les appels Chess.com passent par le transport OAuth côté serveur ; aucun jeton n’est exposé.
-- Requêtes de statistiques, appartenance à Team France et au club adverse vérifiées avant export.
-- Liste des membres sauvegardée sous `data/` et conservée lors des mises à jour.
-- Tableau paginé (50 lignes), recherche, journal repliable et export CSV local.
-- Sélecteur radio des matchs ouverts aux inscriptions, partagé avec l’Analyseur.
+- Uses existing P2K Chess.com OAuth and checks Team France administrator privileges.
+- Sends Chess.com requests through the server-side OAuth bearer gateway without exposing the token.
+- Verifies current club membership and opponent-club exclusion before CSV export.
+- Retains last successful member roster in the private `data/` folder across upgrades.
+- Provides a searchable table, 50-row pagination, a folded request log, and a local CSV download.
+- Shows the same registration-open Daily match radio selector as the Match Analyzer.

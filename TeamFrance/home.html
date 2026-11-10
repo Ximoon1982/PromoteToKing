@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://images.chesscomfiles.com data:; object-src 'none'; base-uri 'self'; form-action 'self'">
-<title>Team France — Administration</title>
+<title>Team France Administration</title>
 <link rel="icon" href="/assets/images/p2k-logo.jpg" type="image/jpeg">
 <style>
 :root{color-scheme:dark;--bg:#141c2b;--surface:#1e2637;--surface-2:#293448;--edge:#41495c;--gold:#75afff;--gold-pale:#d4e4ff;--txt:#f1f5ff;--muted:#b8c5df;--green:#a4ddb0;--danger:#ffb1a9;--focus:#ffffff}
@@ -28,48 +28,48 @@ a{color:inherit}a:focus-visible,button:focus-visible{outline:2px solid var(--foc
 <header class="topbar">
  <a class="wordmark" href="/TeamFrance/" aria-label="Team France hub">
   <span class="brandicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 7 7l2 4-4 4v6h14v-6l-4-4 2-4-5-5Z"/><path d="M9 11h6M8 17h8"/></svg></span>
-  <span class="brandcopy"><strong>Team France</strong><small>Espace d’administration</small></span>
+  <span class="brandcopy"><strong>Team France</strong><small>Administration workspace</small></span>
  </a>
- <nav class="navlinks" aria-label="Outils d’administration"><a class="active" href="#overview">Vue d’ensemble</a><a href="#tools">Outils d’administration</a><a href="#matches">Matchs</a><a href="#admins">Administrateurs</a></nav>
- <span class="pill" title="This standalone file is a mockup, not an authenticated production page"><span class="dot"></span>Réservé aux administrateurs de Team France</span>
+ <nav class="navlinks" aria-label="Admin tools"><a class="active" href="#overview">Overview</a><a href="#tools">Admin tools</a><a href="#matches">Matches</a><a href="#admins">Administrators</a></nav>
+ <span class="pill" title="Authenticated Team France administration page"><span class="dot"></span>Team France administrators only</span>
 </header>
 <main id="overview">
  <section class="hero" aria-labelledby="page-title">
   <div class="hero-content">
-   <div class="eyebrow">Présentation du club / Chess.com</div>
+   <div class="eyebrow">Club overview / Chess.com</div>
    <h1 id="page-title">Team France</h1>
-   <p>L’essentiel du club : effectifs, responsables, prochains matchs par équipe en différé et accès direct aux trois outils d’administration.</p>
-   <div class="hero-actions"><a class="btn" href="#tools">Ouvrir les outils <span aria-hidden="true">↗</span></a><a class="btn outline" href="https://www.chess.com/club/team-france" target="_blank" rel="noopener noreferrer">Voir le club sur Chess.com <span aria-hidden="true">↗</span></a></div>
+   <p>Your club at a glance: membership, administration, upcoming Daily team matches, and quick access to the three management tools.</p>
+   <div class="hero-actions"><a class="btn" href="#tools">Open admin tools <span aria-hidden="true">↗</span></a><a class="btn outline" href="https://www.chess.com/club/team-france" target="_blank" rel="noopener noreferrer">View club on Chess.com <span aria-hidden="true">↗</span></a></div>
   </div>
   <div class="hero-logo" id="clubLogo" aria-label="Team France club logo">
-   <svg id="logoFallback" viewBox="0 0 100 100" role="img" aria-label="Drapeau français" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="21" width="74" height="54" rx="6" fill="#f6f7ff"/><path d="M19 21H38V75H19Q13 75 13 69V27Q13 21 19 21Z" fill="#2156a9"/><path d="M62 21H81Q87 21 87 27V69Q87 75 81 75H62Z" fill="#df4053"/></svg>
+   <svg id="logoFallback" viewBox="0 0 100 100" role="img" aria-label="French flag" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="21" width="74" height="54" rx="6" fill="#f6f7ff"/><path d="M19 21H38V75H19Q13 75 13 69V27Q13 21 19 21Z" fill="#2156a9"/><path d="M62 21H81Q87 21 87 27V69Q87 75 81 75H62Z" fill="#df4053"/></svg>
   </div>
  </section>
  <section class="stats" aria-label="Club statistics">
-  <article class="stat"><div class="stat-label">Nombre de membres</div><div class="stat-value" id="membersCount">—</div><div class="stat-sub">Profil Chess.com du club</div></article>
-  <article class="stat"><div class="stat-label">Administrateurs</div><div class="stat-value" id="adminCount">—</div><div class="stat-sub">Administrateurs recensés</div></article>
-  <article class="stat"><div class="stat-label">Inscriptions ouvertes</div><div class="stat-value" id="openCount">—</div><div class="stat-sub">Matchs par équipe en différé</div></article>
-  <article class="stat"><div class="stat-label">Matchs en cours</div><div class="stat-value" id="progressCount">—</div><div class="stat-sub">En cours actuellement</div></article>
+  <article class="stat"><div class="stat-label">Total members</div><div class="stat-value" id="membersCount">—</div><div class="stat-sub">Chess.com club profile</div></article>
+  <article class="stat"><div class="stat-label">Administrators</div><div class="stat-value" id="adminCount">—</div><div class="stat-sub">Listed club administrators</div></article>
+  <article class="stat"><div class="stat-label">Registration open</div><div class="stat-value" id="openCount">—</div><div class="stat-sub">Daily team matches</div></article>
+  <article class="stat"><div class="stat-label">Matches underway</div><div class="stat-value" id="progressCount">—</div><div class="stat-sub">Currently in progress</div></article>
  </section>
  <section id="tools">
-  <div class="section-head"><h2>Outils d’administration</h2><small>Trois outils complémentaires</small></div>
+  <div class="section-head"><h2>Administration tools</h2><small>Three dedicated workflows</small></div>
   <div class="tools">
-   <a class="tool" href="/TeamFrance/Widget/admin/" target="_blank" rel="noopener"><div class="tool-top"><span class="tool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="3" width="20" height="18" rx="2"/><rect x="5" y="7" width="6" height="6" rx="1"/><path d="M14 8h5M14 12h5M5 17h14"/></svg></span><span class="tool-arrow">↗</span></div><h3>Présentation des matchs</h3><p>Sélectionner et organiser les matchs en différé affichés par le widget. Gérer sa configuration et son intégration sur d’autres pages.</p><div class="tool-footer">Administrer le widget ↗</div></a>
-   <a class="tool" href="/TeamFrance/MatchAnalyzer/" target="_blank" rel="noopener"><div class="tool-top"><span class="tool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 20h18M6 17V9m6 8V4m6 13v-6"/><circle cx="6" cy="7" r="2"/></svg></span><span class="tool-arrow">↗</span></div><h3>Analyseur de matchs</h3><p>Analyser les inscriptions, les classements et les projections par échiquier depuis le point de vue de Team France.</p><div class="tool-footer">Ouvrir l’analyseur ↗</div></a>
-   <a class="tool" href="/TeamFrance/MatchRecruitment/" target="_blank" rel="noopener"><div class="tool-top"><span class="tool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M18 11v8M14 15h8"/></svg></span><span class="tool-arrow">↗</span></div><h3>Assistant de recrutement</h3><p>Rechercher les membres éligibles selon les règles du match, les classements actuels et l’appartenance au club. Exporter la liste des candidats.</p><div class="tool-footer">Ouvrir le recrutement ↗</div></a>
+   <a class="tool" href="/TeamFrance/Widget/admin/" target="_blank" rel="noopener"><div class="tool-top"><span class="tool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="3" width="20" height="18" rx="2"/><rect x="5" y="7" width="6" height="6" rx="1"/><path d="M14 8h5M14 12h5M5 17h14"/></svg></span><span class="tool-arrow">↗</span></div><h3>Match Showcase</h3><p>Choose and arrange the Daily team matches featured in the Team France showcase. Manage the public widget and its embed settings.</p><div class="tool-footer">Open widget administration ↗</div></a>
+   <a class="tool" href="/TeamFrance/MatchAnalyzer/" target="_blank" rel="noopener"><div class="tool-top"><span class="tool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 20h18M6 17V9m6 8V4m6 13v-6"/><circle cx="6" cy="7" r="2"/></svg></span><span class="tool-arrow">↗</span></div><h3>Match Analyzer</h3><p>Examine match registration, player strengths and board projections. Explore the matchup from the Team France perspective.</p><div class="tool-footer">Open match analyzer ↗</div></a>
+   <a class="tool" href="/TeamFrance/MatchRecruitment/" target="_blank" rel="noopener"><div class="tool-top"><span class="tool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M18 11v8M14 15h8"/></svg></span><span class="tool-arrow">↗</span></div><h3>Match Recruitment Assistant</h3><p>Screen Team France members against match requirements, current ratings and membership rules. Review candidates and export an eligible-player CSV.</p><div class="tool-footer">Open recruitment assistant ↗</div></a>
   </div>
  </section>
- <div class="section-head" id="matches"><h2>Matchs du club</h2><button class="refresh" id="refreshButton" type="button">↻ Actualiser les données</button></div>
+ <div class="section-head" id="matches"><h2>Club matches</h2><button class="refresh" id="refreshButton" type="button">↻ Refresh API data</button></div>
  <div class="columns">
-  <section class="panel" aria-labelledby="upcoming-title"><div class="panel-head"><h3 id="upcoming-title">Inscriptions ouvertes</h3><a class="textlink" href="https://www.chess.com/club/team-france/matches" target="_blank" rel="noopener">Tous les matchs ↗</a></div><div class="panel-body" id="matchList"><div class="empty">Chargement des matchs depuis Chess.com…</div></div><div class="panel-foot">Affiche jusqu’à cinq matchs en différé ouverts aux inscriptions. Les données sont brièvement mises en cache.</div></section>
-  <section class="panel" id="admins" aria-labelledby="admins-title"><div class="panel-head"><h3 id="admins-title">Administrateurs du club</h3><small id="adminSummary">Profil Chess.com du club</small></div><div class="admin-grid" id="adminsList"><span class="empty">Chargement des administrateurs…</span></div><div class="panel-foot">Administrateurs actuels, avec liens vers leurs profils Chess.com. Aucune liste manuelle.</div></section>
+  <section class="panel" aria-labelledby="upcoming-title"><div class="panel-head"><h3 id="upcoming-title">Registration open</h3><a class="textlink" href="https://www.chess.com/club/team-france/matches" target="_blank" rel="noopener">All club matches ↗</a></div><div class="panel-body" id="matchList"><div class="empty">Loading matches from Chess.com…</div></div><div class="panel-foot">Displays up to five Daily matches accepting registrations. Data is cached briefly by the P2K Chess.com gateway.</div></section>
+  <section class="panel" id="admins" aria-labelledby="admins-title"><div class="panel-head"><h3 id="admins-title">Club administrators</h3><small id="adminSummary">Chess.com club profile</small></div><div class="admin-grid" id="adminsList"><span class="empty">Loading administrators…</span></div><div class="panel-foot">Current administrators, linked to their Chess.com profiles. No manually maintained roster.</div></section>
  </div>
  <div class="lower">
-  <section class="panel"><div class="panel-head"><h3>Informations sur le club</h3><a class="textlink" href="https://www.chess.com/club/team-france" target="_blank" rel="noopener">Page du club ↗</a></div><div class="info-list"><div class="info-line"><span class="key">Visibilité du club</span><span class="value" id="visibility">—</span></div><div class="info-line"><span class="key">Création</span><span class="value" id="created">—</span></div><div class="info-line"><span class="key">Dernière activité</span><span class="value" id="lastActivity">—</span></div><div class="info-line"><span class="key">Classement moyen en différé</span><span class="value" id="averageRating">—</span></div></div></section>
-  <section class="panel"><div class="panel-head"><h3>Données et accès</h3><span class="pill"><span class="dot"></span>OAuth vérifié</span></div><div class="info-list"><div class="info-line"><span class="key">Source des données</span><span class="value">Chess.com PubAPI</span></div><div class="info-line"><span class="key">Club concerné</span><span class="value">Team France uniquement</span></div><div class="info-line"><span class="key">Accès en production</span><span class="value">Réservé aux administrateurs de Team France</span></div><div class="info-line"><span class="key">Dernière actualisation (UTC)</span><span class="value" id="lastRefreshed">Pas encore</span></div></div><div class="note">Cette page et son API JSON nécessitent une session OAuth Chess.com valide et des droits d’administration Team France.</div></section>
+  <section class="panel"><div class="panel-head"><h3>Club information</h3><a class="textlink" href="https://www.chess.com/club/team-france" target="_blank" rel="noopener">Club page ↗</a></div><div class="info-list"><div class="info-line"><span class="key">Club visibility</span><span class="value" id="visibility">—</span></div><div class="info-line"><span class="key">Established</span><span class="value" id="created">—</span></div><div class="info-line"><span class="key">Last recorded activity</span><span class="value" id="lastActivity">—</span></div><div class="info-line"><span class="key">Average Daily rating</span><span class="value" id="averageRating">—</span></div></div></section>
+  <section class="panel"><div class="panel-head"><h3>Data and access</h3><span class="pill"><span class="dot"></span>OAuth verified</span></div><div class="info-list"><div class="info-line"><span class="key">Information source</span><span class="value">Chess.com PubAPI</span></div><div class="info-line"><span class="key">Club scope</span><span class="value">Team France only</span></div><div class="info-line"><span class="key">Production access</span><span class="value">Team France administrators only</span></div><div class="info-line"><span class="key">Last refreshed (UTC)</span><span class="value" id="lastRefreshed">Not yet</span></div></div><div class="note">This administration page and its JSON API require a valid P2K Chess.com OAuth session and current Team France administrator access.</div></section>
  </div>
 </main>
-<footer class="footer"><span>Team France · Administration · Réservé aux administrateurs de Team France</span><span id="apiState" role="status">Chargement des données du club…</span></footer>
+<footer class="footer"><span>Team France · Team France administration · Team France administrators only</span><span id="apiState" role="status">Loading authenticated club overview…</span></footer>
 </div>
-<script defer src="/TeamFrance/assets/home.js?v=tf-v2153-1"></script>
+<script defer src="/TeamFrance/assets/home.js?v=tf-2153-en2"></script>
 </body></html>
