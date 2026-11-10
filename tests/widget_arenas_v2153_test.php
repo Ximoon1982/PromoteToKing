@@ -30,7 +30,7 @@ foreach (['TGP\\Widget\\Store', 'TeamFrance\\Widget\\Store'] as $class) {
         verify($store->read()['items'][0]['matchId'] === '12345', "$class Daily cards preserved");
         $stale = false;
         try { $store->save(['items'=>[], 'arenas'=>[]], 0); }
-        catch (\\TGP\\Widget\\RevisionConflict | \\TeamFrance\\Widget\\RevisionConflict $e) { $stale = true; }
+        catch (\TGP\Widget\RevisionConflict | \TeamFrance\Widget\RevisionConflict $e) { $stale = true; }
         verify($stale, "$class revision race");
         $bad = $arena; $bad['link'] = 'https://evil.example/arena';
         expectedError(fn() => $store->save(['items'=>[], 'arenas'=>[$bad]], 1), "$class reject external URL");
@@ -38,7 +38,7 @@ foreach (['TGP\\Widget\\Store', 'TeamFrance\\Widget\\Store'] as $class) {
         $saved2 = $store->save(['items'=>[['matchId'=>'12345']], 'arenas'=>[$expired]], 1);
         verify(count($saved2['arenas']) === 0, "$class expire past arena");
         verify(count($saved2['items']) === 1, "$class preserve Daily matches");
-    } catch (\\TGP\\Widget\\RevisionConflict | \\TeamFrance\\Widget\\RevisionConflict $e) {
+    } catch (\TGP\Widget\RevisionConflict | \TeamFrance\Widget\RevisionConflict $e) {
         // Expected only for the explicit stale revision scenario, which is verified below.
         throw new RuntimeException("$class unexpected revision conflict");
     } finally {
@@ -46,4 +46,4 @@ foreach (['TGP\\Widget\\Store', 'TeamFrance\\Widget\\Store'] as $class) {
         @rmdir($root . '/data'); @rmdir($root);
     }
 }
-echo "Both widgets: arena storage and Daily state checks passed.\\n";
+echo "Both widgets: arena storage and Daily state checks passed.\n";
