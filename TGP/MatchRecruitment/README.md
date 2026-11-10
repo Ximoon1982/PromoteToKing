@@ -22,3 +22,9 @@ Both fresh and fallback-roster candidates are individually checked via Chess.com
 The browser generates a downloadable CSV only when requested. No CSV is stored.
 
 The installer copies only this application's source, preserves runtime `data/`, and never alters `.htaccess`, TGP Widget, TGP Analyzer, P2K databases, or Release Control.
+
+## OAuth bearer transport and diagnostic log
+- Every active Chess.com roster, match, profile, stats and player-clubs request is sent via P2K's already-existing **server-side OAuth bearer transport**, through the TGP-local `api/?action=batch` gateway. OAuth tokens never reach JavaScript.
+- The gateway requires an authenticated TGP administrator, same-origin request and a matching OAuth CSRF header. It only accepts whitelisted Chess.com match and player endpoints, at most 12 URLs per batch. P2K's existing rate coordinator limits backend traffic. The roster continues to fall back to the last complete local snapshot when unavailable.
+- Transient player API errors (HTTP 429 or 5xx) are retried up to three total attempts with bounded exponential backoff. Permanent errors do not become eligible players.
+- The **Request / event log** at the bottom of the page is collapsed by default. It displays UTC timestamps, request paths, HTTP statuses, durations, retries, gateway errors and scan summaries. Copy/Clear actions are provided. It is session-local to the page and never contains OAuth tokens or request headers.

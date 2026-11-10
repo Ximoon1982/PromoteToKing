@@ -29,6 +29,7 @@ body{margin:0;background:#171513;color:#f3f0e9;font-family:system-ui,sans-serif}
 .p2k-funnel{margin-top:8px}
 #tgpRosterNotice[hidden],#p2kSettingsPanel[hidden],#p2kProgressDetails[hidden],#p2kFunnel[hidden]{display:none}
 </style>
+<meta name="tgp-recruitment-csrf" content="<!-- TGP_RECRUITMENT_CSRF -->">
 </head>
 <body>
 <main class="p2k-analyzer" id="p2kUpcomingAnalyzer">
@@ -61,6 +62,11 @@ body{margin:0;background:#171513;color:#f3f0e9;font-family:system-ui,sans-serif}
 <div class="p2k-funnel" id="p2kFunnel" hidden></div>
 </div>
 <section class="p2k-results" id="p2kResults"><div class="p2k-empty-prompt">Enter a TGP match number or URL to start a recruitment analysis.</div></section>
+<details id="tgpRequestLog" style="margin-top:20px;border:1px solid #49433e;border-radius:8px;padding:12px">
+<summary id="tgpLogSummary" style="cursor:pointer;font-weight:600">Request / event log</summary>
+<div class="p2k-results-tools" style="margin-top:10px"><span>Server-side OAuth bearer · HTTP statuses and errors · no tokens</span><div><button id="tgpLogCopy" type="button">Copy log</button> <button id="tgpLogClear" type="button">Clear</button></div></div>
+<pre id="tgpLogContent" style="font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:350px;overflow:auto"></pre>
+</details>
 </main>
 <script src="assets/js/recruitment-core.js?v=2.15.3"></script>
 <script src="assets/js/recruitment.js?v=2.15.3"></script>

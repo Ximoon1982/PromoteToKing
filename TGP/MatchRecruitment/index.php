@@ -19,4 +19,6 @@ if (!$access['ok']) {
     echo '</body></html>'; exit;
 }
 header('Content-Type: text/html; charset=utf-8');
-readfile(__DIR__.'/template.html');
+$template=file_get_contents(__DIR__.'/template.html');
+if($template===false){http_response_code(503);exit('Recruitment template unavailable.');}
+echo str_replace('<!-- TGP_RECRUITMENT_CSRF -->',htmlspecialchars((string)$access['csrf'],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8'),$template);
