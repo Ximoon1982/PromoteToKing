@@ -16,6 +16,7 @@ header('Cache-Control: no-cache, max-age=30');
 <link rel="stylesheet" href="/TeamFrance/assets/widget-theme.css?v=tf-2153-en2">
 </head>
 <body>
+<section id="arenaShowcase" class="arena-showcase" hidden aria-label="Multi-club arenas"></section>
 <main id="tgpGrid" class="tgp-grid" aria-live="polite"></main>
 <script src="assets/widget.js?v=<?= rawurlencode((string)($config['version'] ?? '0.2.0')) ?>-tf-en2"></script>
 </body>
