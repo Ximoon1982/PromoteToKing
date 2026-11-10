@@ -15,4 +15,4 @@
 .arena-fields input{width:100%;min-width:0;border:1px solid var(--border);border-radius:6px;background:#171512;color:var(--text);padding:8px;font:13px Arial,sans-serif}
 .arena-row .remove-arena{border-color:#744;background:#3a2020;color:#ffd9d5;font-size:12px;padding:5px 8px}
 @media(max-width:620px){.arena-fields{grid-template-columns:minmax(0,1fr)}.arena-fields label.wide{grid-column:auto}}
-.preview-panel iframe{height:460px}
+.preview-panel iframe{height:500px}
