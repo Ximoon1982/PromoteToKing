@@ -359,15 +359,24 @@ try {
         $body = body_json();
         $expected = filter_var($body['revision'] ?? null, FILTER_VALIDATE_INT);
         if ($expected === false || $expected < 0) throw new InvalidArgumentException('revision must be a non-negative integer.');
-        // Validate configured ids against the club match index in one request.
-        // Only an id missing from that index needs the slower per-match fallback.
-        $index = $chess->clubMatches($teamSlug);
-        $knownDailyIds = club_daily_match_ids($index);
+        // Arena-only edits and changes to existing match flags must not depend on Chess.com API uptime.
+        // Validate newly introduced Daily IDs only; the stored revision is checked atomically by Store.
+        $current = $store->read();
+        $currentIds = [];
+        foreach ($current['items'] as $existing) $currentIds[(string)$existing['matchId']] = true;
+        $newIds = [];
         foreach (is_array($body['items'] ?? null) ? $body['items'] : [] as $item) {
             $id = trim((string)($item['matchId'] ?? ''));
             if ($id === '' || !preg_match('/^[0-9]{1,18}$/D', $id)) throw new InvalidArgumentException('Invalid match id.');
-            if (isset($knownDailyIds[$id])) continue;
-            [$our, $opponent] = validate_match($chess->match($id), $teamSlug);
+            if (!isset($currentIds[$id])) $newIds[$id] = true;
+        }
+        if ($newIds !== []) {
+            $index = $chess->clubMatches($teamSlug);
+            $knownDailyIds = club_daily_match_ids($index);
+            foreach (array_keys($newIds) as $id) {
+                if (isset($knownDailyIds[$id])) continue;
+                validate_match($chess->match($id), $teamSlug);
+            }
         }
         $saved = $store->save($body, (int)$expected);
         reply(200, array_merge(['ok'=>true], $saved));
