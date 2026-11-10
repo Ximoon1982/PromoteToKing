@@ -98,50 +98,159 @@
 
   const arenaList = document.getElementById("arenaList");
   const addArenaButton = document.getElementById("addArenaButton");
+  const arenaModal = document.getElementById("arenaModal");
+  const arenaForm = document.getElementById("arenaForm");
+  const arenaModalTitle = document.getElementById("arenaModalTitle");
+  const arenaModalError = document.getElementById("arenaModalError");
+  const arenaModalSave = document.getElementById("arenaModalSave");
   let arenas = [];
+  let persistedItems = [];
+  let arenaSaving = false;
+  let dailySaving = false;
+  let editingArenaIndex = null;
 
+  const arenaFields = ["name", "link", "date", "time", "duration", "timeControl"];
+  const toArena = a => ({
+    active: a.active === true,
+    name: String(a.name || ""), link: String(a.link || ""),
+    date: String(a.date || ""), time: String(a.time || ""),
+    duration: String(a.duration || ""), timeControl: String(a.timeControl || ""),
+  });
+  const compactItems = rows => rows.map(({matchId, enabled, urgent}) => ({matchId:String(matchId), enabled:enabled === true, urgent:urgent === true}));
+  const arenaUrlKey = text => {
+    try {
+      const url = new URL(text);
+      return `${url.hostname.toLowerCase().replace(/^www\./, "")}${url.pathname.replace(/\/+$/, "").toLowerCase()}${url.search}`;
+    } catch (_) { return String(text || "").trim().toLowerCase(); }
+  };
+
+  function formatArenaDate(date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return date || "Date unavailable";
+    const value = new Date(`${date}T12:00:00Z`);
+    return new Intl.DateTimeFormat("en-GB", {day:"numeric", month:"short", year:"numeric", timeZone:"UTC"}).format(value);
+  }
   function renderArenas() {
-    arenaList.innerHTML = arenas.map((a, index) => `<div class="arena-row" data-arena-index="${index}">
-      <div class="arena-row-head"><label><input type="checkbox" data-arena-field="active" ${a.active ? "checked" : ""}> Display this arena</label><button type="button" class="remove-arena" data-remove-arena>Remove</button></div>
-      <div class="arena-fields">
-        <label class="wide">Arena name<input data-arena-field="name" maxlength="120" value="${esc(a.name)}" placeholder="Multi-club arena"></label>
-        <label class="wide">Chess.com arena URL<input data-arena-field="link" type="url" maxlength="600" value="${esc(a.link)}" placeholder="https://www.chess.com/tournament/live/arena/..."></label>
-        <label>Start date (Luxembourg)<input type="date" data-arena-field="date" value="${esc(a.date)}"></label>
-        <label>Start time (Luxembourg)<input type="time" data-arena-field="time" value="${esc(a.time)}"></label>
-        <label>Duration<input data-arena-field="duration" maxlength="40" value="${esc(a.duration)}" placeholder="90m, 2h, 1h30m"></label>
-        <label>Time control<input data-arena-field="timeControl" maxlength="40" value="${esc(a.timeControl)}" placeholder="3+2"></label>
-      </div></div>`).join("");
+    arenaList.innerHTML = arenas.map((a, index) => `<div class="arena-row${a.active ? "" : " is-disabled"}" data-arena-index="${index}">
+      <div class="arena-summary">
+        <strong><a href="${esc(a.link)}" target="_blank" rel="noopener noreferrer">${esc(a.name || "Unnamed arena")}</a></strong>
+        <span>${esc(formatArenaDate(a.date))} · ${esc(a.time || "—")} · ${esc(a.timeControl || "—")} · ${esc(a.duration || "—")}</span>
+      </div>
+      <div class="arena-row-actions">
+        <label><input type="checkbox" data-arena-action="enabled" ${a.active ? "checked" : ""} ${(arenaSaving || dailySaving) ? "disabled" : ""}> Enabled</label>
+        <button type="button" data-arena-action="edit" class="secondary" ${(arenaSaving || dailySaving) ? "disabled" : ""}>Edit</button>
+        <button type="button" data-arena-action="remove" class="remove-arena" ${(arenaSaving || dailySaving) ? "disabled" : ""}>Remove</button>
+      </div>
+    </div>`).join("") || '<div class="registration-empty">No arena configured.</div>';
+    addArenaButton.disabled = arenaSaving || dailySaving;
+  }
+  function closeArenaModal() {
+    if (arenaModal.open) arenaModal.close();
+    editingArenaIndex = null;
+    arenaModalError.textContent = "";
+  }
+  function openArenaModal(index = null) {
+    if (arenaSaving || dailySaving) return;
+    editingArenaIndex = Number.isInteger(index) && index >= 0 && index < arenas.length ? index : null;
+    const a = editingArenaIndex === null ? toArena({}) : arenas[editingArenaIndex];
+    arenaModalTitle.textContent = editingArenaIndex === null ? "Add arena" : "Edit arena";
+    arenaFields.forEach(field => {
+      const input = arenaForm.elements.namedItem(field);
+      if (input) input.value = a[field];
+    });
+    arenaModalError.textContent = "";
+    arenaModalSave.disabled = false;
+    if (typeof arenaModal.showModal === "function") arenaModal.showModal();
+  }
+  function readArenaDraft() {
+    const value = {active: editingArenaIndex === null ? false : arenas[editingArenaIndex].active};
+    arenaFields.forEach(field => {value[field] = String(arenaForm.elements.namedItem(field)?.value || "").trim();});
+    return value;
+  }
+  function validateArena(a) {
+    if (!a.name || a.name.length > 120) return "Provide an arena name (maximum 120 characters).";
+    let url;
+    try {url = new URL(a.link);} catch (_) {return "Provide a valid Chess.com arena URL.";}
+    if (url.protocol !== "https:" || !["chess.com", "www.chess.com"].includes(url.hostname.toLowerCase()) ||
+      !/^\/(?:play\/)?(?:tournament|arena|live)(?:\/|$)/i.test(url.pathname) || url.username || url.password || url.port) {
+      return "Use an HTTPS Chess.com arena URL.";
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(a.date) || !/^\d{2}:\d{2}$/.test(a.time)) return "Provide an arena date and start time.";
+    if (!/^\d+\s*(?:m|min|mins|minutes?|h|hr|hours?)?(?:\s*\d{1,2}\s*m?)?$|^\d+:[0-5]\d$/i.test(a.duration) || !a.duration) return "Duration must be 90m, 2h or H:MM.";
+    if (a.timeControl.length > 40) return "Time control is too long.";
+    const key = arenaUrlKey(a.link);
+    if (arenas.some((item, index) => index !== editingArenaIndex && arenaUrlKey(item.link) === key)) return "This Chess.com arena is already configured.";
+    return "";
+  }
+  async function saveArenaConfiguration(next, successText) {
+    if (arenaSaving || dailySaving) return false;
+    arenaSaving = true;
+    renderArenas();
+    arenaModalSave.disabled = true;
+    try {
+      const payload = await json(`${API}?action=save`, {
+        method: "POST", headers: { ["X-" + (CFG.teamSlug === "team-france" ? "TF" : "TGP") + "-CSRF"]: csrf },
+        body: JSON.stringify({revision, items: persistedItems, arenas: next.map(toArena)}),
+      });
+      revision = Number(payload.revision);
+      if (!Number.isInteger(revision) || revision < 0) throw new Error("Invalid revision returned by server.");
+      arenas = (payload.arenas || []).map(toArena);
+      persistedItems = compactItems(payload.items || persistedItems);
+      updateEmbedFields();
+      preview.src = `../?_=${Date.now()}`;
+      setMessage(successText, "success");
+      // Never discard unsaved Daily-match edits during an independent arena save.
+      return true;
+    } catch (error) {
+      const explanation = error.status === 409
+        ? "The configuration changed in another session. Reload the page before saving. Unsaved Daily-match edits were not discarded."
+        : error.message;
+      setMessage(explanation, "error");
+      arenaModalError.textContent = explanation;
+      return false;
+    } finally {
+      arenaSaving = false;
+      arenaModalSave.disabled = false;
+      renderArenas();
+      saveButton.disabled = !dirty;
+    }
   }
   addArenaButton.addEventListener("click", () => {
-    if (arenas.length >= 100) { setMessage("Maximum 100 configured arenas.", "error"); return; }
-    arenas.push({active: true, name:"", link:"", date:"", time:"", duration:"", timeControl:""});
-    setDirty(true); renderArenas();
+    if (arenas.length >= 100) {setMessage("Maximum 100 configured arenas.", "error"); return;}
+    openArenaModal();
   });
-  arenaList.addEventListener("input", event => {
-    const target = event.target;
-    const row = target.closest("[data-arena-index]");
-    const index = Number(row?.dataset.arenaIndex);
-    const field = target.dataset.arenaField;
-    if (!arenas[index] || !field) return;
-    arenas[index][field] = target.type === "checkbox" ? target.checked : target.value;
-    setDirty(true);
+  arenaForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (arenaSaving) return;
+    const draft = readArenaDraft();
+    const validationError = validateArena(draft);
+    if (validationError) {arenaModalError.textContent = validationError; return;}
+    const next = arenas.map(toArena);
+    if (editingArenaIndex === null) next.push(draft);
+    else next[editingArenaIndex] = draft;
+    if (await saveArenaConfiguration(next, "Arena saved.")) closeArenaModal();
   });
-  arenaList.addEventListener("change", event => {
-    const target = event.target;
-    const row = target.closest("[data-arena-index]");
+  document.getElementById("arenaModalCancel").addEventListener("click", closeArenaModal);
+  arenaModal.addEventListener("close", () => {editingArenaIndex = null; arenaModalError.textContent = "";});
+  arenaList.addEventListener("click", async event => {
+    const button = event.target.closest("button[data-arena-action]");
+    const row = button?.closest("[data-arena-index]");
     const index = Number(row?.dataset.arenaIndex);
-    const field = target.dataset.arenaField;
-    if (!arenas[index] || !field) return;
-    arenas[index][field] = target.type === "checkbox" ? target.checked : target.value;
-    setDirty(true);
+    if (arenaSaving || dailySaving || !button || !Number.isInteger(index) || !arenas[index]) return;
+    if (button.dataset.arenaAction === "edit") {openArenaModal(index); return;}
+    if (button.dataset.arenaAction !== "remove") return;
+    if (!window.confirm(`Remove arena “${arenas[index].name}”?`)) return;
+    const next = arenas.map(toArena);
+    next.splice(index, 1);
+    await saveArenaConfiguration(next, "Arena removed.");
   });
-  arenaList.addEventListener("click", event => {
-    const button = event.target.closest("[data-remove-arena]");
-    if (!button) return;
-    const row = button.closest("[data-arena-index]");
-    const index = Number(row?.dataset.arenaIndex);
+  arenaList.addEventListener("change", async event => {
+    const input = event.target;
+    if (arenaSaving || dailySaving || input.dataset.arenaAction !== "enabled") return;
+    const index = Number(input.closest("[data-arena-index]")?.dataset.arenaIndex);
     if (!Number.isInteger(index) || !arenas[index]) return;
-    arenas.splice(index, 1); setDirty(true); renderArenas();
+    const next = arenas.map(toArena);
+    next[index].active = input.checked;
+    await saveArenaConfiguration(next, input.checked ? "Arena enabled." : "Arena disabled.");
   });
 
   function showAdmin() {
@@ -187,7 +296,8 @@
   async function loadAdminState() {
     const payload = await json(`${API}?action=admin-state&_=${Date.now()}`);
     revision = Number(payload.revision) || 0;
-    arenas = (payload.arenas || []).map(a => ({active:a.active === true,name:a.name || "",link:a.link || "",date:a.date || "",time:a.time || "",duration:a.duration || "",timeControl:a.timeControl || ""}));
+    arenas = (payload.arenas || []).map(toArena);
+    persistedItems = compactItems(payload.items || []);
     renderArenas();
     updateEmbedFields();
     items = (payload.items || []).map(row => ({
@@ -348,6 +458,9 @@
   }
 
   async function save() {
+    if (arenaSaving || dailySaving) return;
+    dailySaving = true;
+    renderArenas();
     saveButton.disabled = true;
     setMessage("Saving…");
     try {
@@ -361,6 +474,7 @@
         }),
       });
       revision = Number(payload.revision) || revision + 1;
+      persistedItems = compactItems(payload.items || items);
       setDirty(false);
       setMessage("Configuration saved.", "success");
       preview.src = `../?_=${Date.now()}`;
@@ -368,12 +482,13 @@
       await loadRegistration(false);
     } catch (error) {
       if (error.status === 409) {
-        setMessage("Configuration changed elsewhere. Reloading the current version.", "error");
-        await loadAdminState();
+        setMessage("Configuration changed elsewhere. Reload the page before retrying; unsaved edits remain on this page.", "error");
       } else {
         setMessage(error.message, "error");
       }
     } finally {
+      dailySaving = false;
+      renderArenas();
       saveButton.disabled = !dirty;
     }
   }
