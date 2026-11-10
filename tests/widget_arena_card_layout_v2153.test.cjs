@@ -1,0 +1,60 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
+
+const now = Date.now();
+function arena(hours, name, timeControl) {
+  const start = now + hours*3600000;
+  return {
+    active: true, name, timeControl, duration: "90m",
+    durationMinutes:90,
+    link:"https://www.chess.com/tournament/live/arena/example",
+    startAt:new Date(start).toISOString(),endAt:new Date(start+90*60000).toISOString(),
+  };
+}
+async function fixture(club, arenas, cards=[]) {
+  const grid={innerHTML:"",replaceChildren(){this.innerHTML="";}};
+  const arenaGrid={innerHTML:"",querySelectorAll(){return [];}};
+  const section={hidden:true};
+  const elements={tgpGrid:grid,arenaShowcase:arenaGrid,arenaSection:section};
+  const timers=[];
+  const sandbox={
+    document:{getElementById:id=>elements[id]||null},
+    window:{setInterval:(callback,period)=>timers.push({callback,period})},
+    fetch:async()=>({ok:true,json:async()=>({ok:true,cards,arenas})}),
+    Date, Intl, Math, Number, String, console,
+  };
+  const file=path.join(__dirname,"..",club,"Widget","assets","widget.js");
+  vm.runInNewContext(fs.readFileSync(file,"utf8"),sandbox,{filename:file});
+  await new Promise(resolve=>setImmediate(resolve));
+  return {grid,arenaGrid,section,timers};
+}
+(async()=>{
+  for (const club of ["TGP","TeamFrance"]) {
+    const html=fs.readFileSync(path.join(__dirname,"..",club,"Widget","index.php"),"utf8");
+    assert.match(html,/id="arenaSection"/);
+    assert.match(html,/id="dailySection"/);
+    assert.match(html,/Join daily matches/);
+    assert.match(html,/Join multi-club arenas/);
+    const match={matchId:"56789",category:"league",leagueAcronyms:["WCGC"],opponentName:"Opposition",name:"WCGC event",url:"https://www.chess.com/club/matches/56789",startTime:now/1000+86400,time_control:86400};
+    const a=await fixture(club,[arena(0.5,"Bullet open","1+0"),arena(3,"Blitz open","5+3"),arena(5,"Rapid open","15+10")],[match]);
+    assert.equal(a.section.hidden,false,club+" arena visible");
+    assert.equal((a.arenaGrid.innerHTML.match(/class="tgp-card arena-card"/g)||[]).length,2,club+" max 2");
+    assert.match(a.arenaGrid.innerHTML,/tgp-speed-icon bullet/,club+" bullet icon");
+    assert.match(a.arenaGrid.innerHTML,/tgp-speed-icon blitz/,club+" blitz icon");
+    assert.match(a.arenaGrid.innerHTML,/Registration/,club+" registration phase");
+    assert.match(a.arenaGrid.innerHTML,/Upcoming/,club+" upcoming phase");
+    assert.match(a.arenaGrid.innerHTML,/Starts in /,club+" registration countdown");
+    assert.match(a.arenaGrid.innerHTML,/90m/,club+" duration");
+    assert.match(a.grid.innerHTML,/WCGC/,club+" Daily card preserved");
+    assert.ok(a.timers.some(x=>x.period===1000),club+" timer");
+    const b=await fixture(club,[arena(4,"Rapid open","15+10")]);
+    assert.match(b.arenaGrid.innerHTML,/tgp-speed-icon rapid/,club+" rapid icon");
+    const c=await fixture(club,[]);
+    assert.equal(c.section.hidden,true,club+" hide empty arenas");
+    assert.equal(c.arenaGrid.innerHTML,"",club+" no stale card");
+    assert.match(fs.readFileSync(path.join(__dirname,"..",club,"Widget","assets","admin.js"),"utf8"),/\? 490 : 300/,club+" iframe sizing");
+  }
+  process.stdout.write("TGP and Team France arena card parity / section headings passed.\n");
+})().catch(e=>{console.error(e);process.exitCode=1;});
