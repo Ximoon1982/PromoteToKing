@@ -15,6 +15,7 @@ header('Cache-Control: no-cache, max-age=30');
 <link rel="stylesheet" href="assets/widget.css?v=<?= rawurlencode((string)($config['version'] ?? '0.2.0')) ?>">
 </head>
 <body>
+<section id="arenaShowcase" class="arena-showcase" hidden aria-label="Multi-club arenas"></section>
 <main id="tgpGrid" class="tgp-grid" aria-live="polite"></main>
 <script src="assets/widget.js?v=<?= rawurlencode((string)($config['version'] ?? '0.2.0')) ?>"></script>
 </body>
