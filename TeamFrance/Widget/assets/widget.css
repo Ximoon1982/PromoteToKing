@@ -2,13 +2,24 @@
 @media(prefers-color-scheme:light){:root{color-scheme:light;--card:rgba(255,255,255,.72);--visual:rgba(236,232,225,.62);--border:rgba(24,28,32,.16);--border-soft:rgba(24,28,32,.08);--text:#1e252c;--muted:#616a73;--gold:#915700;--green:#246f35;--red:#a33232;--chip:rgba(20,25,30,.045);--hover:rgba(0,0,0,.035);--shadow:rgba(0,0,0,.07)}}
 *{box-sizing:border-box}html,body{margin:0;min-height:0;background:transparent!important;color:var(--text);font-family:Arial,Helvetica,sans-serif}body{padding:0}.tgp-grid{display:grid;width:260px;max-width:100%;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0 auto}.tgp-card{position:relative;display:block;min-width:0;overflow:hidden;border:1px solid var(--border);border-radius:10px;background:var(--card);color:inherit;text-decoration:none;box-shadow:0 4px 12px var(--shadow);transition:transform .12s ease,border-color .12s ease}.tgp-card:hover,.tgp-card:focus-visible{transform:translateY(-1px);border-color:color-mix(in srgb,var(--gold) 48%,var(--border));outline:none}.tgp-card.league-48h{border-color:color-mix(in srgb,var(--red) 38%,var(--border))}.tgp-visual{position:relative;display:grid;place-items:center;height:82px;padding:8px;overflow:hidden;background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.055),transparent 48%),var(--visual);border-bottom:1px solid var(--border-soft)}.tgp-logo{display:block;width:65px;height:65px;object-fit:contain;object-position:center;filter:drop-shadow(0 4px 7px rgba(0,0,0,.16))}.tgp-logo-fallback{display:grid;place-items:center;width:60px;height:60px;border:1px solid var(--border);border-radius:15px;background:var(--chip);color:var(--gold);font-size:22px;font-weight:900}.tgp-badge,.tgp-priority{position:absolute;top:5px;display:inline-flex;align-items:center;max-width:calc(100% - 12px);padding:3px 6px;overflow:hidden;border:1px solid color-mix(in srgb,var(--gold) 38%,transparent);border-radius:999px;background:color-mix(in srgb,var(--card) 84%,transparent);color:var(--gold);font-size:9.5px;font-weight:900;line-height:1.05;white-space:nowrap;text-overflow:ellipsis}.tgp-badge{left:5px}.tgp-badge.friendly{border-color:color-mix(in srgb,var(--green) 38%,transparent);color:var(--green)}.tgp-priority{right:5px;border-color:color-mix(in srgb,var(--red) 42%,transparent);color:var(--red)}.tgp-card.league-48h .tgp-badge:not(.friendly){border-color:color-mix(in srgb,var(--red) 48%,transparent);background:color-mix(in srgb,var(--red) 10%,var(--card));color:var(--red)}.tgp-info{display:grid;gap:2px;padding:6px 6px 7px;text-align:center}.tgp-line{display:flex;align-items:baseline;justify-content:center;gap:4px;min-width:0;overflow:hidden;white-space:nowrap}.tgp-primary{font-size:10.8px;font-weight:900;line-height:1.25}.tgp-secondary{color:var(--muted);font-size:10px;font-weight:800;line-height:1.25}.red{color:var(--red)}.gold{color:var(--gold)}.green{color:var(--green)}.muted{color:var(--muted)}.tgp-start,.tgp-need,.tgp-time,.tgp-rating{min-width:0;overflow:hidden;text-overflow:ellipsis}.tgp-rating{color:var(--text);font-weight:900}.tgp-separator{color:var(--muted);font-weight:700}
 
-.arena-showcase{width:260px;max-width:100%;margin:0 auto 7px;display:grid;gap:5px}
-.arena-showcase[hidden]{display:none}
-.arena-heading{text-align:center;font-size:11px;line-height:1.25;font-weight:800;color:var(--gold)}
-.arena-entry{display:flex;gap:4px;align-items:center;min-width:0;padding:6px 5px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);text-decoration:none;font-size:10px;line-height:1.2}
-.arena-entry:hover,.arena-entry:focus-visible{border-color:var(--gold)}
-.arena-state,.arena-duration,.arena-control{flex:none;padding:3px 4px;border-radius:5px;background:var(--chip);color:var(--muted);white-space:nowrap;font-size:9px;font-weight:800}
-.arena-state.ongoing{color:var(--red);background:color-mix(in srgb,var(--red) 13%,transparent)}
-.arena-state:not(.ongoing){color:var(--green)}
-.arena-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800}
-@media(max-width:275px){.arena-control{display:none}}
+/* P2K Events Showcase card layout: separate arena and Daily-match sections. */
+.widget-shell{display:grid;width:260px;max-width:100%;gap:8px;margin:0 auto}
+.widget-section{display:grid;gap:5px;min-width:0}
+.widget-section[hidden]{display:none}
+.widget-section-head{display:flex;align-items:center;min-width:0;min-height:17px}
+.widget-section-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gold);font-size:13px;font-weight:900;line-height:1.2}
+.arena-showcase{margin:0}
+.arena-card .tgp-visual{height:82px}
+.tgp-speed-icon{display:block;width:59px;height:59px;color:#b7b7b7;filter:drop-shadow(0 4px 7px rgba(0,0,0,.17))}
+.tgp-speed-icon.blitz{color:#f0c419}
+.tgp-speed-icon.rapid{color:#79a65a}
+.tgp-speed-icon.bullet{color:#b39b79}
+.arena-card .tgp-badge.upcoming{border-color:color-mix(in srgb,var(--gold) 40%,transparent);color:var(--gold)}
+.arena-card .tgp-badge.registration{border-color:color-mix(in srgb,var(--green) 48%,transparent);background:color-mix(in srgb,var(--green) 10%,var(--card));color:var(--green)}
+.arena-card .tgp-badge.ongoing{border-color:color-mix(in srgb,var(--red) 48%,transparent);background:color-mix(in srgb,var(--red) 10%,var(--card));color:var(--red)}
+.arena-start-line{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.8px;font-weight:900;line-height:1.25}
+.arena-start-line.upcoming{color:var(--gold)}
+.arena-start-line.registration{color:var(--green)}
+.arena-start-line.ongoing{color:var(--red)}
+.arena-meta-line{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:10px;font-weight:800;line-height:1.25}
+.arena-meta-line strong{color:var(--text);font-weight:900}
