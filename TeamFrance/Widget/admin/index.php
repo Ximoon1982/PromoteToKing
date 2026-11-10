@@ -16,7 +16,7 @@ header('Cache-Control: no-store');
 </head>
 <body>
 <main class="admin-shell">
-<header class="admin-head"><div><h1>Match Showcase</h1><p><?= htmlspecialchars((string)($config['team_name'] ?? 'Team'), ENT_QUOTES) ?> · standalone Daily matches</p></div><a class="preview-link" href="../" target="_blank" rel="noopener">Open display</a></header>
+<header class="admin-head"><div><h1>Match Showcase</h1><p><?= htmlspecialchars((string)($config['team_name'] ?? 'Team'), ENT_QUOTES) ?> · Daily matches and arenas</p></div><a class="preview-link" href="../" target="_blank" rel="noopener">Open display</a></header>
 <section id="authPanel" class="panel"><div id="authStatus">Checking Chess.com login…</div><button id="loginButton" type="button" hidden>Log in with Chess.com</button><button id="logoutButton" type="button" class="secondary" hidden>End admin session</button></section>
 <section id="embedPanel" class="panel embed-panel" hidden>
 <h2>Embed</h2>
@@ -29,12 +29,18 @@ header('Cache-Control: no-store');
 <div id="message" class="message" aria-live="polite"></div>
 <div class="hint">The first four enabled matches below are the four public cards.</div>
 <div id="matchList" class="match-list"></div>
+<section class="arena-editor" aria-labelledby="arenaTitle">
+<h2 id="arenaTitle">Multi-club arenas</h2>
+<p class="hint">Manage upcoming and on-going arenas. Up to two enabled arenas appear above the Daily match cards. Start times use Europe/Luxembourg time; finished arenas disappear automatically.</p>
+<div id="arenaList" class="arena-list"></div>
+<button id="addArenaButton" type="button" class="secondary">Add arena</button>
+</section>
 <div class="actions"><button id="saveButton" type="button">Save configuration</button><span id="dirtyState"></span></div>
 <div class="registration-head"><div><h2>Matches currently in registration</h2><p>Loaded directly from the Chess.com club match index.</p></div><button id="refreshRegistration" type="button" class="secondary">Refresh</button></div>
 <div id="registrationStatus" class="registration-status" aria-live="polite"></div>
 <div id="registrationList" class="registration-list"></div>
 </section>
-<section class="panel preview-panel"><h2>Live 2×2 preview</h2><iframe id="preview" src="../" title="Match Showcase preview" loading="eager"></iframe></section>
+<section class="panel preview-panel"><h2>Live showcase preview</h2><iframe id="preview" src="../" title="Match Showcase preview" loading="eager"></iframe></section>
 </main>
 <script>window.TEAM_FRANCE_WIDGET_CONFIG={teamSlug:<?= json_encode((string)($config['team_slug'] ?? 'team-france')) ?>,teamName:<?= json_encode((string)($config['team_name'] ?? 'Team France')) ?>,version:<?= json_encode((string)($config['version'] ?? '0.2.0')) ?>};</script>
 <script src="../assets/admin.js?v=<?= rawurlencode((string)($config['version'] ?? '0.2.0')) ?>-tf-en2"></script>
