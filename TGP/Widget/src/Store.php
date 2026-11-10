@@ -112,7 +112,7 @@ final class Store
             $control = trim((string)($entry['timeControl'] ?? ''));
             $active = ($entry['active'] ?? false) === true;
             if (!$active && $name === '' && $link === '' && $date === '' && $time === '' && $duration === '' && $control === '') continue;
-            if ($name === '' || mb_strlen($name) > 120) throw new InvalidArgumentException('Arena name is required (maximum 120 characters).');
+            if ($name === '' || strlen($name) > 120) throw new InvalidArgumentException('Arena name is required (maximum 120 characters).');
             if (strlen($link) > 600 || !preg_match('~^https://(?:www\.)?chess\.com/(?:play/)?(?:tournament|arena|live)(?:/|\?|$)~i', $link)) throw new InvalidArgumentException('Use a Chess.com HTTPS arena link.');
             $parts = parse_url($link);
             if (!is_array($parts) || !in_array(strtolower((string)($parts['host'] ?? '')), ['chess.com', 'www.chess.com'], true) || isset($parts['user']) || isset($parts['pass']) || isset($parts['port'])) throw new InvalidArgumentException('Invalid arena URL.');
