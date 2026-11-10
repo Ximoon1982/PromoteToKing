@@ -44,7 +44,7 @@ jobs:
           PHP_CLI="$(command -v php)" bash tools/install-widget-wcgc-arenas-v2153.sh "$root"
           test "$(cat "$root/TGP/Widget/data/showcase.json")" = 'TGP live data'
           test "$(cat "$root/TeamFrance/Widget/data/showcase.json")" = 'Team France live data'
-          test -f "$root/storage/widget-wcgc-arenas-backups/"*"/TGP/Widget/api.php"
+          find "$root/storage/widget-wcgc-arenas-backups" -path '*/TGP/Widget/api.php' -type f | grep -q .
       - name: Prepare isolated widget overlay
         run: |
           set -euo pipefail
