@@ -1,0 +1,34 @@
+P2K v2.15.3 — MCA compact editor and Team France French public cards
+====================================================================
+
+This ZIP updates the existing TGP and Team France standalone widgets.
+The P2K Events Showcase and all other applications remain unchanged.
+
+Install via IONOS SSH (after uploading the ONE ZIP into your home directory):
+
+  cd ~
+  unzip -oq Widget_MCA_Modal_TeamFrance_FR_v2153.zip -d Widget_MCA_Modal_TeamFrance_FR_v2153
+  bash Widget_MCA_Modal_TeamFrance_FR_v2153/install-widget-mca-modal-fr-v2153.sh \
+    /kunden/homepages/43/d141198007/htdocs/PromoteToKing
+
+What changes:
+- Both widget admin pages: MCA compact list and Add/Edit dialog, immediate
+  saves for arena toggle/create/edit/delete, without saving unsaved Daily edits.
+- Team France public widget ONLY: French text for headings, badges, timers,
+  recruitment counts and time-control units (e.g. En cours, À venir, 2j, 1j/c).
+- TGP remains English; existing 2x2 match cards and P2K-style MCA cards remain.
+
+Data preservation:
+- The installer checks both widgets exist before changing either.
+- It keeps the live data/showcase.json, lock files and Chess.com cache intact.
+- It backs up overwritten files under
+  <site root>/storage/widget-wcgc-arenas-backups/<timestamp>-<pid>/.
+- In case of a copy error it rolls back the files already replaced.
+- This overlay is independent of P2K Release Control; it does not promote or
+  deploy any other application.
+
+After install:
+  https://www.promotetoking.org/TGP/Widget/admin/
+  https://www.promotetoking.org/TeamFrance/Widget/admin/
+
+Refresh embedded iframes (or clear the browser cache) to load v0.3.2 assets.
