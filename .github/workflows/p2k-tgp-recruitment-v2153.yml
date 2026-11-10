@@ -6,6 +6,7 @@ on:
       - 'TGP/MatchRecruitment/**'
       - 'tests/tgp_match_recruitment_policy_test.php'
       - 'tests/test_tgp_match_recruitment_isolation.py'
+      - 'tests/tgp_match_recruit_scheduler.test.cjs'
       - '.github/workflows/p2k-tgp-recruitment-v2153.yml'
   workflow_dispatch:
 
@@ -27,6 +28,7 @@ jobs:
           php tests/tgp_match_recruitment_policy_test.php
           python3 tests/test_tgp_match_recruitment_isolation.py
           node tests/recruit_match_v2_core.test.js
+          node tests/tgp_match_recruit_scheduler.test.cjs
       - name: Installer idempotence and state preservation
         run: |
           set -euo pipefail

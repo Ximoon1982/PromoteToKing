@@ -6,12 +6,18 @@
 <meta name="color-scheme" content="dark">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>The Golden Phoenix — Match Recruitment Assistant</title>
+<link rel="icon" type="image/jpeg" href="/assets/images/p2k-logo.jpg">
 <link rel="stylesheet" href="assets/css/analyze-match.css?v=2.15.3">
 <link rel="stylesheet" href="assets/css/recruit-match.css?v=2.15.3">
 <style>
 body{margin:0;background:#171513;color:#f3f0e9;font-family:system-ui,sans-serif}
 .p2k-analyzer{max-width:1150px;margin:0 auto;padding:16px}
 .p2k-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.p2k-header-logos img{width:72px;height:72px;object-fit:contain;border-radius:12px}
+.tgp-pagination{display:flex;justify-content:center;align-items:center;gap:14px;margin:14px 0;flex-wrap:wrap}
+.tgp-pagination button{padding:6px 14px;cursor:pointer}
+.tgp-pagination button:disabled{opacity:.45;cursor:default}
+#p2kMatchSummary a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 .p2k-reference-form,.p2k-settings-panel,.p2k-results,.p2k-status{margin-top:15px}
 .p2k-reference-input{flex:1;min-width:200px}
 .p2k-reference-row{display:flex;gap:10px;flex-wrap:wrap}
@@ -33,7 +39,7 @@ body{margin:0;background:#171513;color:#f3f0e9;font-family:system-ui,sans-serif}
 </head>
 <body>
 <main class="p2k-analyzer" id="p2kUpcomingAnalyzer">
-<div class="p2k-header"><h2>The Golden Phoenix — Match Recruitment Assistant</h2><span>Team: The Golden Phoenix</span></div>
+<div class="p2k-header"><h2>The Golden Phoenix — Match Recruitment Assistant</h2><div class="p2k-header-logos"><img id="p2kSelectedTeamLogo" alt="The Golden Phoenix club avatar" hidden></div></div>
 <form class="p2k-reference-form" id="p2kMatchForm">
 <label class="p2k-reference-label" for="p2kMatchReference">Chess.com team match URL or numeric ID</label>
 <div class="p2k-reference-row">

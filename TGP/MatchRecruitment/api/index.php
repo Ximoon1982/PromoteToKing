@@ -84,7 +84,7 @@ function recruitment_batch():never {
         $url=is_array($item)?trim((string)($item['url']??'')):'';
         $p=parse_url($url);
         if(!is_array($p)||($p['scheme']??'')!=='https'||($p['host']??'')!=='api.chess.com'||isset($p['user'])||isset($p['pass'])||isset($p['port'])||isset($p['query'])||isset($p['fragment'])||
-        !preg_match('~^/pub/(?:match/[0-9]{1,18}|player/[a-zA-Z0-9_-]{1,64}(?:/(?:stats|clubs))?)$~D',(string)($p['path']??'')))
+        !preg_match('~^/pub/(?:club/the-golden-phoenix|match/[0-9]{1,18}|player/[a-zA-Z0-9_-]{1,64}(?:/(?:stats|clubs))?)$~D',(string)($p['path']??'')))
             recruitment_reply(400,['ok'=>false,'error'=>['message'=>'Only approved Chess.com recruitment API endpoints are allowed.']]);
         $requests[]=['id'=>(string)$i,'url'=>$url];
     }
