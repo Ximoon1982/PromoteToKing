@@ -24,6 +24,24 @@ function urgency(epoch){const seconds=Number(epoch);if(!Number.isFinite(seconds)
 function initials(name){return(String(name||"?").trim().split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]||"").join("")||"?").toUpperCase()}
 function needClass(n){return!Number.isFinite(Number(n))?"gold":Number(n)<=0?"green":Number(n)>=8?"red":"gold"}
 function card(match){const rec=recruitment(match),count=Number.isFinite(Number(rec?.count))?Number(rec.count):null,need=count===null?"Need ?":count===0?"Need ✓":`Need ${count}`,u=urgency(match.startTime),badge=match.category==="league"?((match.leagueAcronyms||[]).join("/")||"League"):"Friendly",opponent=match.opponentName||"Opponent",logo=match.opponentLogo?`<img class="tgp-logo" src="${esc(match.opponentLogo)}" alt="${esc(opponent)} club logo" loading="lazy" referrerpolicy="no-referrer">`:`<div class="tgp-logo-fallback" aria-hidden="true">${esc(initials(opponent))}</div>`,rating=ratingLabel(match),time=compactTime(match.time_control),timeFull=fullTime(match.time_control),startMs=Number(match.startTime)*1000,league48=match.category==="league"&&Number.isFinite(startMs)&&startMs>=Date.now()&&startMs-Date.now()<=48*3600000,startClass=league48?"red":u.level==="urgent"?"red":u.level==="soon"?"gold":"muted",title=`${opponent} — ${match.name||`Match #${match.matchId}`} · ${u.title} · ${rating} · ${timeFull} · ${need}`;return`<a class="tgp-card${league48?" league-48h":""}" href="${esc(match.url)}" target="_blank" rel="noopener noreferrer" title="${esc(title)}" aria-label="${esc(title)}"><div class="tgp-visual">${logo}<span class="tgp-badge${match.category==="friendly"?" friendly":""}">${esc(badge)}</span>${match.urgent?'<span class="tgp-priority">Priority</span>':""}</div><div class="tgp-info"><div class="tgp-line tgp-primary"><span class="tgp-start ${startClass}">${esc(u.label)}</span><span class="tgp-separator">·</span><span class="tgp-need ${needClass(count)}">${esc(need)}</span></div><div class="tgp-line tgp-secondary"><span class="tgp-time" title="${esc(timeFull)}">${esc(time)}</span><span class="tgp-separator">·</span><span class="tgp-rating">${esc(rating)}</span></div></div></a>`}
-async function load(){try{const r=await fetch(`api.php?action=cards&_=${Date.now()}`,{cache:"no-store",credentials:"same-origin",headers:{Accept:"application/json"}}),p=await r.json();if(!r.ok||p?.ok===false)throw Error(p?.error?.message||`HTTP ${r.status}`);const cards=Array.isArray(p.cards)?p.cards:[];grid.innerHTML=cards.map(card).join("")}catch(error){console.error("TGP Match Showcase",error);grid.replaceChildren()}}
+
+const arenaHost=document.getElementById("arenaShowcase");
+function renderArenas(arenas){
+ if(!arenaHost)return;
+ const now=Date.now();
+ const active=(Array.isArray(arenas)?arenas:[]).filter(a=>a.active===true&&a.name&&a.link&&Date.parse(a.endAt)>now).slice(0,2);
+ if(!active.length){arenaHost.hidden=true;arenaHost.replaceChildren();return}
+ arenaHost.hidden=false;
+ const rows=active.map(a=>{
+   const start=Date.parse(a.startAt),ongoing=Number.isFinite(start)&&start<=now;
+   const status=ongoing?"On-going":"Upcoming";
+   const when=Number.isFinite(start)?new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Luxembourg",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(start)):"";
+   const title=`${a.name} · ${status} · ${when} · ${a.duration} · ${a.timeControl}`;
+   return `<a class="arena-entry" href="${esc(a.link)}" target="_blank" rel="noopener noreferrer" title="${esc(title)}"><span class="arena-state ${ongoing?"ongoing":""}">${status}</span><span class="arena-name">${esc(a.name)}</span><span class="arena-duration">${esc(a.duration)}</span><span class="arena-control">${esc(a.timeControl)}</span></a>`;
+ });
+ arenaHost.innerHTML='<div class="arena-heading">⚔️ Join multi-club arenas ⚔️</div>'+rows.join("");
+}
+
+async function load(){try{const r=await fetch(`api.php?action=cards&_=${Date.now()}`,{cache:"no-store",credentials:"same-origin",headers:{Accept:"application/json"}}),p=await r.json();if(!r.ok||p?.ok===false)throw Error(p?.error?.message||`HTTP ${r.status}`);const cards=Array.isArray(p.cards)?p.cards:[];grid.innerHTML=cards.map(card).join("");renderArenas(p.arenas)}catch(error){console.error("TGP Match Showcase",error);grid.replaceChildren();renderArenas([])}}
 void load();window.setInterval(load,60000);
 })();
