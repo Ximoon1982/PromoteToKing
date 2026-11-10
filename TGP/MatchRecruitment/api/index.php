@@ -98,7 +98,7 @@ try {
     } catch (Throwable $e) {
         error_log('TGP recruitment membership API: '.$e->getMessage());
         $cached = recruitment_valid_snapshot($file);
-        $warning = 'The current The Golden Phoenix membership list could not be retrieved from Chess.com. To obtain an updated member list, configure the club membership list as Public on Chess.com while the recruitment analysis is in progress.';
+        $warning = 'The Golden Phoenix membership list could not be retrieved from Chess.com. To obtain an updated member list, configure the club membership list as Public on Chess.com while the recruitment analysis is in progress.';
         if ($cached !== null) recruitment_reply(200,[
             'ok'=>true,'source'=>'fallback','snapshotAt'=>$cached['fetchedAt'],
             'members'=>$cached['members'],'count'=>$cached['memberCount'],'warning'=>$warning.' Using the last saved roster from '.$cached['fetchedAt'].' (UTC). All potentially eligible players will have their current TGP membership rechecked.'
