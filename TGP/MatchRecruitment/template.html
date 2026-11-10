@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+<title>The Golden Phoenix — Match Recruitment Assistant</title>
+<link rel="stylesheet" href="assets/css/analyze-match.css?v=2.15.3">
+<link rel="stylesheet" href="assets/css/recruit-match.css?v=2.15.3">
+<style>
+body{margin:0;background:#171513;color:#f3f0e9;font-family:system-ui,sans-serif}
+.p2k-analyzer{max-width:1150px;margin:0 auto;padding:16px}
+.p2k-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.p2k-reference-form,.p2k-settings-panel,.p2k-results,.p2k-status{margin-top:15px}
+.p2k-reference-input{flex:1;min-width:200px}
+.p2k-reference-row{display:flex;gap:10px;flex-wrap:wrap}
+.p2k-warning{padding:12px;border:1px solid #b99653;border-radius:8px;background:rgba(185,150,83,.12)}
+.p2k-error{color:#ffc9c9}
+.p2k-success{color:#b8f3c1}
+.p2k-results-tools{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.p2k-recruit-table-wrap{overflow:auto;max-width:100%}
+.p2k-recruit-table{width:100%;border-collapse:collapse;white-space:nowrap}
+.p2k-recruit-table th,.p2k-recruit-table td{padding:8px;text-align:left;border-bottom:1px solid #49433e}
+.p2k-recruit-table th[data-sort]{cursor:pointer}
+.p2k-status-row{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.p2k-progress-track{background:#403b35;height:9px;border-radius:20px;overflow:hidden}
+.p2k-progress-bar{height:100%;width:0;background:#d1ab61;transition:width .2s}
+.p2k-funnel{margin-top:8px}
+#tgpRosterNotice[hidden],#p2kSettingsPanel[hidden],#p2kProgressDetails[hidden],#p2kFunnel[hidden]{display:none}
+</style>
+</head>
+<body>
+<main class="p2k-analyzer" id="p2kUpcomingAnalyzer">
+<div class="p2k-header"><h2>The Golden Phoenix — Match Recruitment Assistant</h2><span>Team: The Golden Phoenix</span></div>
+<form class="p2k-reference-form" id="p2kMatchForm">
+<label class="p2k-reference-label" for="p2kMatchReference">Chess.com team match URL or numeric ID</label>
+<div class="p2k-reference-row">
+<input autocomplete="off" class="p2k-reference-input" id="p2kMatchReference" placeholder="Enter TGP match number or URL" required>
+<button class="p2k-main-button" id="p2kLoadButton" type="submit">Load match</button>
+</div>
+<div class="p2k-reference-help">Only matches involving The Golden Phoenix are accepted. Recruitment always uses the TGP side.</div>
+</form>
+<section class="p2k-settings-panel" hidden id="p2kSettingsPanel">
+<div class="p2k-recruit-intro" id="p2kMatchSummary"></div>
+<form id="p2kRecruitmentForm">
+<div class="p2k-filter-title">Eligibility filters</div>
+<div class="p2k-recruit-method"><strong>Chess.com roster and live verification.</strong> Candidates come from TGP's member list, not a P2K database. Rating, current club membership, registration, activity and timeout are verified through Chess.com.</div>
+<div class="p2k-recruit-grid">
+<label class="p2k-recruit-field">Online within (days)<input class="p2k-number-input" id="p2kOnlineDays" type="number" min="0.04" max="365" step="0.04" value="1"></label>
+<label class="p2k-recruit-field">Maximum timeout rate (%)<input class="p2k-number-input" id="p2kTimeoutRate" type="number" min="0" max="100" step="0.1" value="5"></label>
+</div>
+<div class="p2k-scan-actions"><button class="p2k-main-button" id="p2kScanButton" type="submit">Find eligible players</button></div>
+</form>
+</section>
+<section class="p2k-warning" id="tgpRosterNotice" role="status" aria-live="polite" hidden></section>
+<div class="p2k-status" id="p2kStatus" role="status" aria-live="polite" style="display:none">
+<div class="p2k-status-row"><div id="p2kStatusText"></div><div id="p2kProcessingActions" style="display:none"><button type="button" class="p2k-cancel-button" id="p2kCancelButton">Cancel</button></div></div>
+<div class="p2k-progress-track" id="p2kProgressTrack" style="display:none"><div class="p2k-progress-bar" id="p2kProgressBar"></div></div>
+<div class="p2k-progress-details" id="p2kProgressDetails" hidden></div>
+<div class="p2k-funnel" id="p2kFunnel" hidden></div>
+</div>
+<section class="p2k-results" id="p2kResults"><div class="p2k-empty-prompt">Enter a TGP match number or URL to start a recruitment analysis.</div></section>
+</main>
+<script src="assets/js/recruitment-core.js?v=2.15.3"></script>
+<script src="assets/js/recruitment.js?v=2.15.3"></script>
+</body></html>

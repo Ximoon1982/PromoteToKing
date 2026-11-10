@@ -1,0 +1,57 @@
+name: TGP standalone recruitment v2.15.3
+on:
+  push:
+    branches: [release/v2.15.3]
+    paths:
+      - 'TGP/MatchRecruitment/**'
+      - 'tests/tgp_match_recruitment_policy_test.php'
+      - 'tests/test_tgp_match_recruitment_isolation.py'
+      - '.github/workflows/p2k-tgp-recruitment-v2153.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PHP and JavaScript
+        run: |
+          find TGP/MatchRecruitment -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          find TGP/MatchRecruitment -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          bash -n TGP/MatchRecruitment/install-standalone.sh
+      - name: Validate club matching and isolation
+        run: |
+          php tests/tgp_match_recruitment_policy_test.php
+          python3 tests/test_tgp_match_recruitment_isolation.py
+          node tests/recruit_match_v2_core.test.js
+      - name: Installer idempotence and state preservation
+        run: |
+          set -euo pipefail
+          root="$(mktemp -d)"
+          mkdir -p "$root/server/team-points/src" "$root/TGP/MatchAnalyzer" "$root/TGP/Widget" "$root/TGP/MatchRecruitment/data"
+          printf 'retained' > "$root/TGP/Widget/marker.txt"
+          printf 'retained-analyzer' > "$root/TGP/MatchAnalyzer/marker.txt"
+          printf '{"schemaVersion":1,"clubSlug":"the-golden-phoenix","fetchedAt":"2026-11-09T10:30:00Z","memberCount":1,"members":["abc"]}' > "$root/TGP/MatchRecruitment/data/members-latest.json"
+          PHP_CLI="$(command -v php)" bash TGP/MatchRecruitment/install-standalone.sh "$root"
+          PHP_CLI="$(command -v php)" bash TGP/MatchRecruitment/install-standalone.sh "$root"
+          grep -q '2026-11-09T10:30:00Z' "$root/TGP/MatchRecruitment/data/members-latest.json"
+          test "$(cat "$root/TGP/Widget/marker.txt")" = retained
+          test "$(cat "$root/TGP/MatchAnalyzer/marker.txt")" = retained-analyzer
+          test -f "$root/TGP/MatchRecruitment/compat/PreviewIsolation.php"
+          test -f "$root/TGP/MatchRecruitment/api/index.php"
+          test -f "$root/TGP/MatchRecruitment/data/.htaccess"
+          test -f "$root/storage/tgp-match-recruitment-backups/"*"/api/index.php"
+      - name: Build standalone install ZIP
+        run: |
+          mkdir -p dist
+          zip -X -qr dist/P2K_v2.15.3_TGP_MatchRecruitment_STANDALONE.zip TGP/MatchRecruitment
+          unzip -t dist/P2K_v2.15.3_TGP_MatchRecruitment_STANDALONE.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tgp-match-recruitment-v2153
+          path: dist/P2K_v2.15.3_TGP_MatchRecruitment_STANDALONE.zip
+          retention-days: 30
+          if-no-files-found: error

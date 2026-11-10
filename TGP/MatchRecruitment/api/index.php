@@ -1,0 +1,111 @@
+<?php
+declare(strict_types=1);
+require_once dirname(__DIR__) . '/auth.php';
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, private');
+header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: same-origin');
+header('X-Frame-Options: SAMEORIGIN');
+
+function recruitment_reply(int $code, array $data): never {
+    http_response_code($code);
+    echo json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+    exit;
+}
+function recruitment_normalize_members(array $payload): array {
+    $names = [];
+    foreach (['weekly', 'monthly', 'all_time'] as $bucket) {
+        if (!isset($payload[$bucket]) || !is_array($payload[$bucket])) {
+            throw new RuntimeException('Chess.com returned an incomplete membership list.');
+        }
+        foreach ($payload[$bucket] as $item) {
+            $username = is_array($item) ? ($item['username'] ?? null) : $item;
+            if (!is_string($username) || !preg_match('/^[a-z0-9_-]{1,64}$/iD', $username)) {
+                throw new RuntimeException('Chess.com returned a malformed membership entry.');
+            }
+            $names[strtolower($username)] = $username;
+        }
+    }
+    if (!$names) throw new RuntimeException('Chess.com returned an empty membership list; refusing to replace the saved roster.');
+    natcasesort($names);
+    return array_values($names);
+}
+function recruitment_live_roster(): array {
+    $url = 'https://api.chess.com/pub/club/the-golden-phoenix/members';
+    $ch = curl_init($url);
+    if ($ch === false) throw new RuntimeException('Cannot initialize Chess.com roster request.');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 6,
+        CURLOPT_TIMEOUT => 25,
+        CURLOPT_FOLLOWLOCATION => false,
+        CURLOPT_ENCODING => '',
+        CURLOPT_HTTPHEADER => ['Accept: application/json', 'User-Agent: TGP-MatchRecruitment/2.15.3 (https://www.promotetoking.org/)']
+    ]);
+    $raw = curl_exec($ch);
+    $http = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+    if (!is_string($raw) || $http !== 200 || strlen($raw) > 8000000) {
+        throw new RuntimeException('Chess.com membership API is unavailable (HTTP ' . $http . ').');
+    }
+    $payload = json_decode($raw, true);
+    if (!is_array($payload)) throw new RuntimeException('Chess.com returned invalid membership JSON.');
+    $members = recruitment_normalize_members($payload);
+    return ['schemaVersion'=>1, 'clubSlug'=>'the-golden-phoenix',
+        'fetchedAt'=>gmdate(DATE_ATOM), 'memberCount'=>count($members), 'members'=>$members];
+}
+function recruitment_valid_snapshot(string $file): ?array {
+    if (!is_file($file)) return null;
+    $data = json_decode((string)@file_get_contents($file), true);
+    if (!is_array($data) || ($data['schemaVersion'] ?? null)!==1 ||
+        ($data['clubSlug'] ?? '')!=='the-golden-phoenix' ||
+        empty($data['fetchedAt']) || !is_string($data['fetchedAt']) ||
+        strtotime($data['fetchedAt'])===false || !is_array($data['members'] ?? null)) return null;
+    try { $members = recruitment_normalize_members(['weekly'=>$data['members'],'monthly'=>[],'all_time'=>[]]); }
+    catch (Throwable) { return null; }
+    if (count($members)!==(int)($data['memberCount']??-1)) return null;
+    return $data;
+}
+function recruitment_save_snapshot(string $dir, array $data): void {
+    if (!is_dir($dir) && !@mkdir($dir, 0770, true) && !is_dir($dir))
+        throw new RuntimeException('Unable to create the private membership cache directory.');
+    $tmp = tempnam($dir, '.members-');
+    if ($tmp === false) throw new RuntimeException('Unable to save membership snapshot.');
+    try {
+        $json = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        if (file_put_contents($tmp, $json, LOCK_EX)===false || !@rename($tmp, $dir.'/members-latest.json'))
+            throw new RuntimeException('Unable to commit membership snapshot.');
+        @chmod($dir.'/members-latest.json', 0660);
+    } finally { if (is_file($tmp)) @unlink($tmp); }
+}
+
+$access = tgp_authorize();
+if (!$access['ok']) recruitment_reply((int)$access['status'], ['ok'=>false,'error'=>['code'=>$access['code'], 'message'=>'The Golden Phoenix administrator authorization is required.']]);
+if (($_SERVER['REQUEST_METHOD']??'GET')!=='GET') recruitment_reply(405, ['ok'=>false,'error'=>['message'=>'Method not allowed.']]);
+if (($_GET['action']??'roster')!=='roster') recruitment_reply(404, ['ok'=>false,'error'=>['message'=>'Unknown action.']]);
+if (!function_exists('curl_init')) recruitment_reply(503, ['ok'=>false,'error'=>['message'=>'PHP cURL is required.']]);
+$dir = dirname(__DIR__).'/data';
+$file = $dir.'/members-latest.json';
+if (!is_dir($dir) && !@mkdir($dir,0770,true) && !is_dir($dir)) recruitment_reply(503,['ok'=>false,'error'=>['message'=>'Membership data directory is unavailable.']]);
+$lock = @fopen($dir.'/members.lock','c+');
+if (!$lock || !flock($lock,LOCK_EX)) recruitment_reply(503,['ok'=>false,'error'=>['message'=>'Membership cache is temporarily unavailable.']]);
+try {
+    // A successful request ALWAYS replaces the saved roster. A failed one never does.
+    try {
+        $data = recruitment_live_roster();
+        recruitment_save_snapshot($dir,$data);
+        recruitment_reply(200,['ok'=>true,'source'=>'live','snapshotAt'=>$data['fetchedAt'],'members'=>$data['members'],'count'=>$data['memberCount']]);
+    } catch (Throwable $e) {
+        error_log('TGP recruitment membership API: '.$e->getMessage());
+        $cached = recruitment_valid_snapshot($file);
+        $warning = 'The current The Golden Phoenix membership list could not be retrieved from Chess.com. To obtain an updated member list, configure the club membership list as Public on Chess.com while the recruitment analysis is in progress.';
+        if ($cached !== null) recruitment_reply(200,[
+            'ok'=>true,'source'=>'fallback','snapshotAt'=>$cached['fetchedAt'],
+            'members'=>$cached['members'],'count'=>$cached['memberCount'],'warning'=>$warning.' Using the last saved roster from '.$cached['fetchedAt'].' (UTC). All potentially eligible players will have their current TGP membership rechecked.'
+        ]);
+        recruitment_reply(503,['ok'=>false,'error'=>['code'=>'ROSTER_UNAVAILABLE','message'=>$warning.' No previously saved roster exists, so recruitment cannot proceed.']]);
+    }
+} finally {
+    flock($lock, LOCK_UN);
+    fclose($lock);
+}
