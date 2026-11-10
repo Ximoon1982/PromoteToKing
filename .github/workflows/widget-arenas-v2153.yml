@@ -34,17 +34,21 @@ jobs:
         run: |
           set -euo pipefail
           root="$(mktemp -d)"
-          mkdir -p "$root/server/team-points/src" "$root/TGP/Widget/data" "$root/TeamFrance/Widget/data"
+          pkg="$(mktemp -d)"
+          mkdir -p "$root/server/team-points/src" "$root/TGP/Widget/data" "$root/TeamFrance/Widget/data" "$pkg/TGP" "$pkg/TeamFrance"
+          cp -a TGP/Widget "$pkg/TGP/"
+          cp -a TeamFrance/Widget "$pkg/TeamFrance/"
+          cp tools/install-widget-wcgc-arenas-v2153.sh "$pkg/"
           touch "$root/server/team-points/src/OAuthSession.php"
           cp -a TGP/Widget/. "$root/TGP/Widget/"
           cp -a TeamFrance/Widget/. "$root/TeamFrance/Widget/"
           printf 'TGP live data' > "$root/TGP/Widget/data/showcase.json"
           printf 'Team France live data' > "$root/TeamFrance/Widget/data/showcase.json"
-          PHP_CLI="$(command -v php)" bash tools/install-widget-wcgc-arenas-v2153.sh "$root"
-          PHP_CLI="$(command -v php)" bash tools/install-widget-wcgc-arenas-v2153.sh "$root"
+          PHP_CLI="$(command -v php)" bash "$pkg/install-widget-wcgc-arenas-v2153.sh" "$root"
+          PHP_CLI="$(command -v php)" bash "$pkg/install-widget-wcgc-arenas-v2153.sh" "$root"
           test "$(cat "$root/TGP/Widget/data/showcase.json")" = 'TGP live data'
           test "$(cat "$root/TeamFrance/Widget/data/showcase.json")" = 'Team France live data'
-          find "$root/storage/widget-wcgc-arenas-backups" -path '*/TGP/Widget/api.php' -type f | grep -q .
+          test "$(find "$root/storage/widget-wcgc-arenas-backups" -path '*/TGP/Widget/api.php' -type f | wc -l)" -ge 1
       - name: Prepare isolated widget overlay
         run: |
           set -euo pipefail
