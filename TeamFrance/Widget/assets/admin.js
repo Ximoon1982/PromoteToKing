@@ -161,7 +161,7 @@
     const url = publicWidgetUrl();
     const title = `${String(CFG.teamName || "Team")} match showcase`;
     displayUrl.value = url;
-    const height = arenas.some(a => a.active && a.name && a.link) ? 460 : 260;
+    const height = arenas.some(a => a.active && a.name && a.link) ? 490 : 300;
     iframeHtml.value = `<iframe src="${url}" width="260" height="${height}" style="border:0;overflow:hidden" scrolling="no" loading="lazy" title="${title.replace(/\"/g, "&quot;")}"></iframe>`;
   }
 
