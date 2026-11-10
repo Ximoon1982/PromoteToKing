@@ -161,7 +161,7 @@
     const url = publicWidgetUrl();
     const title = `${String(CFG.teamName || "Team")} match showcase`;
     displayUrl.value = url;
-    iframeHtml.value = `<iframe src="${url}" width="260" height="260" style="border:0;overflow:hidden" scrolling="no" loading="lazy" title="${title.replace(/\"/g, "&quot;")}"></iframe>`;
+    iframeHtml.value = `<iframe src="${url}" width="260" height="460" style="border:0;overflow:hidden" scrolling="no" loading="lazy" title="${title.replace(/\"/g, "&quot;")}"></iframe>`;
   }
 
   async function copyField(targetId) {
