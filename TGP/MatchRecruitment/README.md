@@ -11,10 +11,10 @@ Installer: `bash TGP/MatchRecruitment/install-standalone.sh /kunden/homepages/43
 - The recruitment core and visual style are copied from P2K. Player data comes directly from Chess.com in the browser.
 - The same player-clubs response verifies both continued TGP membership and nonmembership in the opponent club.
 - Unverified players are excluded from eligible CSV.
-- A four-worker concurrency limit bounds browser-side Chess.com calls.
+- Adaptive candidate scheduling with a two-POST bound, a short batch collection window and server-authoritative rate limiting bounds Chess.com traffic.
 
 ## Member roster and fallback
-Private snapshot: `data/members-latest.json`, containing UTC retrieval timestamp and normalized usernames.
+Private snapshot: `data/members-latest.json`, containing UTC retrieval timestamp and normalized member entries with Chess.com club joined timestamps. Legacy username-only snapshots remain readable, with unknown joined dates left blank.
 Successful full roster retrieval atomically replaces the saved snapshot. An invalid/partial/failed call never overwrites it.
 If a saved snapshot exists, the visible warning includes its timestamp and explains that the member list must be configured Public on Chess.com while the analysis is in progress.
 Without a valid snapshot, analysis fails and displays the same visibility guidance.
@@ -40,3 +40,11 @@ The installer copies only this application's source, preserves runtime `data/`, 
 - Match name becomes an external Chess.com match link when resolved.
 - Eligible player table is globally searchable and sortable, then paginated at **50 rows per page**, with navigation. Download CSV still includes **all** eligible players, not only the current page, and is never persisted.
 - No changes to P2K Core/Analytics databases, existing Match Analyzer, Widget, global routing or Release Control.
+
+## Recruitment results and CSV fields
+
+- Columns: Username, Name (Chess.com profile, or blank), Rating (match Daily category), Last online (UTC), Joined TGP (UTC), Max rating (same Daily category `best.rating`, blank if absent), Timeout (%).
+- Paginated at 50 entries; sorting and searching apply across the full result.
+- Download-only CSV contains username, name, profile_url, rating, last_online, joined_tgp, max_rating, timeout_rate, last_online_age_hours and match context. Previous rating_category/rating_updated_at/current_match_load fields are removed.
+- The browser coalesces frequent completion events into ~120ms progress updates; the event log remains folded by default. Gateway batching collects pending requests for a short 28ms window, keeps up to two POSTs active, and does not change the shared rate coordinator.
+- Existing v1 saved-roster usernames remain valid; joined timestamps are available only after a successful fresh roster fetch.

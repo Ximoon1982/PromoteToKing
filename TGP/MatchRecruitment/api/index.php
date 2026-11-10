@@ -23,23 +23,29 @@ function recruitment_normalize_members(array $payload): array {
             if (!is_string($username) || !preg_match('/^[a-z0-9_-]{1,64}$/iD', $username)) {
                 throw new RuntimeException('Chess.com returned a malformed membership entry.');
             }
-            $names[strtolower($username)] = $username;
+            $joined = is_array($item) ? ($item['joined'] ?? null) : null;
+            $joined = is_numeric($joined) && (int)$joined > 0 ? (int)$joined : null;
+            $lookup = strtolower($username);
+            // Preserve join date across all Chess.com membership activity buckets.
+            $previous = $names[$lookup]['joined'] ?? null;
+            $names[$lookup] = ['username'=>$username, 'joined'=>$joined ?? $previous];
         }
     }
     if (!$names) throw new RuntimeException('Chess.com returned an empty membership list; refusing to replace the saved roster.');
-    natcasesort($names);
+    ksort($names, SORT_NATURAL | SORT_FLAG_CASE);
     return array_values($names);
 }
 function recruitment_valid_snapshot(string $file): ?array {
     if (!is_file($file)) return null;
     $data = json_decode((string)@file_get_contents($file), true);
-    if (!is_array($data) || ($data['schemaVersion'] ?? null)!==1 ||
+    if (!is_array($data) || !in_array(($data['schemaVersion'] ?? null), [1,2], true) ||
         ($data['clubSlug'] ?? '')!=='the-golden-phoenix' ||
         empty($data['fetchedAt']) || !is_string($data['fetchedAt']) ||
         strtotime($data['fetchedAt'])===false || !is_array($data['members'] ?? null)) return null;
     try { $members = recruitment_normalize_members(['weekly'=>$data['members'],'monthly'=>[],'all_time'=>[]]); }
     catch (Throwable) { return null; }
     if (count($members)!==(int)($data['memberCount']??-1)) return null;
+    $data['members'] = $members; // Normalize legacy string-only snapshots safely.
     return $data;
 }
 function recruitment_save_snapshot(string $dir, array $data): void {
@@ -66,7 +72,7 @@ function recruitment_live_bearer_roster():array {
     $item=$r['results'][0]??[];$status=(int)($item['status']??0);
     if($status!==200||!is_array($item['json']??null))throw new RuntimeException('Chess.com member roster request failed (HTTP '.$status.').');
     $members=recruitment_normalize_members($item['json']);
-    return ['schemaVersion'=>1,'clubSlug'=>'the-golden-phoenix','fetchedAt'=>gmdate(DATE_ATOM),'memberCount'=>count($members),'members'=>$members];
+    return ['schemaVersion'=>2,'clubSlug'=>'the-golden-phoenix','fetchedAt'=>gmdate(DATE_ATOM),'memberCount'=>count($members),'members'=>$members];
 }
 function recruitment_batch():never {
     $access=tgp_authorize();

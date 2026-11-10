@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; object-src 'none'; base-uri 'self'; form-action 'self'">
-<title>The Golden Phoenix — Match Recruitment Assistant</title>
+<title>The Golden Phoenix Match Recruitment Assistant</title>
 <link rel="icon" type="image/jpeg" href="/assets/images/p2k-logo.jpg">
 <link rel="stylesheet" href="assets/css/analyze-match.css?v=2.15.3">
 <link rel="stylesheet" href="assets/css/recruit-match.css?v=2.15.3">
@@ -15,7 +15,7 @@ body{margin:0;background:#171513;color:#f3f0e9;font-family:system-ui,sans-serif}
 .p2k-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .p2k-header-logos img{width:72px;height:72px;object-fit:contain;border-radius:12px}
 .tgp-pagination{display:flex;justify-content:center;align-items:center;gap:14px;margin:14px 0;flex-wrap:wrap}
-.tgp-pagination button{padding:6px 14px;cursor:pointer}
+.tgp-pagination .p2k-cancel-button{min-width:100px}
 .tgp-pagination button:disabled{opacity:.45;cursor:default}
 #p2kMatchSummary a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 .p2k-reference-form,.p2k-settings-panel,.p2k-results,.p2k-status{margin-top:15px}
@@ -39,7 +39,7 @@ body{margin:0;background:#171513;color:#f3f0e9;font-family:system-ui,sans-serif}
 </head>
 <body>
 <main class="p2k-analyzer" id="p2kUpcomingAnalyzer">
-<div class="p2k-header"><h2>The Golden Phoenix — Match Recruitment Assistant</h2><div class="p2k-header-logos"><img id="p2kSelectedTeamLogo" alt="The Golden Phoenix club avatar" hidden></div></div>
+<div class="p2k-header"><h2>The Golden Phoenix Match Recruitment Assistant</h2><div class="p2k-header-logos"><img id="p2kSelectedTeamLogo" alt="The Golden Phoenix club avatar" hidden></div></div>
 <form class="p2k-reference-form" id="p2kMatchForm">
 <label class="p2k-reference-label" for="p2kMatchReference">Chess.com team match URL or numeric ID</label>
 <div class="p2k-reference-row">
@@ -52,7 +52,7 @@ body{margin:0;background:#171513;color:#f3f0e9;font-family:system-ui,sans-serif}
 <div class="p2k-recruit-intro" id="p2kMatchSummary"></div>
 <form id="p2kRecruitmentForm">
 <div class="p2k-filter-title">Eligibility filters</div>
-<div class="p2k-recruit-method"><strong>Chess.com roster and live verification.</strong> Candidates come from TGP's member list, not a P2K database. Rating, current club membership, registration, activity and timeout are verified through Chess.com.</div>
+<div class="p2k-recruit-method"><strong>Chess.com roster and live verification.</strong> Candidates come from TGP's member list. Rating, current club membership, registration, activity and timeout are verified through Chess.com.</div>
 <div class="p2k-recruit-grid">
 <label class="p2k-recruit-field">Online within (days)<input class="p2k-number-input" id="p2kOnlineDays" type="number" min="0.04" max="365" step="0.04" value="1"></label>
 <label class="p2k-recruit-field">Maximum timeout rate (%)<input class="p2k-number-input" id="p2kTimeoutRate" type="number" min="0" max="100" step="0.1" value="5"></label>
