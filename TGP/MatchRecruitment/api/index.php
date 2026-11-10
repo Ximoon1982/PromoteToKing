@@ -30,30 +30,6 @@ function recruitment_normalize_members(array $payload): array {
     natcasesort($names);
     return array_values($names);
 }
-function recruitment_live_roster(): array {
-    $url = 'https://api.chess.com/pub/club/the-golden-phoenix/members';
-    $ch = curl_init($url);
-    if ($ch === false) throw new RuntimeException('Cannot initialize Chess.com roster request.');
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_CONNECTTIMEOUT => 6,
-        CURLOPT_TIMEOUT => 25,
-        CURLOPT_FOLLOWLOCATION => false,
-        CURLOPT_ENCODING => '',
-        CURLOPT_HTTPHEADER => ['Accept: application/json', 'User-Agent: TGP-MatchRecruitment/2.15.3 (https://www.promotetoking.org/)']
-    ]);
-    $raw = curl_exec($ch);
-    $http = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-    curl_close($ch);
-    if (!is_string($raw) || $http !== 200 || strlen($raw) > 8000000) {
-        throw new RuntimeException('Chess.com membership API is unavailable (HTTP ' . $http . ').');
-    }
-    $payload = json_decode($raw, true);
-    if (!is_array($payload)) throw new RuntimeException('Chess.com returned invalid membership JSON.');
-    $members = recruitment_normalize_members($payload);
-    return ['schemaVersion'=>1, 'clubSlug'=>'the-golden-phoenix',
-        'fetchedAt'=>gmdate(DATE_ATOM), 'memberCount'=>count($members), 'members'=>$members];
-}
 function recruitment_valid_snapshot(string $file): ?array {
     if (!is_file($file)) return null;
     $data = json_decode((string)@file_get_contents($file), true);
