@@ -1,4 +1,4 @@
-The Golden Phoenix Match Showcase v0.2.0
+The Golden Phoenix Match Showcase v0.3.0
 
 Standalone location:
   /TGP/Widget/
@@ -11,14 +11,14 @@ Administration:
 
 Scope
 -----
-- Public output is only the 2x2 Daily-match card grid.
+- Public output retains the 2x2 Daily-match card grid, with an optional compact arena panel above it.
 - The first four enabled configured matches are displayed.
-- No arena support, no League/Friendly selector, no heading and no trailing button.
-- Persistent application state is data/showcase.json. No SQL/P2K data store is used.
+- Up to two active upcoming/on-going arenas are displayed above the cards; completed arenas expire automatically. No League/Friendly selector or trailing button.
+- Arenas are configured by club administrators (name, Chess.com link, Luxembourg-local start date/time, duration, time control, enabled flag).\n- WCGC fixtures are recognized as league matches.\n- Persistent application state is data/showcase.json. No SQL/P2K data store is used.
 - P2K is used only for the existing Chess.com OAuth identity assertion.
 - Admin authorization is checked against the configured Chess.com club slug.
 
-v0.2.0 admin additions
+v0.3.0 admin additions
 ----------------------
 - Registration chooser loaded from one Chess.com club match-index request:
     https://api.chess.com/pub/club/the-golden-phoenix/matches
@@ -26,7 +26,7 @@ v0.2.0 admin additions
 - Each registration-row has an Add button.
 - Save validation first uses the same club match index and only falls back to match detail for an id missing from that index.
 - Copy-ready public card URL and iframe HTML are shown at the top of the admin page.
-- Default iframe size is 260 x 260 px, matching the 2x2 card surface.
+- Suggested iframe size is 260 x 460 px, allowing for optional arena rows above the 2x2 card surface.
 
 Install
 -------
