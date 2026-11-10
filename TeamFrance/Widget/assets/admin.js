@@ -44,7 +44,7 @@
 
   function setDirty(value) {
     dirty = Boolean(value);
-    dirtyState.textContent = dirty ? "Unsaved changes" : "Saved";
+    dirtyState.textContent = dirty ? "Modifications non enregistrées" : "Saved";
     saveButton.disabled = !dirty;
   }
 
@@ -124,13 +124,13 @@
       else {
         field.focus();
         field.select();
-        if (!document.execCommand("copy")) throw new Error("Copy failed");
+        if (!document.execCommand("copy")) throw new Error("Copie impossible");
       }
-      copyStatus.textContent = targetId === "displayUrl" ? "Card URL copied." : "Iframe HTML copied.";
+      copyStatus.textContent = targetId === "displayUrl" ? "URL du widget copiée." : "HTML de l’iframe copié.";
     } catch (_) {
       field.focus();
       field.select();
-      copyStatus.textContent = "Select and copy the highlighted text.";
+      copyStatus.textContent = "Sélectionnez et copiez le texte surligné.";
     }
   }
 
@@ -180,7 +180,7 @@
   function renderRegistration() {
     const configured = new Set(items.map(item => String(item.matchId)));
     if (!registrationMatches.length) {
-      registrationList.innerHTML = '<div class="registration-empty">No Daily matches are currently in registration.</div>';
+      registrationList.innerHTML = '<div class="registration-empty">Aucun match en différé ouvert aux inscriptions.</div>';
       return;
     }
     registrationList.innerHTML = registrationMatches.map(match => {
@@ -195,11 +195,11 @@
 
   async function loadRegistration(force = false) {
     refreshRegistration.disabled = true;
-    registrationStatus.textContent = force ? "Refreshing registration matches…" : "Loading registration matches…";
+    registrationStatus.textContent = force ? "Actualisation des inscriptions…" : "Chargement des matchs ouverts aux inscriptions…";
     try {
       const payload = await json(`${API}?action=registration-list${force ? "&refresh=1" : ""}&_=${Date.now()}`);
       registrationMatches = Array.isArray(payload.matches) ? payload.matches : [];
-      registrationStatus.textContent = `${registrationMatches.length} Daily match${registrationMatches.length === 1 ? "" : "es"} currently in registration.`;
+      registrationStatus.textContent = `${registrationMatches.length} match en différé${registrationMatches.length === 1 ? "" : "es"} actuellement ouvert(s) aux inscriptions.`;
       renderRegistration();
     } catch (error) {
       registrationMatches = [];
@@ -269,7 +269,7 @@
     const reference = input.value.trim();
     if (!reference) return;
     addButton.disabled = true;
-    setMessage("Resolving match…");
+    setMessage("Chargement du match…");
     try {
       const payload = await json(`${API}?action=resolve`, {
         method: "POST",
@@ -278,7 +278,7 @@
       });
       const id = String(payload.match?.matchId || "");
       if (items.some(item => item.matchId === id)) {
-        setMessage("That match is already configured.", "error");
+        setMessage("Ce match est déjà configuré.", "error");
         return;
       }
       items.push({ matchId: id, enabled: true, urgent: false, resolved: true, match: payload.match, error: "" });
@@ -308,13 +308,13 @@
       });
       revision = Number(payload.revision) || revision + 1;
       setDirty(false);
-      setMessage("Configuration saved.", "success");
+      setMessage("Configuration enregistrée.", "success");
       preview.src = `../?_=${Date.now()}`;
       await loadAdminState();
       await loadRegistration(false);
     } catch (error) {
       if (error.status === 409) {
-        setMessage("Configuration changed elsewhere. Reloading the current version.", "error");
+        setMessage("La configuration a été modifiée ailleurs. Rechargement en cours.", "error");
         await loadAdminState();
       } else {
         setMessage(error.message, "error");
@@ -336,7 +336,7 @@
     editor.hidden = true;
     embedPanel.hidden = true;
     logoutButton.hidden = true;
-    authStatus.textContent = "Admin session ended.";
+    authStatus.textContent = "Session administrateur terminée.";
     loginButton.hidden = false;
   }
 
@@ -378,13 +378,13 @@
     try {
       const oauth = await oauthSession();
       if (!oauth.authenticated) {
-        authStatus.textContent = "Log in with Chess.com to administer this showcase.";
+        authStatus.textContent = "Connectez-vous avec Chess.com pour administrer le widget.";
         loginButton.hidden = false;
         return;
       }
-      authStatus.textContent = `Checking ${oauth.profile?.username || "Chess.com user"} against ${CFG.teamSlug || "configured club"} admins…`;
+      authStatus.textContent = `Checking ${oauth.profile?.username || "Utilisateur Chess.com"} against ${CFG.teamSlug || "configured club"} admins…`;
       const payload = await establishAdmin(String(oauth.admin_bootstrap || ""));
-      await enterAdmin(payload.session?.username || oauth.profile?.username || "Chess.com user");
+      await enterAdmin(payload.session?.username || oauth.profile?.username || "Utilisateur Chess.com");
     } catch (error) {
       authStatus.textContent = error.message;
       loginButton.hidden = false;

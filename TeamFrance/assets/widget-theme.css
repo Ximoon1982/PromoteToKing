@@ -1,0 +1,4 @@
+/* Palette bleu-blanc-rouge du widget Team France */
+:root{--bg:#141c2b!important;--panel:#202d43!important;--panel2:#28384f!important;--border:#455d82!important;--text:#eef4ff!important;--muted:#b7c9e4!important;--gold:#7fb1ff!important;--green:#9bd8bd!important;--red:#ef8d9d!important}
+.admin-head,.admin-shell header{border-top:3px solid #2454a2;position:relative}.admin-head:after{content:"";height:3px;width:38%;position:absolute;right:0;top:-3px;background:linear-gradient(90deg,#f6f7fb 0 50%,#df3f53 50%)}
+button:not(.secondary){background:#1f56a4!important;border-color:#518ade!important;color:#fff!important}button.secondary,.preview-link{color:#9ac2ff!important;border-color:#5681bf!important}.panel{border-color:#455d82!important;background:#202d43!important}

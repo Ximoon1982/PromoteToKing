@@ -1,0 +1,10 @@
+/* Team France : bleu, blanc et rouge — modifications visuelles isolées */
+:root{--tf-blue:#1c4f9d;--tf-light:#8dbaff;--tf-red:#df4053;--tf-text:#f3f6ff;--tf-bg:#141c2b}
+body{background-color:var(--tf-bg)!important;color:var(--tf-text)}
+.p2k-header{border-top:3px solid var(--tf-blue);border-bottom:1px solid #43567d;padding:12px 0 14px;position:relative}
+.p2k-header:after{content:"";position:absolute;top:-3px;right:0;width:40%;height:3px;background:linear-gradient(90deg,#f4f5fa 0 50%,var(--tf-red) 50%)}
+.p2k-main-button{background:#2057a6!important;border-color:#5289d8!important;color:white!important}
+.p2k-main-button:hover{background:#2f6ac3!important}.p2k-cancel-button{border-color:#5976a5!important;color:#cddfff!important}
+.p2k-results,.p2k-settings-panel,.p2k-status,.p2k-reference-form{border-color:#445272}
+.p2k-progress-bar{background:linear-gradient(90deg,#1b4e9d 0%,#f4f6fc 52%,#de4052 100%)!important}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #a4c8ff;outline-offset:2px}

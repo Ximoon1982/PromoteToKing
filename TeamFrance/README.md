@@ -1,20 +1,23 @@
-# Team France standalone chess applications
+# Team France — portail et outils d’administration
 
-P2K release/v2.15.3 addition, cloned from the independently working TGP Widget v0.2.0 and Match Analyzer.
+Le portail `/TeamFrance/` présente les informations du club, les administrateurs, les effectifs, les inscriptions ouvertes et les outils de gestion. Il exige une authentification OAuth Chess.com et le statut d’administrateur actuel de Team France.
 
-- Public widget: `/TeamFrance/Widget/`
-- Widget administration: `/TeamFrance/Widget/admin/`
-- Match Analyzer: `/TeamFrance/MatchAnalyzer/`
-- Club identity: `https://www.chess.com/club/team-france`
+Les trois outils associés sont :
 
-The widget is publicly visible. Administration in the widget and all analyzer functions require a verified P2K Chess.com OAuth identity **and Team France club-admin membership**. Each installation has independent widget data, cache, PHP session, CSRF header, and diagnostics. Analyzer monitoring uses the existing shared P2K match registry (same behavior as TGP).
+- `/TeamFrance/Widget/admin/` — gestion de la présentation des matchs et du widget public (`/TeamFrance/Widget/`).
+- `/TeamFrance/MatchAnalyzer/` — analyse des inscriptions, des classements et de la composition des équipes.
+- `/TeamFrance/MatchRecruitment/` — recherche de joueurs éligibles, vérification actuelle des appartenances et export CSV.
 
-**Deploy** by copying this whole `TeamFrance/` folder to a staging location on IONOS and running:
+Les pages Analyseur et Recrutement présentent, sous le champ de référence, les matchs en différé dont les inscriptions sont ouvertes. Un bouton radio préremplit le champ ; la saisie manuelle demeure possible.
+
+Les nouvelles pages utilisent le transport OAuth et la passerelle Chess.com déjà établis pour P2K, avec contrôle des droits Team France. L’identité graphique repose sur le bleu, le blanc et le rouge. Les textes du portail et des outils modifiés sont en français. Les titres des matchs issus de Chess.com ne sont pas traduits afin de préserver leur contenu original.
+
+## Installation incrémentale
+
+Depuis un dossier séparé de l’installation en production :
 
 ```bash
-bash TeamFrance/install-standalone.sh /kunden/homepages/43/d141198007/htdocs/PromoteToKing
+bash TeamFrance/install-admin-hub.sh /kunden/homepages/43/d141198007/htdocs/PromoteToKing
 ```
 
-The installer validates input, PHP syntax, and dependencies; backs up previously installed source; and copies only files under `/TeamFrance/`. It intentionally never overwrites `Widget/data/showcase.json` or cached data. It does not change root `.htaccess`, OAuth, Release Control, public slots, or TGP applications. P2K PHP 8.5 CLI is required on the server. When running the local installer simulation, set `PHP_CLI` to an installed compatible CLI.
-
-The analyzer is available at its standalone URL rather than through P2K's preview-slot router. Shared history endpoints continue to resolve from the P2K root.
+Le script conserve les données persistantes du Widget, les journaux de l’Analyseur, les listes de membres du Recrutement et tous les fichiers des applications TGP. Il sauvegarde les fichiers sources remplacés sous `storage/team-france-admin-hub-backups/`.

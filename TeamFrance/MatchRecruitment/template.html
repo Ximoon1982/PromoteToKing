@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+<title>Team France — Assistant de recrutement</title>
+<link rel="icon" type="image/jpeg" href="/assets/images/p2k-logo.jpg">
+<link rel="stylesheet" href="assets/css/analyze-match.css?v=2.15.3-tf-recruit-2153-1">
+<link rel="stylesheet" href="assets/css/recruit-match.css?v=2.15.3-tf-recruit-2153-1">
+<style>
+body{margin:0;background:#171513;color:#f3f0e9;font-family:system-ui,sans-serif}
+.p2k-analyzer{max-width:1150px;margin:0 auto;padding:16px}
+.p2k-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.p2k-header-logos img{width:72px;height:72px;object-fit:contain;border-radius:12px}
+.tgp-pagination{display:flex;justify-content:center;align-items:center;gap:14px;margin:14px 0;flex-wrap:wrap}
+.tgp-pagination .p2k-cancel-button{min-width:100px}
+.tgp-pagination button:disabled{opacity:.45;cursor:default}
+#p2kMatchSummary a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+.p2k-reference-form,.p2k-settings-panel,.p2k-results,.p2k-status{margin-top:15px}
+.p2k-reference-input{flex:1;min-width:200px}
+.p2k-reference-row{display:flex;gap:10px;flex-wrap:wrap}
+.p2k-warning{padding:12px;border:1px solid #5e8dc8;border-radius:8px;background:rgba(50,100,175,.14)}
+.p2k-error{color:#ffc9c9}
+.p2k-success{color:#b8f3c1}
+.p2k-results-tools{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.p2k-recruit-table-wrap{overflow:auto;max-width:100%}
+.p2k-recruit-table{width:100%;border-collapse:collapse;white-space:nowrap}
+.p2k-recruit-table th,.p2k-recruit-table td{padding:8px;text-align:left;border-bottom:1px solid #49433e}
+.p2k-recruit-table th[data-sort]{cursor:pointer}
+.p2k-status-row{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.p2k-progress-track{background:#403b35;height:9px;border-radius:20px;overflow:hidden}
+.p2k-progress-bar{height:100%;width:0;background:#6f9ade;transition:width .2s}
+.p2k-funnel{margin-top:8px}
+#tgpRosterNotice[hidden],#p2kSettingsPanel[hidden],#p2kProgressDetails[hidden],#p2kFunnel[hidden]{display:none}
+</style>
+<meta name="team-france-recruitment-csrf" content="<!-- TEAM_FRANCE_RECRUITMENT_CSRF -->">
+<link rel="stylesheet" href="/TeamFrance/assets/theme.css?v=tf-2153-1"><link rel="stylesheet" href="/TeamFrance/assets/upcoming-selector.css?v=tf-2153-1">
+</head>
+<body>
+<main class="p2k-analyzer" id="p2kUpcomingAnalyzer">
+<div class="p2k-header"><h2>Team France — Assistant de recrutement</h2><div class="p2k-header-logos"><img id="p2kSelectedTeamLogo" alt="Logo du club Team France" hidden></div></div>
+<form class="p2k-reference-form" id="p2kMatchForm">
+<label class="p2k-reference-label" for="p2kMatchReference">Identifiant ou URL du match par équipe Chess.com</label>
+<div class="p2k-reference-row">
+<input autocomplete="off" class="p2k-reference-input" id="p2kMatchReference" placeholder="Saisir un numéro ou une URL de match Team France" required>
+<button class="p2k-main-button" id="p2kLoadButton" type="submit">Charger le match</button>
+</div>
+<div class="p2k-reference-help">Seuls les matchs impliquant Team France sont acceptés. Le recrutement est effectué du point de vue de Team France.</div>
+</form>
+<section class="p2k-settings-panel" hidden id="p2kSettingsPanel">
+<div class="p2k-recruit-intro" id="p2kMatchSummary"></div>
+<form id="p2kRecruitmentForm">
+<div class="p2k-filter-title">Filtres d’éligibilité</div>
+<div class="p2k-recruit-method"><strong>Liste Chess.com et vérification en direct.</strong> Les candidats proviennent de la liste des membres Team France. Classement, appartenance, inscription, activité et taux d’abandon sont vérifiés sur Chess.com.</div>
+<div class="p2k-recruit-grid">
+<label class="p2k-recruit-field">Dernière connexion (jours)<input class="p2k-number-input" id="p2kOnlineDays" type="number" min="0.04" max="365" step="0.04" value="1"></label>
+<label class="p2k-recruit-field">Taux maximal d’abandon (%)<input class="p2k-number-input" id="p2kTimeoutRate" type="number" min="0" max="100" step="0.1" value="5"></label>
+</div>
+<div class="p2k-scan-actions"><button class="p2k-main-button" id="p2kScanButton" type="submit">Chercher les joueurs éligibles</button></div>
+</form>
+</section>
+<section class="p2k-warning" id="tgpRosterNotice" role="status" aria-live="polite" hidden></section>
+<div class="p2k-status" id="p2kStatus" role="status" aria-live="polite" style="display:none">
+<div class="p2k-status-row"><div id="p2kStatusText"></div><div id="p2kProcessingActions" style="display:none"><button type="button" class="p2k-cancel-button" id="p2kAnnulerButton">Annuler</button></div></div>
+<div class="p2k-progress-track" id="p2kProgressTrack" style="display:none"><div class="p2k-progress-bar" id="p2kProgressBar"></div></div>
+<div class="p2k-progress-details" id="p2kProgressDetails" hidden></div>
+<div class="p2k-funnel" id="p2kFunnel" hidden></div>
+</div>
+<section class="p2k-results" id="p2kResults"><div class="p2k-empty-prompt">Saisissez un identifiant ou une URL de match Team France pour démarrer une analyse.</div></section>
+<details id="tgpRequestLog" style="margin-top:20px;border:1px solid #49433e;border-radius:8px;padding:12px">
+<summary id="tgpLogSummary" style="cursor:pointer;font-weight:600">Journal des requêtes et événements</summary>
+<div class="p2k-results-tools" style="margin-top:10px"><span>OAuth côté serveur · codes HTTP et erreurs · aucun jeton affiché</span><div><button id="tgpLogCopy" type="button">Copier le journal</button> <button id="tgpLogEffacer" type="button">Effacer</button></div></div>
+<pre id="tgpLogContent" style="font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:350px;overflow:auto"></pre>
+</details>
+</main>
+<script src="assets/js/recruitment-core.js?v=2.15.3-tf-recruit-2153-1"></script>
+<script src="assets/js/recruitment.js?v=2.15.3-tf-recruit-2153-1"></script>
+<script defer src="/TeamFrance/assets/upcoming-selector.js?v=tf-2153-1"></script></body></html>

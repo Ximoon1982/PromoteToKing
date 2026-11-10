@@ -1,0 +1,68 @@
+name: Team France portail et outils en francais v2.15.3
+on:
+  push:
+    branches: [release/v2.15.3]
+    paths:
+      - 'TeamFrance/**'
+      - 'tests/team_france_admin_hub.test.cjs'
+      - 'tests/team_france_recruitment.test.cjs'
+      - 'tests/team_france_security_test.php'
+      - '.github/workflows/team-france-admin-hub-v2153.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntaxe PHP et JavaScript
+        run: |
+          find TeamFrance -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          find TeamFrance -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          bash -n TeamFrance/install-admin-hub.sh
+      - name: Tests fonctionnels et confinement
+        run: |
+          php tests/team_france_security_test.php
+          node tests/team_france_admin_hub.test.cjs
+          node tests/team_france_recruitment.test.cjs
+          TF_ROSTER_SHAPE=structured node tests/team_france_recruitment.test.cjs
+          TF_ROSTER_SHAPE=malformed node tests/team_france_recruitment.test.cjs
+      - name: Installation double et preservation de l'etat
+        run: |
+          set -euo pipefail
+          root="$(mktemp -d)"
+          mkdir -p "$root/server/team-points/src" "$root/TGP" "$root/TeamFrance/Widget/data" "$root/TeamFrance/MatchAnalyzer" "$root/TeamFrance/MatchRecruitment/data"
+          printf '<?php\n' > "$root/server/team-points/src/OAuthSession.php"
+          printf 'TGP marker' > "$root/TGP/marker"
+          printf 'live widget config' > "$root/TeamFrance/Widget/data/showcase.json"
+          printf 'live recruitment roster' > "$root/TeamFrance/MatchRecruitment/data/members-latest.json"
+          PHP_CLI="$(command -v php)" bash TeamFrance/install-admin-hub.sh "$root"
+          PHP_CLI="$(command -v php)" bash TeamFrance/install-admin-hub.sh "$root"
+          test "$(cat "$root/TGP/marker")" = 'TGP marker'
+          test "$(cat "$root/TeamFrance/Widget/data/showcase.json")" = 'live widget config'
+          test "$(cat "$root/TeamFrance/MatchRecruitment/data/members-latest.json")" = 'live recruitment roster'
+          test -f "$root/TeamFrance/index.php"
+          test -f "$root/TeamFrance/MatchRecruitment/api/index.php"
+          test -f "$root/TeamFrance/MatchRecruitment/data/.htaccess"
+          test -f "$root/storage/team-france-admin-hub-backups/"*"/Widget/admin/index.php" || true
+      - name: Paquet d'installation independant
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          files=(
+            TeamFrance/install-admin-hub.sh TeamFrance/index.php TeamFrance/home.html TeamFrance/README.md TeamFrance/api/overview.php
+            TeamFrance/assets/home.js TeamFrance/assets/theme.css TeamFrance/assets/widget-theme.css TeamFrance/assets/localize.js
+            TeamFrance/assets/upcoming-selector.js TeamFrance/assets/upcoming-selector.css
+            TeamFrance/Widget/admin/index.php TeamFrance/Widget/index.php TeamFrance/Widget/assets/admin.js TeamFrance/Widget/assets/widget.js
+            TeamFrance/MatchAnalyzer/index.php TeamFrance/MatchAnalyzer/template.html
+          )
+          while IFS= read -r file; do files+=("$file"); done < <(find TeamFrance/MatchRecruitment -type f ! -name 'install-standalone.sh' | sort)
+          zip -X -q dist/TeamFrance_Admin_Hub_Three_Tools_FR_v2153.zip "${files[@]}"
+          unzip -t dist/TeamFrance_Admin_Hub_Three_Tools_FR_v2153.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: team-france-admin-hub-three-tools-v2153
+          path: dist/TeamFrance_Admin_Hub_Three_Tools_FR_v2153.zip
+          retention-days: 30
+          if-no-files-found: error
