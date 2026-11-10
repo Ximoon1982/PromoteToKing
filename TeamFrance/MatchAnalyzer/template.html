@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="dark" name="color-scheme"/>
+<meta content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self' https://api.chess.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" http-equiv="Content-Security-Policy"/><title>Team France Match Analyzer</title>
+<!-- TEAM_FRANCE_OAUTH_CSRF -->
+<link href="/assets/images/p2k-logo.jpg" rel="icon" type="image/jpeg"/>
+<!-- AnalyzeMatch.html - Version 3: single-request in-progress projections from match start ratings -->
+<link href="/assets/css/analyze-match.css?v=2.11.5-bf6a828490f57" rel="stylesheet"/><link href="/assets/css/admin-embedded.css?v=2.11.5-bf6a828490f57" rel="stylesheet"/><link href="/assets/css/info-popover.css?v=2.11.5-bf6a828490f57" rel="stylesheet"/><link href="/assets/css/match-history.css?v=2.11.5-bf6a828490f57" rel="stylesheet"/><link href="/assets/css/analysis-failure-ui.css?v=2.11.5-bf6a828490f57" rel="stylesheet"/>
+<script src="/config/site-branding.js?v=2.11.5-bf6a828490f57"></script><script src="/assets/js/site-config.js?v=p2k-2.12.0-d025d8c46103-ae73ae796f09667d"></script><script defer src="/assets/js/shared/real-oauth.js?v=2.11.5-bf6a828490f57"></script><script src="/assets/js/shared/simulated-oauth.js?v=2.11.5-bf6a828490f57"></script><script defer src="/assets/js/shared/authenticated-member-refresh.js?v=2.11.5-bf6a828490f57"></script>
+<link href="/assets/css/responsive-unification.css?v=2.11.5-bf6a828490f57" rel="stylesheet"/>
+</head>
+<body>
+<div class="p2k-analyzer" id="p2kUpcomingAnalyzer">
+<div class="p2k-header">
+<div><h2>Team France Match Analyzer</h2></div>
+<div class="p2k-header-logos"><img alt="" hidden="" id="p2kSelectedTeamLogo"/></div>
+</div>
+<form class="p2k-reference-form" id="p2kMatchForm">
+<label class="p2k-reference-label" for="p2kMatchReference">Chess.com team match ID or URL</label>
+<div class="p2k-reference-row">
+<input autocomplete="off" class="p2k-reference-input" id="p2kMatchReference" inputmode="url" placeholder="Example: 1234567 or https://www.chess.com/club/matches/club-name/1234567" spellcheck="false" type="text"/>
+<button class="p2k-main-button" id="p2kAnalyzeButton" type="submit">Analyze match</button>
+
+</div>
+<div class="p2k-reference-help">The page accepts <code>?match=1234567</code> or a URL-encoded match URL. Only matches involving Team France are accepted. The perspective is always Team France.</div>
+</form>
+<div aria-live="polite" class="p2k-status" id="p2kStatus" style="display:none">
+<div class="p2k-status-row">
+<div class="p2k-status-text" id="p2kStatusText"></div>
+</div>
+<div aria-hidden="true" class="p2k-progress-track" id="p2kProgressTrack">
+<div class="p2k-progress-bar" id="p2kProgressBar"></div>
+</div>
+</div>
+<fieldset class="p2k-team-selector" hidden="" id="p2kTeamSelector">
+<legend>Analyze from the perspective of</legend>
+<div class="p2k-choices" id="p2kTeamChoices"></div>
+</fieldset>
+<div class="p2k-tracking-controls" id="teamFranceTrackingControls" aria-live="polite"></div><div class="p2k-results" id="p2kResults">
+<div class="p2k-empty-prompt">Enter a Chess.com team match number or URL above to display its complete lineup analysis. Only matches involving Team France are accepted.</div>
+</div>
+<div aria-hidden="true" class="p2k-chart-modal" hidden="" id="p2kChartModal">
+<div aria-labelledby="p2kChartModalTitle" aria-modal="true" class="p2k-chart-modal-dialog" role="dialog">
+<div class="p2k-chart-modal-header">
+<div class="p2k-chart-modal-title" id="p2kChartModalTitle"></div>
+<button class="p2k-chart-modal-close" id="p2kChartModalClose" type="button">Close</button>
+</div>
+<div id="p2kChartModalBody"></div>
+</div>
+</div>
+</div>
+<script src="/assets/js/site-config.js?v=p2k-2.12.0-d025d8c46103-ae73ae796f09667d"></script><script src="/assets/js/shared/tab-activity.js?v=2.11.5-bf6a828490f57"></script><script src="/assets/js/shared/info-popover.js?v=2.11.5-bf6a828490f57"></script><script src="/assets/js/shared/api-cache.js?v=2.11.5-bf6a828490f57"></script><script src="/assets/js/shared/match-priority.js?v=2.11.5-bf6a828490f57"></script><script src="/assets/js/shared/api-request-semantics.js?v=2.11.5-bf6a828490f57"></script><script src="/assets/js/shared/api-oauth-context.js?v=2.11.5-bf6a828490f57"></script><script src="/assets/js/shared/api-transport.js?v=2.11.5-bf6a828490f57"></script><script src="/assets/js/shared/api-request-coordinator.js?v=2.11.5-bf6a828490f57"></script><script src="/assets/js/shared/api-client.js?v=2.11.5-bf6a828490f57"></script><script src="/TeamFrance/MatchAnalyzer/assets/team-france-tracking.js?v=tgp-track-diag3"></script><script src="/TeamFrance/MatchAnalyzer/assets/match-history-ui.js?v=tgp-standalone1"></script><script src="/assets/js/shared/analysis-failure-ui.js?v=2.11.5-bf6a828490f57"></script><script src="/TeamFrance/MatchAnalyzer/assets/analyze-match.js?v=tgp-standalone1"></script><script src="/assets/js/shared/control-hints.js?v=2.11.5-bf6a828490f57"></script><script src="/assets/js/shared/svg-touch-title.js?v=2.11.5-bf6a828490f57"></script><script src="/assets/js/shared/embedded-page.js?v=2.11.5-bf6a828490f57"></script></body>
+</html>

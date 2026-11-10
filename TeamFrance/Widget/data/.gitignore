@@ -1,0 +1,5 @@
+showcase.json
+showcase.json.bak
+showcase.lock
+cache/*
+!cache/.gitkeep
