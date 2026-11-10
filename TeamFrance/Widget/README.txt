@@ -14,7 +14,9 @@ Scope
 - Public output retains the 2x2 Daily-match card grid, with an optional compact arena panel above it.
 - The first four enabled configured matches are displayed.
 - Up to two active upcoming/on-going arenas are displayed above the cards; completed arenas expire automatically. No League/Friendly selector or trailing button.
-- Arenas are configured by club administrators (name, Chess.com link, Luxembourg-local start date/time, duration, time control, enabled flag).\n- WCGC fixtures are recognized as league matches.\n- Persistent application state is data/showcase.json. No SQL/P2K data store is used.
+- Arenas are configured by club administrators (name, Chess.com link, Luxembourg-local start date/time, duration, time control, enabled flag).
+- WCGC fixtures are recognized as league matches.
+- Persistent application state is data/showcase.json. No SQL/P2K data store is used.
 - P2K is used only for the existing Chess.com OAuth identity assertion.
 - Admin authorization is checked against the configured Chess.com club slug.
 
