@@ -48,6 +48,6 @@ console.log('PASS OAuth batching: '+requests+' external calls through '+posts+' 
 const core=require(path.join(root,'assets/js/recruitment-core.js'));
 const sample=core.csv([{username:'tester',name:'Taylor, Tester',rating:1500,max_rating:1910,joined_tgp_epoch:1700000000,last_online_age_hours:1,live:{last_online:1700000100,timeout_percent:1.4}}],{id:123456,name:'Example',min:1000,max:2000});
 const header=sample.slice(1).split('\r\n')[0];
-assert.equal(header,'"username","name","profile_url","rating","last_online","joined_tgp","max_rating","timeout_rate","last_online_age_hours","match_id","match_name","rating_min","rating_max"');
+assert.equal(header,'"username","name","rating","max_rating","timeout_rate","last_online","joined_tgp","profile_url","last_online_age_hours","match_id","match_name","rating_min","rating_max"');
 assert.ok(!header.includes('rating_category')&&!header.includes('rating_updated_at')&&!header.includes('current_match_load'));
 assert.match(sample,/Taylor, Tester/);assert.match(sample,/2023-11-/);assert.match(sample,/1910/);
