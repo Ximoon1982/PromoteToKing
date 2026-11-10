@@ -19,13 +19,13 @@ header('Cache-Control: no-cache, max-age=30');
 <main class="widget-shell">
 <section id="arenaSection" class="widget-section" hidden aria-label="Multi-club arenas">
   <header class="widget-section-head">
-    <div class="widget-section-title">⚔️ Join multi-club arenas ⚔️</div>
+    <div class="widget-section-title">⚔️ Arènes multiclubs ⚔️</div>
   </header>
   <div id="arenaShowcase" class="tgp-grid arena-showcase" aria-live="polite"></div>
 </section>
 <section id="dailySection" class="widget-section" aria-label="Daily matches">
   <header class="widget-section-head">
-    <div class="widget-section-title">⚔️ Join daily matches ⚔️</div>
+    <div class="widget-section-title">⚔️ Matchs en différé ⚔️</div>
   </header>
   <div id="tgpGrid" class="tgp-grid" aria-live="polite"></div>
 </section>
