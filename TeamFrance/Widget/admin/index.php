@@ -40,7 +40,7 @@ header('Cache-Control: no-store');
 <div id="registrationStatus" class="registration-status" aria-live="polite"></div>
 <div id="registrationList" class="registration-list"></div>
 </section>
-<section class="panel preview-panel"><h2>Live showcase preview</h2><iframe id="preview" src="../" title="Match Showcase preview" loading="eager"></iframe></section>
+<section class="panel preview-panel"><h2>Live showcase preview (arenas + Daily matches)</h2><iframe id="preview" src="../" title="Match Showcase preview" loading="eager"></iframe></section>
 </main>
 <script>window.TEAM_FRANCE_WIDGET_CONFIG={teamSlug:<?= json_encode((string)($config['team_slug'] ?? 'team-france')) ?>,teamName:<?= json_encode((string)($config['team_name'] ?? 'Team France')) ?>,version:<?= json_encode((string)($config['version'] ?? '0.2.0')) ?>};</script>
 <script src="../assets/admin.js?v=<?= rawurlencode((string)($config['version'] ?? '0.2.0')) ?>-tf-en2"></script>
