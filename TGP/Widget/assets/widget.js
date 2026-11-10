@@ -25,23 +25,81 @@ function initials(name){return(String(name||"?").trim().split(/\s+/).filter(Bool
 function needClass(n){return!Number.isFinite(Number(n))?"gold":Number(n)<=0?"green":Number(n)>=8?"red":"gold"}
 function card(match){const rec=recruitment(match),count=Number.isFinite(Number(rec?.count))?Number(rec.count):null,need=count===null?"Need ?":count===0?"Need ✓":`Need ${count}`,u=urgency(match.startTime),badge=match.category==="league"?((match.leagueAcronyms||[]).join("/")||"League"):"Friendly",opponent=match.opponentName||"Opponent",logo=match.opponentLogo?`<img class="tgp-logo" src="${esc(match.opponentLogo)}" alt="${esc(opponent)} club logo" loading="lazy" referrerpolicy="no-referrer">`:`<div class="tgp-logo-fallback" aria-hidden="true">${esc(initials(opponent))}</div>`,rating=ratingLabel(match),time=compactTime(match.time_control),timeFull=fullTime(match.time_control),startMs=Number(match.startTime)*1000,league48=match.category==="league"&&Number.isFinite(startMs)&&startMs>=Date.now()&&startMs-Date.now()<=48*3600000,startClass=league48?"red":u.level==="urgent"?"red":u.level==="soon"?"gold":"muted",title=`${opponent} — ${match.name||`Match #${match.matchId}`} · ${u.title} · ${rating} · ${timeFull} · ${need}`;return`<a class="tgp-card${league48?" league-48h":""}" href="${esc(match.url)}" target="_blank" rel="noopener noreferrer" title="${esc(title)}" aria-label="${esc(title)}"><div class="tgp-visual">${logo}<span class="tgp-badge${match.category==="friendly"?" friendly":""}">${esc(badge)}</span>${match.urgent?'<span class="tgp-priority">Priority</span>':""}</div><div class="tgp-info"><div class="tgp-line tgp-primary"><span class="tgp-start ${startClass}">${esc(u.label)}</span><span class="tgp-separator">·</span><span class="tgp-need ${needClass(count)}">${esc(need)}</span></div><div class="tgp-line tgp-secondary"><span class="tgp-time" title="${esc(timeFull)}">${esc(time)}</span><span class="tgp-separator">·</span><span class="tgp-rating">${esc(rating)}</span></div></div></a>`}
 
-const arenaHost=document.getElementById("arenaShowcase");
-function renderArenas(arenas){
- if(!arenaHost)return;
- const now=Date.now();
- const active=(Array.isArray(arenas)?arenas:[]).filter(a=>a.active===true&&a.name&&a.link&&Date.parse(a.endAt)>now).slice(0,2);
- if(!active.length){arenaHost.hidden=true;arenaHost.replaceChildren();return}
- arenaHost.hidden=false;
- const rows=active.map(a=>{
-   const start=Date.parse(a.startAt),ongoing=Number.isFinite(start)&&start<=now;
-   const status=ongoing?"On-going":"Upcoming";
-   const when=Number.isFinite(start)?new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Luxembourg",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(start)):"";
-   const title=`${a.name} · ${status} · ${when} · ${a.duration} · ${a.timeControl}`;
-   return `<a class="arena-entry" href="${esc(a.link)}" target="_blank" rel="noopener noreferrer" title="${esc(title)}"><span class="arena-state ${ongoing?"ongoing":""}">${status}</span><span class="arena-name">${esc(a.name)}</span><span class="arena-duration">${esc(a.duration)}</span><span class="arena-control">${esc(a.timeControl)}</span></a>`;
- });
- arenaHost.innerHTML='<div class="arena-heading">⚔️ Join multi-club arenas ⚔️</div>'+rows.join("");
+
+const arenaHost = document.getElementById("arenaShowcase");
+const arenaSection = document.getElementById("arenaSection");
+let configuredArenas = [];
+
+function arenaTiming(a, now=Date.now()) {
+  const start=Date.parse(a?.startAt||"");
+  const end=Date.parse(a?.endAt||"") || start+Number(a?.durationMinutes||0)*60000;
+  if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start||now>=end) return null;
+  return {start,end,phase:now<start-3600000?"upcoming":now<start?"registration":"ongoing"};
+}
+function parseArenaControl(value) {
+  const raw=String(value||"").trim().toLowerCase();
+  if(raw.includes("bullet"))return "bullet";
+  if(raw.includes("blitz"))return "blitz";
+  if(raw.includes("rapid"))return "rapid";
+  const hit=raw.match(/(\d+(?:\.\d+)?)\s*(?:\+|\||\/)\s*(\d+(?:\.\d+)?)/);
+  const estimated=hit?Number(hit[1])+Number(hit[2])*40/60:Number(raw);
+  return Number.isFinite(estimated)&&estimated<3?"bullet":Number.isFinite(estimated)&&estimated<10?"blitz":"rapid";
+}
+function arenaSpeedIcon(kind) {
+  if(kind==="bullet")return '<svg class="tgp-speed-icon bullet" viewBox="0 0 120 120" role="img" aria-label="Bullet"><path fill="currentColor" d="M20 72h52c18 0 30-10 30-24S90 24 72 24H59c-3 0-6 2-7 5L39 66c-1 4 2 6 6 6h27z"/><rect x="13" y="32" width="29" height="7" rx="3.5" fill="currentColor" opacity=".66"/><rect x="7" y="47" width="34" height="7" rx="3.5" fill="currentColor" opacity=".48"/><rect x="16" y="62" width="24" height="7" rx="3.5" fill="currentColor" opacity=".34"/></svg>';
+  if(kind==="blitz")return '<svg class="tgp-speed-icon blitz" viewBox="0 0 120 120" role="img" aria-label="Blitz"><path fill="currentColor" d="M68 8 24 66h29l-8 46 50-65H65z"/></svg>';
+  return '<svg class="tgp-speed-icon rapid" viewBox="0 0 120 120" role="img" aria-label="Rapid"><circle cx="60" cy="62" r="42" fill="none" stroke="currentColor" stroke-width="10"/><path d="M60 38v26l19 12" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M42 12h36" stroke="currentColor" stroke-width="10" stroke-linecap="round"/></svg>';
+}
+function arenaCountdown(ms) {
+  const total=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(total/3600),m=Math.floor(total%3600/60),s=total%60;
+  return String(h)+"h "+String(m).padStart(2,"0")+"m "+String(s).padStart(2,"0")+"s";
+}
+function arenaStartText(start) {
+  const date=new Date(start);
+  if(!Number.isFinite(date.getTime()))return "—";
+  const options={timeZone:"Europe/Luxembourg"};
+  return new Intl.DateTimeFormat("en-GB",{...options,day:"numeric",month:"short"}).format(date)+" · "+
+    new Intl.DateTimeFormat("en-GB",{...options,hour:"2-digit",minute:"2-digit",hour12:false}).format(date);
+}
+function arenaLiveText(t,now) {
+  if(t.phase==="ongoing")return arenaCountdown(t.end-now);
+  if(t.phase==="registration")return "Starts in "+Math.max(1,Math.ceil((t.start-now)/60000))+" mn";
+  return arenaStartText(t.start);
+}
+function arenaCard(a,t,now) {
+  const kind=parseArenaControl(a.timeControl), status=t.phase==="upcoming"?"Upcoming":t.phase==="registration"?"Registration":"On-going";
+  const name=String(a.name||"Arena"),control=String(a.timeControl||"—"),duration=String(a.duration||"—");
+  const title=name+" · "+status+" · "+duration+" · "+control+" ("+kind+")";
+  return '<a class="tgp-card arena-card" href="'+esc(a.link)+'" target="_blank" rel="noopener noreferrer" title="'+esc(title)+'" aria-label="'+esc(title)+'" data-arena-start="'+t.start+'" data-arena-end="'+t.end+'" data-arena-phase="'+t.phase+'">'+
+    '<div class="tgp-visual">'+arenaSpeedIcon(kind)+'<span class="tgp-badge '+t.phase+'">'+status+'</span></div>'+
+    '<div class="tgp-info"><div class="arena-start-line '+t.phase+'" data-arena-live>'+esc(arenaLiveText(t,now))+'</div>'+
+    '<div class="arena-meta-line" title="'+esc(name)+'"><strong>'+esc(duration)+'</strong> · '+esc(control)+'</div></div></a>';
+}
+function renderArenas(next) {
+  if(Array.isArray(next))configuredArenas=next;
+  if(!arenaHost||!arenaSection)return;
+  const now=Date.now();
+  const visible=configuredArenas.map(a=>({a,t:arenaTiming(a,now)}))
+    .filter(x=>x.a?.active===true&&x.a?.name&&x.a?.link&&x.t)
+    .sort((a,b)=>a.t.start-b.t.start).slice(0,2);
+  arenaSection.hidden=visible.length===0;
+  arenaHost.innerHTML=visible.map(x=>arenaCard(x.a,x.t,now)).join("");
+}
+function tickArenaClock() {
+  if(!arenaSection||arenaSection.hidden)return;
+  const now=Date.now();
+  let changed=false;
+  arenaHost.querySelectorAll(".arena-card[data-arena-start]").forEach(card=>{
+    const start=Number(card.dataset.arenaStart),end=Number(card.dataset.arenaEnd);
+    if(!Number.isFinite(start)||!Number.isFinite(end)||now>=end){changed=true;return;}
+    const phase=now<start-3600000?"upcoming":now<start?"registration":"ongoing";
+    if(phase!==card.dataset.arenaPhase){changed=true;return;}
+    const live=card.querySelector("[data-arena-live]");
+    if(live&&phase!=="upcoming")live.textContent=arenaLiveText({start,end,phase},now);
+  });
+  if(changed)renderArenas();
 }
 
 async function load(){try{const r=await fetch(`api.php?action=cards&_=${Date.now()}`,{cache:"no-store",credentials:"same-origin",headers:{Accept:"application/json"}}),p=await r.json();if(!r.ok||p?.ok===false)throw Error(p?.error?.message||`HTTP ${r.status}`);const cards=Array.isArray(p.cards)?p.cards:[];grid.innerHTML=cards.map(card).join("");renderArenas(p.arenas)}catch(error){console.error("TGP Match Showcase",error);grid.replaceChildren();renderArenas([])}}
-void load();window.setInterval(load,60000);
+void load();window.setInterval(load,60000);window.setInterval(tickArenaClock,1000);
 })();
