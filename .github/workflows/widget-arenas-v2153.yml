@@ -6,6 +6,7 @@ on:
       - 'TGP/Widget/**'
       - 'TeamFrance/Widget/**'
       - 'tests/widget_arenas_v2153_test.php'
+      - 'tests/widget_arena_card_layout_v2153.test.cjs'
       - 'tools/install-widget-wcgc-arenas-v2153.sh'
       - 'tools/INSTALL-widget-wcgc-arenas-v2153.txt'
       - '.github/workflows/widget-arenas-v2153.yml'
@@ -28,6 +29,7 @@ jobs:
         run: |
           set -euo pipefail
           php tests/widget_arenas_v2153_test.php
+          node tests/widget_arena_card_layout_v2153.test.cjs
           grep -q "'WCGC'" TGP/Widget/config.php
           grep -q "'WCGC'" TeamFrance/Widget/config.php
       - name: Installer preservation and idempotence smoke test
