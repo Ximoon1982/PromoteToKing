@@ -30,11 +30,25 @@ header('Cache-Control: no-store');
 <div class="hint">The first four enabled matches below are the four public cards.</div>
 <div id="matchList" class="match-list"></div>
 <section class="arena-editor" aria-labelledby="arenaTitle">
-<h2 id="arenaTitle">Multi-club arenas</h2>
-<p class="hint">Manage upcoming and on-going arenas. Up to two enabled arenas appear above the Daily match cards. Start times use Europe/Luxembourg time; finished arenas disappear automatically.</p>
+<div class="arena-editor-head"><h2 id="arenaTitle">Multi-club arenas</h2><button id="addArenaButton" type="button" class="secondary">Add arena</button></div>
+<p class="hint">Up to two enabled arenas appear above the Daily-match cards. Dates and times use Europe/Luxembourg time. Arena edits save immediately; Daily-match changes use Save configuration.</p>
 <div id="arenaList" class="arena-list"></div>
-<button id="addArenaButton" type="button" class="secondary">Add arena</button>
 </section>
+<dialog id="arenaModal" class="arena-modal" aria-labelledby="arenaModalTitle">
+  <form id="arenaForm" class="arena-modal-form" novalidate>
+    <div class="arena-modal-head"><h2 id="arenaModalTitle">Add arena</h2><button id="arenaModalCancel" type="button" class="secondary" aria-label="Close arena editor">✕</button></div>
+    <div class="arena-modal-fields">
+      <label class="wide">Arena name<input name="name" required maxlength="120" autocomplete="off"></label>
+      <label class="wide">Chess.com arena URL<input name="link" type="url" required maxlength="600" autocomplete="off" placeholder="https://www.chess.com/tournament/live/arena/..."></label>
+      <label>Start date (Luxembourg)<input name="date" type="date" required></label>
+      <label>Start time (Luxembourg)<input name="time" type="time" required></label>
+      <label>Time control<input name="timeControl" maxlength="40" autocomplete="off" placeholder="3+2"></label>
+      <label>Duration<input name="duration" required maxlength="40" autocomplete="off" placeholder="90m, 2h or 1:30"></label>
+    </div>
+    <div id="arenaModalError" class="arena-modal-error" role="alert" aria-live="polite"></div>
+    <div class="arena-modal-actions"><button type="button" class="secondary" onclick="document.getElementById('arenaModalCancel').click()">Cancel</button><button id="arenaModalSave" type="submit">Save arena</button></div>
+  </form>
+</dialog>
 <div class="actions"><button id="saveButton" type="button">Save configuration</button><span id="dirtyState"></span></div>
 <div class="registration-head"><div><h2>Matches currently in registration</h2><p>Loaded directly from the Chess.com club match index.</p></div><button id="refreshRegistration" type="button" class="secondary">Refresh</button></div>
 <div id="registrationStatus" class="registration-status" aria-live="polite"></div>
