@@ -1,0 +1,57 @@
+name: Team France standalone Widget and Match Analyzer
+on:
+  push:
+    branches: [release/v2.15.3]
+    paths:
+      - 'TeamFrance/**'
+      - 'tests/team_france_clone_test.*'
+      - '.github/workflows/p2k-team-france-v2153.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PHP and JavaScript
+        run: |
+          find TeamFrance -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          find TeamFrance -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          bash -n TeamFrance/install-standalone.sh
+      - name: Verify Team France club isolation
+        run: |
+          php tests/team_france_clone_test.php
+          python3 tests/team_france_clone_test.py
+      - name: Qualify installer and runtime data preservation
+        run: |
+          set -euo pipefail
+          root="$(mktemp -d)"
+          mkdir -p "$root/server/team-points/src" "$root/api" "$root/TeamFrance/Widget/data/cache" "$root/TGP/Widget"
+          printf '<?php // mock OAuth source\n' > "$root/server/team-points/src/OAuthSession.php"
+          printf '<?php // mock monitoring source\n' > "$root/api/_common.php"
+          printf '{"schemaVersion":1,"revision":7,"items":[{"matchId":"12345"}]}' > "$root/TeamFrance/Widget/data/showcase.json"
+          printf 'untouched' > "$root/TeamFrance/Widget/data/cache/preserve.txt"
+          printf 'untouched' > "$root/TGP/Widget/marker.txt"
+          PHP_CLI="$(command -v php)" bash TeamFrance/install-standalone.sh "$root"
+          PHP_CLI="$(command -v php)" bash TeamFrance/install-standalone.sh "$root"
+          test -f "$root/TeamFrance/MatchAnalyzer/compat/PreviewIsolation.php"
+          test -f "$root/TeamFrance/MatchAnalyzer/assets/team-france-tracking.js"
+          grep -q '"revision":7' "$root/TeamFrance/Widget/data/showcase.json"
+          test "$(cat "$root/TeamFrance/Widget/data/cache/preserve.txt")" = untouched
+          test "$(cat "$root/TGP/Widget/marker.txt")" = untouched
+          test "$(find "$root/storage/team-france-backups" -type f | wc -l)" -gt 0
+      - name: Build standalone installer ZIP
+        run: |
+          mkdir -p dist
+          zip -X -qr dist/P2K_v2.15.3_TeamFrance_Widget_Analyzer_STANDALONE.zip TeamFrance
+          unzip -t dist/P2K_v2.15.3_TeamFrance_Widget_Analyzer_STANDALONE.zip
+          sha256sum dist/P2K_v2.15.3_TeamFrance_Widget_Analyzer_STANDALONE.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: team-france-v2153-${{ github.sha }}
+          path: dist/P2K_v2.15.3_TeamFrance_Widget_Analyzer_STANDALONE.zip
+          retention-days: 30
+          if-no-files-found: error
