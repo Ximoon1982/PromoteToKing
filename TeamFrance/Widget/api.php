@@ -291,7 +291,7 @@ try {
         $items = array_slice(array_values(array_filter($state['items'], static fn(array $item): bool => ($item['enabled'] ?? true) === true)), 0, $limit);
         $cards = [];
         foreach ($items as $item) $cards[] = item_payload($item, $teamSlug, $chess, $config)['match'];
-        reply(200, ['ok'=>true,'version'=>$config['version'] ?? '0.2.0','teamSlug'=>$teamSlug,'cards'=>$cards]);
+        reply(200, ['ok'=>true,'version'=>$config['version'] ?? '0.2.0','teamSlug'=>$teamSlug,'cards'=>$cards,'arenas'=>array_slice(array_values(array_filter($state['arenas'] ?? [], static fn(array $a): bool => ($a['active'] ?? false) === true)), 0, 2)]);
     }
 
     if ($action === 'admin-status') {
@@ -325,7 +325,7 @@ try {
         $matchMap = club_daily_match_map($index, $teamSlug);
         $items = [];
         foreach ($state['items'] as $item) $items[] = admin_item_payload($item, $matchMap, $teamSlug);
-        reply(200, ['ok'=>true,'schemaVersion'=>$state['schemaVersion'],'revision'=>$state['revision'],'updatedAt'=>$state['updatedAt'],'items'=>$items,'teamSlug'=>$teamSlug,'teamName'=>$config['team_name'] ?? $teamSlug]);
+        reply(200, ['ok'=>true,'schemaVersion'=>$state['schemaVersion'],'revision'=>$state['revision'],'updatedAt'=>$state['updatedAt'],'items'=>$items,'arenas'=>$state['arenas'] ?? [],'teamSlug'=>$teamSlug,'teamName'=>$config['team_name'] ?? $teamSlug]);
     }
 
     if ($action === 'registration-list') {
