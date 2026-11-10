@@ -1,4 +1,4 @@
-Team France Match Showcase v0.3.1
+Team France Match Showcase v0.3.2
 
 Standalone location:
   /TeamFrance/Widget/
@@ -43,3 +43,6 @@ config.php defaults to:
 The data/cache directory is disposable. data/showcase.json is the persistent configuration.
 
 Install with TeamFrance/install-standalone.sh. Configuration state is never overwritten.
+
+Update v0.3.2: MCA compact list with add/edit modal, independent immediate arena saves; unsaved Daily-match edits stay local.
+Public cards and headings localized to French (Matchs en différé; En cours; jours abbreviated j). Admin stays in English.
