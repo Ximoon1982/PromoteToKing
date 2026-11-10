@@ -68,14 +68,14 @@
     return Math.max(0, Math.ceil(remaining / throughput / 1000));
   }
   function csv(rows, match) {
-    const fields = ["username", "name", "profile_url", "rating", "last_online", "joined_tgp", "max_rating", "timeout_rate", "last_online_age_hours", "match_id", "match_name", "rating_min", "rating_max"];
+    const fields = ["username", "name", "rating", "max_rating", "timeout_rate", "last_online", "joined_tgp", "profile_url", "last_online_age_hours", "match_id", "match_name", "rating_min", "rating_max"];
     const quote = value => `"${String(value ?? "").replace(/"/g, '""')}"`;
     const iso = seconds => Number(seconds)>0 ? new Date(Number(seconds)*1000).toISOString() : "";
     const lines = [fields.map(quote).join(",")];
     rows.forEach(row => lines.push([
-      row.username, row.name || "", `https://www.chess.com/member/${encodeURIComponent(row.username)}`,
-      row.rating, iso(row.live?.last_online), iso(row.joined_tgp_epoch), row.max_rating ?? "",
-      row.live?.timeout_percent, row.last_online_age_hours, match.id, match.name, match.min,
+      row.username, row.name || "", row.rating, row.max_rating ?? "",
+      row.live?.timeout_percent, iso(row.live?.last_online), iso(row.joined_tgp_epoch),
+      `https://www.chess.com/member/${encodeURIComponent(row.username)}`, row.last_online_age_hours, match.id, match.name, match.min,
       Number.isFinite(match.max) ? match.max : ""
     ].map(quote).join(",")));
     return `\uFEFF${lines.join("\r\n")}\r\n`;
