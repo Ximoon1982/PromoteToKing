@@ -6,6 +6,8 @@ on:
       - 'TGP/Widget/**'
       - 'TeamFrance/Widget/**'
       - 'tests/widget_arenas_v2153_test.php'
+      - 'tools/install-widget-wcgc-arenas-v2153.sh'
+      - 'tools/INSTALL-widget-wcgc-arenas-v2153.txt'
       - '.github/workflows/widget-arenas-v2153.yml'
   workflow_dispatch:
 permissions:
@@ -20,6 +22,7 @@ jobs:
           set -euo pipefail
           find TGP/Widget TeamFrance/Widget -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l tests/widget_arenas_v2153_test.php
+          bash -n tools/install-widget-wcgc-arenas-v2153.sh
           find TGP/Widget TeamFrance/Widget -type f -name '*.js' -print0 | xargs -0 -n1 node --check
       - name: Arena storage and regression tests
         run: |
@@ -27,12 +30,31 @@ jobs:
           php tests/widget_arenas_v2153_test.php
           grep -q "'WCGC'" TGP/Widget/config.php
           grep -q "'WCGC'" TeamFrance/Widget/config.php
+      - name: Installer preservation and idempotence smoke test
+        run: |
+          set -euo pipefail
+          root="$(mktemp -d)"
+          mkdir -p "$root/server/team-points/src" "$root/TGP/Widget/data" "$root/TeamFrance/Widget/data"
+          touch "$root/server/team-points/src/OAuthSession.php"
+          cp -a TGP/Widget/. "$root/TGP/Widget/"
+          cp -a TeamFrance/Widget/. "$root/TeamFrance/Widget/"
+          printf 'TGP live data' > "$root/TGP/Widget/data/showcase.json"
+          printf 'Team France live data' > "$root/TeamFrance/Widget/data/showcase.json"
+          PHP_CLI="$(command -v php)" bash tools/install-widget-wcgc-arenas-v2153.sh "$root"
+          PHP_CLI="$(command -v php)" bash tools/install-widget-wcgc-arenas-v2153.sh "$root"
+          test "$(cat "$root/TGP/Widget/data/showcase.json")" = 'TGP live data'
+          test "$(cat "$root/TeamFrance/Widget/data/showcase.json")" = 'Team France live data'
+          test -f "$root/storage/widget-wcgc-arenas-backups/"*"/TGP/Widget/api.php"
       - name: Prepare isolated widget overlay
         run: |
           set -euo pipefail
-          mkdir -p dist
-          zip -X -qr dist/Widget_WCGC_Arenas_v2153.zip TGP/Widget TeamFrance/Widget \
-            -x '*/data/showcase.json' '*/data/showcase.json.bak' '*/data/showcase.lock' '*/data/cache/*' '*/data/*.tmp'
+          mkdir -p dist/stage/TGP dist/stage/TeamFrance
+          cp tools/install-widget-wcgc-arenas-v2153.sh dist/stage/
+          cp tools/INSTALL-widget-wcgc-arenas-v2153.txt dist/stage/
+          cp -a TGP/Widget dist/stage/TGP/
+          cp -a TeamFrance/Widget dist/stage/TeamFrance/
+          (cd dist/stage && zip -X -qr ../Widget_WCGC_Arenas_v2153.zip TGP/Widget TeamFrance/Widget install-widget-wcgc-arenas-v2153.sh INSTALL-widget-wcgc-arenas-v2153.txt \
+            -x '*/data/showcase.json' '*/data/showcase.json.bak' '*/data/showcase.lock' '*/data/cache/*' '*/data/*.tmp')
           unzip -t dist/Widget_WCGC_Arenas_v2153.zip
       - uses: actions/upload-artifact@v4
         with:
