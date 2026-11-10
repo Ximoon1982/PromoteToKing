@@ -1,4 +1,4 @@
-The Golden Phoenix Match Showcase v0.3.1
+The Golden Phoenix Match Showcase v0.3.2
 
 Standalone location:
   /TGP/Widget/
@@ -41,3 +41,5 @@ config.php defaults to:
   team_name = The Golden Phoenix
 
 The data/cache directory is disposable. data/showcase.json is the persistent configuration.
+
+Update v0.3.2: MCA compact list with add/edit modal, independent immediate arena saves; unsaved Daily-match edits stay local.
