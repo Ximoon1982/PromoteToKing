@@ -95,6 +95,55 @@
     return payload;
   }
 
+
+  const arenaList = document.getElementById("arenaList");
+  const addArenaButton = document.getElementById("addArenaButton");
+  let arenas = [];
+
+  function renderArenas() {
+    arenaList.innerHTML = arenas.map((a, index) => `<div class="arena-row" data-arena-index="${index}">
+      <div class="arena-row-head"><label><input type="checkbox" data-arena-field="active" ${a.active ? "checked" : ""}> Display this arena</label><button type="button" class="remove-arena" data-remove-arena>Remove</button></div>
+      <div class="arena-fields">
+        <label class="wide">Arena name<input data-arena-field="name" maxlength="120" value="${esc(a.name)}" placeholder="Multi-club arena"></label>
+        <label class="wide">Chess.com arena URL<input data-arena-field="link" type="url" maxlength="600" value="${esc(a.link)}" placeholder="https://www.chess.com/tournament/live/arena/..."></label>
+        <label>Start date (Luxembourg)<input type="date" data-arena-field="date" value="${esc(a.date)}"></label>
+        <label>Start time (Luxembourg)<input type="time" data-arena-field="time" value="${esc(a.time)}"></label>
+        <label>Duration<input data-arena-field="duration" maxlength="40" value="${esc(a.duration)}" placeholder="90m, 2h, 1h30m"></label>
+        <label>Time control<input data-arena-field="timeControl" maxlength="40" value="${esc(a.timeControl)}" placeholder="3+2"></label>
+      </div></div>`).join("");
+  }
+  addArenaButton.addEventListener("click", () => {
+    if (arenas.length >= 100) { setMessage("Maximum 100 configured arenas.", "error"); return; }
+    arenas.push({active: true, name:"", link:"", date:"", time:"", duration:"", timeControl:""});
+    setDirty(true); renderArenas();
+  });
+  arenaList.addEventListener("input", event => {
+    const target = event.target;
+    const row = target.closest("[data-arena-index]");
+    const index = Number(row?.dataset.arenaIndex);
+    const field = target.dataset.arenaField;
+    if (!arenas[index] || !field) return;
+    arenas[index][field] = target.type === "checkbox" ? target.checked : target.value;
+    setDirty(true);
+  });
+  arenaList.addEventListener("change", event => {
+    const target = event.target;
+    const row = target.closest("[data-arena-index]");
+    const index = Number(row?.dataset.arenaIndex);
+    const field = target.dataset.arenaField;
+    if (!arenas[index] || !field) return;
+    arenas[index][field] = target.type === "checkbox" ? target.checked : target.value;
+    setDirty(true);
+  });
+  arenaList.addEventListener("click", event => {
+    const button = event.target.closest("[data-remove-arena]");
+    if (!button) return;
+    const row = button.closest("[data-arena-index]");
+    const index = Number(row?.dataset.arenaIndex);
+    if (!Number.isInteger(index) || !arenas[index]) return;
+    arenas.splice(index, 1); setDirty(true); renderArenas();
+  });
+
   function showAdmin() {
     editor.hidden = false;
     embedPanel.hidden = false;
@@ -137,6 +186,8 @@
   async function loadAdminState() {
     const payload = await json(`${API}?action=admin-state&_=${Date.now()}`);
     revision = Number(payload.revision) || 0;
+    arenas = (payload.arenas || []).map(a => ({active:a.active === true,name:a.name || "",link:a.link || "",date:a.date || "",time:a.time || "",duration:a.duration || "",timeControl:a.timeControl || ""}));
+    renderArenas();
     items = (payload.items || []).map(row => ({
       matchId: String(row.matchId),
       enabled: row.enabled !== false,
@@ -304,6 +355,7 @@
         body: JSON.stringify({
           revision,
           items: items.map(({ matchId, enabled, urgent }) => ({ matchId, enabled, urgent })),
+          arenas: arenas.map(({active,name,link,date,time,duration,timeControl}) => ({active,name,link,date,time,duration,timeControl})),
         }),
       });
       revision = Number(payload.revision) || revision + 1;
