@@ -17,5 +17,9 @@ try{
  file_put_contents($file,json_encode(['schemaVersion'=>2,'clubSlug'=>'the-golden-phoenix','fetchedAt'=>'2026-11-10T10:00:00Z','memberCount'=>2,'members'=>$members]));
  $new=recruitment_valid_snapshot($file);
  if($new===null||$new['members'][0]['joined']!==1700000000)throw new RuntimeException('Joined date lost in snapshot');
- echo "PASS TGP roster joined dates and legacy snapshot compatibility\n";
+ $wire=recruitment_response_members($new);
+ if($wire['members']!==['ALICE','Bob'] || $wire['joinedByUsername']['alice']!==1700000000) throw new RuntimeException('Wire roster must send string usernames and separately mapped joined times');
+ $oldWire=recruitment_response_members($old);
+ if($oldWire['members']!==['Alice','Bob'] || $oldWire['joinedByUsername']!==[]) throw new RuntimeException('Legacy wire roster invalid');
+ echo "PASS TGP roster joined dates, legacy snapshots and string-compatible HTTP response\n";
 }finally{unlink($file);}

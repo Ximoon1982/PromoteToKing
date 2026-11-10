@@ -30,6 +30,8 @@ jobs:
           python3 tests/test_tgp_match_recruitment_isolation.py
           node tests/recruit_match_v2_core.test.js
           node tests/tgp_match_recruit_scheduler.test.cjs
+          TGP_ROSTER_SHAPE=structured node tests/tgp_match_recruit_scheduler.test.cjs
+          TGP_ROSTER_SHAPE=malformed node tests/tgp_match_recruit_scheduler.test.cjs
           php tests/tgp_member_roster_snapshot_test.php
       - name: Installer idempotence and state preservation
         run: |

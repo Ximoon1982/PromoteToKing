@@ -48,6 +48,25 @@ function recruitment_valid_snapshot(string $file): ?array {
     $data['members'] = $members; // Normalize legacy string-only snapshots safely.
     return $data;
 }
+function recruitment_response_members(array $snapshot): array {
+    // Wire protocol remains backward compatible with already-open recruitment tabs.
+    // Persisted snapshots may contain records with joining dates, but the "members"
+    // response field ALWAYS contains usernames as strings. Joining dates travel in
+    // a separate map for modern clients.
+    $members = [];
+    $joined = [];
+    foreach ($snapshot['members'] ?? [] as $member) {
+        $username = is_array($member) ? ($member['username'] ?? null) : $member;
+        if (!is_string($username) || !preg_match('/^[a-z0-9_-]{1,64}$/iD', $username)) {
+            throw new RuntimeException('Invalid cached recruitment roster username.');
+        }
+        $members[] = $username;
+        $epoch = is_array($member) ? ($member['joined'] ?? null) : null;
+        if (is_numeric($epoch) && (int)$epoch > 0) $joined[strtolower($username)] = (int)$epoch;
+    }
+    return ['members' => $members, 'joinedByUsername' => $joined];
+}
+
 function recruitment_save_snapshot(string $dir, array $data): void {
     if (!is_dir($dir) && !@mkdir($dir, 0770, true) && !is_dir($dir))
         throw new RuntimeException('Unable to create the private membership cache directory.');
@@ -125,14 +144,14 @@ try {
     try {
         $data = recruitment_live_bearer_roster();
         recruitment_save_snapshot($dir,$data);
-        recruitment_reply(200,['ok'=>true,'source'=>'live','snapshotAt'=>$data['fetchedAt'],'members'=>$data['members'],'count'=>$data['memberCount']]);
+        recruitment_reply(200,['ok'=>true,'source'=>'live','snapshotAt'=>$data['fetchedAt'],...recruitment_response_members($data),'count'=>$data['memberCount']]);
     } catch (Throwable $e) {
         error_log('TGP recruitment membership API: '.$e->getMessage());
         $cached = recruitment_valid_snapshot($file);
         $warning = 'The Golden Phoenix membership list could not be retrieved from Chess.com. To obtain an updated member list, configure the club membership list as Public on Chess.com while the recruitment analysis is in progress.';
         if ($cached !== null) recruitment_reply(200,[
             'ok'=>true,'source'=>'fallback','snapshotAt'=>$cached['fetchedAt'],
-            'members'=>$cached['members'],'count'=>$cached['memberCount'],'warning'=>$warning.' Using the last saved roster from '.$cached['fetchedAt'].' (UTC). All potentially eligible players will have their current TGP membership rechecked.'
+            ...recruitment_response_members($cached),'count'=>$cached['memberCount'],'warning'=>$warning.' Using the last saved roster from '.$cached['fetchedAt'].' (UTC). All potentially eligible players will have their current TGP membership rechecked.'
         ]);
         recruitment_reply(503,['ok'=>false,'error'=>['code'=>'ROSTER_UNAVAILABLE','message'=>$warning.' No previously saved roster exists, so recruitment cannot proceed.']]);
     }

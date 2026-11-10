@@ -72,7 +72,16 @@ const r=await fetch("api/?action=roster",{signal:ctl.signal,cache:"no-store",cre
 const roster=await r.json();logEvent(r.ok?"success":"error","TGP roster",r.ok?"Membership "+(roster.source||"unknown")+" ("+Number(roster.count||0)+" members)":"Roster request failed",{status:r.status});if(!r.ok||!roster.ok)throw Error(roster?.error?.message||"Membership list unavailable.");
 note(roster.source==="fallback"?roster.warning:"");
 const users=roster.members;if(!Array.isArray(users)||users.length===0)throw Error("No valid TGP member list is available.");
-const reg=registered(),pool=users.map(item=>typeof item==="string"?{username:item,joined:null}:item).filter(item=>item&&typeof item.username==="string"&&!reg.has(key(item.username))).map(item=>({username:item.username,username_key:key(item.username),joined_tgp_epoch:Number(item.joined)>0?Number(item.joined):null}));
+// Normalize BOTH the original string roster and the v2 structured roster.
+// Reject malformed responses before any candidate requests can be queued.
+const joinMap=roster.joinedByUsername&&typeof roster.joinedByUsername==="object"?roster.joinedByUsername:{};
+const normalizedUsers=users.map(item=>{
+ const username=typeof item==="string"?item:(item&&typeof item.username==="string"?item.username:null);
+ if(!username||!/^[a-z0-9_-]{1,64}$/i.test(username))throw Error("Invalid username in TGP member list; scan stopped before sending player requests. Reload the application.");
+ const joined=typeof item==="object"&&item!==null?item.joined:joinMap[key(username)];
+ return{username,joined_tgp_epoch:Number(joined)>0?Number(joined):null};
+});
+const reg=registered(),pool=normalizedUsers.filter(item=>!reg.has(key(item.username))).map(item=>({...item,username_key:key(item.username)}));
 u.funnel.hidden=false;u.funnel.textContent=users.length+" saved/live TGP members → "+pool.length+" not registered for this match";
 let ratingChecked=0,eligibleCount=0,qualifiedCount=0,unverifiedCount=0;const started=performance.now(),completion=[];
 const progress=(done,total)=>{latestProgress={done,total,qualifiedCount,eligibleCount,unverifiedCount};if(progressFrame!==null)return;progressFrame=setTimeout(()=>{progressFrame=null;const p=latestProgress;if(!p)return;const elapsed=performance.now()-started;const rate=p.done/Math.max(.001,elapsed/1000);const eta=rate>0?Math.ceil((p.total-p.done)/rate):null;const now=performance.now();if(now-rateWindowStart>=1000){lastMeasuredRate=completedRequests/((now-rateWindowStart)/1000);completedRequests=0;rateWindowStart=now}u.details.textContent=p.done+" / "+p.total+" checked · "+p.qualifiedCount+" within rating · "+p.eligibleCount+" eligible · "+p.unverifiedCount+" unverified · " +lastMeasuredRate.toFixed(1)+" requests/s · "+activePosts+" gateway POSTs · "+queue.length+" queued · ETA "+(eta==null?"calculating…":eta+"s");status("Verifying ratings, eligibility and membership…","working",10+(p.total?p.done/p.total*89:89))},120)};
@@ -99,7 +108,10 @@ const unverified=checked.filter(x=>x?.kind==="unverified").map(x=>({username:x.u
 const rows=[...checked.filter(x=>x?.kind==="checked"),...unverified];
 const matchInfo={id:state.id,name:state.match.name||"Match "+state.id, ratingCategory:s.ratingCategory,min:s.min,max:s.max};
 display({rows,rosterCount:users.length,ratingChecked,match:matchInfo});logEvent("info","scan",eligibleCount+" eligible · "+unverified.length+" unverified");
-status("Recruitment analysis completed. "+eligibleCount+" eligible; "+unverified.length+" unverified.","success",100);
+if(pool.length>0&&unverified.length===pool.length&&ratingChecked===0){
+ logEvent("error","scan","All player-statistics requests failed; results are invalid.");
+ status("Recruitment failed: every player-statistics request failed. Check the event log; the result is not a valid eligibility analysis.","error",null);
+}else status("Recruitment analysis completed. "+eligibleCount+" eligible; "+unverified.length+" unverified.","success",100);
 }catch(e){logEvent("error","scan",e.message||String(e));status(ctl.signal.aborted?"Recruitment cancelled.":e.message||String(e),ctl.signal.aborted?"working":"error")}finally{if(progressFrame!==null){clearTimeout(progressFrame);progressFrame=null}state.controller=null;busy(false)}}
 document.getElementById("tgpLogCopy")?.addEventListener("click",()=>navigator.clipboard?.writeText(events.map(e=>JSON.stringify(e)).join("\n")).catch(()=>{}));
 document.getElementById("tgpLogClear")?.addEventListener("click",()=>{events.length=0;requestCount=0;errorCount=0;logEvent("info","log","Log cleared")});
