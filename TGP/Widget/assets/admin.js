@@ -161,7 +161,8 @@
     const url = publicWidgetUrl();
     const title = `${String(CFG.teamName || "Team")} match showcase`;
     displayUrl.value = url;
-    iframeHtml.value = `<iframe src="${url}" width="260" height="460" style="border:0;overflow:hidden" scrolling="no" loading="lazy" title="${title.replace(/\"/g, "&quot;")}"></iframe>`;
+    const height = arenas.some(a => a.active && a.name && a.link) ? 460 : 260;
+    iframeHtml.value = `<iframe src="${url}" width="260" height="${height}" style="border:0;overflow:hidden" scrolling="no" loading="lazy" title="${title.replace(/\"/g, "&quot;")}"></iframe>`;
   }
 
   async function copyField(targetId) {
@@ -188,6 +189,7 @@
     revision = Number(payload.revision) || 0;
     arenas = (payload.arenas || []).map(a => ({active:a.active === true,name:a.name || "",link:a.link || "",date:a.date || "",time:a.time || "",duration:a.duration || "",timeControl:a.timeControl || ""}));
     renderArenas();
+    updateEmbedFields();
     items = (payload.items || []).map(row => ({
       matchId: String(row.matchId),
       enabled: row.enabled !== false,
