@@ -1,0 +1,66 @@
+name: TGP admin hub and upcoming match selectors v2.15.3
+on:
+  push:
+    branches: [release/v2.15.3]
+    paths:
+      - 'TGP/index.php'
+      - 'TGP/home.html'
+      - 'TGP/api/overview.php'
+      - 'TGP/assets/home.js'
+      - 'TGP/assets/upcoming-selector.js'
+      - 'TGP/assets/upcoming-selector.css'
+      - 'TGP/MatchAnalyzer/template.html'
+      - 'TGP/MatchRecruitment/template.html'
+      - 'TGP/install-admin-hub.sh'
+      - 'tests/tgp_admin_hub.test.cjs'
+      - '.github/workflows/tgp-admin-hub-v2153.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and integration checks
+        run: |
+          set -euo pipefail
+          php -l TGP/index.php
+          php -l TGP/api/overview.php
+          node --check TGP/assets/upcoming-selector.js
+          node --check TGP/assets/home.js
+          node tests/tgp_admin_hub.test.cjs
+          bash -n TGP/install-admin-hub.sh
+      - name: Installer preserves sibling applications
+        run: |
+          set -euo pipefail
+          root="$(mktemp -d)"
+          mkdir -p "$root/server/team-points/src" "$root/TGP/MatchAnalyzer" "$root/TGP/MatchRecruitment" "$root/TGP/Widget"
+          printf 'keep-analyzer' > "$root/TGP/MatchAnalyzer/auth.php"
+          printf 'keep-recruitment' > "$root/TGP/MatchRecruitment/auth.php"
+          printf 'keep-widget' > "$root/TGP/Widget/api.php"
+          PHP_CLI="$(command -v php)" bash TGP/install-admin-hub.sh "$root"
+          PHP_CLI="$(command -v php)" bash TGP/install-admin-hub.sh "$root"
+          test "$(cat "$root/TGP/MatchAnalyzer/auth.php")" = 'keep-analyzer'
+          test "$(cat "$root/TGP/MatchRecruitment/auth.php")" = 'keep-recruitment'
+          test "$(cat "$root/TGP/Widget/api.php")" = 'keep-widget'
+          test -f "$root/TGP/api/overview.php"
+          test -f "$root/TGP/assets/upcoming-selector.js"
+          test -f "$root/storage/tgp-admin-hub-backups/"*"/TGP/MatchAnalyzer/template.html"
+      - name: Build isolated installer ZIP
+        run: |
+          set -euo pipefail
+          mkdir -p dist/stage/TGP/{api,assets,MatchAnalyzer,MatchRecruitment}
+          cp TGP/index.php TGP/home.html TGP/install-admin-hub.sh dist/stage/TGP/
+          cp TGP/api/overview.php dist/stage/TGP/api/
+          cp TGP/assets/{home.js,upcoming-selector.js,upcoming-selector.css} dist/stage/TGP/assets/
+          cp TGP/MatchAnalyzer/template.html dist/stage/TGP/MatchAnalyzer/
+          cp TGP/MatchRecruitment/template.html dist/stage/TGP/MatchRecruitment/
+          (cd dist/stage && zip -X -qr ../TGP_Admin_Hub_and_Match_Selectors_v2153.zip TGP)
+          unzip -t dist/TGP_Admin_Hub_and_Match_Selectors_v2153.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tgp-admin-hub-and-match-selectors
+          path: dist/TGP_Admin_Hub_and_Match_Selectors_v2153.zip
+          retention-days: 30
+          if-no-files-found: error
