@@ -1,0 +1,52 @@
+P2K v2.15.3 — TGP + Team France Widget WCGC / Arena Overlay
+===============================================================
+
+This standalone overlay updates the TGP and Team France widgets ONLY.
+It does not change the Promote to King dashboard, Release Control trees,
+Match Analyzer or Recruitment Assistant. Existing per-club widget state
+(data/showcase.json, locks and cache) is not shipped or overwritten.
+
+Installation (IONOS SSH)
+-----------------------
+1. Download Widget_WCGC_Arenas_v2153.zip from the GitHub Actions
+   "Widget WCGC and arena management v2.15.3" workflow artifact
+   (widget-wcgc-arenas-v2153). GitHub Actions artifact downloads may
+   contain another ZIP: extract it first to obtain this installation ZIP.
+2. Upload Widget_WCGC_Arenas_v2153.zip to your SSH home directory.
+3. Run:
+
+   cd ~
+   mkdir -p P2K_Widget_WCGC_Arenas_v2153
+   unzip -oq Widget_WCGC_Arenas_v2153.zip -d P2K_Widget_WCGC_Arenas_v2153
+   bash P2K_Widget_WCGC_Arenas_v2153/install-widget-wcgc-arenas-v2153.sh \
+     /kunden/homepages/43/d141198007/htdocs/PromoteToKing
+
+4. Visit:
+   https://www.promotetoking.org/TGP/Widget/admin/
+   https://www.promotetoking.org/TeamFrance/Widget/admin/
+   Configure arenas and save; both widgets retain their four Daily cards.
+
+New content
+-----------
+- WCGC recognized as a league acronym.
+- Optional up-to-two arenas shown above the 2x2 Daily card grid.
+- Per-club arena editor: URL/name, start in Europe/Luxembourg, duration,
+  time control and enable/disable.
+- Expired arenas are removed from display automatically.
+- New admin iframe HTML uses 260x460 when arenas are configured, or 260x260
+  when none are configured. Update old iframe HEIGHT on external sites
+  if you want the arenas to appear fully.
+
+Data safety and recovery
+------------------------
+The installer backs up overwritten files to
+  <site root>/storage/widget-wcgc-arenas-backups/<timestamp>-<pid>/
+The installer can be safely run twice.
+To reverse code changes, copy the files in that backup to their original
+locations, preserving relative paths. Existing data/showcase.json is left
+untouched by installer and is never included in the ZIP. If config was saved
+using the new widget, older application code may no longer understand arenas;
+take a state backup before reverting code.
+
+The installer expects BOTH standalone widgets already installed. If not,
+it will stop before changing any files.
