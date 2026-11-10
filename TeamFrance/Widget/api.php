@@ -321,7 +321,12 @@ try {
         Auth::requireAdmin($sessionLifetime, false);
         $state = $store->read();
         // Admin rows need only the lightweight club match index: no per-match detail calls.
-        $index = $chess->clubMatches($teamSlug);
+        try {
+            $index = $chess->clubMatches($teamSlug);
+        } catch (ChessApiException $e) {
+            // Admins must still be able to update arenas during a Chess.com API outage.
+            $index = [];
+        }
         $matchMap = club_daily_match_map($index, $teamSlug);
         $items = [];
         foreach ($state['items'] as $item) $items[] = admin_item_payload($item, $matchMap, $teamSlug);
