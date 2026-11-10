@@ -1,0 +1,42 @@
+name: Widget WCGC and arena management v2.15.3
+on:
+  push:
+    branches: [release/v2.15.3]
+    paths:
+      - 'TGP/Widget/**'
+      - 'TeamFrance/Widget/**'
+      - 'tests/widget_arenas_v2153_test.php'
+      - '.github/workflows/widget-arenas-v2153.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax checks
+        run: |
+          set -euo pipefail
+          find TGP/Widget TeamFrance/Widget -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l tests/widget_arenas_v2153_test.php
+          find TGP/Widget TeamFrance/Widget -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Arena storage and regression tests
+        run: |
+          set -euo pipefail
+          php tests/widget_arenas_v2153_test.php
+          grep -q "'WCGC'" TGP/Widget/config.php
+          grep -q "'WCGC'" TeamFrance/Widget/config.php
+      - name: Prepare isolated widget overlay
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          zip -X -qr dist/Widget_WCGC_Arenas_v2153.zip TGP/Widget TeamFrance/Widget \
+            -x '*/data/showcase.json' '*/data/showcase.json.bak' '*/data/showcase.lock' '*/data/cache/*' '*/data/*.tmp'
+          unzip -t dist/Widget_WCGC_Arenas_v2153.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: widget-wcgc-arenas-v2153
+          path: dist/Widget_WCGC_Arenas_v2153.zip
+          retention-days: 30
+          if-no-files-found: error
