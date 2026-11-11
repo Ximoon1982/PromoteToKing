@@ -287,11 +287,12 @@ try {
     if ($action === 'cards') {
         request_method('GET');
         $state = $store->read();
-        $limit = max(1, min(4, (int)($config['max_display_matches'] ?? 4)));
+        $layout = $state['layout'] ?? ['arenaRows'=>1,'dailyRows'=>2];
+        $limit = max(1, min(6, (int)($layout['dailyRows'] ?? 2) * 2));
         $items = array_slice(array_values(array_filter($state['items'], static fn(array $item): bool => ($item['enabled'] ?? true) === true)), 0, $limit);
         $cards = [];
         foreach ($items as $item) $cards[] = item_payload($item, $teamSlug, $chess, $config)['match'];
-        reply(200, ['ok'=>true,'version'=>$config['version'] ?? '0.2.0','teamSlug'=>$teamSlug,'cards'=>$cards,'arenas'=>array_slice(array_values(array_filter($state['arenas'] ?? [], static fn(array $a): bool => ($a['active'] ?? false) === true)), 0, 2)]);
+        reply(200, ['ok'=>true,'version'=>$config['version'] ?? '0.2.0','teamSlug'=>$teamSlug,'cards'=>$cards,'arenas'=>array_slice(array_values(array_filter($state['arenas'] ?? [], static fn(array $a): bool => ($a['active'] ?? false) === true)), 0, max(2, min(4, (int)($layout['arenaRows'] ?? 1) * 2))),'layout'=>$layout]);
     }
 
     if ($action === 'admin-status') {
@@ -330,7 +331,7 @@ try {
         $matchMap = club_daily_match_map($index, $teamSlug);
         $items = [];
         foreach ($state['items'] as $item) $items[] = admin_item_payload($item, $matchMap, $teamSlug);
-        reply(200, ['ok'=>true,'schemaVersion'=>$state['schemaVersion'],'revision'=>$state['revision'],'updatedAt'=>$state['updatedAt'],'items'=>$items,'arenas'=>$state['arenas'] ?? [],'teamSlug'=>$teamSlug,'teamName'=>$config['team_name'] ?? $teamSlug]);
+        reply(200, ['ok'=>true,'schemaVersion'=>$state['schemaVersion'],'revision'=>$state['revision'],'updatedAt'=>$state['updatedAt'],'items'=>$items,'arenas'=>$state['arenas'] ?? [],'layout'=>$state['layout'] ?? ['arenaRows'=>1,'dailyRows'=>2],'teamSlug'=>$teamSlug,'teamName'=>$config['team_name'] ?? $teamSlug]);
     }
 
     if ($action === 'registration-list') {
