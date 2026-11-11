@@ -1,0 +1,104 @@
+name: P2K v2.15.7 MCA-MIAC review Release Control upload
+on:
+  push:
+    paths:
+      - '.github/workflows/p2k-v2157-mca-miac-review.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test MCA / MIAC integration contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in \
+            server/team-points/public/mca-renames.php \
+            server/team-points/src/McaRenameReviewService.php \
+            server/team-points/src/LiveRanksService.php \
+            server/team-points/src/MiacService.php; do php -l "$f"; done
+          node --check assets/js/pages/mca-rename-review-v2157.js
+          node --check assets/js/pages/team-points-features.js
+          node --check assets/js/pages/club-intelligence.js
+          python3 tests/test_v2157_mca_miac_review.py
+          python3 tests/test_v2156_mca_uploaded_dates.py
+          python3 tests/test_v2155_mca_results_priority.py
+      - name: Package exact v2.15.6 public baseline for Release Control
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess,zipfile,re
+          root=pathlib.Path(".")
+          dist=pathlib.Path("dist")
+          dist.mkdir(exist_ok=True)
+          stem="P2K_MCA_MIAC_Review_v2157_ReleaseControl_Upload"
+          pkg=dist/stem
+          payload=pkg/"payload"
+          payload.mkdir(parents=True)
+          version="2.15.7"
+          head=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip()
+          accepted=[{"version":"2.15.6","source_head":"9c92b999d8111c2af7dad78054aa65c275eecb24"}]
+          paths=[
+             "VERSION","ui-v2.html","TeamPointsAdmin.html",
+             "assets/js/pages/team-points-features.js",
+             "assets/js/pages/mca-rename-review-v2157.js",
+             "assets/js/pages/club-intelligence.js",
+             "server/team-points/src/LiveRanksService.php",
+             "server/team-points/src/McaRenameReviewService.php",
+             "server/team-points/public/mca-renames.php",
+          ]
+          recovery=[
+             "ReleaseControl.php",
+             "server/release-control/src/bootstrap.php",
+             "server/release-control/src/ReleasePackageUploadInstaller.php",
+             "server/release-control/src/FilesystemCleanupManager.php",
+          ]
+          for path in paths+recovery:
+             data=(root/path).read_bytes()
+             target=payload/path
+             target.parent.mkdir(parents=True,exist_ok=True)
+             target.write_bytes(data)
+          (payload/"VERSION").write_text(version+"\n")
+          key="p2k-"+version+"-"+head[:12]+"-"+hashlib.sha256((head+"|mca-miac-review-v2157").encode()).hexdigest()[:16]
+          uipath=payload/"ui-v2.html"
+          ui=uipath.read_text()
+          ui=re.sub(r"p2k-\d+\.\d+\.\d+-[a-f0-9]{12}-[a-f0-9]{16}",key,ui,flags=re.I)
+          ui=ui.replace("p2k-2.15.3-widgets-20261111",key)
+          assert "</head>" in ui
+          ui=ui.replace("</head>",'<meta name="p2k-build" content="'+key+'">\n</head>',1)
+          uipath.write_text(ui)
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          (pkg/"CANDIDATE_PAYLOAD.sha256").write_text("".join(sha(payload/p)+"  ./"+p+"\n" for p in sorted(paths)))
+          (pkg/"RECOVERY_PLANE.sha256").write_text("".join(sha(payload/p)+"  ./"+p+"\n" for p in sorted(recovery)))
+          meta={"schema_version":1,"version":version,"source_head":head,"cache_key":key,
+                "build_id":"p2k-mca-miac-review-v2157-"+head[:12]+"-web-upload",
+                "payload_manifest_sha256":sha(pkg/"CANDIDATE_PAYLOAD.sha256"),
+                "accepted_public_builds":accepted}
+          (pkg/"CANDIDATE_RELEASE.json").write_text(json.dumps(meta,indent=2)+"\n")
+          (pkg/"README.txt").write_text(
+             "P2K v2.15.7 MCA-to-MIAC review; upload via Release Control (no SSH).\n"
+             "Requires public 2.15.6-9c92b999d811. Upload creates a preview candidate, not a deployment.\n"
+             "Unresolved MCA username review, MIAC candidate proposals and hard-conflict checks, controlled MIRA rebuild.\n"
+             "No data migration, no automatic merges, no change to raw CSVs or scoring formulas.\n")
+          out=dist/(stem+".zip")
+          with zipfile.ZipFile(out,"w",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+              for p in pkg.rglob("*"):
+                  if p.is_file():z.write(p,p.relative_to(pkg))
+          with zipfile.ZipFile(out) as z:
+              assert z.testzip() is None
+              assert len(z.namelist())==len(paths)+len(recovery)+4
+          print("Release ZIP",out,"version",version,"source head",head,"size",out.stat().st_size)
+          print("sha256",sha(out))
+          PY
+      - name: Validate against actual Release Control candidate loader
+        shell: bash
+        run: |
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_MCA_MIAC_Review_v2157_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.7" || $p["overlay_file_count"]!==9) exit(1); echo "PASS ".$p["release_id"].PHP_EOL;'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-mca-miac-v2157-release-control
+          path: dist/P2K_MCA_MIAC_Review_v2157_ReleaseControl_Upload.zip
+          retention-days: 7
