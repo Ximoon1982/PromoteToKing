@@ -110,7 +110,7 @@
     state.busy = true;
     try {
       const result = await call('review', {method: 'POST', body: {old_username: row.username, new_username: target, decision}, timeoutMs: 45_000});
-      state.report = result.report; render();
+      state.report = result.report; state.busy = false; render();
       if (result.change?.status === 'conflict') message('MIAC detected contradictory verified player IDs. No accounts were merged.', true);
       else message('MIAC: ' + row.username + ' → ' + target + ': ' + (result.change?.status || decision) + '. Rebuild MCA attribution if the MIAC generation changed.');
     } catch (error) {message('MIAC review failed: ' + (error.message || error), true);}
