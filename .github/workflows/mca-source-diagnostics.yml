@@ -58,8 +58,49 @@ jobs:
             }
           }
           PHP
+      - name: Extract failing HTML fixture and check full historical index coverage
+        shell: bash
+        run: |
+          php <<'PHP'
+          <?php
+          require 'server/team-points/src/McaIndexParser.php';
+          use P2K\\TeamPoints\\McaIndexParser;
+          $get=static function(string $url):array {
+            $ch=curl_init($url);
+            curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,
+              CURLOPT_CONNECTTIMEOUT=>6,CURLOPT_TIMEOUT=>15,CURLOPT_USERAGENT=>'PromoteToKing/2.10.9.4 MCA Arena Acquisition (+https://www.promotetoking.org)',
+              CURLOPT_ENCODING=>'',CURLOPT_HTTPHEADER=>['Accept: text/html,text/csv;q=0.9,*/*;q=0.5','Accept-Language: en-US,en;q=0.8']]);
+            $raw=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_RESPONSE_CODE);$err=curl_error($ch);curl_close($ch);
+            return [$status,is_string($raw)?$raw:'',$err];
+          };
+          [$status,$html,$err]=$get('https://www.chess.com/tournament/live/arena/one-world-league-6th-24-hours-multi-club-31111058?clubs=1&players=1&pairings=1');
+          if($status===200){
+            file_put_contents('dist/mca-bad-clubs.html',$html);
+            $pos=stripos($html,'Club Results');if($pos===false)$pos=0;
+            $fragment=substr($html,$pos,17000);
+            $start=strpos($fragment,'<tbody');$firstrow=$start!==false?substr($fragment,$start,2800):substr($fragment,0,2800);
+            echo 'CLUB TABLE FIRST ROW / STRUCTURE:',PHP_EOL,substr(preg_replace('/\\s+/', ' ',$firstrow),0,2800),PHP_EOL;
+          }
+          $unique=[];$lastSig='';$scan=[];
+          for($page=1;$page<=40;$page++){
+            $url='https://www.chess.com/club/live-tournaments/promote-to-king?type=multi'.($page>1?'&page='.$page:'');
+            [$http,$body,$error]=$get($url);
+            if($http!==200){echo "INDEX STOP: HTTP $http page $page $error\\n";break;}
+            $p=McaIndexParser::parse($body,$page);$ids=array_column($p['events'],'arena_id');$sig=implode(',',$ids);
+            if(!$ids){echo "INDEX STOP: empty page $page\\n";break;}
+            if($sig===$lastSig){echo "INDEX STOP: repeated page $page\\n";break;}
+            $lastSig=$sig;$prior=count($unique);
+            foreach($p['events'] as $row)$unique[(int)$row['arena_id']]=$row;
+            $scan[]=['page'=>$page,'count'=>count($ids),'new'=>count($unique)-$prior,'first'=>$ids[0],'last'=>$ids[count($ids)-1],'has_next'=>$p['has_next']];
+            echo json_encode($scan[count($scan)-1]),PHP_EOL;
+            if(count($ids)<25)break;
+            usleep(1100000);
+          }
+          file_put_contents('dist/mca-index-scan.json',json_encode(['count'=>count($unique),'pages'=>$scan,'arenas'=>array_values($unique)],JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
+          echo 'INDEX UNIQUE ARENAS: ',count($unique),'; PAGES: ',count($scan),PHP_EOL;
+          PHP
       - uses: actions/upload-artifact@v4
         with:
           name: mca-source-diagnostics
-          path: dist/mca-source-diagnostics.txt
+          path: dist/mca-*
           retention-days: 3
