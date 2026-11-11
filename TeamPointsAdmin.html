@@ -220,13 +220,13 @@
       </div>
       <div class="p2k-tp-grid" id="liveRanksSyncMetrics" style="margin-top:.8rem"></div>
       <div id="liveRanksSyncErrorsWrap" hidden style="margin-top:1rem">
-        <div class="p2k-tp-card-head"><div><h3>Failed arena acquisition steps</h3><p>Failures remain durable at the exact arena/stage/page. Successful arenas and pages are retained; use Retry failed acquisition after the source or transport issue has cleared.</p></div></div>
-        <div class="p2k-tp-table-wrap"><table><thead><tr><th>Arena</th><th>Stage</th><th>Attempts</th><th>Error</th><th>Last attempt UTC</th></tr></thead><tbody id="liveRanksSyncErrorRows"></tbody></table></div>
+        <div class="p2k-tp-card-head"><div><h3>Arenas needing Results or parsing</h3><p>Distinct arenas without a successfully parsed Results source. Successfully parsed arenas are shown only in the separate list below, even when optional scraping or Pairings enrichment remains incomplete.</p></div></div>
+        <div class="p2k-tp-table-wrap"><table><thead><tr><th>Arena</th><th>Results source</th><th>Acquisition stage</th><th>Warning / error</th><th>Last attempt UTC</th></tr></thead><tbody id="liveRanksSyncErrorRows"></tbody></table></div><div class="p2k-tp-actions" id="liveRanksSyncIssuesPager" style="margin-top:.7rem;justify-content:flex-end"></div>
       </div>
     </section>
     <div class="p2k-tp-grid" id="liveRanksMetrics"></div>
     <section class="p2k-tp-card">
-      <div class="p2k-tp-card-head"><div><h2>Stored MCA source CSV files / arena inventory</h2><p>One canonical row is shown per arena. Scraping is the primary acquisition path; retained CSV files remain the scoring source and audit fallback. Date repair and source-integrity controls are folded into this inventory.</p></div><span class="p2k-tp-pill">canonical arena inventory</span></div>
+      <div class="p2k-tp-card-head"><div><h2>Successfully stored and parsed MCA arenas</h2><p>Only canonical, successfully parsed Results CSV sources appear here, whether scraped automatically, recovered from HTML, or uploaded manually. Each arena appears once and never also in the attention list. Paginated 25 per page.</p></div><span class="p2k-tp-pill">canonical arena inventory</span></div>
       <div class="p2k-tp-actions">
         <button class="p2k-tp-button" id="liveRanksDateSyncStart" type="button">Repair missing dates</button>
         <button class="p2k-tp-button" id="liveRanksDateSyncResume" type="button">Resume date repair</button>
@@ -239,7 +239,7 @@
       <div class="p2k-tp-grid" id="liveRanksIntegrityMetrics" style="margin-top:.8rem"></div>
       <div class="p2k-tp-status" id="liveRanksIntegrityStatus">Loading source-integrity reconciliation…</div>
       <div id="liveRanksDuplicateWrap" hidden style="margin-top:1rem"><div class="p2k-tp-table-wrap"><table><thead><tr><th>Arena</th><th>Canonical source</th><th>Excluded legacy copies</th><th>Content</th></tr></thead><tbody id="liveRanksDuplicateRows"></tbody></table></div></div>
-      <div class="p2k-tp-table-wrap" style="margin-top:1rem"><table><thead><tr><th>Arena / source</th><th>Event date</th><th>Source</th><th>Acquisition</th><th>Results rows</th><th>P2K rows</th><th>Scraped players</th><th>Games</th><th>Integrity</th></tr></thead><tbody id="liveRanksFileRows"><tr><td colspan="9">No MCA source arenas loaded.</td></tr></tbody></table></div>
+      <div class="p2k-tp-table-wrap" style="margin-top:1rem"><table><thead><tr><th>Arena / source</th><th>Event date</th><th>Source</th><th>Results coverage</th><th>Results rows</th><th>P2K rows</th><th>Scraped players</th><th>Games</th><th>Integrity</th></tr></thead><tbody id="liveRanksFileRows"><tr><td colspan="9">No MCA source arenas loaded.</td></tr></tbody></table></div><div class="p2k-tp-actions" id="liveRanksFilePager" style="margin-top:.7rem;justify-content:flex-end"></div>
     </section>
     <section class="p2k-tp-card">
       <div class="p2k-tp-card-head"><div><h2>Computed players and post-processing</h2><p>All valid P2K scores are included immediately. A player endpoint failure does not stop computation; the MCA source username remains in the ladder and is listed as a possible rename for later correction.</p></div></div>
