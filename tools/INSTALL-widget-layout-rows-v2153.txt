@@ -1,0 +1,36 @@
+P2K v2.15.3 — TGP and Team France widget adjustable rows + MCA priority
+=======================================================================
+
+Single ZIP overlay: no database migration, no change to P2K Events Showcase.
+
+1. Upload Widget_Rows_Priority_MCA_v2153.zip to your IONOS SSH home directory.
+2. Run:
+
+  cd ~
+  unzip -oq Widget_Rows_Priority_MCA_v2153.zip -d Widget_Rows_Priority_MCA_v2153
+  bash Widget_Rows_Priority_MCA_v2153/install-widget-layout-rows-v2153.sh \
+    /kunden/homepages/43/d141198007/htdocs/PromoteToKing
+
+WHAT CHANGES
+- Both widgets: independent setting MCA rows 1 or 2 (2 or 4 cards);
+  Daily rows 1, 2 or 3 (2, 4 or 6 cards). Defaults 1 MCA, 2 Daily.
+- Both widgets: arena priority flag/label in compact administration list
+  and a card badge identical to Daily priority.
+- Both widgets: centered arena and Daily title text.
+- Team France: the Daily recruitment number says Manque X including Manque 0.
+- Admin shows updated iframe HTML height (based on currently configured
+  visible cards and row limits); the preview iframe resizes too.
+  Re-copy the new iframe HTML when changing the row configuration on an
+  external embedding page. Browser frame content cannot automatically resize
+  an iframe hosted by another website without cooperation from that host.
+
+DATA SAFETY
+- Existing configurations are upgraded in place to schema 3 with defaults.
+- Both club saved matches, MCA settings and cache remain untouched by installer.
+- Installer performs preflight syntax checks and backs up code in
+  <site root>/storage/widget-layout-rows-backups/<timestamp>-<pid>/.
+- Installer rolls back copied files if one of its copy operations fails.
+
+Admin pages:
+  https://www.promotetoking.org/TGP/Widget/admin/
+  https://www.promotetoking.org/TeamFrance/Widget/admin/
