@@ -150,11 +150,11 @@ final class McaResultsCronService
     /** Compatibility name retained for Admin API; now runs the full arena acquisition worker. */
     public function runHydration(int $maxSeconds=55): array
     {
-        return $this->withGlobalLock(function()use($maxSeconds){$this->ensureState();$this->ensureStorage();$this->seedHistoricalBacklog();$this->pdo->prepare("UPDATE p2k_lr_arena_acquisition SET status='pending' WHERE club_slug=? AND status='running'")->execute([$this->clubSlug]);$this->reconcileAcquisitionDatesFromCanonical();$this->requeueLegacyDateErrors();$this->markSourceIntegrityRebuildIfNeeded();
+        return $this->withGlobalLock(function()use($maxSeconds){$this->ensureState();$this->ensureStorage();$this->seedHistoricalBacklog();$this->pdo->prepare("UPDATE p2k_lr_arena_acquisition SET status='pending' WHERE club_slug=? AND status='running'")->execute([$this->clubSlug]);$this->reconcileAcquisitionDatesFromCanonical();$dateRepairs=$this->reconcileStoredSourceDatesFromAcquisition();$this->requeueLegacyDateErrors();$this->markSourceIntegrityRebuildIfNeeded();
             $deadline=microtime(true)+max(5,min(55,$maxSeconds));$steps=0;$csvAdded=0;
             while(microtime(true)<$deadline-6.0){$item=$this->nextAcquisitionItem();if($item===null)break;$r=$this->acquisitionStep($item,$deadline);$steps++;if(!empty($r['csv_added']))$csvAdded++;}
             if($this->rebuildRequired()&&microtime(true)<$deadline-6.0){try{$service=new LiveRanksService($this->pdo,$this->repository,new ChessApi($this->repository));$service->startProcessing($deadline-1.0);$this->pdo->prepare('UPDATE p2k_lr_sync_state SET rebuild_required=0,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')->execute([$this->clubSlug]);}catch(\Throwable $e){$this->pdo->prepare('UPDATE p2k_lr_sync_state SET last_error=?,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')->execute([substr($e->getMessage(),0,4000),$this->clubSlug]);}}
-            return ['steps'=>$steps,'csv_added'=>$csvAdded,'sync'=>$this->status()];});
+            return ['steps'=>$steps,'csv_added'=>$csvAdded,'source_dates_repaired'=>$dateRepairs,'sync'=>$this->status()];});
     }
 
     public function retryHydrationErrors(): array
@@ -290,6 +290,37 @@ final class McaResultsCronService
     private function storeHtmlFallbackCsv(array $item): void{$q=$this->pdo->prepare('SELECT rank_value,username,result_club,score,wins,draws,losses,streak,most_wins FROM p2k_lr_arena_players WHERE club_slug=? AND arena_id=? ORDER BY COALESCE(rank_value,999999),username_key');$q->execute([$this->clubSlug,(int)$item['arena_id']]);$rows=$q->fetchAll(PDO::FETCH_ASSOC)?:[];if($rows===[])throw new \RuntimeException('Cannot create HTML fallback Results source without player rows.');$fh=fopen('php://temp','w+');fputcsv($fh,['rank','username','club','score','wins','draws','losses','longest streak','most wins']);foreach($rows as $r)fputcsv($fh,[$r['rank_value'],$r['username'],$r['result_club'],$r['score'],$r['wins'],$r['draws'],$r['losses'],$r['streak'],$r['most_wins']]);rewind($fh);$body=stream_get_contents($fh);fclose($fh);$this->storeAutomaticCsv($item,(string)$body,['event_date'=>$item['event_date']??null,'event_start_at'=>$item['event_start_at']??null,'date_precision'=>$item['date_precision']??'unknown'],'html-fallback');$this->pdo->prepare('UPDATE p2k_lr_sync_state SET rebuild_required=1,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')->execute([$this->clubSlug]);}
     private function storeAutomaticCsv(array $item,string $body,array $date,string $origin): void{$this->ensureStorage();$stored=bin2hex(random_bytes(12)).'.csv';$path=$this->storageDir.'/'.$stored;if(file_put_contents($path,$body,LOCK_EX)===false)throw new \RuntimeException('Unable to store discovered MCA Results source.');@chmod($path,0660);try{$ins=$this->pdo->prepare("INSERT INTO p2k_lr_files(club_slug,original_name,stored_name,sha256,size_bytes,uploaded_at,arena_id,arena_slug,event_url,csv_url,source_origin,source_fetched_at,actual_event_date,effective_event_date,event_date_precision,event_date_updated_at,status,row_count,p2k_row_count) VALUES(?,?,?,?,?,UTC_TIMESTAMP(),?,?,?,?,?,UTC_TIMESTAMP(),?,?,?,UTC_TIMESTAMP(),'uploaded',0,0)");$eventDate=$date['event_date']??null;$ins->execute([$this->clubSlug,(string)$item['arena_slug'].'.csv',$stored,hash('sha256',$body),strlen($body),(int)$item['arena_id'],(string)$item['arena_slug'],(string)$item['arena_url'],(string)($item['csv_url']??''),$origin,$eventDate,$eventDate,$eventDate!==null?'known':'upload-fallback']);}catch(\Throwable $e){@unlink($path);throw $e;}$this->invalidateDerivedMca();}
     private function invalidateDerivedMca(): void{$this->pdo->prepare('DELETE FROM p2k_lr_players WHERE club_slug=?')->execute([$this->clubSlug]);$this->pdo->prepare('DELETE FROM p2k_lr_arena_stats WHERE club_slug=?')->execute([$this->clubSlug]);$this->pdo->prepare("INSERT INTO p2k_lr_processing_state(club_slug,status,phase,total_files,processed_files,total_players,checked_players,possible_renamed,closed_accounts,started_at,updated_at,finished_at,last_error) VALUES(?,'idle','files_changed',0,0,0,0,0,0,NULL,UTC_TIMESTAMP(),NULL,NULL) ON DUPLICATE KEY UPDATE status='idle',phase='files_changed',total_files=0,processed_files=0,total_players=0,checked_players=0,possible_renamed=0,closed_accounts=0,started_at=NULL,updated_at=UTC_TIMESTAMP(),finished_at=NULL,last_error=NULL")->execute([$this->clubSlug]);}
+
+    /**
+     * Correct uploaded MCA source dates from existing discovery evidence.
+     * This is a cheap, scoped, idempotent DB-only reconciliation on the
+     * acquisition CRON; it does not redownload, reparse or modify Results.
+     * It also resolves an old mismatch where arena-page repair filled the
+     * manual actual_event_date but left effective_event_date as upload day.
+     */
+    private function reconcileStoredSourceDatesFromAcquisition(): int
+    {
+        $explicit=$this->pdo->prepare("UPDATE p2k_lr_files
+            SET effective_event_date=actual_event_date,event_date_precision='known',event_date_updated_at=UTC_TIMESTAMP()
+            WHERE club_slug=? AND actual_event_date IS NOT NULL
+            AND (effective_event_date IS NULL OR effective_event_date<>actual_event_date
+                 OR event_date_precision IS NULL OR event_date_precision<>'known')");
+        $explicit->execute([$this->clubSlug]);
+        $fromIndex=$this->pdo->prepare("UPDATE p2k_lr_files f
+            JOIN p2k_lr_arena_acquisition a
+              ON a.club_slug=f.club_slug AND a.arena_id=f.arena_id
+            SET f.effective_event_date=a.event_date,
+                f.event_date_precision=a.date_precision,
+                f.event_date_updated_at=UTC_TIMESTAMP()
+            WHERE f.club_slug=? AND f.actual_event_date IS NULL
+              AND a.event_date IS NOT NULL
+              AND a.date_precision IN ('index-visible-time','index-visible-date','index-machine','arena-machine','known')
+              AND (f.effective_event_date IS NULL OR f.effective_event_date<>a.event_date
+                   OR f.event_date_precision IS NULL
+                   OR f.event_date_precision IN ('unknown','upload-fallback'))");
+        $fromIndex->execute([$this->clubSlug]);
+        return $explicit->rowCount()+$fromIndex->rowCount();
+    }
 
     private function reconcileAcquisitionDatesFromCanonical(): int
     {
