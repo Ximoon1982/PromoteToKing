@@ -35,14 +35,76 @@ final class McaResultsCronService
         $errors=array_map(static fn($r)=>['arena_id'=>(int)$r['arena_id'],'arena_slug'=>(string)$r['arena_slug'],'arena_url'=>(string)$r['arena_url'],'stage'=>(string)$r['stage'],'attempts'=>(int)$r['attempts'],'error'=>(string)($r['last_error']??''),'updated_at'=>(string)$r['updated_at']],$errQ->fetchAll(PDO::FETCH_ASSOC)?:[]);
         $total=array_sum($counts);$done=$counts['completed'];$workflow='current';if(($state['phase']??'')==='discovery_limited')$workflow='discovery_attention';elseif(($state['status']??'')==='running'&&($state['phase']??'')==='discovery')$workflow=!empty($state['last_error'])?'discovery_attention':'discovery';elseif($counts['running']+$counts['pending']>0)$workflow='acquisition';elseif($counts['error']>0)$workflow='attention';
         $catalogue=$this->sourceCatalogue();$missingDates=0;foreach($catalogue['canonical_rows'] as $row)if(empty($row['actual_event_date']))$missingDates++;
+        $inventory=$this->adminArenaInventory($catalogue);
         return $state+[
-            'mode'=>'v21094_row_scoped_live_tournaments','workflow_status'=>$workflow,'queue'=>$counts,'hydration_queue'=>$counts,'stage_queue'=>$stage,'errors'=>$errors,
+            'mode'=>'v21094_row_scoped_live_tournaments','workflow_status'=>$workflow,'queue'=>$counts,'hydration_queue'=>$counts,'stage_queue'=>$stage,'errors'=>$errors,'arena_inventory'=>$inventory,
             'progress_percent'=>$total>0?round(100*$done/$total,1):100.0,'historical_missing_dates'=>$missingDates,
             'arena_backlog_total'=>$total,'index_confirmed_arenas'=>$indexConfirmed,'arena_backlog_remaining'=>$counts['pending']+$counts['running']+$counts['error'],'games_stored'=>$games,'club_rows_stored'=>(int)$perf[0],'player_rows_stored'=>(int)$perf[1],
             'source_records_stored'=>$catalogue['stored_records'],'canonical_source_count'=>$catalogue['canonical_sources'],'recognized_source_arenas'=>$catalogue['recognized_arena_sources'],
             'duplicate_source_records'=>$catalogue['duplicate_records'],'duplicate_source_groups'=>$catalogue['duplicate_groups'],'conflicting_duplicate_source_groups'=>$catalogue['conflicting_duplicate_groups'],'unidentified_source_records'=>$catalogue['unidentified_records'],
             'discovery_health'=>(int)($state['discovery_failure_streak']??0)>=2?'error':((int)($state['discovery_failure_streak']??0)===1?'warning':'healthy'),
-            'serial'=>true,'request_spacing_ms'=>1000,'worker_frequency'=>'every_minute','worker_slice_seconds'=>55,'new_arena_priority'=>true,'discovery_strategy'=>'index-occurrence-first-known','full_reconciliation_active'=>(int)($state['high_water_arena_id']??0)>0,
+            'serial'=>true,'request_spacing_ms'=>1000,'worker_frequency'=>'every_minute','worker_slice_seconds'=>55,'new_arena_priority'=>true,'discovery_strategy'=>'index-occurrence-exhaustive','full_reconciliation_active'=>(int)($state['high_water_arena_id']??0)>0,
+        ];
+    }
+
+    /**
+     * Mutually exclusive MCA inventory: one record per arena, with processed
+     * Results taking precedence over optional acquisition-stage failures.
+     */
+    private function adminArenaInventory(array $catalogue): array
+    {
+        $rows=[];
+        foreach(($catalogue['canonical_by_arena']??[]) as $arenaId=>$file){
+            $id=(int)$arenaId;if($id<=0)continue;
+            $identity=McaSourceCatalogue::identityFromRow($file);
+            $fileStatus=(string)($file['status']??'');
+            $rows[$id]=[
+                'arena_id'=>$id,'arena_slug'=>(string)($identity['arena_slug']??($file['arena_slug']??'')),
+                'arena_url'=>(string)($identity['arena_url']??($file['event_url']??'')),
+                'event_date'=>(string)($file['effective_event_date']??($file['actual_event_date']??'')),
+                'file_id'=>(int)($file['id']??0),'source_name'=>(string)($file['original_name']??''),
+                'source_status'=>$fileStatus,'source_origin'=>(string)($file['source_origin']??'manual'),
+                'result_rows'=>(int)($file['row_count']??0),'p2k_rows'=>(int)($file['p2k_row_count']??0),
+                'results_ready'=>$fileStatus==='processed'&&(int)($file['row_count']??0)>0,
+                'acquisition_status'=>'not-in-queue','acquisition_stage'=>'','acquisition_error'=>'',
+                'attempts'=>0,'last_attempt_at'=>'','index_confirmed'=>false,
+            ];
+        }
+        $q=$this->pdo->prepare('SELECT arena_id,arena_slug,arena_url,event_date,source_kind,status,stage,attempts,last_error,updated_at FROM p2k_lr_arena_acquisition WHERE club_slug=? ORDER BY arena_id DESC');
+        $q->execute([$this->clubSlug]);
+        foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $item){
+            $id=(int)$item['arena_id'];if($id<=0)continue;
+            if(!isset($rows[$id])){
+                $rows[$id]=[
+                    'arena_id'=>$id,'arena_slug'=>(string)($item['arena_slug']??''),
+                    'arena_url'=>(string)($item['arena_url']??''),
+                    'event_date'=>(string)($item['event_date']??''),
+                    'file_id'=>0,'source_name'=>'','source_status'=>'missing','source_origin'=>'',
+                    'result_rows'=>0,'p2k_rows'=>0,'results_ready'=>false,
+                    'acquisition_status'=>'','acquisition_stage'=>'','acquisition_error'=>'',
+                    'attempts'=>0,'last_attempt_at'=>'','index_confirmed'=>false,
+                ];
+            }
+            $rows[$id]['acquisition_status']=(string)($item['status']??'');
+            $rows[$id]['acquisition_stage']=(string)($item['stage']??'');
+            $rows[$id]['acquisition_error']=(string)($item['last_error']??'');
+            $rows[$id]['attempts']=(int)($item['attempts']??0);
+            $rows[$id]['last_attempt_at']=(string)($item['updated_at']??'');
+            $rows[$id]['index_confirmed']=(string)($item['source_kind']??'')==='index';
+            if($rows[$id]['event_date']===''&&!empty($item['event_date']))$rows[$id]['event_date']=(string)$item['event_date'];
+        }
+        $items=array_values($rows);
+        usort($items,static fn(array $a,array $b):int => strcmp((string)$b['event_date'],(string)$a['event_date'])?:($b['arena_id']<=>$a['arena_id']));
+        $ready=0;$needs=0;$enrichment=0;
+        foreach($items as $row){
+            if($row['results_ready']){
+                $ready++;
+                if($row['acquisition_status']==='error')$enrichment++;
+            }else{$needs++;}
+        }
+        return [
+            'rows'=>$items,'known_arenas'=>count($items),'results_ready'=>$ready,
+            'needs_results'=>$needs,'results_ready_with_enrichment_errors'=>$enrichment,
         ];
     }
 
@@ -134,26 +196,20 @@ final class McaResultsCronService
                 throw new \RuntimeException($error);
             }
 
-            $knownQ=$this->pdo->prepare('SELECT source_kind FROM p2k_lr_arena_acquisition WHERE club_slug=? AND arena_id=?');
+            // Always reconcile all index pages. Events can be added/reordered after
+            // an older known arena, so stopping at the first known row loses arenas.
+            // The ~28 pages are fetched once every 12h, rate-limited, resumably.
             $ins=$this->pdo->prepare("INSERT INTO p2k_lr_arena_acquisition(club_slug,arena_id,arena_slug,arena_url,csv_url,source_kind,priority,status,stage,results_source,needs_clubs,needs_players,event_start_at,event_date,date_precision,discovered_at,updated_at) VALUES(?,?,?,?,?,'index',100,'pending','arena','unknown',1,1,?,?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE arena_slug=VALUES(arena_slug),arena_url=VALUES(arena_url),csv_url=COALESCE(NULLIF(VALUES(csv_url),''),csv_url),source_kind='index',priority=GREATEST(priority,100),event_start_at=COALESCE(VALUES(event_start_at),event_start_at),event_date=COALESCE(VALUES(event_date),event_date),date_precision=IF(VALUES(event_date) IS NOT NULL,VALUES(date_precision),date_precision),updated_at=UTC_TIMESTAMP()");
 
-            $inserted=0;$checked=0;$reachedKnown=false;
+            $inserted=0;$checked=0;
             foreach($events as $e){
                 $id=(int)$e['arena_id'];
-                // Incremental scans follow Chess.com's occurrence order and stop at the
-                // first event confirmed by a previous successful index scan. File presence
-                // or arena ID is deliberately irrelevant to this boundary.
-                if(!$fullReconciliation){
-                    $knownQ->execute([$this->clubSlug,$id]);
-                    if(strtolower((string)($knownQ->fetchColumn()?:''))==='index'){$reachedKnown=true;break;}
-                }
                 $ins->execute([$this->clubSlug,$id,(string)$e['arena_slug'],(string)$e['arena_url'],(string)$e['csv_url'],$e['event_start_at'],$e['event_date'],(string)$e['date_precision']]);
                 $checked++;if($ins->rowCount()===1)$inserted++;
             }
             $this->pdo->prepare('UPDATE p2k_lr_sync_state SET total_events=total_events+?,checked_events=checked_events+?,current_stage=?,last_index_page_fingerprint=?,discovery_failure_streak=0,last_discovery_attempt_at=UTC_TIMESTAMP(),last_successful_discovery_at=UTC_TIMESTAMP(),last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')
                 ->execute([$inserted,$checked,'index:'.($page+1),(string)($parsed['page_fingerprint']??''),$this->clubSlug]);
 
-            if($reachedKnown){$this->completeDiscoveryCycle();return false;}
             // Current Chess.com index pages contain 25 events. A short page is a genuine
             // terminal page even when the modern UI omits a traditional rel=next link.
             if(count($events)<25){$this->completeDiscoveryCycle();return false;}
