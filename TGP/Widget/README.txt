@@ -43,3 +43,5 @@ config.php defaults to:
 The data/cache directory is disposable. data/showcase.json is the persistent configuration.
 
 Update v0.3.2: MCA compact list with add/edit modal, independent immediate arena saves; unsaved Daily-match edits stay local.
+
+Widget rows (v0.3.3): choose 1–2 MCA rows (up to 4 arenas) and 1–3 Daily rows (up to 6 matches). Defaults remain 1 and 2 rows. Arena priority badges are configured independently in the admin arena list. Updated iframe HTML reflects displayed rows; re-copy after changing settings on an external host.
