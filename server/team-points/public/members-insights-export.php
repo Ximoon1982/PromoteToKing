@@ -37,7 +37,26 @@ try {
     $direction = strtolower(trim((string)($_GET['direction'] ?? 'asc'))) === 'desc' ? 'desc' : 'asc';
     $activityStatus = trim((string)($_GET['activity_status'] ?? ''));
 
-    $filename = 'P2K_Members_' . gmdate('Ymd\\THis\\Z') . '.csv';
+    // The Members leaderboard sends its selected UTC activity window here.
+    // Validate before any CSV headers or bytes are emitted, so an invalid range
+    // yields a normal API error instead of a truncated/corrupted CSV.
+    $startDate = trim((string)($_GET['start'] ?? ''));
+    $endDate = trim((string)($_GET['end'] ?? ''));
+    foreach ([$startDate, $endDate] as $value) {
+        if ($value === '') continue;
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value, new DateTimeZone('UTC'));
+        if (!$date || $date->format('Y-m-d') !== $value) {
+            throw new ApiException('Invalid member insight date.', 400, 'INVALID_DATE');
+        }
+    }
+    if ($startDate !== '' && $endDate !== '' && $startDate > $endDate) {
+        throw new ApiException('The start date must not be after the end date.', 400, 'INVALID_DATE_RANGE');
+    }
+
+    $rangeName = ($startDate !== '' || $endDate !== '')
+        ? ($startDate !== '' ? $startDate : 'beginning') . '_to_' . ($endDate !== '' ? $endDate : 'present') . '_'
+        : '';
+    $filename = 'P2K_Members_' . $rangeName . gmdate('Ymd\\THis\\Z') . '.csv';
     header('Content-Type: text/csv; charset=UTF-8');
     header('Content-Disposition: attachment; filename="' . $filename . '"');
     header('Cache-Control: private, no-store, max-age=0');
@@ -74,7 +93,7 @@ try {
     do {
         $payload = $repository->publicMemberInsights($club, [
             'page'=>$page,'page_size'=>$pageSize,'search'=>$search,'filter'=>$filter,
-            'sort'=>$sort,'direction'=>$direction,'start'=>'','end'=>'','usernames'=>'',
+            'sort'=>$sort,'direction'=>$direction,'start'=>$startDate,'end'=>$endDate,'usernames'=>'',
             'activity_status'=>$activityStatus,'_export'=>true,'_include_secondary'=>false,
         ]);
         $rows = is_array($payload['rows'] ?? null) ? $payload['rows'] : [];
