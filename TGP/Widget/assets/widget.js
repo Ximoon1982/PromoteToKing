@@ -1,4 +1,5 @@
 (()=>{"use strict";
+window.WIDGET_FRANCE=false;
 const grid=document.getElementById("tgpGrid");if(!grid)return;
 const esc=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#039;");
 const numericSetting=(value,fallback)=>value===undefined||value===null||value===""?fallback:(Number.isFinite(Number(value))?Number(value):fallback);
@@ -29,6 +30,13 @@ function card(match){const rec=recruitment(match),count=Number.isFinite(Number(r
 const arenaHost = document.getElementById("arenaShowcase");
 const arenaSection = document.getElementById("arenaSection");
 let configuredArenas = [];
+let arenaRows = 1;
+let dailyRows = 2;
+function applyLayout(value) {
+  const data=value&&typeof value==="object"?value:{};
+  arenaRows=Math.max(1,Math.min(2,Number(data.arenaRows)||1));
+  dailyRows=Math.max(1,Math.min(3,Number(data.dailyRows)||2));
+}
 
 function arenaTiming(a, now=Date.now()) {
   const start=Date.parse(a?.startAt||"");
@@ -71,7 +79,7 @@ function arenaCard(a,t,now) {
   const name=String(a.name||"Arena"),control=String(a.timeControl||"—"),duration=String(a.duration||"—");
   const title=name+" · "+status+" · "+duration+" · "+control+" ("+kind+")";
   return '<a class="tgp-card arena-card" href="'+esc(a.link)+'" target="_blank" rel="noopener noreferrer" title="'+esc(title)+'" aria-label="'+esc(title)+'" data-arena-start="'+t.start+'" data-arena-end="'+t.end+'" data-arena-phase="'+t.phase+'">'+
-    '<div class="tgp-visual">'+arenaSpeedIcon(kind)+'<span class="tgp-badge '+t.phase+'">'+status+'</span></div>'+
+    '<div class="tgp-visual">'+arenaSpeedIcon(kind)+'<span class="tgp-badge '+t.phase+'">'+status+'</span>'+(a.urgent===true?'<span class="tgp-priority">'+(window.WIDGET_FRANCE?'Priorité':'Priority')+'</span>':'')+'</div>'+
     '<div class="tgp-info"><div class="arena-start-line '+t.phase+'" data-arena-live>'+esc(arenaLiveText(t,now))+'</div>'+
     '<div class="arena-meta-line" title="'+esc(name)+'"><strong>'+esc(duration)+'</strong> · '+esc(control)+'</div></div></a>';
 }
@@ -81,7 +89,7 @@ function renderArenas(next) {
   const now=Date.now();
   const visible=configuredArenas.map(a=>({a,t:arenaTiming(a,now)}))
     .filter(x=>x.a?.active===true&&x.a?.name&&x.a?.link&&x.t)
-    .sort((a,b)=>a.t.start-b.t.start).slice(0,2);
+    .sort((a,b)=>a.t.start-b.t.start).slice(0,arenaRows*2);
   arenaSection.hidden=visible.length===0;
   arenaHost.innerHTML=visible.map(x=>arenaCard(x.a,x.t,now)).join("");
 }
@@ -100,6 +108,6 @@ function tickArenaClock() {
   if(changed)renderArenas();
 }
 
-async function load(){try{const r=await fetch(`api.php?action=cards&_=${Date.now()}`,{cache:"no-store",credentials:"same-origin",headers:{Accept:"application/json"}}),p=await r.json();if(!r.ok||p?.ok===false)throw Error(p?.error?.message||`HTTP ${r.status}`);const cards=Array.isArray(p.cards)?p.cards:[];grid.innerHTML=cards.map(card).join("");renderArenas(p.arenas)}catch(error){console.error("TGP Match Showcase",error);grid.replaceChildren();renderArenas([])}}
+async function load(){try{const r=await fetch(`api.php?action=cards&_=${Date.now()}`,{cache:"no-store",credentials:"same-origin",headers:{Accept:"application/json"}}),p=await r.json();if(!r.ok||p?.ok===false)throw Error(p?.error?.message||`HTTP ${r.status}`);const cards=Array.isArray(p.cards)?p.cards:[];applyLayout(p.layout);grid.innerHTML=cards.slice(0,dailyRows*2).map(card).join("");renderArenas(p.arenas)}catch(error){console.error("TGP Match Showcase",error);grid.replaceChildren();renderArenas([])}}
 void load();window.setInterval(load,60000);window.setInterval(tickArenaClock,1000);
 })();

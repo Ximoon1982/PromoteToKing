@@ -1,4 +1,5 @@
 (()=>{"use strict";
+window.WIDGET_FRANCE=true;
 const grid=document.getElementById("tgpGrid");if(!grid)return;
 const esc=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#039;");
 const numericSetting=(value,fallback)=>value===undefined||value===null||value===""?fallback:(Number.isFinite(Number(value))?Number(value):fallback);
@@ -23,12 +24,19 @@ function formatStart(epoch){if(!Number.isFinite(Number(epoch))||Number(epoch)<=0
 function urgency(epoch){const seconds=Number(epoch);if(!Number.isFinite(seconds)||seconds<=0)return{level:"",title:"Début indisponible",label:"—"};const delta=seconds*1000-Date.now();if(delta<=0)return{level:"urgent",title:formatStart(seconds),label:"En cours"};const hours=delta/3600000;if(hours<1)return{level:"urgent",title:formatStart(seconds),label:`${Math.max(1,Math.ceil(delta/60000))}m`};if(hours<24)return{level:hours<=6?"urgent":"soon",title:formatStart(seconds),label:`${Math.ceil(hours)}h`};const days=hours/24;if(days<7)return{level:days<=3?"soon":"",title:formatStart(seconds),label:`${Math.ceil(days)}j`};return{level:"",title:formatStart(seconds),label:formatStartCompact(seconds)}}
 function initials(name){return(String(name||"?").trim().split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]||"").join("")||"?").toUpperCase()}
 function needClass(n){return!Number.isFinite(Number(n))?"gold":Number(n)<=0?"green":Number(n)>=8?"red":"gold"}
-function card(match){const rec=recruitment(match),count=Number.isFinite(Number(rec?.count))?Number(rec.count):null,need=count===null?"Besoin ?":count===0?"Besoin ✓":`Besoin ${count}`,u=urgency(match.startTime),badge=match.category==="league"?((match.leagueAcronyms||[]).join("/")||"Ligue"):"Amical",opponent=match.opponentName||"Adversaire",logo=match.opponentLogo?`<img class="tgp-logo" src="${esc(match.opponentLogo)}" alt="Logo du club ${esc(opponent)}" loading="lazy" referrerpolicy="no-referrer">`:`<div class="tgp-logo-fallback" aria-hidden="true">${esc(initials(opponent))}</div>`,rating=ratingLabel(match),time=compactTime(match.time_control),timeFull=fullTime(match.time_control),startMs=Number(match.startTime)*1000,league48=match.category==="league"&&Number.isFinite(startMs)&&startMs>=Date.now()&&startMs-Date.now()<=48*3600000,startClass=league48?"red":u.level==="urgent"?"red":u.level==="soon"?"gold":"muted",title=`${opponent} — ${match.name||`Match #${match.matchId}`} · ${u.title} · ${rating} · ${timeFull} · ${need}`;return`<a class="tgp-card${league48?" league-48h":""}" href="${esc(match.url)}" target="_blank" rel="noopener noreferrer" title="${esc(title)}" aria-label="${esc(title)}"><div class="tgp-visual">${logo}<span class="tgp-badge${match.category==="friendly"?" friendly":""}">${esc(badge)}</span>${match.urgent?'<span class="tgp-priority">Priorité</span>':""}</div><div class="tgp-info"><div class="tgp-line tgp-primary"><span class="tgp-start ${startClass}">${esc(u.label)}</span><span class="tgp-separator">·</span><span class="tgp-need ${needClass(count)}">${esc(need)}</span></div><div class="tgp-line tgp-secondary"><span class="tgp-time" title="${esc(timeFull)}">${esc(time)}</span><span class="tgp-separator">·</span><span class="tgp-rating">${esc(rating)}</span></div></div></a>`}
+function card(match){const rec=recruitment(match),count=Number.isFinite(Number(rec?.count))?Number(rec.count):null,need=count===null?"Manque ?":`Manque ${count}`,u=urgency(match.startTime),badge=match.category==="league"?((match.leagueAcronyms||[]).join("/")||"Ligue"):"Amical",opponent=match.opponentName||"Adversaire",logo=match.opponentLogo?`<img class="tgp-logo" src="${esc(match.opponentLogo)}" alt="Logo du club ${esc(opponent)}" loading="lazy" referrerpolicy="no-referrer">`:`<div class="tgp-logo-fallback" aria-hidden="true">${esc(initials(opponent))}</div>`,rating=ratingLabel(match),time=compactTime(match.time_control),timeFull=fullTime(match.time_control),startMs=Number(match.startTime)*1000,league48=match.category==="league"&&Number.isFinite(startMs)&&startMs>=Date.now()&&startMs-Date.now()<=48*3600000,startClass=league48?"red":u.level==="urgent"?"red":u.level==="soon"?"gold":"muted",title=`${opponent} — ${match.name||`Match #${match.matchId}`} · ${u.title} · ${rating} · ${timeFull} · ${need}`;return`<a class="tgp-card${league48?" league-48h":""}" href="${esc(match.url)}" target="_blank" rel="noopener noreferrer" title="${esc(title)}" aria-label="${esc(title)}"><div class="tgp-visual">${logo}<span class="tgp-badge${match.category==="friendly"?" friendly":""}">${esc(badge)}</span>${match.urgent?'<span class="tgp-priority">Priorité</span>':""}</div><div class="tgp-info"><div class="tgp-line tgp-primary"><span class="tgp-start ${startClass}">${esc(u.label)}</span><span class="tgp-separator">·</span><span class="tgp-need ${needClass(count)}">${esc(need)}</span></div><div class="tgp-line tgp-secondary"><span class="tgp-time" title="${esc(timeFull)}">${esc(time)}</span><span class="tgp-separator">·</span><span class="tgp-rating">${esc(rating)}</span></div></div></a>`}
 
 
 const arenaHost = document.getElementById("arenaShowcase");
 const arenaSection = document.getElementById("arenaSection");
 let configuredArenas = [];
+let arenaRows = 1;
+let dailyRows = 2;
+function applyLayout(value) {
+  const data=value&&typeof value==="object"?value:{};
+  arenaRows=Math.max(1,Math.min(2,Number(data.arenaRows)||1));
+  dailyRows=Math.max(1,Math.min(3,Number(data.dailyRows)||2));
+}
 
 function arenaTiming(a, now=Date.now()) {
   const start=Date.parse(a?.startAt||"");
@@ -71,7 +79,7 @@ function arenaCard(a,t,now) {
   const name=String(a.name||"Arena"),control=String(a.timeControl||"—"),duration=String(a.duration||"—");
   const title=name+" · "+status+" · "+duration+" · "+control+" ("+kind+")";
   return '<a class="tgp-card arena-card" href="'+esc(a.link)+'" target="_blank" rel="noopener noreferrer" title="'+esc(title)+'" aria-label="'+esc(title)+'" data-arena-start="'+t.start+'" data-arena-end="'+t.end+'" data-arena-phase="'+t.phase+'">'+
-    '<div class="tgp-visual">'+arenaSpeedIcon(kind)+'<span class="tgp-badge '+t.phase+'">'+status+'</span></div>'+
+    '<div class="tgp-visual">'+arenaSpeedIcon(kind)+'<span class="tgp-badge '+t.phase+'">'+status+'</span>'+(a.urgent===true?'<span class="tgp-priority">'+(window.WIDGET_FRANCE?'Priorité':'Priority')+'</span>':'')+'</div>'+
     '<div class="tgp-info"><div class="arena-start-line '+t.phase+'" data-arena-live>'+esc(arenaLiveText(t,now))+'</div>'+
     '<div class="arena-meta-line" title="'+esc(name)+'"><strong>'+esc(duration)+'</strong> · '+esc(control)+'</div></div></a>';
 }
@@ -81,7 +89,7 @@ function renderArenas(next) {
   const now=Date.now();
   const visible=configuredArenas.map(a=>({a,t:arenaTiming(a,now)}))
     .filter(x=>x.a?.active===true&&x.a?.name&&x.a?.link&&x.t)
-    .sort((a,b)=>a.t.start-b.t.start).slice(0,2);
+    .sort((a,b)=>a.t.start-b.t.start).slice(0,arenaRows*2);
   arenaSection.hidden=visible.length===0;
   arenaHost.innerHTML=visible.map(x=>arenaCard(x.a,x.t,now)).join("");
 }
@@ -100,6 +108,6 @@ function tickArenaClock() {
   if(changed)renderArenas();
 }
 
-async function load(){try{const r=await fetch(`api.php?action=cards&_=${Date.now()}`,{cache:"no-store",credentials:"same-origin",headers:{Accept:"application/json"}}),p=await r.json();if(!r.ok||p?.ok===false)throw Error(p?.error?.message||`HTTP ${r.status}`);const cards=Array.isArray(p.cards)?p.cards:[];grid.innerHTML=cards.map(card).join("");renderArenas(p.arenas)}catch(error){console.error("Team France Match Showcase",error);grid.replaceChildren();renderArenas([])}}
+async function load(){try{const r=await fetch(`api.php?action=cards&_=${Date.now()}`,{cache:"no-store",credentials:"same-origin",headers:{Accept:"application/json"}}),p=await r.json();if(!r.ok||p?.ok===false)throw Error(p?.error?.message||`HTTP ${r.status}`);const cards=Array.isArray(p.cards)?p.cards:[];applyLayout(p.layout);grid.innerHTML=cards.slice(0,dailyRows*2).map(card).join("");renderArenas(p.arenas)}catch(error){console.error("Team France Match Showcase",error);grid.replaceChildren();renderArenas([])}}
 void load();window.setInterval(load,60000);window.setInterval(tickArenaClock,1000);
 })();
