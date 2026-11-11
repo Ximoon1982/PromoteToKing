@@ -76,7 +76,16 @@ final class McaRenameReviewService
                 ];
             }
             $canonicalKey = (string)($identity['canonical_username_key'] ?? $key);
-            $isResolved = $canonicalKey !== $key && empty($identity['conflict']);
+            // A confirmed MIAC relationship also counts as resolved when MIAC
+            // happened to choose the historical username as the canonical key.
+            $confirmedTarget = null;
+            foreach ($suggestions as $suggestion) {
+                if ($suggestion['status'] === 'confirmed') {
+                    $confirmedTarget = (string)$suggestion['new_username'];
+                    break;
+                }
+            }
+            $isResolved = empty($identity['conflict']) && ($canonicalKey !== $key || $confirmedTarget !== null);
             $case = [
                 'username' => (string)$row['username'],
                 'username_key' => $key,
@@ -85,7 +94,7 @@ final class McaRenameReviewService
                 'source_files' => is_array($files) ? array_values(array_map('strval', $files)) : [],
                 'verification_error' => (string)($row['last_error'] ?? ''),
                 'profile_checked_at' => $row['profile_checked_at'] ?? null,
-                'canonical_username' => $isResolved ? (string)($identity['canonical_username'] ?? $canonicalKey) : null,
+                'canonical_username' => $isResolved ? ($canonicalKey !== $key ? (string)($identity['canonical_username'] ?? $canonicalKey) : (string)$confirmedTarget) : null,
                 'identity_conflict' => !empty($identity['conflict']),
                 'suggestions' => $suggestions,
                 'state' => $isResolved ? 'resolved_pending_attribution' : 'unresolved',
