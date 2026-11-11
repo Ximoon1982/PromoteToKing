@@ -253,12 +253,14 @@
       </div>
       <div class="p2k-tp-actions" style="flex-wrap:wrap">
         <button class="p2k-tp-button" id="mcaRenameRefresh" type="button">Refresh reconciliation</button>
+        <button class="p2k-tp-button" id="mcaRenameRecheck" type="button">Re-download and compare next missing username</button>
         <button class="p2k-tp-button" id="mcaRenameExport" type="button">Download unresolved CSV</button>
         <button class="p2k-tp-button blue" id="mcaRenameRebuild" type="button" disabled>Rebuild MCA identity attribution</button>
         <a class="p2k-tp-button" href="ClubIntelligence.html?tab=aliases" target="_blank" rel="noopener noreferrer">Open Aliases &amp; name changes</a>
       </div>
       <div id="mcaRenameAttributionStatus" class="p2k-tp-status">Checking MCA identity-map generation…</div>
       <div id="mcaRenameStatus" class="p2k-tp-status">Loading MCA possible rename review…</div>
+      <div id="mcaRenameCsvCheckStatus" class="p2k-tp-status">Checking original-vs-current Chess.com Results CSV comparisons…</div>
       <div id="mcaRenameMetrics" class="p2k-tp-grid" style="margin:.75rem 0"></div>
       <div class="p2k-tp-table-wrap"><table>
         <thead><tr><th>Historical username</th><th>MCA points / arenas</th><th>Source evidence</th><th>Verification</th><th>MIAC candidates and review</th></tr></thead>
@@ -364,7 +366,7 @@
 </main>
 <script src="assets/js/pages/team-points-admin.js?v=2.11.5-bf6a828490f57"></script>
 <script src="assets/js/pages/team-points-features.js?v=2.15.7-miac-mca-review"></script>
-<script src="assets/js/pages/mca-rename-review-v2157.js?v=2.15.7-miac-mca-review"></script>
+<script src="assets/js/pages/mca-rename-review-v2157.js?v=2.15.8-mca-rename-csv-recheck"></script>
 <script src="assets/js/shared/embedded-page.js?v=2.11.5-bf6a828490f57"></script>
 </body>
 </html>
