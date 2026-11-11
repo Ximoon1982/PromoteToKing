@@ -105,16 +105,21 @@
   const arenaModalSave = document.getElementById("arenaModalSave");
   let arenas = [];
   let persistedItems = [];
+  let layout = {arenaRows: 1, dailyRows: 2};
+  const arenaRowsControl = document.getElementById("arenaRows");
+  const dailyRowsControl = document.getElementById("dailyRows");
+  const toLayout = raw => ({arenaRows:Math.max(1,Math.min(2,Number(raw?.arenaRows)||1)),dailyRows:Math.max(1,Math.min(3,Number(raw?.dailyRows)||2))});
   let arenaSaving = false;
   let dailySaving = false;
   let editingArenaIndex = null;
 
   const arenaFields = ["name", "link", "date", "time", "duration", "timeControl"];
   const toArena = a => ({
-    active: a.active === true,
+    active: a.active === true, urgent: a.urgent === true,
     name: String(a.name || ""), link: String(a.link || ""),
     date: String(a.date || ""), time: String(a.time || ""),
     duration: String(a.duration || ""), timeControl: String(a.timeControl || ""),
+    endAt: String(a.endAt || ""),
   });
   const compactItems = rows => rows.map(({matchId, enabled, urgent}) => ({matchId:String(matchId), enabled:enabled === true, urgent:urgent === true}));
   const arenaUrlKey = text => {
@@ -136,7 +141,7 @@
         <span>${esc(formatArenaDate(a.date))} · ${esc(a.time || "—")} · ${esc(a.timeControl || "—")} · ${esc(a.duration || "—")}</span>
       </div>
       <div class="arena-row-actions">
-        <label><input type="checkbox" data-arena-action="enabled" ${a.active ? "checked" : ""} ${(arenaSaving || dailySaving) ? "disabled" : ""}> Enabled</label>
+        <label><input type="checkbox" data-arena-action="enabled" ${a.active ? "checked" : ""} ${(arenaSaving || dailySaving) ? "disabled" : ""}> Enabled</label><label><input type="checkbox" data-arena-action="priority" ${a.urgent ? "checked" : ""} ${(arenaSaving || dailySaving) ? "disabled" : ""}> Priority</label>
         <button type="button" data-arena-action="edit" class="secondary" ${(arenaSaving || dailySaving) ? "disabled" : ""}>Edit</button>
         <button type="button" data-arena-action="remove" class="remove-arena" ${(arenaSaving || dailySaving) ? "disabled" : ""}>Remove</button>
       </div>
@@ -189,7 +194,7 @@
     try {
       const payload = await json(`${API}?action=save`, {
         method: "POST", headers: { ["X-" + (CFG.teamSlug === "team-france" ? "TF" : "TGP") + "-CSRF"]: csrf },
-        body: JSON.stringify({revision, items: persistedItems, arenas: next.map(toArena)}),
+        body: JSON.stringify({revision, items: persistedItems, arenas: next.map(toArena), layout}),
       });
       revision = Number(payload.revision);
       if (!Number.isInteger(revision) || revision < 0) throw new Error("Invalid revision returned by server.");
@@ -245,12 +250,13 @@
   });
   arenaList.addEventListener("change", async event => {
     const input = event.target;
-    if (arenaSaving || dailySaving || input.dataset.arenaAction !== "enabled") return;
+    if (arenaSaving || dailySaving || !["enabled","priority"].includes(input.dataset.arenaAction)) return;
     const index = Number(input.closest("[data-arena-index]")?.dataset.arenaIndex);
     if (!Number.isInteger(index) || !arenas[index]) return;
     const next = arenas.map(toArena);
-    next[index].active = input.checked;
-    await saveArenaConfiguration(next, input.checked ? "Arena enabled." : "Arena disabled.");
+    if (input.dataset.arenaAction === "priority") next[index].urgent = input.checked;
+    else next[index].active = input.checked;
+    await saveArenaConfiguration(next, input.dataset.arenaAction === "priority" ? "Arena priority updated." : (input.checked ? "Arena enabled." : "Arena disabled."));
   });
 
   function showAdmin() {
@@ -270,7 +276,14 @@
     const url = publicWidgetUrl();
     const title = `${String(CFG.teamName || "Team")} match showcase`;
     displayUrl.value = url;
-    const height = arenas.some(a => a.active && a.name && a.link) ? 490 : 300;
+    // The configured row counts are maxima; don't leave blank space for empty rows.
+    const today = Date.now();
+    const activeArenas = arenas.filter(a => a.active && a.name && a.link && (!a.endAt || Date.parse(a.endAt) > today)).length;
+    const arenaLines = Math.ceil(Math.min(activeArenas, layout.arenaRows * 2) / 2);
+    const dailyLines = Math.ceil(Math.min(persistedItems.filter(i => i.enabled).length, layout.dailyRows * 2) / 2);
+    // Card content is ~130-140px per row at 260px, with section titles and spacing.
+    const height = 24 + 132 * (arenaLines + dailyLines) + (arenaLines > 0 ? 17 : 0);
+    preview.style.height = `${height}px`;
     iframeHtml.value = `<iframe src="${url}" width="260" height="${height}" style="border:0;overflow:hidden" scrolling="no" loading="lazy" title="${title.replace(/\"/g, "&quot;")}"></iframe>`;
   }
 
@@ -298,6 +311,9 @@
     revision = Number(payload.revision) || 0;
     arenas = (payload.arenas || []).map(toArena);
     persistedItems = compactItems(payload.items || []);
+    layout = toLayout(payload.layout);
+    arenaRowsControl.value = String(layout.arenaRows);
+    dailyRowsControl.value = String(layout.dailyRows);
     renderArenas();
     updateEmbedFields();
     items = (payload.items || []).map(row => ({
@@ -316,7 +332,7 @@
   function publicRank(index) {
     if (!items[index]?.enabled) return "—";
     const rank = items.filter((item, i) => i <= index && item.enabled).length;
-    return rank <= 4 ? String(rank) : "—";
+    return rank <= layout.dailyRows * 2 ? String(rank) : "—";
   }
 
   function render() {
@@ -469,8 +485,9 @@
         headers: { "X-TF-CSRF": csrf },
         body: JSON.stringify({
           revision,
+          layout,
           items: items.map(({ matchId, enabled, urgent }) => ({ matchId, enabled, urgent })),
-          arenas: arenas.map(({active,name,link,date,time,duration,timeControl}) => ({active,name,link,date,time,duration,timeControl})),
+          arenas: arenas.map(toArena),
         }),
       });
       revision = Number(payload.revision) || revision + 1;
@@ -492,6 +509,41 @@
       saveButton.disabled = !dirty;
     }
   }
+
+  async function saveLayoutConfiguration() {
+    if (arenaSaving || dailySaving) return;
+    const next = toLayout({arenaRows:arenaRowsControl.value, dailyRows:dailyRowsControl.value});
+    const previous = {...layout};
+    if (next.arenaRows === previous.arenaRows && next.dailyRows === previous.dailyRows) return;
+    arenaSaving = true;
+    renderArenas();
+    arenaRowsControl.disabled = true;
+    dailyRowsControl.disabled = true;
+    try {
+      const payload = await json(`${API}?action=save`, {
+        method:"POST",headers:{["X-"+(CFG.teamSlug === "team-france" ? "TF" : "TGP")+"-CSRF"]:csrf},
+        body:JSON.stringify({revision, items:persistedItems, arenas:arenas.map(toArena), layout:next}),
+      });
+      revision = Number(payload.revision);
+      layout = toLayout(payload.layout);
+      arenaRowsControl.value = String(layout.arenaRows);
+      dailyRowsControl.value = String(layout.dailyRows);
+      updateEmbedFields();
+      preview.src = `../?_${Date.now()}`;
+      setMessage("Card rows saved. Copy the updated iframe HTML if the widget is embedded externally.","success");
+    } catch (error) {
+      arenaRowsControl.value = String(previous.arenaRows);
+      dailyRowsControl.value = String(previous.dailyRows);
+      setMessage(error.status === 409 ? "Configuration changed in another session. Reload before retrying; unsaved Daily edits remain." : error.message,"error");
+    } finally {
+      arenaSaving = false;
+      arenaRowsControl.disabled = false;
+      dailyRowsControl.disabled = false;
+      renderArenas();
+    }
+  }
+  arenaRowsControl.addEventListener("change", () => void saveLayoutConfiguration());
+  dailyRowsControl.addEventListener("change", () => void saveLayoutConfiguration());
 
   async function logout() {
     try {
