@@ -429,6 +429,9 @@
         ? `Computation completed. ${renamed} possible renamed account(s) remain included under their MCA source usernames; review/export them and re-upload corrected MCA source CSV files when available.`
         : 'Live rank points computation completed successfully.', renamed ? 'error' : 'success');
       success = true;
+      // Re-read the canonical acquisition/Results inventory after a completed
+      // processing run: the process-start payload has no fresh sync snapshot.
+      await loadLive();
     } catch (error) { message('liveRanksStatus', error.message, 'error'); }
     finally { state.liveRunning = false; $('liveRanksProcess').disabled = false; }
     return success;
