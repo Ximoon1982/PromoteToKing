@@ -16,6 +16,7 @@ def test_upload_recalculation_uses_index_date_not_upload_time():
     assert "else{$effective=substr((string)$row['uploaded_at'],0,10);$precision='upload-fallback';}" in LIVE
     assert "'index-visible-time','index-visible-date','index-machine','arena-machine','known'" in LIVE
     assert "'event_date_approximate' => !in_array" in LIVE
+    assert "'event_date_approximate'=>!in_array" in LIVE  # Arena Insights also uses verified dates
 
 def test_existing_csvs_repaired_by_regular_acquisition_cron():
     assert "private function reconcileStoredSourceDatesFromAcquisition(): int" in CRON
