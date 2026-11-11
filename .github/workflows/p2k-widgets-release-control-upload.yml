@@ -82,7 +82,7 @@ jobs:
             assert "CANDIDATE_RELEASE.json" in z.namelist()
             assert "RECOVERY_PLANE.sha256" in z.namelist()
             assert "CANDIDATE_PAYLOAD.sha256" in z.namelist()
-            assert len(z.namelist())==18
+            assert len(z.namelist())==19
           print("Candidate ZIP:",zip_dest)
           print("Accepted public build:",accepted)
           print("Stamped cache key:",cache_key)
