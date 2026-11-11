@@ -6,8 +6,8 @@
 .widget-shell{display:grid;width:260px;max-width:100%;gap:8px;margin:0 auto}
 .widget-section{display:grid;gap:5px;min-width:0}
 .widget-section[hidden]{display:none}
-.widget-section-head{display:flex;align-items:center;min-width:0;min-height:17px}
-.widget-section-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gold);font-size:13px;font-weight:900;line-height:1.2}
+.widget-section-head{display:flex;align-items:center;justify-content:center;min-width:0;min-height:17px}
+.widget-section-title{width:100%;text-align:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gold);font-size:13px;font-weight:900;line-height:1.2}
 .arena-showcase{margin:0}
 .arena-card .tgp-visual{height:82px}
 .tgp-speed-icon{display:block;width:59px;height:59px;color:#b7b7b7;filter:drop-shadow(0 4px 7px rgba(0,0,0,.17))}

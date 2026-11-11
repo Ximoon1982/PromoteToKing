@@ -26,11 +26,11 @@ header('Cache-Control: no-store');
 <section id="editor" class="panel" hidden>
 <div class="add-row"><input id="matchReference" type="text" autocomplete="off" placeholder="Chess.com match URL, ID or slug"><button id="addButton" type="button">Add match</button></div>
 <div id="message" class="message" aria-live="polite"></div>
-<div class="hint">The first four enabled matches below are the four public cards.</div>
+<div class="hint">The first enabled Daily matches fill the configured rows (two cards per row, up to six cards).</div>
 <div id="matchList" class="match-list"></div>
 <section class="arena-editor" aria-labelledby="arenaTitle">
 <div class="arena-editor-head"><h2 id="arenaTitle">Multi-club arenas</h2><button id="addArenaButton" type="button" class="secondary">Add arena</button></div>
-<p class="hint">Up to two enabled arenas appear above the Daily-match cards. Dates and times use Europe/Luxembourg time. Arena edits save immediately; Daily-match changes use Save configuration.</p>
+<p class="hint">Up to four enabled arenas fill the configured MCA rows. Dates and times use Europe/Luxembourg time. Arena edits save immediately; Daily-match changes use Save configuration.</p>
 <div id="arenaList" class="arena-list"></div>
 </section>
 <dialog id="arenaModal" class="arena-modal" aria-labelledby="arenaModalTitle">
@@ -48,6 +48,7 @@ header('Cache-Control: no-store');
     <div class="arena-modal-actions"><button type="button" class="secondary" onclick="document.getElementById('arenaModalCancel').click()">Cancel</button><button id="arenaModalSave" type="submit">Save arena</button></div>
   </form>
 </dialog>
+<section class="layout-editor" aria-labelledby="layoutTitle"><h2 id="layoutTitle">Public widget card rows</h2><div class="layout-fields"><label for="arenaRows">MCA rows<select id="arenaRows"><option value="1">1 row · 2 cards</option><option value="2">2 rows · 4 cards</option></select></label><label for="dailyRows">Daily-match rows<select id="dailyRows"><option value="1">1 row · 2 cards</option><option value="2">2 rows · 4 cards</option><option value="3">3 rows · 6 cards</option></select></label></div><p class="hint">Changes save immediately. The iframe HTML above updates its height for the selected rows. Copy the refreshed iframe when changing the layout on an external page.</p></section>
 <div class="actions"><button id="saveButton" type="button">Save configuration</button><span id="dirtyState"></span></div>
 <div class="registration-head"><div><h2>Matches currently in registration</h2><p>Loaded directly from the Chess.com club match index.</p></div><button id="refreshRegistration" type="button" class="secondary">Refresh</button></div>
 <div id="registrationStatus" class="registration-status" aria-live="polite"></div>
