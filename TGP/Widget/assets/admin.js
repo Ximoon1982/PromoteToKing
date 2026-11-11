@@ -529,7 +529,7 @@
       arenaRowsControl.value = String(layout.arenaRows);
       dailyRowsControl.value = String(layout.dailyRows);
       updateEmbedFields();
-      preview.src = `../?_${Date.now()}`;
+      preview.src = `../?_=${Date.now()}`;
       setMessage("Card rows saved. Copy the updated iframe HTML if the widget is embedded externally.","success");
     } catch (error) {
       arenaRowsControl.value = String(previous.arenaRows);
