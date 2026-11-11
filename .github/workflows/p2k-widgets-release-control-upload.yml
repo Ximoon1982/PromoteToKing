@@ -96,7 +96,16 @@ jobs:
           for f in server/widgets/src/WidgetConfigStore.php server/widgets/public/api.php server/widgets/public/embed.php; do php -l "$f"; done
           php -l ReleaseControl.php
           php -l server/team-points/public/members-insights-export.php
-          python3 -m pytest -q tests/test_v2153_members_csv_period.py tests/test_v2150_members_csv_resource_guard.py
+          python3 - <<'PY'
+          import runpy
+          for path in ("tests/test_v2153_members_csv_period.py","tests/test_v2150_members_csv_resource_guard.py"):
+              namespace=runpy.run_path(path)
+              tests={name:func for name,func in namespace.items() if name.startswith("test_") and callable(func)}
+              assert tests, "No tests found: "+path
+              for name,func in tests.items():
+                  func()
+                  print("PASS",path,name)
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: p2k-widgets-v2153-release-control-direct-upload
