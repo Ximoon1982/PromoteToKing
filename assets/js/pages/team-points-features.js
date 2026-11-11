@@ -298,7 +298,7 @@
     if (processing.status === 'running') message('liveRanksStatus', `Processing ${processing.phase || ''}: ${processing.checked_players || 0} profile check(s) completed.`, '');
   }
   async function loadLive() {
-    try { const payload = await endpoint(liveEndpoint, { action: 'status' }); renderLive(payload); }
+    try { const payload = await endpoint(liveEndpoint, { action: 'status' }); renderLive(payload); window.P2K_MCA_RENAME_REVIEW?.refresh?.(); }
     catch (error) { message('liveRanksStatus', error.message, 'error'); }
   }
   function setSelectedFiles(files) {
@@ -426,7 +426,7 @@
       }
       const renamed = Number(payload.summary?.possible_renames || 0);
       message('liveRanksStatus', renamed
-        ? `Computation completed. ${renamed} possible renamed account(s) remain included under their MCA source usernames; review/export them and re-upload corrected MCA source CSV files when available.`
+        ? `Computation completed. ${renamed} unavailable account(s) need MIAC identity review. Use MCA possible-renames review below; source CSVs are preserved.`
         : 'Live rank points computation completed successfully.', renamed ? 'error' : 'success');
       success = true;
       // Re-read the canonical acquisition/Results inventory after a completed
@@ -521,8 +521,10 @@
   }
 
   async function exportCorrections() {
-    try { await download(await endpoint(liveEndpoint, { action: 'export_corrections', raw: true }), 'p2k-live-ranks-possible-renames.csv'); }
-    catch (error) { message('liveRanksStatus', error.message, 'error'); }
+    try {
+      const response = await endpoint('server/team-points/public/mca-renames.php', { action: 'export', raw: true });
+      await download(response, 'p2k-mca-unresolved-renames.csv');
+    } catch (error) { message('liveRanksStatus', error.message, 'error'); }
   }
 
   function setup() {
