@@ -942,7 +942,7 @@ final class LiveRanksService
                 'file_id'=>(int)$row['file_id'],'arena_id'=>$arenaId,'arena_slug'=>$slug,'arena_name'=>$display,
                 'source_name'=>(string)$row['original_name'],'event_url'=>$url,'event_date'=>$date,
                 'event_date_precision'=>(string)($row['event_date_precision']??'upload-fallback'),
-                'event_date_approximate'=>(string)($row['event_date_precision']??'upload-fallback')!=='known',
+                'event_date_approximate'=>!in_array((string)($row['event_date_precision']??'upload-fallback'),['known','index-visible-time','index-visible-date','index-machine','arena-machine'],true),
                 'total_players'=>(int)$row['total_players'],'p2k_players'=>(int)$row['p2k_players'],
                 'p2k_points'=>(float)$row['p2k_points'],'first_places'=>(int)$row['first_places'],
                 'second_places'=>(int)$row['second_places'],'third_places'=>(int)$row['third_places'],
