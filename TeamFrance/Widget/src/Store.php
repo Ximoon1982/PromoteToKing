@@ -16,7 +16,7 @@ final class RevisionConflict extends RuntimeException
 
 final class Store
 {
-    public const SCHEMA_VERSION = 2;
+    public const SCHEMA_VERSION = 3;
 
     private string $statePath;
     private string $lockPath;
@@ -48,6 +48,7 @@ final class Store
                 'updatedAt' => gmdate('Y-m-d\TH:i:s\Z'),
                 'items' => $this->normalizeItems($payload['items'] ?? []),
                 'arenas' => $this->normalizeArenas($payload['arenas'] ?? $current['arenas']),
+                'layout' => $this->normalizeLayout($payload['layout'] ?? $current['layout']),
             ];
             $this->writeRaw($next);
             return $next;
@@ -62,6 +63,7 @@ final class Store
             'updatedAt' => null,
             'items' => [],
             'arenas' => [],
+            'layout' => ['arenaRows' => 1, 'dailyRows' => 2],
         ];
     }
 
@@ -73,6 +75,18 @@ final class Store
             'updatedAt' => is_string($raw['updatedAt'] ?? null) ? $raw['updatedAt'] : null,
             'items' => $this->normalizeItems(is_array($raw['items'] ?? null) ? $raw['items'] : []),
             'arenas' => $this->normalizeArenas(is_array($raw['arenas'] ?? null) ? $raw['arenas'] : []),
+            'layout' => $this->normalizeLayout($raw['layout'] ?? null),
+        ];
+    }
+
+    private function normalizeLayout(mixed $raw): array
+    {
+        $layout = is_array($raw) ? $raw : [];
+        $arenaRows = (int)($layout['arenaRows'] ?? 1);
+        $dailyRows = (int)($layout['dailyRows'] ?? 2);
+        return [
+            'arenaRows' => max(1, min(2, $arenaRows)),
+            'dailyRows' => max(1, min(3, $dailyRows)),
         ];
     }
 
@@ -111,6 +125,7 @@ final class Store
             $duration = trim((string)($entry['duration'] ?? ''));
             $control = trim((string)($entry['timeControl'] ?? ''));
             $active = ($entry['active'] ?? false) === true;
+            $urgent = ($entry['urgent'] ?? false) === true;
             if (!$active && $name === '' && $link === '' && $date === '' && $time === '' && $duration === '' && $control === '') continue;
             if ($name === '' || strlen($name) > 120) throw new InvalidArgumentException('Arena name is required (maximum 120 characters).');
             if (strlen($link) > 600 || !preg_match('~^https://(?:www\.)?chess\.com/(?:play/)?(?:tournament|arena|live)(?:/|\?|$)~i', $link)) throw new InvalidArgumentException('Use a Chess.com HTTPS arena link.');
@@ -127,7 +142,7 @@ final class Store
             $seen[$key] = true;
             $end = $dt->getTimestamp() + $minutes * 60;
             if ($end <= time()) continue;
-            $result[] = ['active'=>$active,'name'=>$name,'link'=>$link,'date'=>$date,'time'=>$time,
+            $result[] = ['active'=>$active,'urgent'=>$urgent,'name'=>$name,'link'=>$link,'date'=>$date,'time'=>$time,
                 'timeControl'=>$control,'duration'=>$duration,'durationMinutes'=>$minutes,'startAt'=>$dt->format(DATE_ATOM),'endAt'=>gmdate('c', $end)];
         }
         usort($result, static fn(array $a, array $b): int => strcmp($a['startAt'], $b['startAt']));
