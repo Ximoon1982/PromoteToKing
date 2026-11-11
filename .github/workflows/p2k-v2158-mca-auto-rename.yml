@@ -1,0 +1,116 @@
+name: P2K v2.15.8 MCA automatic CSV substitution Release Control package
+on:
+  push:
+    paths:
+      - '.github/workflows/p2k-v2158-mca-auto-rename.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and behavioral regression checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in server/team-points/src/McaRenameRecheckService.php \
+                   server/team-points/src/McaRenameReviewService.php \
+                   server/team-points/src/LiveRanksService.php \
+                   server/team-points/public/mca-renames.php \
+                   server/team-points/bin/mca-results-sync.php; do php -l "$f"; done
+          node --check assets/js/pages/mca-rename-review-v2157.js
+          node --check assets/js/pages/team-points-features.js
+          node --check assets/js/pages/club-intelligence.js
+          php tests/test_v2158_mca_csv_recheck.php
+          python3 tests/test_v2158_mca_recheck_contract.py
+          python3 tests/test_v2157_mca_miac_review.py
+          python3 tests/test_v2156_mca_uploaded_dates.py
+          python3 tests/test_v2155_mca_results_priority.py
+      - name: Package v2.15.8 for current v2.15.6 and v2.15.7 public releases
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess,zipfile,re
+          root=pathlib.Path(".")
+          dist=pathlib.Path("dist")
+          dist.mkdir(exist_ok=True)
+          stem="P2K_MCA_Auto_Rename_v2158_ReleaseControl_Upload"
+          pkg=dist/stem
+          payload=pkg/"payload"
+          payload.mkdir(parents=True)
+          version="2.15.8"
+          head=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip()
+          accepted=[
+            {"version":"2.15.6","source_head":"9c92b999d8111c2af7dad78054aa65c275eecb24"},
+            {"version":"2.15.7","source_head":"2be367793b1720d6df9afcf80af3a39a83787086"},
+          ]
+          paths=[
+             "VERSION","ui-v2.html","TeamPointsAdmin.html",
+             "assets/js/pages/team-points-features.js",
+             "assets/js/pages/mca-rename-review-v2157.js",
+             "assets/js/pages/club-intelligence.js",
+             "server/team-points/src/LiveRanksService.php",
+             "server/team-points/src/McaRenameReviewService.php",
+             "server/team-points/src/McaRenameRecheckService.php",
+             "server/team-points/public/mca-renames.php",
+             "server/team-points/bin/mca-results-sync.php",
+          ]
+          recovery=[
+             "ReleaseControl.php",
+             "server/release-control/src/bootstrap.php",
+             "server/release-control/src/ReleasePackageUploadInstaller.php",
+             "server/release-control/src/FilesystemCleanupManager.php",
+          ]
+          for path in paths+recovery:
+             source=root/path
+             if not source.is_file():raise RuntimeError("Missing source "+path)
+             target=payload/path
+             target.parent.mkdir(parents=True,exist_ok=True)
+             target.write_bytes(source.read_bytes())
+          (payload/"VERSION").write_text(version+"\n")
+          key="p2k-"+version+"-"+head[:12]+"-"+hashlib.sha256((head+"|mca-auto-csv-rename-v2158").encode()).hexdigest()[:16]
+          uipath=payload/"ui-v2.html"
+          ui=uipath.read_text()
+          ui=re.sub(r"p2k-\d+\.\d+\.\d+-[a-f0-9]{12}-[a-f0-9]{16}",key,ui,flags=re.I)
+          ui=ui.replace("p2k-2.15.3-widgets-20261111",key)
+          if "</head>" not in ui:raise RuntimeError("No head element")
+          ui=ui.replace("</head>",'<meta name="p2k-build" content="'+key+'">\n</head>',1)
+          uipath.write_text(ui)
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          (pkg/"CANDIDATE_PAYLOAD.sha256").write_text("".join(sha(payload/p)+"  ./"+p+"\n" for p in sorted(paths)))
+          (pkg/"RECOVERY_PLANE.sha256").write_text("".join(sha(payload/p)+"  ./"+p+"\n" for p in sorted(recovery)))
+          meta={"schema_version":1,"version":version,"source_head":head,"cache_key":key,
+                "build_id":"p2k-mca-auto-rename-v2158-"+head[:12]+"-web-upload",
+                "payload_manifest_sha256":sha(pkg/"CANDIDATE_PAYLOAD.sha256"),
+                "accepted_public_builds":accepted}
+          (pkg/"CANDIDATE_RELEASE.json").write_text(json.dumps(meta,indent=2)+"\n")
+          (pkg/"README.txt").write_text(
+            "P2K v2.15.8 MCA automatic username substitution via old/fresh Chess.com Results CSV.\n"
+            "Upload with P2K Release Control, preview, and promote if verified. No SSH.\n"
+            "Accepts exact public v2.15.6-9c92b999d811 or v2.15.7-2be367793b17.\n"
+            "Automatic re-download runs in the existing once-per-minute MCA cron, at most one CSV per run.\n"
+            "Only an exact one-username row substitution with matching rank/club/score/stats\n"
+            "is treated as definitive and passed to MIAC's conflict-checked identity link.\n"
+            "All ambiguous cases remain for review. Original Results CSVs are untouched.\n"
+            "Audit checks stored under protected data/live-ranks. No schema migration.\n")
+          out=dist/(stem+".zip")
+          with zipfile.ZipFile(out,"w",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+              for f in pkg.rglob("*"):
+                  if f.is_file():z.write(f,f.relative_to(pkg))
+          with zipfile.ZipFile(out) as z:
+              assert z.testzip() is None
+              assert len(z.namelist())==len(paths)+len(recovery)+4
+          print("Release ZIP:",out,"version",version,"source head",head,"size",out.stat().st_size)
+          print("SHA256:",sha(out))
+          PY
+      - name: Validate Release Control candidate metadata and integrity
+        shell: bash
+        run: |
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_MCA_Auto_Rename_v2158_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.8" || $p["overlay_file_count"]!==11) exit(1); echo "Candidate contract OK: ".$p["release_id"].PHP_EOL;'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-mca-auto-rename-v2158
+          path: dist/P2K_MCA_Auto_Rename_v2158_ReleaseControl_Upload.zip
+          retention-days: 7
