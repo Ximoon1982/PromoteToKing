@@ -64,7 +64,7 @@ jobs:
           php <<'PHP'
           <?php
           require 'server/team-points/src/McaIndexParser.php';
-          use P2K\\TeamPoints\\McaIndexParser;
+          use P2K\TeamPoints\McaIndexParser;
           $get=static function(string $url):array {
             $ch=curl_init($url);
             curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,
