@@ -27,7 +27,8 @@ def test_one_shared_miac_identity_authority():
     assert "'candidate','mca_possible_rename'" in service
 
 def test_resolved_aliases_not_in_unresolved_queue():
-    assert "empty($identity['conflict']) && ($canonicalKey !== $key || $confirmedTarget !== null)" in service
+    assert "($canonicalKey !== $key || $confirmedTarget !== null || $hasKnownAliases)" in service
+    assert "canonical_username_key=? AND username_key<>? AND conflict=0" in service
     assert "'resolved_pending_attribution' => $resolved" in service
     assert "'unresolved' => $unresolved" in service
     assert "if ($isResolved)" in service
@@ -71,6 +72,7 @@ def test_ui_and_direct_alias_review_routing():
     assert "miac_search" in ui and "miac_search" in ci
     assert "query.set(\"search\",aliasSearch)" in ci
     assert "raw: true" in features
+    assert "->exportUnresolvedCsv();" in live
     assert "const perPage = 25" in ui
 
 if __name__=='__main__':
