@@ -103,7 +103,7 @@ final class LiveRanksService
                 'actual_event_date' => $row['actual_event_date'] !== null ? (string)$row['actual_event_date'] : null,
                 'event_date' => $row['effective_event_date'] !== null ? (string)$row['effective_event_date'] : substr((string)$row['uploaded_at'],0,10),
                 'event_date_precision' => (string)($row['event_date_precision'] ?: 'upload-fallback'),
-                'event_date_approximate' => (string)($row['event_date_precision'] ?? 'upload-fallback') !== 'known',
+                'event_date_approximate' => !in_array((string)($row['event_date_precision'] ?? 'upload-fallback'), ['known','index-visible-time','index-visible-date','index-machine','arena-machine'], true),
                 'status' => (string)$row['status'],
                 'rows' => (int)$row['row_count'],
                 'p2k_rows' => (int)$row['p2k_row_count'],
@@ -148,13 +148,27 @@ final class LiveRanksService
      */
     public function recomputeEventDates(): void
     {
-        $q=$this->pdo->prepare('SELECT id,uploaded_at,actual_event_date FROM p2k_lr_files WHERE club_slug=? ORDER BY id');
-        $q->execute([$this->clubSlug]);$rows=$q->fetchAll()?:[];
+        // Manual CSVs carry no event timestamp. The MCA discovery index does,
+        // keyed by the Chess.com arena ID. Never substitute today's upload
+        // timestamp when we have a verified date from that index.
+        // Explicitly confirmed dates always take precedence over scraped dates.
+        $q=$this->pdo->prepare("SELECT f.id,f.uploaded_at,f.actual_event_date,
+                    a.event_date AS discovered_event_date,a.date_precision AS discovered_date_precision
+                FROM p2k_lr_files f
+                LEFT JOIN p2k_lr_arena_acquisition a
+                  ON a.club_slug=f.club_slug AND a.arena_id=f.arena_id
+                WHERE f.club_slug=? ORDER BY f.id");
+        $q->execute([$this->clubSlug]);$rows=$q->fetchAll(PDO::FETCH_ASSOC)?:[];
         $update=$this->pdo->prepare('UPDATE p2k_lr_files SET effective_event_date=?,event_date_precision=?,event_date_updated_at=UTC_TIMESTAMP() WHERE club_slug=? AND id=?');
         foreach($rows as $row){
             $actual=trim((string)($row['actual_event_date']??''));
-            $effective=$actual!==''?$actual:substr((string)$row['uploaded_at'],0,10);
-            $precision=$actual!==''?'known':'upload-fallback';
+            $discovered=trim((string)($row['discovered_event_date']??''));
+            $source=(string)($row['discovered_date_precision']??'unknown');
+            $credible=in_array($source,['index-visible-time','index-visible-date','index-machine','arena-machine','known'],true)
+                && preg_match('/^\d{4}-\d{2}-\d{2}$/D',$discovered);
+            if($actual!==''){$effective=$actual;$precision='known';}
+            elseif($credible){$effective=$discovered;$precision=$source;}
+            else{$effective=substr((string)$row['uploaded_at'],0,10);$precision='upload-fallback';}
             $update->execute([$effective,$precision,$this->clubSlug,(int)$row['id']]);
         }
     }
