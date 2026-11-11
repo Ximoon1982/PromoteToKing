@@ -1096,22 +1096,11 @@ final class LiveRanksService
 
     public function exportCorrectionsCsv(): void
     {
-        $query = $this->pdo->prepare(
-            "SELECT username,total_points,arena_count,source_files_json,last_error
-             FROM p2k_lr_players WHERE club_slug=? AND account_state='possible_renamed' ORDER BY username"
-        );
-        $query->execute([$this->clubSlug]);
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="p2k-live-ranks-possible-renames.csv"');
-        header('Cache-Control: no-store');
-        $out = fopen('php://output', 'wb');
-        fwrite($out, "\xEF\xBB\xBF");
-        fputcsv($out, ['username_in_csv', 'points', 'arenas', 'source_files', 'verification_error', 'corrected_username']);
-        foreach ($query->fetchAll() ?: [] as $row) {
-            $files = implode(' | ', \p2k_tp_json_decode((string)($row['source_files_json'] ?? '[]')));
-            fputcsv($out, [$row['username'], $row['total_points'], $row['arena_count'], $files, $row['last_error'], '']);
-        }
-        fclose($out);
+        // Retain the historical admin download endpoint but apply the same
+        // MIAC reconciliation as the new review interface. Never export
+        // already-resolved identity relationships as unresolved renames.
+        (new McaRenameReviewService($this->repository->core(), $this->pdo, $this->clubSlug))
+            ->exportUnresolvedCsv();
     }
 
     public static function thresholds(): array
