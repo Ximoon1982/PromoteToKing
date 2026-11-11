@@ -19,6 +19,7 @@ jobs:
           mkdir -p dist
           zip -q -r dist/p2k-widgets-dev-source.zip \
             TeamPointsAdmin.html \
+            ui-v2.html \
             assets/js/admin \
             assets/css/dashboard-v2.css \
             assets/js/pages/dashboard-insights.js \
