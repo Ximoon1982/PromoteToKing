@@ -53,6 +53,11 @@ final class McaRenameReviewService
                       FIELD(confidence,'Very strong','Strong','Possible'), shared_boards DESC LIMIT 12"
         );
 
+        $peerQ = $this->core->prepare(
+            "SELECT COUNT(*) FROM p2k_miac_canonical_map
+             WHERE club_slug=? AND canonical_username_key=? AND username_key<>? AND conflict=0"
+        );
+
         $unresolved = [];
         $resolved = [];
         $reviewable = 0;
@@ -85,7 +90,12 @@ final class McaRenameReviewService
                     break;
                 }
             }
-            $isResolved = empty($identity['conflict']) && ($canonicalKey !== $key || $confirmedTarget !== null);
+            // A canonical username can itself have several confirmed aliases;
+            // do not report it unresolved merely because it is the map's root.
+            $peerQ->execute([$this->clubSlug, $canonicalKey, $key]);
+            $hasKnownAliases = (int)$peerQ->fetchColumn() > 0;
+            $isResolved = empty($identity['conflict'])
+                && ($canonicalKey !== $key || $confirmedTarget !== null || $hasKnownAliases);
             $case = [
                 'username' => (string)$row['username'],
                 'username_key' => $key,
