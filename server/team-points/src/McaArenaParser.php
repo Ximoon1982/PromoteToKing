@@ -47,10 +47,20 @@ final class McaArenaParser
                     if($candidate!==''){$name=$candidate;break;}
                 }
             }
-            preg_match_all('~<td[^>]*class=["\'][^"\']*table-text-right[^"\']*["\'][^>]*>\s*([^<]+)\s*</td>~is',$row,$nums);
+            // Chess.com now nests the Club Results score in a total-score <div>
+            // with streak/W/L detail in the same <td>. The old direct-text-only
+            // regex silently rejected every club on these modern result pages.
+            preg_match_all('~<td\b[^>]*class=["\'][^"\']*table-text-right[^"\']*["\'][^>]*>(.*?)</td>~is',$row,$nums);
             if(count($nums[1]??[])<2)continue;
-            $total=(int)preg_replace('/[^0-9]/','',$nums[1][0]);
-            $score=self::number($nums[1][1]); if($score===null)continue;
+            $totalText=self::cleanText((string)$nums[1][0]);
+            $total=(int)preg_replace('/[^0-9]/','',$totalText);
+            $scoreCell=(string)$nums[1][1];
+            if(preg_match('~<div\b[^>]*class=["\'][^"\']*tournaments-live-view-total-score[^"\']*["\'][^>]*>(.*?)</div>~is',$scoreCell,$scoreMatch)){
+                $score=self::number(self::cleanText($scoreMatch[1]));
+            }else{
+                $score=self::number(self::cleanText($scoreCell));
+            }
+            if($score===null)continue;
             $out[]=['rank'=>(int)$r[1],'club'=>$name,'club_slug'=>$slug,'club_url'=>'https://www.chess.com/club/'.$slug,'total_players'=>$total,'score'=>$score];
         }
         return $out;
