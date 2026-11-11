@@ -2,10 +2,10 @@
 declare(strict_types=1);
 
 return [
-    'version' => '0.3.2',
+    'version' => '0.3.3',
     'team_slug' => 'team-france',
     'team_name' => 'Team France',
-    'max_display_matches' => 4,
+    'max_display_matches' => 6,
     'max_configured_matches' => 100,
     'cache_ttl_match_seconds' => 45,
     'cache_ttl_club_seconds' => 300,
