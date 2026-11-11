@@ -10,7 +10,9 @@ on:
       - 'tools/install-widget-wcgc-arenas-v2153.sh'
       - 'tools/INSTALL-widget-wcgc-arenas-v2153.txt'
       - 'tools/install-widget-mca-modal-fr-v2153.sh'
+      - 'tools/install-widget-layout-rows-v2153.sh'
       - 'tools/INSTALL-widget-mca-modal-fr-v2153.txt'
+      - 'tools/INSTALL-widget-layout-rows-v2153.txt'
       - '.github/workflows/widget-arenas-v2153.yml'
   workflow_dispatch:
 permissions:
@@ -27,6 +29,7 @@ jobs:
           php -l tests/widget_arenas_v2153_test.php
           bash -n tools/install-widget-wcgc-arenas-v2153.sh
           bash -n tools/install-widget-mca-modal-fr-v2153.sh
+          bash -n tools/install-widget-layout-rows-v2153.sh
           find TGP/Widget TeamFrance/Widget -type f -name '*.js' -print0 | xargs -0 -n1 node --check
       - name: Arena storage and regression tests
         run: |
@@ -43,48 +46,31 @@ jobs:
           mkdir -p "$root/server/team-points/src" "$root/TGP/Widget/data" "$root/TeamFrance/Widget/data" "$pkg/TGP" "$pkg/TeamFrance"
           cp -a TGP/Widget "$pkg/TGP/"
           cp -a TeamFrance/Widget "$pkg/TeamFrance/"
-          cp tools/install-widget-wcgc-arenas-v2153.sh "$pkg/"
+          cp tools/install-widget-layout-rows-v2153.sh "$pkg/"
           touch "$root/server/team-points/src/OAuthSession.php"
           cp -a TGP/Widget/. "$root/TGP/Widget/"
           cp -a TeamFrance/Widget/. "$root/TeamFrance/Widget/"
           printf 'TGP live data' > "$root/TGP/Widget/data/showcase.json"
           printf 'Team France live data' > "$root/TeamFrance/Widget/data/showcase.json"
-          PHP_CLI="$(command -v php)" bash "$pkg/install-widget-wcgc-arenas-v2153.sh" "$root"
-          PHP_CLI="$(command -v php)" bash "$pkg/install-widget-wcgc-arenas-v2153.sh" "$root"
+          PHP_CLI="$(command -v php)" bash "$pkg/install-widget-layout-rows-v2153.sh" "$root"
+          PHP_CLI="$(command -v php)" bash "$pkg/install-widget-layout-rows-v2153.sh" "$root"
           test "$(cat "$root/TGP/Widget/data/showcase.json")" = 'TGP live data'
           test "$(cat "$root/TeamFrance/Widget/data/showcase.json")" = 'Team France live data'
-          test "$(find "$root/storage/widget-wcgc-arenas-backups" -path '*/TGP/Widget/api.php' -type f | wc -l)" -ge 1
-      - name: Prepare isolated widget overlay
+          test "$(find "$root/storage/widget-layout-rows-backups" -path '*/TGP/Widget/api.php' -type f | wc -l)" -ge 1
+      - name: Package adjustable rows, MCA priority and French Daily labels
         run: |
           set -euo pipefail
-          mkdir -p dist/stage/TGP dist/stage/TeamFrance
-          cp tools/install-widget-wcgc-arenas-v2153.sh dist/stage/
-          cp tools/INSTALL-widget-wcgc-arenas-v2153.txt dist/stage/
-          cp -a TGP/Widget dist/stage/TGP/
-          cp -a TeamFrance/Widget dist/stage/TeamFrance/
-          (cd dist/stage && zip -X -qr ../Widget_WCGC_Arenas_v2153.zip TGP/Widget TeamFrance/Widget install-widget-wcgc-arenas-v2153.sh INSTALL-widget-wcgc-arenas-v2153.txt \
+          mkdir -p dist/rows/TGP dist/rows/TeamFrance
+          cp tools/install-widget-layout-rows-v2153.sh dist/rows/
+          cp tools/INSTALL-widget-layout-rows-v2153.txt dist/rows/INSTALLATION.txt
+          cp -a TGP/Widget dist/rows/TGP/
+          cp -a TeamFrance/Widget dist/rows/TeamFrance/
+          (cd dist/rows && zip -X -qr ../Widget_Rows_Priority_MCA_v2153.zip TGP/Widget TeamFrance/Widget install-widget-layout-rows-v2153.sh INSTALLATION.txt \
             -x '*/data/showcase.json' '*/data/showcase.json.bak' '*/data/showcase.lock' '*/data/cache/*' '*/data/*.tmp')
-          unzip -t dist/Widget_WCGC_Arenas_v2153.zip
-      - name: Package compact MCA editor and French public cards
-        run: |
-          set -euo pipefail
-          mkdir -p dist/modalstage/TGP dist/modalstage/TeamFrance
-          cp tools/install-widget-mca-modal-fr-v2153.sh dist/modalstage/
-          cp tools/INSTALL-widget-mca-modal-fr-v2153.txt dist/modalstage/INSTALLATION.txt
-          cp -a TGP/Widget dist/modalstage/TGP/
-          cp -a TeamFrance/Widget dist/modalstage/TeamFrance/
-          (cd dist/modalstage && zip -X -qr ../Widget_MCA_Modal_TeamFrance_FR_v2153.zip TGP/Widget TeamFrance/Widget install-widget-mca-modal-fr-v2153.sh INSTALLATION.txt \
-            -x '*/data/showcase.json' '*/data/showcase.json.bak' '*/data/showcase.lock' '*/data/cache/*' '*/data/*.tmp')
-          unzip -t dist/Widget_MCA_Modal_TeamFrance_FR_v2153.zip
+          unzip -t dist/Widget_Rows_Priority_MCA_v2153.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: widget-mca-modal-team-france-fr-v2153
-          path: dist/Widget_MCA_Modal_TeamFrance_FR_v2153.zip
-          retention-days: 30
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        with:
-          name: widget-wcgc-arenas-v2153
-          path: dist/Widget_WCGC_Arenas_v2153.zip
+          name: widget-rows-priority-mca-v2153
+          path: dist/Widget_Rows_Priority_MCA_v2153.zip
           retention-days: 30
           if-no-files-found: error
