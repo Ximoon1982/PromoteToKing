@@ -17,15 +17,17 @@ foreach (['TGP\\Widget\\Store', 'TeamFrance\\Widget\\Store'] as $class) {
         $store = new $class($root);
         $start = (new DateTimeImmutable('+2 days', new DateTimeZone('Europe/Luxembourg')))->setTime(18, 30);
         $arena = [
-            'active' => true, 'name' => 'WCGC multi-club arena',
+            'active' => true, 'urgent' => true, 'name' => 'WCGC multi-club arena',
             'link' => 'https://www.chess.com/tournament/live/arena/test-event',
             'date' => $start->format('Y-m-d'), 'time' => $start->format('H:i'),
             'duration' => '1h30m', 'timeControl' => '3+2',
         ];
         $initial = $store->read();
-        verify($initial['schemaVersion'] === 2 && $initial['arenas'] === [], "$class initial schema");
-        $saved = $store->save(['items'=>[['matchId'=>'12345','enabled'=>true,'urgent'=>false]],'arenas'=>[$arena]], 0);
+        verify($initial['schemaVersion'] === 3 && $initial['arenas'] === [] && $initial['layout'] === ['arenaRows'=>1,'dailyRows'=>2], "$class initial schema and backward-compatible layout");
+        $saved = $store->save(['items'=>[['matchId'=>'12345','enabled'=>true,'urgent'=>false]],'arenas'=>[$arena],'layout'=>['arenaRows'=>2,'dailyRows'=>3]], 0);
         verify($saved['revision'] === 1, "$class revision");
+        verify($saved['layout'] === ['arenaRows'=>2,'dailyRows'=>3], "$class custom row limits");
+        verify($saved['arenas'][0]['urgent'] === true, "$class MCA priority persisted");
         verify(count($saved['arenas']) === 1 && $saved['arenas'][0]['durationMinutes'] === 90, "$class arena persisted");
         verify($store->read()['items'][0]['matchId'] === '12345', "$class Daily cards preserved");
         $stale = false;
@@ -38,6 +40,7 @@ foreach (['TGP\\Widget\\Store', 'TeamFrance\\Widget\\Store'] as $class) {
         $saved2 = $store->save(['items'=>[['matchId'=>'12345']], 'arenas'=>[$expired]], 1);
         verify(count($saved2['arenas']) === 0, "$class expire past arena");
         verify(count($saved2['items']) === 1, "$class preserve Daily matches");
+        verify($saved2['layout'] === ['arenaRows'=>2,'dailyRows'=>3], "$class preserve layout when save omits it");
     } catch (\TGP\Widget\RevisionConflict | \TeamFrance\Widget\RevisionConflict $e) {
         // Expected only for the explicit stale revision scenario, which is verified below.
         throw new RuntimeException("$class unexpected revision conflict");
