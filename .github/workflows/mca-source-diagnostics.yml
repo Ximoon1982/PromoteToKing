@@ -99,6 +99,21 @@ jobs:
           file_put_contents('dist/mca-index-scan.json',json_encode(['count'=>count($unique),'pages'=>$scan,'arenas'=>array_values($unique)],JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
           echo 'INDEX UNIQUE ARENAS: ',count($unique),'; PAGES: ',count($scan),PHP_EOL;
           PHP
+      - name: Export MCA source files for local regression testing
+        shell: bash
+        run: |
+          zip -q -r dist/mca-dev-source.zip \
+            server/team-points/src/McaResultsCronService.php \
+            server/team-points/src/McaIndexParser.php \
+            server/team-points/src/McaArenaParser.php \
+            server/team-points/src/McaSourceCatalogue.php \
+            server/team-points/src/LiveRanksService.php \
+            assets/js/pages/team-points-features.js \
+            TeamPointsAdmin.html \
+            tests/test_v2109_mca_arena_acquisition.py \
+            tests/test_v21091_mca_date_recovery.py \
+            tests/test_v21092_mca_date_recovery.py \
+            tests/test_v2130_mca_admin.py
       - uses: actions/upload-artifact@v4
         with:
           name: mca-source-diagnostics
