@@ -42,7 +42,7 @@ def test_preserves_source_and_limits_fanout():
     assert "DELETE FROM p2k_lr" not in SERVICE
     assert "LIMIT 3000" in SERVICE
     assert "'next_after'=>time()+3600" in SERVICE
-    assert "'next_after'=>time()+365*86400" in SERVICE
+    assert "$record['next_after'] = time()+365*86400" in SERVICE
     assert "flock($lock, LOCK_EX | LOCK_NB)" in SERVICE
     assert "rename($tmp,$this->stateFile)" in SERVICE
     assert "data/live-ranks/uploads" in SERVICE
