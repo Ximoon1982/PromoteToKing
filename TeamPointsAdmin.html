@@ -245,6 +245,28 @@
       <div class="p2k-tp-card-head"><div><h2>Computed players and post-processing</h2><p>All valid P2K scores are included immediately. A player endpoint failure does not stop computation; the MCA source username remains in the ladder and is listed as a possible rename for later correction.</p></div></div>
       <div class="p2k-tp-table-wrap"><table><thead><tr><th>Player</th><th>Points</th><th>Arenas</th><th>Membership/account state</th><th>Source files</th><th>Verification</th></tr></thead><tbody id="liveRanksPlayerRows"><tr><td colspan="6">No Live ranks computation has been run.</td></tr></tbody></table></div>
     </section>
+    <section class="p2k-tp-card" id="mcaRenameReview">
+      <div class="p2k-tp-card-head">
+        <div><h2>MCA possible renames · MIAC review</h2>
+          <p>Historical usernames unavailable on Chess.com are not automatically assumed to be renamed. Existing MIAC mappings are excluded from unresolved cases. Proposals are stored as candidates until an administrator reviews identity evidence; historical MCA Results remain unchanged.</p></div>
+        <span class="p2k-tp-pill">MIAC canonical identities · MIRA attribution</span>
+      </div>
+      <div class="p2k-tp-actions" style="flex-wrap:wrap">
+        <button class="p2k-tp-button" id="mcaRenameRefresh" type="button">Refresh reconciliation</button>
+        <button class="p2k-tp-button" id="mcaRenameExport" type="button">Download unresolved CSV</button>
+        <button class="p2k-tp-button blue" id="mcaRenameRebuild" type="button" disabled>Rebuild MCA identity attribution</button>
+        <a class="p2k-tp-button" href="ClubIntelligence.html?tab=aliases" target="_blank" rel="noopener noreferrer">Open Aliases &amp; name changes</a>
+      </div>
+      <div id="mcaRenameAttributionStatus" class="p2k-tp-status">Checking MCA identity-map generation…</div>
+      <div id="mcaRenameStatus" class="p2k-tp-status">Loading MCA possible rename review…</div>
+      <div id="mcaRenameMetrics" class="p2k-tp-grid" style="margin:.75rem 0"></div>
+      <div class="p2k-tp-table-wrap"><table>
+        <thead><tr><th>Historical username</th><th>MCA points / arenas</th><th>Source evidence</th><th>Verification</th><th>MIAC candidates and review</th></tr></thead>
+        <tbody id="mcaRenameRows"><tr><td colspan="5">Loading identity cases…</td></tr></tbody>
+      </table></div>
+      <div id="mcaRenamePager" class="p2k-tp-actions" style="margin-top:.65rem;justify-content:flex-end"></div>
+      <p class="p2k-tp-status">Confirmation uses MIAC's existing hard-conflict protection for contradictory Chess.com player IDs. After a confirmed change, rebuild MCA attribution from unchanged source CSVs to refresh Live Ranks. A missing profile alone is not proof that two usernames belong to one player.</p>
+    </section>
   </section>
 
 
@@ -341,7 +363,8 @@
   </section>
 </main>
 <script src="assets/js/pages/team-points-admin.js?v=2.11.5-bf6a828490f57"></script>
-<script src="assets/js/pages/team-points-features.js?v=2.15.4-mca-inventory-20261111"></script>
+<script src="assets/js/pages/team-points-features.js?v=2.15.7-miac-mca-review"></script>
+<script src="assets/js/pages/mca-rename-review-v2157.js?v=2.15.7-miac-mca-review"></script>
 <script src="assets/js/shared/embedded-page.js?v=2.11.5-bf6a828490f57"></script>
 </body>
 </html>
