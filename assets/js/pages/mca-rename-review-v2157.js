@@ -21,6 +21,19 @@
   function render() {
     const d = state.report || {}, c = d.counts || {}, mira = d.mira || {};
     const rows = Array.isArray(d.unresolved) ? d.unresolved : [];
+    const rechecks = d.csv_rechecks || {}, recheckCounts = rechecks.counts || {};
+    const lastScan = Array.isArray(rechecks.recent) ? rechecks.recent[0] : null;
+    const recheckStatus = $('mcaRenameCsvCheckStatus');
+    if (recheckStatus) recheckStatus.textContent =
+      'CSV comparison runs automatically during the MCA CRON (one arena per cycle). ' +
+      number(rechecks.checked_sources || 0) + ' source comparison(s): ' +
+      number(recheckCounts.linked || 0) + ' MIAC alias link(s), ' +
+      number(recheckCounts.unchanged || 0) + ' unchanged, ' +
+      number((recheckCounts.ambiguous || 0) + (recheckCounts.identity_conflict || 0) + (recheckCounts.previously_rejected || 0)) + ' for review, ' +
+      number(recheckCounts.fetch_error || 0) + ' download error(s).' +
+      (lastScan ? ' Latest: ' + lastScan.old_username + ' / arena ' + number(lastScan.arena_id) +
+        ' — ' + lastScan.status + (lastScan.new_username ? ' → ' + lastScan.new_username : '') + '.' : ' No checks yet.');
+
     if ($('mcaRenameMetrics')) $('mcaRenameMetrics').innerHTML = [
       ['Unresolved MCA usernames', c.unresolved || 0],
       ['MIAC candidates for review', c.ready_for_miac_review || 0],
@@ -117,6 +130,31 @@
     finally {state.busy = false;}
   }
 
+  async function recheckNext() {
+    const button = $('mcaRenameRecheck');
+    if (!button || state.busy) return;
+    state.busy = true;
+    button.disabled = true;
+    message('Downloading and comparing the next due MCA Results source against its original CSV…');
+    try {
+      const payload = await call('recheck', {method:'POST', body:{}, timeoutMs: 35_000});
+      state.report = payload.report;
+      state.busy = false;
+      render();
+      const result = payload.step?.checked;
+      message(result
+        ? 'Rechecked ' + result.old_username + ' / arena ' + number(result.arena_id) +
+          ': ' + result.status + (result.new_username ? ' → ' + result.new_username : '') +
+          '. ' + (result.message || '')
+        : 'Recheck: ' + (payload.step?.skipped || 'no due source found') + '.');
+    } catch (error) {
+      state.busy = false;
+      message('CSV recheck failed: ' + (error.message || error), true);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   async function download() {
     try {
       const response = await call('export', {raw: true, timeoutMs: 40_000});
@@ -139,9 +177,10 @@
   function setup() {
     if (!$('mcaRenameRows')) return;
     $('mcaRenameRefresh')?.addEventListener('click', refresh);
+    $('mcaRenameRecheck')?.addEventListener('click', recheckNext);
     $('mcaRenameExport')?.addEventListener('click', download);
     $('mcaRenameRebuild')?.addEventListener('click', rebuild);
-    window.P2K_MCA_RENAME_REVIEW = {refresh, download};
+    window.P2K_MCA_RENAME_REVIEW = {refresh, download, recheckNext};
     refresh();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup, {once: true});
