@@ -1,4 +1,4 @@
-name: P2K Widgets v2.15.3 Release Control direct-upload package
+name: P2K Widgets v2.15.3 + Members CSV Release Control direct-upload package
 on:
   push:
     paths:
@@ -19,11 +19,11 @@ jobs:
           R=pathlib.Path(".")
           out=pathlib.Path("dist")
           out.mkdir(exist_ok=True)
-          pkg=out/"P2K_Team_Widgets_v2153_ReleaseControl_Upload"
+          pkg=out/"P2K_Team_Widgets_Members_CSV_v2153_ReleaseControl_Upload"
           payload=pkg/"payload"
           payload.mkdir(parents=True)
           candidate_version="2.15.3"
-          source_head="82bb965764baca58df46dc5488d0e7c600c36e77"
+          source_head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
           accepted=[{"version":"2.15.2","source_head":"ed6e0a80774d3be1e7925d4385d458a0b2e25432"}]
           app_paths=[
             "VERSION","ui-v2.html",
@@ -36,6 +36,7 @@ jobs:
             "server/widgets/src/WidgetConfigStore.php",
             "server/widgets/public/api.php",
             "server/widgets/public/embed.php",
+            "server/team-points/public/members-insights-export.php",
           ]
           recovery_paths=[
             "ReleaseControl.php",
@@ -73,7 +74,7 @@ jobs:
               "Upload prepares a candidate and preview only. It does not promote.\n"
               "Includes the four mandatory existing recovery-plane files, unchanged from repository.\n"
               "No database migration or change to persisted Match Showcase state.\n")
-          zip_dest=out/"P2K_Team_Widgets_v2153_ReleaseControl_Upload.zip"
+          zip_dest=out/"P2K_Team_Widgets_Members_CSV_v2153_ReleaseControl_Upload.zip"
           with zipfile.ZipFile(zip_dest,"w",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
             for file in pkg.rglob("*"):
               if file.is_file():z.write(file,file.relative_to(pkg))
@@ -82,7 +83,7 @@ jobs:
             assert "CANDIDATE_RELEASE.json" in z.namelist()
             assert "RECOVERY_PLANE.sha256" in z.namelist()
             assert "CANDIDATE_PAYLOAD.sha256" in z.namelist()
-            assert len(z.namelist())==19
+            assert len(z.namelist())==20
           print("Candidate ZIP:",zip_dest)
           print("Accepted public build:",accepted)
           print("Stamped cache key:",cache_key)
@@ -91,11 +92,13 @@ jobs:
       - name: Validate with the real ReleaseCandidatePackage contract
         shell: bash
         run: |
-          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_Team_Widgets_v2153_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.3" || $p["overlay_file_count"]!==11) exit(1); echo "Candidate contract OK: ".$p["release_id"].PHP_EOL;'
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_Team_Widgets_Members_CSV_v2153_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.3" || $p["overlay_file_count"]!==12) exit(1); echo "Candidate contract OK: ".$p["release_id"].PHP_EOL;'
           for f in server/widgets/src/WidgetConfigStore.php server/widgets/public/api.php server/widgets/public/embed.php; do php -l "$f"; done
           php -l ReleaseControl.php
+          php -l server/team-points/public/members-insights-export.php
+          python3 -m pytest -q tests/test_v2153_members_csv_period.py tests/test_v2150_members_csv_resource_guard.py
       - uses: actions/upload-artifact@v4
         with:
           name: p2k-widgets-v2153-release-control-direct-upload
-          path: dist/P2K_Team_Widgets_v2153_ReleaseControl_Upload.zip
+          path: dist/P2K_Team_Widgets_Members_CSV_v2153_ReleaseControl_Upload.zip
           retention-days: 7
