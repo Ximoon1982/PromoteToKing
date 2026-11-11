@@ -1,4 +1,5 @@
 name: P2K v2.15.7 MCA-MIAC review Release Control upload
+# Final qualification: verified-alias canonical roots and legacy export reconciliation
 on:
   push:
     paths:
