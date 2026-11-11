@@ -399,8 +399,16 @@ final class LiveRanksService
                     $profile = $this->api->json('https://api.chess.com/pub/player/' . rawurlencode($usernameKey), true);
                     if ($this->isClosedProfile($profile)) $state = 'closed_account';
                 } catch (\Throwable $exception) {
-                    // Legacy anonymous path: retain established classification behavior.
-                    $state = 'possible_renamed';
+                    // Transport errors and HTTP 5xx are not rename evidence.
+                    // Only a definitive 404/410 qualifies for manual MIAC
+                    // review, including on this legacy non-OAuth path.
+                    $httpCode = $exception instanceof ApiException
+                        ? $exception->httpStatus : (int)$exception->getCode();
+                    if (in_array($httpCode, [404, 410], true)) {
+                        $state = 'possible_renamed';
+                    } else {
+                        $conclusive = false;
+                    }
                     $error = $exception->getMessage();
                 }
             }
