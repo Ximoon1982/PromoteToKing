@@ -6,6 +6,7 @@ use P2K\TeamPoints\ApiException;
 use P2K\TeamPoints\Auth;
 use P2K\TeamPoints\Http;
 use P2K\TeamPoints\McaRenameReviewService;
+use P2K\TeamPoints\McaRenameRecheckService;
 use P2K\TeamPoints\PreviewIsolation;
 use P2K\TeamPoints\PublicReadDatabase;
 
@@ -15,15 +16,28 @@ try {
     $analytics = PublicReadDatabase::analytics();
     $club = strtolower((string)(p2k_tp_config()['app']['club_slug'] ?? 'promote-to-king'));
     $service = new McaRenameReviewService($core, $analytics, $club);
+    $rechecks = new McaRenameRecheckService($core, $analytics, $club);
     $action = strtolower(trim((string)($_GET['action'] ?? 'report')));
     if ($action === 'report') {
         Http::method('GET');
-        Http::json($service->report());
+        $report=$service->report();
+        $report['csv_rechecks']=$rechecks->status();
+        Http::json($report);
     }
     if ($action === 'export') {
         Http::method('GET');
         $service->exportUnresolvedCsv();
         exit;
+    }
+    if ($action === 'recheck') {
+        Http::method('POST');
+        if (PreviewIsolation::active()) {
+            throw new ApiException('MCA CSV re-download is read-only in release preview.', 403, 'PREVIEW_READ_ONLY');
+        }
+        $step = $rechecks->runStep(8);
+        $report = $service->report();
+        $report['csv_rechecks'] = $rechecks->status();
+        Http::json(['ok'=>true,'step'=>$step,'report'=>$report]);
     }
     if (in_array($action, ['propose', 'review'], true)) {
         Http::method('POST');
@@ -42,7 +56,9 @@ try {
             }
             $change = $service->review($old, $new, $decision);
         }
-        Http::json(['ok'=>true,'change'=>$change,'report'=>$service->report()]);
+        $report=$service->report();
+        $report['csv_rechecks']=$rechecks->status();
+        Http::json(['ok'=>true,'change'=>$change,'report'=>$report]);
     }
     throw new ApiException('Unknown MCA alias review action.', 404, 'UNKNOWN_ACTION');
 } catch (ApiException $e) {
