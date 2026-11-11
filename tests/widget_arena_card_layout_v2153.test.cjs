@@ -13,7 +13,7 @@ function arena(hours, name, timeControl) {
     startAt:new Date(start).toISOString(),endAt:new Date(start+90*60000).toISOString(),
   };
 }
-async function fixture(club, arenas, cards=[]) {
+async function fixture(club, arenas, cards=[], layout={arenaRows:1,dailyRows:2}) {
   const grid={innerHTML:"",replaceChildren(){this.innerHTML="";}};
   const arenaGrid={innerHTML:"",querySelectorAll(){return [];}};
   const section={hidden:true};
@@ -22,7 +22,7 @@ async function fixture(club, arenas, cards=[]) {
   const sandbox={
     document:{getElementById:id=>elements[id]||null},
     window:{setInterval:(callback,period)=>timers.push({callback,period})},
-    fetch:async()=>({ok:true,json:async()=>({ok:true,cards,arenas})}),
+    fetch:async()=>({ok:true,json:async()=>({ok:true,cards,arenas,layout})}),
     Date, Intl, Math, Number, String, console,
   };
   const file=path.join(__dirname,"..",club,"Widget","assets","widget.js");
@@ -66,8 +66,22 @@ async function fixture(club, arenas, cards=[]) {
     const c=await fixture(club,[]);
     assert.equal(c.section.hidden,true,club+" hide empty arenas");
     assert.equal(c.arenaGrid.innerHTML,"",club+" no stale card");
+    const priorityArena=arena(6,"Priority arena","3+2"); priorityArena.urgent=true;
+    const p=await fixture(club,[priorityArena],[{...match,ourTeam:{players:[]},opponentTeam:{players:[]}}]);
+    assert.match(p.arenaGrid.innerHTML,/tgp-priority/,club+" priority badge");
+    assert.match(p.arenaGrid.innerHTML,club==="TeamFrance"?/Priorité/:/Priority/,club+" priority translated");
+    assert.match(p.grid.innerHTML,club==="TeamFrance"?/Manque 0/:/Need ✓/,club+" zero-need wording");
+    const four=await fixture(club,[
+      arena(2,"One","1+0"),arena(3,"Two","3+2"),arena(4,"Three","10+0"),arena(5,"Four","5+0")
+    ],Array.from({length:6},(_,i)=>({...match,matchId:String(56790+i)})),{arenaRows:2,dailyRows:3});
+    assert.equal((four.arenaGrid.innerHTML.match(/class="tgp-card arena-card"/g)||[]).length,4,club+" MCA 2 rows = 4 cards");
+    assert.equal((four.grid.innerHTML.match(/class="tgp-card/g)||[]).length,6,club+" Daily 3 rows = 6 cards");
+    const css=fs.readFileSync(path.join(__dirname,"..",club,"Widget","assets","widget.css"),"utf8");
+    assert.match(css,/text-align:center/,club+" section headings centered");
     const admin=fs.readFileSync(path.join(__dirname,"..",club,"Widget","assets","admin.js"),"utf8");
-    assert.match(admin,/\? 490 : 300/,club+" iframe sizing");
+    assert.match(admin,/const height = 24 \+ 132/,club+" dynamic iframe sizing");
+    assert.match(admin,/saveLayoutConfiguration/,club+" row control persistence");
+    assert.match(admin,/data-arena-action="priority"/,club+" MCA priority control");
     assert.match(admin,/persistedItems/,club+" arena saves preserve unsaved Daily edits");
     assert.match(admin,/arenaModal/,club+" modal editor");
     assert.match(admin,/if \(arenaSaving \|\| dailySaving\)/,club+" concurrent saves blocked");
