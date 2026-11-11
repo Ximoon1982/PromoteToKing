@@ -1,0 +1,65 @@
+name: MCA external discovery source diagnostics
+on:
+  push:
+    paths:
+      - '.github/workflows/mca-source-diagnostics.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe MCA page pagination and parse without touching live database
+        shell: bash
+        run: |
+          mkdir -p /tmp/mca-diagnostics dist
+          php <<'PHP' | tee dist/mca-source-diagnostics.txt
+          <?php
+          require 'server/team-points/src/McaIndexParser.php';
+          require 'server/team-points/src/McaArenaParser.php';
+          use P2K\TeamPoints\McaIndexParser;
+          use P2K\TeamPoints\McaArenaParser;
+          $urls=[
+            'index1'=>'https://www.chess.com/club/live-tournaments/promote-to-king?type=multi',
+            'index2'=>'https://www.chess.com/club/live-tournaments/promote-to-king?type=multi&page=2',
+            'index3'=>'https://www.chess.com/club/live-tournaments/promote-to-king?type=multi&page=3',
+            'bad-clubs'=>'https://www.chess.com/tournament/live/arena/one-world-league-6th-24-hours-multi-club-31111058?clubs=1&players=1&pairings=1',
+          ];
+          foreach(['worker'=>'PromoteToKing/2.10.9.4 MCA Arena Acquisition (+https://www.promotetoking.org)',
+                   'browser'=>'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'] as $agent=>$ua){
+            foreach($urls as $key=>$url){
+              $ch=curl_init($url);
+              curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>5,
+                CURLOPT_CONNECTTIMEOUT=>6,CURLOPT_TIMEOUT=>15,CURLOPT_USERAGENT=>$ua,CURLOPT_ENCODING=>'',
+                CURLOPT_HTTPHEADER=>['Accept: text/html,text/csv;q=0.9,*/*;q=0.5','Accept-Language: en-US,en;q=0.8']]);
+              $html=curl_exec($ch);
+              $status=(int)curl_getinfo($ch,CURLINFO_RESPONSE_CODE);
+              $urlTo=(string)curl_getinfo($ch,CURLINFO_EFFECTIVE_URL);
+              $curlerr=curl_error($ch);
+              curl_close($ch);
+              $html=is_string($html)?$html:'';
+              $res=['ua'=>$agent,'source'=>$key,'status'=>$status,'effective_url'=>$urlTo,
+                'length'=>strlen($html),'sha'=>substr(hash('sha256',$html),0,16),'curl_error'=>$curlerr];
+              if(str_starts_with($key,'index') && $status===200){
+                $p=McaIndexParser::parse($html,(int)substr($key,5));
+                $ids=array_column($p['events'],'arena_id');
+                $res+=['events'=>count($ids),'first'=>array_slice($ids,0,3),'last'=>array_slice($ids,-3),
+                       'has_next'=>$p['has_next'],'fingerprint'=>hash('sha256',implode(',',$ids))];
+              }elseif($key==='bad-clubs'&&$status===200){
+                $res+=['clubs_parsed'=>count(McaArenaParser::clubRows($html)),
+                  'html_tbody_count'=>substr_count(strtolower($html),'<tbody'),
+                  'club_results_label'=>stripos($html,'Club Results')!==false];
+              }
+              if($status!==200)$res['start']=substr(preg_replace('/\s+/',' ',$html),0,140);
+              echo json_encode($res,JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE),PHP_EOL;
+              usleep(1000000);
+            }
+          }
+          PHP
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mca-source-diagnostics
+          path: dist/mca-source-diagnostics.txt
+          retention-days: 3
