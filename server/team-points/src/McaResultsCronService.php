@@ -113,7 +113,10 @@ final class McaResultsCronService
         return $this->withGlobalLock(function(){
             $this->ensureState();
             $this->seedHistoricalBacklog();
-            $this->requeueKnownInventoryForFullRefresh();
+            // This button only reconciles the index. Do not restart acquisition
+            // for already-stored arenas: that can requeue hundreds of completed
+            // Results sources and delay genuinely missing Results for hours.
+            // Newly discovered arena IDs are inserted as pending by discoveryStep().
             $this->pdo->prepare("UPDATE p2k_lr_sync_state SET status='running',phase='discovery',total_events=0,checked_events=0,csv_found=0,csv_added=0,dates_added=0,error_count=0,request_count=0,current_stage='index:1',high_water_arena_id=1,last_index_page_fingerprint=NULL,started_at=UTC_TIMESTAMP(),finished_at=NULL,next_scan_at=NULL,last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=?")->execute([$this->clubSlug]);
             return $this->status();
         });
@@ -237,7 +240,25 @@ final class McaResultsCronService
         return $q->rowCount();
     }
 
-    private function nextAcquisitionItem(): ?array{$q=$this->pdo->prepare("SELECT * FROM p2k_lr_arena_acquisition WHERE club_slug=? AND status='pending' ORDER BY priority DESC,arena_id DESC LIMIT 1");$q->execute([$this->clubSlug]);$r=$q->fetch(PDO::FETCH_ASSOC);return is_array($r)?$r:null;}
+    private function nextAcquisitionItem(): ?array
+    {
+        // Results coverage is the first obligation. A historical/full-refresh
+        // queue can contain hundreds of already-scored arenas, all at priority
+        // 100; choosing by arena ID alone would starve missing Results sources.
+        // NOT EXISTS is intentionally evaluated against *processed* files, not
+        // downloads/uploads still waiting for validation and scoring.
+        $q=$this->pdo->prepare("SELECT a.* FROM p2k_lr_arena_acquisition a
+            WHERE a.club_slug=? AND a.status='pending'
+            ORDER BY CASE WHEN NOT EXISTS (
+                SELECT 1 FROM p2k_lr_files f
+                WHERE f.club_slug=a.club_slug AND f.arena_id=a.arena_id
+                  AND f.status='processed' AND f.row_count>0
+            ) THEN 0 ELSE 1 END ASC,
+            a.priority DESC,a.arena_id DESC LIMIT 1");
+        $q->execute([$this->clubSlug]);
+        $r=$q->fetch(PDO::FETCH_ASSOC);
+        return is_array($r)?$r:null;
+    }
 
     private function acquisitionStep(array $item,float $deadline): array
     {
