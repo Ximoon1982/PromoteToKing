@@ -6,7 +6,7 @@
   const client = () => window.P2K_TEAM_POINTS_CLIENT;
   const opponentEndpoint = 'server/team-points/public/opponents-admin.php';
   const liveEndpoint = 'server/team-points/public/live-ranks-admin.php';
-  const state = { opponentInventory: [], opponentResults: [], selectedFiles: [], liveRunning: false, mcaSyncRunning: false, mcaSync: {}, mcaDateSyncRunning: false, mcaDateSync: {} };
+  const state = { opponentInventory: [], opponentResults: [], selectedFiles: [], liveRunning: false, mcaSyncRunning: false, mcaSync: {}, mcaDateSyncRunning: false, mcaDateSync: {}, mcaResultsPage: 1, mcaAttentionPage: 1, lastMcaPayload: null };
   const MCA_REBUILD_TIMEOUT_MS = 110_000;
   const MCA_PROFILE_STEP_TIMEOUT_MS = 75_000;
   const MCA_PROFILE_LAUNCH_BUDGET_SECONDS = 12;
@@ -130,34 +130,68 @@
     const cls = value === 'current_member' || value === 'former_member' ? 'good' : value === 'possible_renamed' || value === 'pending_profile' ? 'warn' : 'bad';
     return `<span class="p2k-tp-state ${cls}">${esc(String(value || 'unknown').replaceAll('_',' '))}</span>`;
   }
+  // Both results and attention lists are paginated independently; their source
+  // classification is mutually exclusive by canonical Chess.com arena ID.
+  function mcaPage(rows, stateKey, pagerId, repaint) {
+    const perPage = 25;
+    const totalPages = Math.max(1, Math.ceil(rows.length / perPage));
+    const page = Math.max(1, Math.min(totalPages, Number(state[stateKey] || 1)));
+    state[stateKey] = page;
+    const start = (page - 1) * perPage;
+    const pager = $(pagerId);
+    if (pager) {
+      pager.innerHTML = `<span>${rows.length ? `${fmt(start + 1,0)}–${fmt(Math.min(start + perPage,rows.length),0)} of ${fmt(rows.length,0)}` : '0 arenas'} · page ${page} / ${totalPages}</span>
+        <button type="button" class="p2k-tp-small" data-go="-1" ${page === 1 ? 'disabled' : ''}>Previous</button>
+        <button type="button" class="p2k-tp-small" data-go="1" ${page === totalPages ? 'disabled' : ''}>Next</button>`;
+      pager.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => {
+        state[stateKey] = page + Number(button.dataset.go || 0);
+        repaint();
+      }));
+    }
+    return rows.slice(start, start + perPage);
+  }
+
   function renderMcaSync(sync = {}) {
     state.mcaSync = sync || {};
-    const progress = Math.max(0, Math.min(100, Number(sync.progress_percent || 0)));
+    const inventory = sync.arena_inventory || {};
+    const arenas = Array.isArray(inventory.rows) ? inventory.rows : [];
+    const successful = arenas.filter(row => row.results_ready);
+    const attention = arenas.filter(row => !row.results_ready);
+    const covered = Number(inventory.results_ready || 0);
+    const known = Number(inventory.known_arenas || 0);
+    const progress = known > 0 ? Math.max(0, Math.min(100, 100 * covered / known)) : 100;
     const progressNode = $('liveRanksSyncProgress'); if (progressNode) progressNode.value = progress;
-    if ($('liveRanksSyncPercent')) $('liveRanksSyncPercent').textContent = `${progress.toFixed(1)}%`;
-    const queue = sync.queue || {};
+    if ($('liveRanksSyncPercent')) $('liveRanksSyncPercent').textContent = `${progress.toFixed(1)}% results ready`;
     const metrics = [
-      ['Local acquisition arenas', sync.arena_backlog_total || 0], ['Index-confirmed arenas', sync.index_confirmed_arenas || 0], ['Remaining', sync.arena_backlog_remaining || 0],
+      ['Known distinct arenas', known], ['Index-confirmed arenas', sync.index_confirmed_arenas || 0],
+      ['Parsed Results sources', covered], ['Need Results / parsing', attention.length],
+      ['Results ready; enrichment incomplete', inventory.results_ready_with_enrichment_errors || 0],
+      ['Acquisition stages remaining', sync.arena_backlog_remaining || 0],
       ['Games stored', sync.games_stored || 0], ['Player rows stored', sync.player_rows_stored || 0],
-      ['Club rows stored', sync.club_rows_stored || 0], ['New acquisition rows this discovery', sync.total_events || 0],
-      ['Requests this discovery cycle', sync.request_count || 0], ['Next index discovery', sync.next_scan_at || '—']
+      ['Club rows stored', sync.club_rows_stored || 0], ['New discoveries this cycle', sync.total_events || 0],
+      ['Requests this cycle', sync.request_count || 0], ['Next index discovery', sync.next_scan_at || '—']
     ];
     if ($('liveRanksSyncMetrics')) $('liveRanksSyncMetrics').innerHTML = metrics.map(([label,value]) => `<div class="p2k-tp-metric"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join('');
-    const errors = Array.isArray(sync.errors) ? sync.errors : [];
+    const rawErrors = Array.isArray(sync.errors) ? sync.errors : [];
     const errorWrap = $('liveRanksSyncErrorsWrap'), errorRows = $('liveRanksSyncErrorRows');
-    if (errorWrap) errorWrap.hidden = errors.length === 0;
-    if (errorRows) errorRows.innerHTML = errors.map(row => `<tr><td><a href="${esc(row.arena_url || '#')}" target="_blank" rel="noopener noreferrer"><strong>#${fmt(row.arena_id,0)}</strong><br><small>${esc(row.arena_slug || '')}</small></a></td><td>${esc(row.stage || 'arena')}</td><td>${fmt(row.attempts || 0,0)}</td><td><small>${esc(row.error || 'Acquisition step failed')}</small></td><td>${esc(row.updated_at || '—')}</td></tr>`).join('');
+    if (errorWrap) errorWrap.hidden = attention.length === 0;
+    const visible = mcaPage(attention,'mcaAttentionPage','liveRanksSyncIssuesPager',() => renderMcaSync(sync));
+    if (errorRows) errorRows.innerHTML = visible.map(row => `<tr>
+      <td><a href="${esc(row.arena_url || '#')}" target="_blank" rel="noopener noreferrer"><strong>#${fmt(row.arena_id,0)}</strong><br><small>${esc(row.arena_slug || '')}</small></a></td>
+      <td>${esc(row.source_status === 'missing' ? 'No Results source' : row.source_status === 'processed' ? 'Parsed, empty source' : `CSV ${row.source_status || 'awaiting import'}`)}</td>
+      <td>${esc(row.acquisition_stage || 'arena')} · ${esc(row.acquisition_status || 'pending')}<br><small>${fmt(row.attempts || 0,0)} attempt(s)</small></td>
+      <td><small>${esc(row.acquisition_error || (row.source_status === 'uploaded' ? 'CSV uploaded; process the MCA dataset to validate it.' : 'Awaiting Results acquisition or processing.'))}</small></td>
+      <td>${esc(row.last_attempt_at || '—')}</td>
+    </tr>`).join('');
     const workflow = String(sync.workflow_status || 'current');
     const remaining = Number(sync.arena_backlog_remaining || 0);
-    const text = workflow === 'discovery' ? `MCA index discovery is running at ${sync.current_stage || 'the current page'} in ${sync.full_reconciliation_active ? 'one-time full reconciliation' : 'incremental first-known'} mode; its cursor is durable.`
-      : workflow === 'discovery_attention' ? `MCA index discovery paused without advancing its cursor: ${sync.last_error || 'source error'}.`
-      : workflow === 'acquisition' ? `Durable arena acquisition is active: ${fmt(remaining,0)} arena(s) remain. New arenas have priority; Pairings resume page-by-page. The CRON worker runs every minute for at most 55 seconds.`
-      : workflow === 'attention' ? `Arena acquisition has ${fmt(errors.length,0)} failed step(s). Successful work is retained; retry only the failed stages.`
-      : `MCA arena data is current for the known queue. Next index discovery: ${sync.next_scan_at || 'not scheduled yet'}.`;
-    message('liveRanksSyncStatus', text, ['attention','discovery_attention'].includes(workflow) ? 'error' : workflow === 'current' ? 'success' : '');
+    const text = workflow === 'discovery' ? `Full MCA index discovery is running (${sync.current_stage || 'page 1'}). It traverses every available page, including known arenas, to recover gaps.`
+      : workflow === 'discovery_attention' ? `Full index discovery stopped with a source/pagination warning: ${sync.last_error || 'source error'}. Inventory coverage is not yet confirmed.`
+      : `${fmt(covered,0)} of ${fmt(known,0)} known arenas have processed Results. ${fmt(attention.length,0)} need Results or parsing. ${fmt(inventory.results_ready_with_enrichment_errors || 0,0)} have usable Results but incomplete optional enrichment. ${fmt(remaining,0)} acquisition stage(s) remain.`;
+    message('liveRanksSyncStatus', text, workflow === 'discovery_attention' || attention.length > 0 ? 'error' : 'success');
     if ($('liveRanksSyncStart')) $('liveRanksSyncStart').disabled = state.mcaSyncRunning;
     if ($('liveRanksSyncResume')) $('liveRanksSyncResume').disabled = state.mcaSyncRunning || remaining === 0;
-    if ($('liveRanksSyncRetry')) $('liveRanksSyncRetry').disabled = state.mcaSyncRunning || errors.length === 0;
+    if ($('liveRanksSyncRetry')) $('liveRanksSyncRetry').disabled = state.mcaSyncRunning || rawErrors.length === 0;
     if ($('liveRanksFullRefresh')) $('liveRanksFullRefresh').disabled = state.mcaSyncRunning;
     if ($('liveRanksStatsBackfill')) $('liveRanksStatsBackfill').disabled = state.mcaSyncRunning;
   }
@@ -196,10 +230,19 @@
   }
 
   function renderLive(payload) {
-    const allFiles = payload.files || [], files = allFiles.filter(file => file.canonical_source !== false), players = payload.players || [], summary = payload.summary || {}, processing = payload.processing || {}, integrity = payload.source_integrity || {};
+    // Upload / process responses do not necessarily include the acquisition
+    // snapshot. Keep the last verified inventory until the next status refresh.
+    const prior = state.lastMcaPayload || {};
+    payload = { ...prior, ...payload, sync: payload.sync || prior.sync || state.mcaSync || {}, files: payload.files || prior.files || [] };
+    state.lastMcaPayload = payload;
+    const allFiles = payload.files || [], canonicalFiles = allFiles.filter(file => file.canonical_source !== false), players = payload.players || [], summary = payload.summary || {}, processing = payload.processing || {}, integrity = payload.source_integrity || {};
+    const inventory = payload.sync?.arena_inventory || {};
+    const successIds = new Set((Array.isArray(inventory.rows) ? inventory.rows : []).filter(row => row.results_ready).map(row => Number(row.arena_id)));
+    const files = canonicalFiles.filter(file => successIds.has(Number(file.arena_id)) && file.status === 'processed' && Number(file.rows || 0) > 0).sort((a,b) => String(b.event_date || '').localeCompare(String(a.event_date || '')) || Number(b.arena_id || 0) - Number(a.arena_id || 0));
     renderMcaSync(payload.sync || {});
     renderMcaDateSync(payload.date_sync || {});
-    $('liveRanksFileRows').innerHTML = files.length ? files.map(file => {
+    const pageFiles = mcaPage(files,'mcaResultsPage','liveRanksFilePager',() => state.lastMcaPayload && renderLive(state.lastMcaPayload));
+    $('liveRanksFileRows').innerHTML = pageFiles.length ? pageFiles.map(file => {
       const approx = file.event_date_approximate ? ' <small>(approximative date)</small>' : '';
       const editLabel = file.actual_event_date ? 'Edit actual date' : 'Set actual date';
       const sourceNote = file.canonical_source === false
@@ -210,9 +253,9 @@
       return `<tr>
       <td><a href="${esc(file.event_url || '#')}" target="_blank" rel="noopener noreferrer"><strong>${esc(file.name)}</strong></a>${file.arena_id ? `<br><small>Arena #${fmt(file.arena_id,0)}</small>` : ''}<br><small><code>${esc(String(file.sha256 || '').slice(0,12))}…</code></small></td>
       <td><strong>${esc(file.event_date || '—')}</strong>${approx}<br><button type="button" class="p2k-tp-small" data-mca-event-date="${Number(file.id)||0}" data-current-date="${esc(file.actual_event_date || '')}">${editLabel}</button></td>
-      <td>${esc(file.source_origin || 'manual')}</td><td>${esc(file.acquisition_status || '—')}<br><small>${esc(file.acquisition_stage || '')}</small></td>
+      <td>${esc(file.source_origin || 'manual')}</td><td>Results parsed${file.acquisition_status === 'error' ? `<br><small>Extra ${esc(file.acquisition_stage || 'enrichment')} pending</small>` : ''}</td>
       <td>${fmt(file.rows,0)}</td><td>${fmt(file.p2k_rows,0)}</td><td>${coverage}</td><td>${fmt(file.scraped_games||0,0)}</td><td>${esc(integrityLabel)}</td></tr>`;
-    }).join('') : '<tr><td colspan="9">No stored MCA source arenas.</td></tr>';
+    }).join('') : '<tr><td colspan="9">No successfully processed MCA Results sources.</td></tr>';
     $('liveRanksFileRows').querySelectorAll('[data-mca-event-date]').forEach(button => button.addEventListener('click', async () => {
       const fileId=Number(button.dataset.mcaEventDate||0),current=String(button.dataset.currentDate||'');
       const value=window.prompt('Actual MCA event date (YYYY-MM-DD). Leave blank to clear the known date and return to interpolation/upload fallback.',current);
@@ -227,7 +270,7 @@
       <td>${stateBadge(player.account_state)}</td><td><small>${esc((player.source_files || []).join(' · '))}</small></td>
       <td>${esc(player.profile_checked_at || 'Pending')}${player.error ? `<br><small>${esc(player.error)}</small>` : ''}</td></tr>`).join('') : '<tr><td colspan="6">No computed players.</td></tr>';
     const metrics = [
-      ['Canonical MCA sources', integrity.canonical_sources ?? files.filter(file => file.canonical_source !== false).length],
+      ['Parsed MCA Results sources', files.length], ['Canonical sources stored', integrity.canonical_sources ?? canonicalFiles.length],
       ['Stored CSV records', integrity.stored_records ?? allFiles.length], ['P2K players', summary.players || 0], ['Arena points', fmt(summary.total_points,2)],
       ['Ranked 50+', summary.ranked_players || 0], ['Current members', summary.current_members || 0], ['Possible renames', summary.possible_renames || 0],
       ['Closed accounts', summary.closed_accounts || 0], ['Pending checks', summary.pending_checks || 0]
