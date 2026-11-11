@@ -31,7 +31,16 @@ const ADMIN_DETAIL_DEFS = {
       {key:"snapshots",label:"Snapshots",src:"ClubIntelligence.html?embedded=1&tab=snapshots&release=2.10.6.14"},
       {key:"anomalies",label:"Anomalies",src:"ClubIntelligence.html?embedded=1&tab=anomalies&release=2.10.6.14"}
     ]},
-    trophies: { title:"Trophy Gallery", tabs:[{key:"gallery",label:"Trophy Gallery",mode:"native",nativeKey:"trophy-gallery"}]}
+    trophies: { title:"Trophy Gallery", tabs:[{key:"gallery",label:"Trophy Gallery",mode:"native",nativeKey:"trophy-gallery"}]},
+    widgets: { title:"Widgets", tabs:[
+      {key:"match-showcase",label:"Match Showcase",mode:"native",nativeKey:"match-showcase"},
+      {key:"club-pulse",label:"Club Points",mode:"native",nativeKey:"p2k-widget-club-pulse"},
+      {key:"recruitment-radar",label:"Recruitment Radar",mode:"native",nativeKey:"p2k-widget-recruitment-radar"},
+      {key:"trophy-spotlight",label:"Trophy Spotlight",mode:"native",nativeKey:"p2k-widget-trophy-spotlight"},
+      {key:"rivalry-spotlight",label:"Rivalry Spotlight",mode:"native",nativeKey:"p2k-widget-rivalry-spotlight"},
+      {key:"club-progress",label:"Club Progress",mode:"native",nativeKey:"p2k-widget-club-progress"},
+      {key:"around-the-world",label:"P2K Around the World",mode:"native",nativeKey:"p2k-widget-around-the-world"}
+    ]}
   },
   opponents: {
     opponents: { title:"Opponent intelligence", tabs:[
@@ -84,6 +93,14 @@ return `<article class="dashboard-admin-shell-card dashboard-admin-release-contr
   <div class="dashboard-admin-shell-meta"><span><b>Mode</b><em>Standalone</em></span><span><b>Path</b><em>/ReleaseControl.php</em></span></div>
   <footer class="dashboard-admin-shell-actions"><a class="dashboard-button" href="/ReleaseControl.php">Open Release Control</a></footer>
 </article>`;
+}
+function adminWidgetsCard(){
+return `<article class="dashboard-admin-shell-card" data-admin-shell-card="widgets" data-admin-detail="widgets" data-admin-detail-tab="match-showcase" data-admin-detail-category="team" role="link" tabindex="0" aria-label="Manage widgets">
+<header class="dashboard-admin-shell-card-head"><div><span class="dashboard-admin-shell-eyebrow">Team</span><h3>Widgets</h3></div><span class="dashboard-admin-shell-status is-good">7 modules</span></header>
+<p>Configure the Match Showcase and six live, embeddable club widgets. Each has a separate tab, preview and iframe HTML.</p>
+<div class="dashboard-admin-shell-metrics"><div class="dashboard-admin-shell-metric"><span>Widgets</span><strong>7</strong><small>Independent settings</small></div><div class="dashboard-admin-shell-metric"><span>Embeds</span><strong>260px</strong><small>Public read-only views</small></div></div>
+<div class="dashboard-admin-shell-meta"><span><b>Source</b><em>Green Analytics · Trophy Gallery · Opponent data</em></span><span><b>Setup</b><em>Preview and copy iframe</em></span></div>
+<footer class="dashboard-admin-shell-actions"><span class="dashboard-button">Manage Widgets</span></footer></article>`;
 }
 function adminMemberLookupCard(){
 return `<article class="dashboard-admin-shell-card dashboard-admin-member-lookup-card" data-admin-member-lookup-card>
@@ -138,7 +155,8 @@ members: [
 ],
 team: [
   adminShellCard({key:"team",category:"team",eyebrow:"Team",title:"Club intelligence",description:"Authoritative team health, Club Points, snapshots, forecast and current anomalies.",metrics:[{label:"Club points",id:"adminShellTeamPoints"},{label:"Current members",id:"adminShellTeamMembers"},{label:"Open anomalies",id:"adminShellTeamAnomalies"}],source:"Green Core · Club Intelligence",links:[{label:"Open club intelligence",tab:"overview"},{label:"Forecast",tab:"forecast",secondary:true}]}),
-  adminShellCard({key:"trophies",category:"team",eyebrow:"Team",title:"Trophy Gallery",description:"Create, publish and maintain the club trophy archive and its managed artwork.",metrics:[{label:"Catalog",id:"adminTrophyCatalog",value:"Persistent",note:"JSON + managed media"}],source:"Trophy Gallery catalog",links:[{label:"Open Trophy Gallery",tab:"gallery"}]})
+  adminShellCard({key:"trophies",category:"team",eyebrow:"Team",title:"Trophy Gallery",description:"Create, publish and maintain the club trophy archive and its managed artwork.",metrics:[{label:"Catalog",id:"adminTrophyCatalog",value:"Persistent",note:"JSON + managed media"}],source:"Trophy Gallery catalog",links:[{label:"Open Trophy Gallery",tab:"gallery"}]}),
+  adminWidgetsCard()
 ],
 opponents: [adminShellCard({key:"opponents",category:"opponents",eyebrow:"Opponents",title:"Opponent intelligence",description:"Recurring opponents, historical outcomes and opponent maintenance intelligence.",metrics:[{label:"Profiles",id:"adminShellOpponentProfiles"},{label:"Recent opponents",id:"adminShellOpponentRecent"},{label:"Review needed",id:"adminShellOpponentReview"}],source:"Club Intelligence · Green match history",links:[{label:"Open opponent intelligence",tab:"intelligence"},{label:"Challenge assistant",tab:"challenge",secondary:true}]})],
 maintenance: [
@@ -204,7 +222,9 @@ function renderAdminShellDetail(){
     setIntegratedFrameActivity("");
     if(frameWrap)frameWrap.hidden=true;
     if(frame){frame.hidden=true;frame.removeAttribute("data-p2k-r2-stable");}
-    if(nativeHost){nativeHost.hidden=false;nativeHost.dataset.nativeDetail=nativeKey||validTab.key;if(nativeKey==="trophy-gallery")window.P2K_TROPHY_ADMIN_V2121?.mount?.();}
+    if(nativeHost){nativeHost.hidden=false;nativeHost.dataset.nativeDetail=nativeKey||validTab.key;if(nativeKey==="trophy-gallery")window.P2K_TROPHY_ADMIN_V2121?.mount?.();
+      if(nativeKey==="match-showcase")void window.P2K_EVENTS_SHOWCASE_ADMIN?.mount?.();
+      if(nativeKey.startsWith("p2k-widget-"))void window.P2K_WIDGETS_ADMIN?.mount?.(nativeKey.slice("p2k-widget-".length));}
     return;
   }
   if(nativeHost){nativeHost.hidden=true;nativeHost.replaceChildren();nativeHost.removeAttribute("data-native-detail");}

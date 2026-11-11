@@ -60,11 +60,35 @@ function suspendPreviews(){if(previewRefreshTimer){window.clearTimeout(previewRe
 async function copy(value,button){try{await navigator.clipboard.writeText(value);}catch{const t=document.createElement("textarea");t.value=value;document.body.append(t);t.select();document.execCommand("copy");t.remove();}const old=button.textContent;button.textContent="Copied";setTimeout(()=>button.textContent=old,1000);}
 async function refreshCatalog(force=false){const api=window.P2K_EVENTS_SHOWCASE_CORE;feedback(force?"Refreshing registered matches…":"Loading registered matches…");const out=await api.loadCatalog(force);catalog=Array.isArray(out.matches)?out.matches:[];catalogLoadedAt=Number(out.loadedAt)||Date.now();renderSelected();renderSearch();refreshCatalogAge();feedback(`Loaded ${catalog.length} current registered match${catalog.length===1?"":"es"}.`,"success");}
 function refreshCatalogAge(){const n=q("[data-es-catalog-age]");if(!n)return;if(!catalogLoadedAt){n.textContent="Not loaded";return;}const s=Math.max(0,Math.floor((Date.now()-catalogLoadedAt)/1000));n.textContent=s<10?"Refreshed just now":s<60?`Refreshed ${s}s ago`:s<3600?`Refreshed ${Math.floor(s/60)}m ago`:`Refreshed ${Math.floor(s/3600)}h ago`;}
-function mountEditorInline(d){const detail=$("#adminShellDetail"),native=$("#adminShellNativeDetailHost"),frameWrap=$("#adminShellDetailFrameWrap"),frame=$("#adminShellDetailFrame"),tabs=$("#adminShellDetailTabs");if(!detail||!native){d.hidden=false;return;}document.querySelectorAll("[data-admin-shell-panel]").forEach(panel=>panel.hidden=true);detail.hidden=false;const title=$("#adminShellDetailTitle"),crumb=$("#adminShellDetailBreadcrumb");if(title)title.textContent="Events showcase";if(crumb)crumb.textContent="Administration · Competitions";if(tabs){tabs.hidden=true;tabs.replaceChildren();}if(frameWrap)frameWrap.hidden=true;if(frame)frame.hidden=true;native.hidden=false;native.dataset.nativeDetail="events-showcase";if(d.parentElement!==native)native.replaceChildren(d);d.hidden=false;}
-function closeEditor(){suspendPreviews();const d=$("#p2kEventsShowcaseEditor");if(d)d.hidden=true;const detail=$("#adminShellDetail"),native=$("#adminShellNativeDetailHost"),frameWrap=$("#adminShellDetailFrameWrap"),frame=$("#adminShellDetailFrame");if(detail)detail.hidden=true;if(native)native.hidden=true;if(frameWrap)frameWrap.hidden=false;if(frame)frame.hidden=false;document.querySelectorAll("[data-admin-shell-panel]").forEach(panel=>panel.hidden=panel.dataset.adminShellPanel!=="competitions");}
+function mountEditorInline(d){
+  const host=$("#adminShellNativeDetailHost[data-native-detail='match-showcase']");
+  if(!host)return false;
+  if(d.parentElement!==host)host.replaceChildren(d);
+  d.hidden=false;
+  return true;
+}
+function closeEditor(){
+  suspendPreviews();
+  const d=$("#p2kEventsShowcaseEditor");if(d)d.hidden=true;
+  $("#adminShellDetailBack")?.click();
+}
 async function initialize(){if(initialized)return;if(initializePromise)return initializePromise;initializePromise=(async()=>{await ensureCore();const state=await publicState();config={revision:Number(state.revision||0),items:Array.isArray(state.items)?state.items:[],arenas:normalizedArenas(state.arenas)};renderArenas();renderSelected();renderSearch();updatePreviewMetadata();initialized=true;setInterval(refreshCatalogAge,30000);catalogPromise=refreshCatalog(false).catch(e=>feedback(e.message||"Unable to load registered matches.","error")).finally(()=>{catalogPromise=null;});})();try{await initializePromise;}finally{if(!initialized)initializePromise=null;}}
-async function openEditor(){installStyle();const d=ensureEditor();mountEditorInline(d);updatePreviewMetadata();try{await initialize();}catch(e){feedback(e.message||"Unable to initialize Events Showcase.","error");}}
+async function openEditor(){
+  const host=$("#adminShellNativeDetailHost[data-native-detail='match-showcase']");
+  if(!host)return;
+  installStyle();const d=ensureEditor();
+  if(!mountEditorInline(d))return;
+  updatePreviewMetadata();
+  try{await initialize();renderArenas();renderSelected();renderSearch();updatePreviewMetadata();}
+  catch(e){feedback(e.message||"Unable to initialize Events Showcase.","error");}
+}
 function bindEditor(d){$("[data-es-close]",d).onclick=closeEditor;$("[data-es-load-preview]",d).onclick=()=>loadPreview("line",true);$("[data-es-load-card-preview]",d).onclick=()=>loadPreview("card",true);$("[data-es-add-arena]",d).onclick=()=>openArenaModal(null);$("[data-es-arena-close]",d).onclick=closeArenaModal;$("[data-es-arena-cancel]",d).onclick=closeArenaModal;$("[data-es-arena-form]",d).onsubmit=saveArena;$("[data-es-search]",d).oninput=()=>{searchPage=0;renderSearch();};$("[data-es-refresh]",d).onclick=()=>refreshCatalog(true).catch(e=>feedback(e.message||"Refresh failed.","error"));$("[data-es-copy-url]",d).onclick=e=>copy(EMBED,e.currentTarget);$("[data-es-copy-iframe]",d).onclick=e=>copy(iframeHtml(),e.currentTarget);$("[data-es-copy-card-url]",d).onclick=e=>copy(CARD_EMBED,e.currentTarget);$("[data-es-copy-card-iframe]",d).onclick=e=>copy(iframeHtml(CARD_EMBED,480,"Promote to King events showcase cards"),e.currentTarget);}
-installStyle();if(!installCard()){const obs=new MutationObserver(()=>{if(installCard())obs.disconnect();});obs.observe(document.documentElement,{childList:true,subtree:true});}
-window.P2K_EVENTS_SHOWCASE_ADMIN=Object.freeze({open:openEditor,refreshCard});
+installStyle();
+window.P2K_EVENTS_SHOWCASE_ADMIN=Object.freeze({open:openEditor,mount:openEditor,refreshCard});
+window.addEventListener("p2k-admin-shell-route",e=>{
+  const key=String(e?.detail?.nativeKey||"");
+  if(key==="match-showcase")void openEditor();
+  else suspendPreviews();
+});
+queueMicrotask(()=>{if($("#adminShellNativeDetailHost[data-native-detail='match-showcase']"))void openEditor();});
 })();

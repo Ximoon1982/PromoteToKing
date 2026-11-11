@@ -139,11 +139,20 @@ function loadEventsShowcaseV2122() {
 if (document.getElementById("p2kEventsShowcaseV2122")) return;
 const script = document.createElement("script");
 script.id = "p2kEventsShowcaseV2122";
-script.src = "assets/js/admin/events-showcase-v2122.js?v=p2k-2.12.2-src-79c27cc76eb1f256";
+script.src = "assets/js/admin/events-showcase-v2122.js?v=p2k-2.15.3-widgets-20261111";
 script.defer = true;
 document.head.appendChild(script);
 }
 loadEventsShowcaseV2122();
+function loadWidgetManagementV2153(){
+  if(document.getElementById("p2kWidgetsManagementV2153"))return;
+  const script=document.createElement("script");
+  script.id="p2kWidgetsManagementV2153";
+  script.src="assets/js/admin/widgets-v2153.js?v=p2k-2.15.3-widgets-1";
+  script.defer=true;
+  document.head.appendChild(script);
+}
+loadWidgetManagementV2153();
 
 return Object.freeze({ tools, renderTools, routeFallback });
 }});
