@@ -71,7 +71,7 @@ try {
     if($action==='spotlight-leaders' && $method==='GET') {
         $config=p2k_tp_config();
         $club=strtolower(trim((string)($config['app']['club_slug']??'promote-to-king')));
-        $repository=new \P2K\TeamPoints\\Repository(PublicReadDatabase::core(),PublicReadDatabase::analytics());
+        $repository=new \P2K\TeamPoints\Repository(PublicReadDatabase::core(),PublicReadDatabase::analytics());
         if(!$repository->schemaInstalled())api_error(503,'SCHEMA_NOT_INSTALLED','Team Points data is not available.');
         $generation=$repository->publicReadGenerationToken($club,true,true);
         $cache=new ResponseCache(is_array($config['storage']??null)?$config['storage']:[]);
@@ -95,14 +95,14 @@ try {
             }
             return ['ok'=>true,'daily'=>$topDaily,'arena'=>$live,'source'=>'Green Members Insights + canonical MCA players'];
         },900);
-        \P2K\TeamPoints\\Http::jsonCacheable($entry['payload'],200,90,300,$entry['etag']);
+        \P2K\TeamPoints\Http::jsonCacheable($entry['payload'],200,90,300,$entry['etag']);
     }
     if($action==='tournament-highlights' && $method==='GET') {
         require_once dirname(__DIR__,2).'/tournaments/src/bootstrap.php';
         $search=trim((string)($_GET['search']??''));
         if(strlen($search)>80)api_error(400,'INVALID_SEARCH','Tournament search is too long.');
         $page=max(1,min(500,(int)($_GET['page']??1)));
-        $indexer=new \P2K\Tournaments\\BrowseIndex();
+        $indexer=new \P2K\Tournaments\BrowseIndex();
         $config=p2k_tp_config();
         $cache=new ResponseCache(is_array($config['storage']??null)?$config['storage']:[]);
         $key='widgets-tournament-highlights-v2159|'.$indexer->signature().'|'.hash('sha256',strtolower($search).'|'.$page);
@@ -141,7 +141,7 @@ try {
                 'source'=>'Finalized tournament archive with medalist exclusions'
             ];
         },600);
-        \P2K\TeamPoints\\Http::jsonCacheable($entry['payload'],200,60,300,$entry['etag']);
+        \P2K\TeamPoints\Http::jsonCacheable($entry['payload'],200,60,300,$entry['etag']);
     }
     api_error(405,'METHOD_NOT_ALLOWED','Method/action not allowed');
 } catch(RevisionConflict $e){api_error(409,'REVISION_CONFLICT',$e->getMessage(),['current'=>$e->current]);}
