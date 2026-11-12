@@ -37,7 +37,7 @@ final class RecruitmentHistoryStore
         $matchName=trim(preg_replace('/\s+/u',' ',strip_tags($matchName))??'');
         if($matchName==='') $matchName='Match '.$matchId;
         // mbstring is not guaranteed by the IONOS web PHP installation.
-        $matchName=function_exists('mb_substr') ? mb_substr($matchName,0,300) : substr($matchName,0,300);
+        $matchName=function_exists('mb_substr') ? mb_substr($matchName,0,300) : (preg_match('/^.{0,300}/us',$matchName,$parts) ? $parts[0] : 'Match '.$matchId);
         $bytes=strlen($csv);
         if($bytes<=0||$bytes>self::MAX_CSV_BYTES) throw new RecruitmentHistoryException('RECRUITMENT_CSV_SIZE','Recruitment CSV is empty or exceeds the archive size limit.');
 
