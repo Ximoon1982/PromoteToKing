@@ -2,8 +2,18 @@ name: P2K v2.15.9 Recruitment archive session Release Control upload
 # Requalified with storage diagnostics and Unicode-safe no-mbstring regression.
 on:
   push:
+    branches:
+      - 'release/v2.15.9'
     paths:
       - '.github/workflows/p2k-v2159-recruitment-auth-release-control.yml'
+      - 'server/team-points/src/Auth.php'
+      - 'server/team-points/src/RecruitmentHistoryStore.php'
+      - 'server/team-points/public/recruitment-history.php'
+      - 'assets/js/shared/team-points-client.js'
+      - 'assets/js/pages/recruit-match.js'
+      - 'assets/js/pages/recruit-match-v2121-bootstrap.js'
+      - 'RecruitMatch.html'
+      - 'ui-v2.html'
   workflow_dispatch:
 permissions:
   contents: read
@@ -59,6 +69,7 @@ jobs:
             {"version":"2.15.6","source_head":"9c92b999d8111c2af7dad78054aa65c275eecb24"},
             {"version":"2.15.7","source_head":"2be367793b1720d6df9afcf80af3a39a83787086"},
             {"version":"2.15.8","source_head":"d539f9e5893e5d7b2be5ef6e4bfa68630dc4f7db"},
+            {"version":"2.15.9","source_head":"e449ac12fabc9266df59f9f87b49bd116ece9e60"},
           ]
           paths=[
              "VERSION","ui-v2.html",
