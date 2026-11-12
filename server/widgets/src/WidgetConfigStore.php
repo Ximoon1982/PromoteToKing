@@ -11,7 +11,7 @@ final class RevisionConflict extends RuntimeException {
 
 /** Small, versioned, independent widget settings registry. No legacy data is changed. */
 final class WidgetConfigStore {
-    public const IDS = ['club-pulse','recruitment-radar','trophy-spotlight','rivalry-spotlight','club-progress','around-the-world'];
+    public const IDS = ['club-pulse','recruitment-radar','trophy-spotlight','rivalry-spotlight','club-progress','around-the-world','player-spotlight','tournament-winners'];
     public const SCHEMA = 1;
     private string $path;
     private string $lock;
@@ -27,7 +27,8 @@ final class WidgetConfigStore {
         $common = ['enabled'=>true, 'title'=>[
             'club-pulse'=>'Club Pulse', 'recruitment-radar'=>'Recruitment Radar',
             'trophy-spotlight'=>'Trophy Spotlight', 'rivalry-spotlight'=>'Rivalry Spotlight',
-            'club-progress'=>'Club Progress', 'around-the-world'=>'P2K Around the World'
+            'club-progress'=>'Club Progress', 'around-the-world'=>'P2K Around the World',
+            'player-spotlight'=>'Player Spotlight', 'tournament-winners'=>'Tournament Winners'
         ][$id], 'theme'=>'dark'];
         return $common + match ($id) {
             'club-pulse'=>['period'=>'7d','showMembers'=>true],
@@ -36,6 +37,8 @@ final class WidgetConfigStore {
             'rivalry-spotlight'=>['opponent'=>'','limit'=>6],
             'club-progress'=>['period'=>'30d','metric'=>'points'],
             'around-the-world'=>['metric'=>'matches','limit'=>8],
+            'player-spotlight'=>['limit'=>5,'showArena'=>true,'showMedals'=>true],
+            'tournament-winners'=>['limit'=>5,'medalPageSize'=>3],
         };
     }
 
