@@ -148,7 +148,7 @@ function loadWidgetManagementV2153(){
   if(document.getElementById("p2kWidgetsManagementV2153"))return;
   const script=document.createElement("script");
   script.id="p2kWidgetsManagementV2153";
-  script.src="assets/js/admin/widgets-v2153.js?v=p2k-2.15.9-spotlight-1";
+  script.src="assets/js/admin/widgets-v2153.js?v=p2k-2.15.9-widget-polish-2";
   script.defer=true;
   document.head.appendChild(script);
 }
