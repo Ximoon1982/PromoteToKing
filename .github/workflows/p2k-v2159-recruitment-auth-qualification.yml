@@ -22,6 +22,7 @@ jobs:
           php -l server/team-points/public/session.php
           node --check assets/js/shared/team-points-client.js
           node --check assets/js/pages/recruit-match.js
+          node --check assets/js/pages/recruit-match-ui-helpers.js
           node --check assets/js/pages/recruit-match-v2121-bootstrap.js
           php tests/test_v2159_admin_session_reconnect.php
           php tests/test_v2159_recruitment_storage_diagnostics.php
@@ -40,7 +41,8 @@ jobs:
           for phrase in ["assets/js/shared/team-points-client.js?v=2.15.9-admin-session-recovery","p2kRetryRecruitmentArchive"]:
               assert phrase in html,phrase
           assert "2.15.9-session-recovery" in boot
-          assert "pendingArchive({match,csv:state.resultCsv})" in controller
+          assert "await UI.pending.save(pending)" in controller
+          assert "void restorePendingArchive()" in controller
           assert "retryPendingArchive()" in controller
           assert "team-points-client.js?v=2.15.9-admin-session-recovery" in ui
           print("PASS recruitment standalone/embedded cache and manual retry contract")
