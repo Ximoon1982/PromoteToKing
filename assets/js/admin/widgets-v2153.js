@@ -37,14 +37,16 @@
     }
     return'';
   }
-  function iframeUrl(id,theme,preview=false){const u=new URL(embed);u.searchParams.set('widget',id);u.searchParams.set('theme',theme||'dark');if(preview)u.searchParams.set('preview','1');return u.href;}
-  const heights={'club-pulse':335,'recruitment-radar':460,'trophy-spotlight':400,'rivalry-spotlight':440,'club-progress':380,'around-the-world':560,'player-spotlight':580,'tournament-winners':590};
-  function code(){const settings=drafts[active]||state?.widgets?.[active]||{};const url=iframeUrl(active,settings.theme,false);const height=heights[active]||440;
-    const id='p2kw-'+active;
-    // The fallback height is suitable for hosts that strip inline scripts.
-    // Sites allowing scripts receive precise height updates from the iframe.
-    return `<iframe id="${id}" src="${url}" width="260" height="${height}" style="width:260px;max-width:100%;border:0;overflow:hidden" loading="lazy" scrolling="no" title="${esc(settings.title||names[active])}"></iframe>\n<script>(function(){var f=document.getElementById('${id}');window.addEventListener('message',function(e){if(e.origin!==new URL(f.src).origin||e.source!==f.contentWindow||e.data?.type!=='p2k-widget-height'||e.data.widget!=='${active}')return;var h=Number(e.data.height);if(Number.isFinite(h)&&h>=100&&h<=1000)f.height=Math.ceil(h)+2;});})();<\/script>`;
+  function iframeUrl(id,theme,preview=false){const u=new URL(embed);u.searchParams.set('widget',id);u.searchParams.set('theme',theme||'auto');if(preview)u.searchParams.set('preview','1');return u.href;}
+  // All embed snippets are standalone iframe-only HTML. The host must not need
+  // inline scripts or postMessage resizing; previews use the same fixed heights.
+  const heights={'club-pulse':350,'recruitment-radar':520,'trophy-spotlight':490,'rivalry-spotlight':520,'club-progress':430,'around-the-world':780,'player-spotlight':760,'tournament-winners':1050};
+  function code(){
+    const settings=drafts[active]||state?.widgets?.[active]||{};
+    const url=iframeUrl(active,settings.theme,false),height=heights[active]||600;
+    return `<iframe src="${url}" width="260" height="${height}" style="display:block;width:260px;max-width:100%;height:${height}px;border:0;overflow:hidden" loading="lazy" scrolling="no" title="${esc(settings.title||names[active])}"></iframe>`;
   }
+
   function fields(){const settings=drafts[active]||state?.widgets?.[active]||{};
     let rows=`<label><input type="checkbox" data-setting="enabled" ${settings.enabled?'checked':''}> Publish this widget</label><label>Widget title<input type="text" maxlength="64" data-setting="title" value="${esc(settings.title||'')}"></label><label>Theme<select data-setting="theme">${['dark','light','auto'].map(v=>`<option value="${v}" ${settings.theme===v?'selected':''}>${v}</option>`).join('')}</select></label>`;
     for(const k of Object.keys(defaults[active]||{}))rows+=`<label>${esc(labels[k]||k)}${opts(k,settings[k])}</label>`;
@@ -54,7 +56,7 @@
     if(!state){el.innerHTML='<div class="p2kw-admin-empty">Loading widget configuration…</div>';return;}
     if(!drafts[active])drafts[active]={...(state.widgets?.[active]||{})};
     const changed=dirty.has(active);
-    el.innerHTML=`<section class="p2kw-admin" data-widgets-admin="${esc(active)}"><header><div><h3>${esc(names[active]||active)}</h3><p>Read-only embedded widget · 260 px · configurable independently from the Match Showcase</p></div><span class="p2kw-admin-live">Native widgets</span></header><div data-widgets-message class="p2kw-admin-status">${changed?'Unsaved changes':'Configuration loaded'}</div><div class="p2kw-admin-grid"><div><section class="p2kw-admin-panel"><h4>Appearance & content</h4><form data-widgets-form>${fields()}<div class="p2kw-admin-actions"><button class="primary" type="submit" ${!changed?'disabled':''}>Save settings</button><button type="button" data-revert ${!changed?'disabled':''}>Revert</button></div></form></section><section class="p2kw-admin-panel p2kw-admin-code"><h4>Embed HTML</h4><p>Paste the iframe snippet into a page that permits iframes. Hosts permitting inline JavaScript resize automatically; otherwise the fallback height applies.</p><textarea data-widgets-code readonly aria-label="Iframe HTML">${esc(code())}</textarea><div class="p2kw-admin-actions"><button type="button" data-copy-embed>Copy iframe HTML</button></div></section></div><div><section class="p2kw-admin-panel"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h4>Public preview</h4><button type="button" data-preview>Load preview</button></div><p>Preview is loaded only on demand; it uses live public data and the current saved configuration.</p><div class="p2kw-admin-preview-wrap" data-preview-wrap hidden><iframe class="p2kw-admin-preview" title="${esc(active)} preview" loading="lazy"></iframe></div></section></div></div></section>`;
+    el.innerHTML=`<section class="p2kw-admin" data-widgets-admin="${esc(active)}"><header><div><h3>${esc(names[active]||active)}</h3><p>Read-only embedded widget · 260 px · configurable independently from the Match Showcase</p></div><span class="p2kw-admin-live">Native widgets</span></header><div data-widgets-message class="p2kw-admin-status">${changed?'Unsaved changes':'Configuration loaded'}</div><div class="p2kw-admin-grid"><div><section class="p2kw-admin-panel"><h4>Appearance & content</h4><form data-widgets-form>${fields()}<div class="p2kw-admin-actions"><button class="primary" type="submit" ${!changed?'disabled':''}>Save settings</button><button type="button" data-revert ${!changed?'disabled':''}>Revert</button></div></form></section><section class="p2kw-admin-panel p2kw-admin-code"><h4>Embed HTML</h4><p>Paste the iframe snippet into a page that permits iframes. The embed uses one fixed-height iframe only. No script tag or host JavaScript is required.</p><textarea data-widgets-code readonly aria-label="Iframe HTML">${esc(code())}</textarea><div class="p2kw-admin-actions"><button type="button" data-copy-embed>Copy iframe HTML</button></div></section></div><div><section class="p2kw-admin-panel"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h4>Public preview</h4><button type="button" data-preview>Load preview</button></div><p>Preview is loaded only on demand; it uses live public data and the current saved configuration.</p><div class="p2kw-admin-preview-wrap" data-preview-wrap hidden><iframe class="p2kw-admin-preview" title="${esc(active)} preview" loading="lazy"></iframe></div></section></div></div></section>`;
     const form=el.querySelector('[data-widgets-form]');
     form.oninput=onChange;form.onchange=onChange;form.onsubmit=save;
     el.querySelector('[data-revert]').onclick=()=>{delete drafts[active];dirty.delete(active);layout();};
@@ -85,13 +87,11 @@
     }
   }
   function preview(){const h=host(),frame=h?.querySelector('.p2kw-admin-preview'),wrap=h?.querySelector('[data-preview-wrap]');if(!frame||!wrap)return;
-    frame.src=iframeUrl(active,drafts[active]?.theme||'dark',true);
+    frame.src=iframeUrl(active,drafts[active]?.theme||'auto',true);
     frame.style.height=String(heights[active]||440)+'px';wrap.hidden=false;
     h.querySelector('[data-preview]').textContent='Refresh preview';
   }
   async function copy(){const str=code();try{await navigator.clipboard.writeText(str);message('Iframe HTML copied.','good');}catch{const textarea=host()?.querySelector('[data-widgets-code]');if(textarea){textarea.focus();textarea.select();message('Select and copy the highlighted iframe HTML.');}}}
-  function onHeight(e){const frame=host()?.querySelector('.p2kw-admin-preview');if(!frame||frame.contentWindow!==e.source||e.origin!==location.origin||e.data?.type!=='p2k-widget-height'||e.data.widget!==active)return;const height=Number(e.data.height);if(Number.isFinite(height)&&height>=100&&height<1000)frame.style.height=Math.ceil(height+2)+'px';}
-  window.addEventListener('message',onHeight);
   async function mount(id){if(!ids.includes(id))return;active=id;
     if(!host())return;
     try{layout();await load();if(active===id)layout();}catch(e){const h=host();if(h)h.innerHTML='<div class="p2kw-admin-empty">Widget configuration unavailable: '+esc(e.message)+'</div>';}
