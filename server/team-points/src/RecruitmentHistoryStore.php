@@ -5,6 +5,14 @@ namespace P2K\TeamPoints;
 
 use RuntimeException;
 
+final class RecruitmentHistoryException extends RuntimeException
+{
+    public function __construct(public readonly string $safeCode, string $safeMessage)
+    {
+        parent::__construct($safeMessage);
+    }
+}
+
 final class RecruitmentHistoryStore
 {
     public const DEFAULT_PAGE_SIZE = 10;
@@ -25,17 +33,18 @@ final class RecruitmentHistoryStore
 
     public function archive(int $matchId,string $matchName,string $csv): array
     {
-        if($matchId<=0) throw new RuntimeException('A valid match ID is required.');
+        if($matchId<=0) throw new RecruitmentHistoryException('RECRUITMENT_MATCH_INVALID','A valid match ID is required.');
         $matchName=trim(preg_replace('/\s+/u',' ',strip_tags($matchName))??'');
         if($matchName==='') $matchName='Match '.$matchId;
-        $matchName=mb_substr($matchName,0,300);
+        // mbstring is not guaranteed by the IONOS web PHP installation.
+        $matchName=function_exists('mb_substr') ? mb_substr($matchName,0,300) : substr($matchName,0,300);
         $bytes=strlen($csv);
-        if($bytes<=0||$bytes>self::MAX_CSV_BYTES) throw new RuntimeException('Recruitment CSV is empty or exceeds the archive size limit.');
+        if($bytes<=0||$bytes>self::MAX_CSV_BYTES) throw new RecruitmentHistoryException('RECRUITMENT_CSV_SIZE','Recruitment CSV is empty or exceeds the archive size limit.');
 
         $id=gmdate('Ymd\\THis\\Z').'-'.$matchId.'-'.bin2hex(random_bytes(3));
         $file=$id.'.csv';
         $path=$this->directory.'/'.$file;
-        if(@file_put_contents($path,$csv,LOCK_EX)!==$bytes) throw new RuntimeException('Unable to store recruitment CSV.');
+        if(@file_put_contents($path,$csv,LOCK_EX)!==$bytes) throw new RecruitmentHistoryException('RECRUITMENT_CSV_WRITE_FAILED','Recruitment history cannot write the CSV file. Check storage permissions and available disk space.');
         @chmod($path,0600);
 
         $entry=[
@@ -114,7 +123,8 @@ final class RecruitmentHistoryStore
 
     private function ensureDirectory(): void
     {
-        if(!is_dir($this->directory)&&!@mkdir($this->directory,0700,true)&&!is_dir($this->directory)) throw new RuntimeException('Unable to create recruitment archive directory.');
+        if(!is_dir($this->directory)&&!@mkdir($this->directory,0700,true)&&!is_dir($this->directory)) throw new RecruitmentHistoryException('RECRUITMENT_DIRECTORY_UNAVAILABLE','Recruitment history cannot create its protected storage directory. Check the configured runtime directory and PHP write permissions.');
+        if(!is_writable($this->directory)) throw new RecruitmentHistoryException('RECRUITMENT_DIRECTORY_READ_ONLY','Recruitment history storage directory is not writable by the web PHP process. Check ownership and permissions.');
         foreach([
             '.htaccess'=>"<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n",
             'index.html'=>'',
@@ -138,16 +148,16 @@ final class RecruitmentHistoryStore
     {
         $lockPath=$this->directory.'/.index.lock';
         $lock=@fopen($lockPath,'c+');
-        if($lock===false) throw new RuntimeException('Unable to lock recruitment archive index.');
+        if($lock===false) throw new RecruitmentHistoryException('RECRUITMENT_INDEX_LOCK_UNAVAILABLE','Recruitment history cannot open its index lock. Check directory write permissions and disk space.');
         try{
-            if(!flock($lock,LOCK_EX)) throw new RuntimeException('Unable to lock recruitment archive index.');
+            if(!flock($lock,LOCK_EX)) throw new RecruitmentHistoryException('RECRUITMENT_INDEX_LOCK_FAILED','Recruitment history cannot acquire its index lock.');
             $next=$mutator($this->readIndex());
             $json=json_encode(array_values($next),JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
             if($json===false) throw new RuntimeException('Unable to encode recruitment archive index.');
             $tmp=$this->directory.'/index.json.tmp.'.bin2hex(random_bytes(4));
-            if(@file_put_contents($tmp,$json."\n",LOCK_EX)===false) throw new RuntimeException('Unable to write recruitment archive index.');
+            if(@file_put_contents($tmp,$json."\n",LOCK_EX)===false) throw new RecruitmentHistoryException('RECRUITMENT_INDEX_WRITE_FAILED','Recruitment history cannot write its index. Check storage permissions and available disk space.');
             @chmod($tmp,0600);
-            if(!@rename($tmp,$this->directory.'/index.json')){@unlink($tmp);throw new RuntimeException('Unable to publish recruitment archive index.');}
+            if(!@rename($tmp,$this->directory.'/index.json')){@unlink($tmp);throw new RecruitmentHistoryException('RECRUITMENT_INDEX_PUBLISH_FAILED','Recruitment history cannot publish its index. Check storage ownership and permissions.');}
         }finally{
             @flock($lock,LOCK_UN);
             @fclose($lock);
