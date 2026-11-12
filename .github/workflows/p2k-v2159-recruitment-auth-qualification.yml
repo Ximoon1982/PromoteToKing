@@ -25,6 +25,7 @@ jobs:
           node --check assets/js/pages/recruit-match-v2121-bootstrap.js
           php tests/test_v2159_admin_session_reconnect.php
           php tests/test_v2159_recruitment_storage_diagnostics.php
+          php tests/test_v2159_recruitment_default_runtime_path.php
           php -n tests/test_v2159_recruitment_storage_diagnostics.php
           node tests/test_v2159_team_points_client_recovery.cjs
           php tests/recruitment_history_v2152_test.php
