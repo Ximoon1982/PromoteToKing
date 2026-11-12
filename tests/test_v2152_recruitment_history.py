@@ -7,7 +7,9 @@ api = (ROOT / "server/team-points/public/recruitment-history.php").read_text(enc
 store = (ROOT / "server/team-points/src/RecruitmentHistoryStore.php").read_text(encoding="utf-8")
 
 assert 'state.resultCsv=csvText' in js
-assert 'new Blob([csvText]' in js
+assert 'new Blob([csv]' in js
+assert 'downloadCsv(csvText,state.id)' in js
+assert 'UI.page(filtered,state.resultPage,UI.PAGE_SIZE)' in js
 assert 'archiveRecruitment(match,state.resultCsv)' in js
 assert 'action=list&page=' in js
 assert 'action=download&id=' in js
