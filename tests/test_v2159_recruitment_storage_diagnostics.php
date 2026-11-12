@@ -34,6 +34,7 @@ try {
     echo "PASS explicit storage errors, no invisible directory fallback, no orphan CSV, normal archive\n";
 } finally {
     foreach(glob($root.'/history/*')?:[] as $f) if(is_file($f)) @unlink($f);
+    @unlink($root.'/history/.htaccess');
     @rmdir($root.'/history');
     @unlink($root.'/blocked');
     @rmdir($root);
