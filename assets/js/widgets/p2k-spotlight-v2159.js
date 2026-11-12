@@ -7,6 +7,7 @@ const id=document.body.dataset.widget;
 if(!['player-spotlight','tournament-winners'].includes(id))return;
 const main=document.getElementById('p2kwContent'),status=document.getElementById('p2kwStatus'),foot=document.getElementById('p2kwFoot');
 if(!main||!status||!foot)return;
+document.querySelector('.p2kw-panel')?.classList.add('p2kw-widget-panel');
 const ROOT=new URL('../../../',document.currentScript.src);
 const SPOT=new URL('server/widgets/public/api.php',ROOT);
 const HALL=new URL('server/team-points/public/hall-search.php',ROOT);
@@ -32,6 +33,7 @@ async function get(endpoint,params={},timeout=18000){
 }
 function medal(label,count){return '<span>'+label+' <strong>'+esc(num(count))+'</strong></span>'}
 function rankImage(rank,kind){
+ if(!rank||rank.key==='unranked')return '';
  const name=kind==='live'?String(rank?.icon||''):String(rank?.image||'');
  const file=name.split(/[\\/]/).pop();
  if(!/^[a-z0-9_.-]+\.(?:png|webp|jpg|jpeg)$/i.test(file||''))return '';
