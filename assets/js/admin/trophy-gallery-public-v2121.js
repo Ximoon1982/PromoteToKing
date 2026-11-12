@@ -280,6 +280,16 @@ async function mountStandalone() {
   const base = await waitBase();
   await base.mountPublic(host);
   await decorate(host);
+  // Stable standalone deep link from Trophy Spotlight. Reuse the Gallery's
+  // existing card-to-modal handler instead of building another modal.
+  const trophyId=String(params().get("trophyId")||"").trim();
+  if(trophyId && host.dataset.openedTrophyId!==trophyId) {
+    const cardButton=$("[data-open]",host).find(button=>button.dataset.open===trophyId);
+    if(cardButton){
+      host.dataset.openedTrophyId=trophyId;
+      cardButton.click();
+    }
+  }
 }
 
 window.addEventListener("popstate", () => {
