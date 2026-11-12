@@ -10,6 +10,7 @@ try {
     $start=$store->read();
     ensure(count($start['widgets'])===8,'Eight widget defaults');
     ensure(($start['widgets']['club-pulse']['period']??'')==='7d','Pulse defaults');
+    foreach (WidgetConfigStore::IDS as $id) ensure(($start['widgets'][$id]['theme']??'')==='auto','Auto default theme: '.$id);
     ensure(($start['widgets']['player-spotlight']['limit']??0)===5,'Player Spotlight top-five defaults');
     ensure(($start['widgets']['tournament-winners']['medalPageSize']??0)===3,'Tournament Winners three-medalist pages');
     ensure(($start['widgets']['tournament-winners']['limit']??0)===5,'Five recent finished tournaments');
