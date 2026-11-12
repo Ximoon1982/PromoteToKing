@@ -127,8 +127,26 @@
     return state.connecting;
   }
 
-  async function request(action, { method = "GET", body = null, params = {}, raw = false, username = "", serverTrafficClass = "foreground" } = {}) {
+  function isRecoverableAdminSessionError(error) {
+    // A genuine authorization denial (ADMIN_AUTH_FAILED), an origin error,
+    // or an application-level 403 must never trigger credential rotation.
+    return error?.code === "CSRF_VALIDATION_FAILED"
+      || error?.code === "ADMIN_SESSION_REQUIRED";
+  }
+
+  async function recoverAdminSession(sentCsrf) {
+    // Other same-origin requests/tabs may have completed a shared reconnect
+    // already. Never rotate credentials again when that happened.
+    if (!state.csrf || state.csrf === sentCsrf) {
+      state.csrf = "";
+      state.username = "";
+      await connect();
+    }
+  }
+
+  async function request(action, { method = "GET", body = null, params = {}, raw = false, username = "", serverTrafficClass = "foreground", authRetry = 0 } = {}) {
     if (!state.csrf) await connect();
+    const sentCsrf = state.csrf;
     const response = await withServerTraffic(serverTrafficClass, `team-points:${action||"request"}`, () => fetchWithTimeout(endpoint(apiEndpoint, action, params), {
       method,
       credentials: "same-origin",
@@ -143,17 +161,19 @@
     if (raw && response.ok) return response;
     try { return await parse(response); }
     catch (error) {
-      if ([401, 403].includes(Number(error.status)) && error.code !== "ADMIN_AUTH_FAILED") {
-        state.csrf = "";
-        await connect();
-        return request(action, { method, body, params, raw, username, serverTrafficClass });
+      // One bounded transparent replay, only after a definitive session
+      // failure. This request was rejected before its side-effect ran.
+      if (authRetry < 1 && isRecoverableAdminSessionError(error)) {
+        await recoverAdminSession(sentCsrf);
+        return request(action, { method, body, params, raw, username, serverTrafficClass, authRetry: authRetry + 1 });
       }
       throw error;
     }
   }
 
-  async function endpointRequest(base, { action = "", method = "GET", body = null, params = {}, raw = false, username = "", requestKind = "", timeoutMs = REQUEST_TIMEOUT_MS, serverTrafficClass = "foreground" } = {}) {
+  async function endpointRequest(base, { action = "", method = "GET", body = null, params = {}, raw = false, username = "", requestKind = "", timeoutMs = REQUEST_TIMEOUT_MS, serverTrafficClass = "foreground", authRetry = 0 } = {}) {
     if (!state.csrf) await connect();
+    const sentCsrf = state.csrf;
     const upper = method.toUpperCase();
     const isForm = typeof FormData !== "undefined" && body instanceof FormData;
     const normalizedBase = String(base || "").toLowerCase();
@@ -181,10 +201,9 @@
     if (raw && response.ok) return response;
     try { return await parse(response); }
     catch (error) {
-      if ([401, 403].includes(Number(error.status)) && error.code !== "ADMIN_AUTH_FAILED") {
-        state.csrf = "";
-        await connect();
-        return endpointRequest(base, { action, method, body, params, raw, username, requestKind, timeoutMs, serverTrafficClass });
+      if (authRetry < 1 && isRecoverableAdminSessionError(error)) {
+        await recoverAdminSession(sentCsrf);
+        return endpointRequest(base, { action, method, body, params, raw, username, requestKind, timeoutMs, serverTrafficClass, authRetry: authRetry + 1 });
       }
       throw error;
     }
