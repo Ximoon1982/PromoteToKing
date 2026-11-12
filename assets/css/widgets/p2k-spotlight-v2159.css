@@ -33,3 +33,20 @@
 .p2kw-standings-note{color:var(--muted);font-size:9px;margin:4px 0 0}
 .p2kw-medal-symbol{width:20px;font-size:15px;flex:none;text-align:center}
 .p2kw-loading-status{color:var(--muted);font-size:10px;padding:7px 0}
+
+/* Compact-but-readable scoreboard and medal labels; no score/rank pills. */
+.p2kw-widget-panel .p2kw-leader-position{min-width:15px;font-size:14px;font-weight:900;color:var(--gold);text-align:center}
+.p2kw-widget-panel .p2kw-leader-score{font-size:13.5px;font-weight:900;color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap}
+.p2kw-widget-panel .p2kw-player-link{font-size:11.5px}
+.p2kw-widget-panel .p2kw-big-position{display:grid;justify-items:end;align-content:center;padding-left:5px;flex:none;color:var(--gold)}
+.p2kw-widget-panel .p2kw-big-position strong{font-size:24px;line-height:1.15;font-weight:900;font-variant-numeric:tabular-nums}
+.p2kw-widget-panel .p2kw-big-position small{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.025em}
+.p2kw-widget-panel .p2kw-rank-card{min-height:60px;padding:6px 4px;gap:4px}
+.p2kw-widget-panel .p2kw-rank-card img{width:47px;height:47px;flex:0 0 47px;max-width:47px;max-height:47px}
+.p2kw-widget-panel .p2kw-rank-card strong{font-size:10.2px;white-space:normal;overflow:visible;line-height:1.2}
+.p2kw-widget-panel .p2kw-rank-card small{font-size:8.6px;display:block;margin-bottom:3px}
+.p2kw-widget-panel .p2kw-medalist-row{padding:9px 0;align-items:center}
+.p2kw-widget-panel .p2kw-medalist-row .p2kw-entry-main strong{font-size:13px;font-weight:850;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
+.p2kw-widget-panel .p2kw-medalist-row .p2kw-medal-symbol{font-size:19px;width:25px}
+.p2kw-widget-panel .p2kw-medal-inline{font-size:11px;font-weight:650;color:var(--muted);white-space:nowrap;margin-left:3px}
+.p2kw-widget-panel .p2kw-medal-match{font-size:10px;white-space:normal;line-height:1.4;margin-top:3px}
