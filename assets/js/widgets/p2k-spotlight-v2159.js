@@ -102,7 +102,7 @@ function periods(){
 async function loadDailyPeriods(user,epoch){
  const p=periods();
  const query={section:'table',search:user,sort:'points',direction:'desc',filter:'current',page_size:10,include_position_comparison:0};
- for(const [tag,extra] of [['overall',{evolution:'1m'}],['month',{start:p.month,end:p.end}],['quarter',{start:p.quarter,end:p.end}],['last30',{start:p.last30,end:p.end}]]){
+ for(const [tag,extra] of [['overall',{evolution:'1m',include_position_comparison:1}],['month',{start:p.month,end:p.end}],['quarter',{start:p.quarter,end:p.end}],['last30',{start:p.last30,end:p.end}]]){
    try{
      const response=await get(MEMBERS,{...query,...extra},24000);
      if(epoch!==playerEpoch)return;
