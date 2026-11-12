@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__.'/../src/bootstrap.php';
 
-use P2K\TeamPoints\{ApiException,Auth,Http,RecruitmentHistoryStore};
+use P2K\TeamPoints\{ApiException,Auth,Http,RecruitmentHistoryStore,RecruitmentHistoryException};
 
 try{
     Auth::requireAdmin();
@@ -55,6 +55,12 @@ try{
     throw new ApiException('Unknown recruitment history action.',404,'UNKNOWN_ACTION');
 }catch(ApiException $e){
     Http::json(['ok'=>false,'error'=>['code'=>$e->errorCode,'message'=>$e->getMessage()]],$e->httpStatus);
+}catch(RecruitmentHistoryException $e){
+    // The prior generic 500 masked all storage failures, including GET list.
+    // Expose actionable, non-sensitive error classes without filesystem paths.
+    error_log('P2K recruitment history storage: '.$e->safeCode.' '.$e->getMessage());
+    $status=in_array($e->safeCode,['RECRUITMENT_MATCH_INVALID','RECRUITMENT_CSV_SIZE'],true)?400:503;
+    Http::json(['ok'=>false,'error'=>['code'=>$e->safeCode,'message'=>$e->safeMessage]],$status);
 }catch(Throwable $e){
     error_log('P2K recruitment history: '.$e);
     Http::json(['ok'=>false,'error'=>['code'=>'SERVER_ERROR','message'=>'Recruitment history operation failed safely.']],500);
