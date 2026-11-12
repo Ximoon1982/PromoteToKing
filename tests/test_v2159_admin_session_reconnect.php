@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace P2K\TeamPoints {
     class PreviewIsolation {
         public static function active(): bool { return false; }
+        public static function adminReadAuthorized(): bool { return false; }
     }
     class ApiException extends \RuntimeException {
         public function __construct(string $message, public int $httpStatus, public string $errorCode) {
