@@ -29,7 +29,7 @@ final class WidgetConfigStore {
             'trophy-spotlight'=>'Trophy Spotlight', 'rivalry-spotlight'=>'Rivalry Spotlight',
             'club-progress'=>'Club Progress', 'around-the-world'=>'P2K Around the World',
             'player-spotlight'=>'Player Spotlight', 'tournament-winners'=>'Tournament Winners'
-        ][$id], 'theme'=>'dark'];
+        ][$id], 'theme'=>'auto'];
         return $common + match ($id) {
             'club-pulse'=>['period'=>'7d','showMembers'=>true],
             'recruitment-radar'=>['window'=>'48h','limit'=>4],
