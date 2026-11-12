@@ -81,7 +81,18 @@
       // not the legacy vignette URL. Try managed artwork first and fall back
       // to the alternate slot/external URLs in case an old record has moved.
       const media=id=>id?new URL('server/trophy-gallery/public/media.php?id='+encodeURIComponent(id),ROOT).href:'';
-      const art=[media(t.vignette_media_id),link(t.vignette_url),media(t.modal_media_id),link(t.modal_url)]
+      // Match the Gallery's historical artwork fallback for pre-managed trophies.
+      const historical={
+        'owl-2024-swiss4all':'owl-2024-swiss4all.jpg',
+        'owl-2024-grand-prix-candidates':'owl-2024-grand-prix-candidates.png',
+        'owl-2024-vote-g1':'owl-2024-vote-g1.png',
+        'owl-2024-classic-u1700':'owl-2024-classic-u1700.png',
+        'pcl-super-bingo-2025':'pcl-super-bingo-2025.png',
+        'tcmac-centurion-s4':'tcmac-centurion-s4.png',
+        'club-wars-galactic-conflict':'club-wars-galactic-conflict.png'
+      };
+      const legacy=historical[t.id]?new URL('assets/trophy-gallery/legacy-r4/'+historical[t.id],ROOT).href:'';
+      const art=[media(t.vignette_media_id),link(t.vignette_url),media(t.modal_media_id),link(t.modal_url),legacy]
         .filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i);
       const title=t.title||t.competition||'Trophy';const badge=t.award_date?date(t.award_date+'T12:00:00Z'):'Achievement';
       const safeLink=link(t.award_page||t.competition_page||'');
@@ -163,7 +174,7 @@
     const sorted=[...rows].sort((a,b)=>Number(b[metric]||0)-Number(a[metric]||0)),top=sorted.slice(0,Math.max(1,settings.limit));
     const sum=rows.reduce((n,r)=>n+Number(r[metric]||0),0);
     const names=new Intl.DisplayNames(['en'],{type:'region'});
-    const countryName=code=>code==='XX'?'International':(countryName(code));
+    const countryName=code=>code==='XX'?'International':(names.of(code)||code);
     let selected=sorted[0]||null;
     const dots=rows.filter(x=>x.country!=='XX'&&coord[x.country]).map(x=>{const [x0,y0]=coord[x.country],v=Math.max(1,Number(x[metric])||0);return `<circle tabindex="0" role="button" aria-label="${esc(countryName(x.country))}: ${number(v)} ${metric}" data-country="${esc(x.country)}" class="p2kw-map-dot${selected?.country===x.country?' is-selected':''}" cx="${x0}" cy="${y0}" r="${Math.min(5,1.8+Math.log2(v)/3).toFixed(1)}"><title>${esc(countryName(x.country))}: ${number(v)} ${metric}</title></circle>`;}).join('');
     main.innerHTML=`<div class="p2kw-total-row"><div><div class="p2kw-label">Opponent origins</div><div class="p2kw-big">${number(rows.length)}</div></div><div class="p2kw-small">${number(sum)} ${metric} recorded</div></div>${seg([['clubs','Clubs'],['matches','Matches']],metric,()=>{})}<div class="p2kw-map"><svg class="p2kw-world-svg" viewBox="0 0 270 137" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Simplified global map of known opponent countries">${[30,60,90,120,150,180,210,240].map(x=>`<path d="M${x} 0V137" stroke="var(--border)" stroke-width=".25" fill="none"/>`).join('')}${[25,50,75,100,125].map(y=>`<path d="M0 ${y}H270" stroke="var(--border)" stroke-width=".25" fill="none"/>`).join('')}${mapPaths.map(d=>`<path d="${d}"/>`).join('')}${dots}</svg></div><div class="p2kw-subhead" data-country-detail>${selected?esc(countryName(selected.country))+' · '+number(selected[metric])+' '+metric:'No classified countries'}</div><div class="p2kw-world-list">${top.map((r,i)=>`<div class="p2kw-entry"><div class="p2kw-entry-main"><strong>${i+1}. ${esc(countryName(r.country))}</strong><small>Verified opponent-country code</small></div><button type="button" data-country="${esc(r.country)}" class="p2kw-chip" aria-label="Show ${esc(countryName(r.country))}">${number(r[metric])}</button></div>`).join('')||'<div class="p2kw-empty">No verified opponent country data is available.</div>'}</div>`;
