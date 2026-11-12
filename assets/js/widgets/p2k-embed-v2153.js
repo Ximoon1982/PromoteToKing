@@ -46,8 +46,8 @@
     const total=team.club_points??current;
     const deltaText=delta===null?'—':(delta>=0?'+':'')+number(delta);
     const recent=boards.slice(-1)[0];
-    main.innerHTML=`<div class="p2kw-total-row"><div><div class="p2kw-label">Club Points</div><div class="p2kw-big">${esc(number(total))}</div></div><div class="p2kw-delta${delta!==null&&delta<0?' negative':''}">${esc(deltaText)}<div class="p2kw-small">${n} days</div></div></div>${spark(series)}${seg([['7d','7 days'],['30d','30 days']],settings.period,()=>{})}<div class="p2kw-metric-grid">${kv('Finished matches',number(team.finished_matches))}${kv('Finished boards',number(team.finished_boards))}${kv('Members',settings.showMembers?number(team.current_members):'—')}</div><div class="p2kw-notice">Data: Green Team Points and published Insights. Scores reflect the latest available materialization.</div>`;
-    wire(async v=>{settings.period=v;await clubPulse();});setFoot(actual.length?'Green data · '+date(actual.at(-1).date):'Green Team Points');
+    main.innerHTML=`<div class="p2kw-total-row"><div><div class="p2kw-label">Club Points</div><div class="p2kw-big">${esc(number(total))}</div></div><div class="p2kw-delta${delta!==null&&delta<0?' negative':''}">${esc(deltaText)}<div class="p2kw-small">${n} days</div></div></div>${spark(series)}${seg([['7d','7 days'],['30d','30 days']],settings.period,()=>{})}<div class="p2kw-metric-grid">${kv('Finished matches',number(team.finished_matches))}${kv('Finished boards',number(team.finished_boards))}${kv('Members',settings.showMembers?number(team.current_members):'—')}</div>`;
+    wire(async v=>{settings.period=v;await clubPulse();});setFoot('');
   }
 
   function classifyMatch(match){const name=String(match.name||'');const codes=['1WL','TCMAC','KOTML','TMCL','WKCL','PCL','CW','WCGC'];return match.category==='league'||codes.some(c=>new RegExp(`(^|[^A-Z0-9])${c}([^A-Z0-9]|$)`,'i').test(name));}
@@ -76,11 +76,20 @@
       selected=[...selected].sort((a,b)=>score(a)-score(b));
     }
     let index=0;
-    const draw=()=>{const t=selected[index],img=link(t.vignette_url||t.modal_url);const title=t.title||t.competition||'Trophy';const badge=t.award_date?date(t.award_date+'T12:00:00Z'):'Achievement';
+    const draw=()=>{const t=selected[index];
+      // The Gallery's authoritative artwork URL is the stored media ID,
+      // not the legacy vignette URL. Try managed artwork first and fall back
+      // to the alternate slot/external URLs in case an old record has moved.
+      const media=id=>id?new URL('server/trophy-gallery/public/media.php?id='+encodeURIComponent(id),ROOT).href:'';
+      const art=[media(t.vignette_media_id),link(t.vignette_url),media(t.modal_media_id),link(t.modal_url)]
+        .filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i);
+      const title=t.title||t.competition||'Trophy';const badge=t.award_date?date(t.award_date+'T12:00:00Z'):'Achievement';
       const safeLink=link(t.award_page||t.competition_page||'');
-      main.innerHTML=`<div class="p2kw-label p2kw-center">${esc(t.league||t.competition||'Club achievement')}</div><div class="p2kw-trophy">${img?`<img src="${esc(img)}" alt="${esc(title)}" loading="lazy" referrerpolicy="no-referrer">`:'<span class="p2kw-trophy-fallback" aria-hidden="true">🏆</span>'}</div><div class="p2kw-trophy-name">${esc(title)}</div><div class="p2kw-small p2kw-center">${esc(badge)}</div><div class="p2kw-toolbar"><button type="button" data-prev aria-label="Previous trophy">‹</button><span class="p2kw-small">${index+1} / ${selected.length}</span><button type="button" data-next aria-label="Next trophy">›</button></div>${safeLink?`<div class="p2kw-center" style="margin-top:8px"><a class="p2kw-action" href="${esc(safeLink)}" target="_blank" rel="noopener noreferrer">View achievement</a></div>`:''}`;
+      main.innerHTML=`<div class="p2kw-label p2kw-center">${esc(t.league||t.competition||'Club achievement')}</div><div class="p2kw-trophy">${art.length?`<img src="${esc(art[0])}" data-trophy-image alt="${esc(title)}" loading="lazy">`:'<span class="p2kw-trophy-fallback" aria-hidden="true">🏆</span>'}</div><div class="p2kw-trophy-name">${esc(title)}</div><div class="p2kw-small p2kw-center">${esc(badge)}</div><div class="p2kw-toolbar"><button type="button" data-prev aria-label="Previous trophy">‹</button><span class="p2kw-small">${index+1} / ${selected.length}</span><button type="button" data-next aria-label="Next trophy">›</button></div>${safeLink?`<div class="p2kw-center" style="margin-top:8px"><a class="p2kw-action" href="${esc(safeLink)}" target="_blank" rel="noopener noreferrer">View achievement</a></div>`:''}`;
+      const image=main.querySelector('[data-trophy-image]');
+      if(image){let alternative=1;image.onerror=()=>{if(alternative<art.length)image.src=art[alternative++];else{image.onerror=null;image.replaceWith(Object.assign(document.createElement('span'),{className:'p2kw-trophy-fallback',textContent:'🏆'}));}};}
       main.querySelector('[data-prev]').onclick=()=>{index=(index-1+selected.length)%selected.length;draw();};main.querySelector('[data-next]').onclick=()=>{index=(index+1)%selected.length;draw();};notifySize();
-    };draw();setFoot(`${selected.length} published trophies · P2K gallery`);
+    };draw();setFoot('');
   }
 
   async function rivalrySpotlight(){
@@ -120,22 +129,50 @@
   }
 
   const coord={US:[56,48],CA:[54,30],MX:[48,67],BR:[89,98],AR:[82,115],GB:[121,34],FR:[124,44],DE:[133,41],ES:[118,53],IT:[136,53],PT:[111,55],NL:[129,39],BE:[126,42],LU:[129,43],CH:[132,46],AT:[138,45],PL:[142,39],CZ:[137,43],UA:[157,45],RU:[188,26],TR:[159,58],EG:[152,72],ZA:[158,111],NG:[135,85],IN:[191,81],PK:[180,75],CN:[213,61],JP:[234,70],KR:[229,69],AU:[235,112],NZ:[251,119],SE:[133,26],NO:[128,27],FI:[141,26],GR:[146,56],RO:[148,49],HU:[143,46],BG:[151,53],RS:[146,52],HR:[142,51],BA:[144,52],IL:[157,69],IR:[174,69],SA:[168,76],ID:[218,94],PH:[232,83],TH:[210,84],VN:[217,85],MY:[215,92],SG:[216,96],CO:[74,89],CL:[76,109],PE:[76,99],VE:[79,83],UY:[89,114],UY:[89,115],DK:[130,35],IE:[115,37],IS:[108,25],MA:[115,66],DZ:[130,70],TN:[135,64],KE:[156,91],ET:[160,85],TZ:[156,97],ZW:[159,105],BY:[152,40],LT:[150,36],LV:[149,33],EE:[149,30],GE:[165,56],AM:[165,58],AZ:[171,59],KZ:[187,46],UZ:[184,57],AF:[181,67],BD:[200,80],NP:[194,76],LK:[198,94],TW:[230,76],HK:[220,78],AE:[174,76],QA:[175,76]};
-  const mapPaths=['M0 21L30 16L62 12L92 22L88 42L73 50L64 65L43 68L23 51L2 48Z','M71 69L91 68L106 84L104 104L88 131L74 105L69 82Z','M112 22L142 18L158 28L155 50L144 58L116 57L106 44Z','M128 57L159 58L179 77L166 121L145 127L132 104L122 80Z','M151 23L192 16L253 29L260 61L242 84L219 89L197 77L178 83L160 68L146 48Z','M216 97L247 96L260 117L245 131L221 125Z'];
+  // Fine-grained coastline silhouettes in the same fixed projection as the data pins.
+  // Unlike the former six schematic polygons, retain landmasses, island groups
+  // and peninsulas separately. Decorative grid lines are non-interactive.
+  const mapPaths=[
+    'M2 28L12 23L17 18L29 16L36 12L43 13L49 18L62 18L70 23L79 23L88 27L90 34L82 38L78 44L70 43L68 51L62 56L61 64L55 68L52 61L48 59L41 62L36 57L33 51L25 49L22 45L15 46L8 40L4 42Z',
+    'M30 9L36 6L44 8L46 12L41 13L35 13Z',
+    'M54 62L65 64L70 67L72 74L80 76L83 82L90 79L97 84L101 89L98 98L105 106L102 117L97 123L91 129L85 132L80 127L79 116L74 109L76 99L70 90L70 82L64 79L57 72Z',
+    'M76 44L89 46L96 50L91 57L86 61L80 56Z',
+    'M108 18L117 15L125 18L131 15L141 15L146 19L145 27L138 29L133 34L124 33L119 29L112 31L106 28Z',
+    'M122 36L125 36L126 39L123 43L121 40Z',
+    'M109 31L113 32L115 35L112 37Z',
+    'M119 49L126 47L132 51L136 56L133 64L129 68L122 65L119 59L115 55Z',
+    'M138 49L143 47L148 53L145 58L140 56Z',
+    'M126 60L138 62L149 61L158 66L166 76L170 83L167 92L161 98L159 109L154 121L149 123L144 115L141 105L134 99L132 90L128 85L124 74Z',
+    'M141 123L146 126L147 134L142 136L139 132Z',
+    'M159 66L164 63L167 60L174 63L179 68L181 76L176 82L170 79Z',
+    'M174 77L180 76L185 81L187 88L181 90L176 85Z',
+    'M153 17L166 13L183 11L197 15L207 10L225 14L237 18L251 22L258 30L255 41L244 46L235 49L228 55L218 55L213 60L206 62L203 70L197 68L191 73L183 70L179 62L171 59L163 55L155 51L148 46L145 38L150 32Z',
+    'M187 72L191 75L192 81L189 86L185 83Z',
+    'M195 77L198 78L199 88L195 88Z',
+    'M208 83L213 83L215 91L211 93Z',
+    'M211 96L230 95L235 99L247 98L256 105L261 115L253 125L246 127L236 122L227 123L222 115L212 114L209 105Z',
+    'M246 130L250 132L251 137L247 138Z',
+    'M259 123L263 126L265 134L262 136Z',
+    'M231 79L233 81L232 87L229 87Z',
+    'M198 89L209 92L220 94L220 98L211 99L201 96Z',
+    'M1 133L30 133L51 135L82 132L110 136L149 135L184 137L215 134L241 138L269 135L269 141L0 141Z'
+  ];
   async function aroundWorld(){
     const p=await get(`${WIDGET_API}?action=countries`),rows=Array.isArray(p.countries)?p.countries:[];
     const metric=settings.metric==='clubs'?'clubs':'matches';
     const sorted=[...rows].sort((a,b)=>Number(b[metric]||0)-Number(a[metric]||0)),top=sorted.slice(0,Math.max(1,settings.limit));
     const sum=rows.reduce((n,r)=>n+Number(r[metric]||0),0);
     const names=new Intl.DisplayNames(['en'],{type:'region'});
+    const countryName=code=>code==='XX'?'International':(countryName(code));
     let selected=sorted[0]||null;
-    const dots=rows.filter(x=>coord[x.country]).map(x=>{const [x0,y0]=coord[x.country],v=Math.max(1,Number(x[metric])||0);return `<circle tabindex="0" role="button" aria-label="${esc(names.of(x.country)||x.country)}: ${number(v)} ${metric}" data-country="${esc(x.country)}" class="p2kw-map-dot${selected?.country===x.country?' is-selected':''}" cx="${x0}" cy="${y0}" r="${Math.min(5,1.8+Math.log2(v)/3).toFixed(1)}"><title>${esc(names.of(x.country)||x.country)}: ${number(v)} ${metric}</title></circle>`;}).join('');
-    main.innerHTML=`<div class="p2kw-total-row"><div><div class="p2kw-label">Known opponent countries</div><div class="p2kw-big">${number(rows.length)}</div></div><div class="p2kw-small">${number(sum)} ${metric} mapped</div></div>${seg([['clubs','Clubs'],['matches','Matches']],metric,()=>{})}<div class="p2kw-map"><svg class="p2kw-world-svg" viewBox="0 0 270 137" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Simplified global map of known opponent countries">${mapPaths.map(d=>`<path d="${d}"/>`).join('')}${dots}</svg></div><div class="p2kw-subhead" data-country-detail>${selected?esc(names.of(selected.country)||selected.country)+' · '+number(selected[metric])+' '+metric:'No classified countries'}</div><div class="p2kw-world-list">${top.map((r,i)=>`<div class="p2kw-entry"><div class="p2kw-entry-main"><strong>${i+1}. ${esc(names.of(r.country)||r.country)}</strong><small>Verified opponent-country code</small></div><button type="button" data-country="${esc(r.country)}" class="p2kw-chip" aria-label="Show ${esc(names.of(r.country)||r.country)}">${number(r[metric])}</button></div>`).join('')||'<div class="p2kw-empty">No verified opponent country data is available.</div>'}</div><div class="p2kw-notice">Map highlights countries with known stored codes only; unclassified opponents: ${number(p.unclassified)}. Map coordinates are schematic.</div>`;
-    const choose=code=>{const current=rows.find(r=>r.country===code);if(!current)return;selected=current;const detail=main.querySelector('[data-country-detail]');if(detail)detail.textContent=(names.of(code)||code)+' · '+number(current[metric])+' '+metric;main.querySelectorAll('.p2kw-map-dot').forEach(dot=>dot.classList.toggle('is-selected',dot.dataset.country===code));};
+    const dots=rows.filter(x=>x.country!=='XX'&&coord[x.country]).map(x=>{const [x0,y0]=coord[x.country],v=Math.max(1,Number(x[metric])||0);return `<circle tabindex="0" role="button" aria-label="${esc(countryName(x.country))}: ${number(v)} ${metric}" data-country="${esc(x.country)}" class="p2kw-map-dot${selected?.country===x.country?' is-selected':''}" cx="${x0}" cy="${y0}" r="${Math.min(5,1.8+Math.log2(v)/3).toFixed(1)}"><title>${esc(countryName(x.country))}: ${number(v)} ${metric}</title></circle>`;}).join('');
+    main.innerHTML=`<div class="p2kw-total-row"><div><div class="p2kw-label">Opponent origins</div><div class="p2kw-big">${number(rows.length)}</div></div><div class="p2kw-small">${number(sum)} ${metric} recorded</div></div>${seg([['clubs','Clubs'],['matches','Matches']],metric,()=>{})}<div class="p2kw-map"><svg class="p2kw-world-svg" viewBox="0 0 270 137" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Simplified global map of known opponent countries">${[30,60,90,120,150,180,210,240].map(x=>`<path d="M${x} 0V137" stroke="var(--border)" stroke-width=".25" fill="none"/>`).join('')}${[25,50,75,100,125].map(y=>`<path d="M0 ${y}H270" stroke="var(--border)" stroke-width=".25" fill="none"/>`).join('')}${mapPaths.map(d=>`<path d="${d}"/>`).join('')}${dots}</svg></div><div class="p2kw-subhead" data-country-detail>${selected?esc(countryName(selected.country))+' · '+number(selected[metric])+' '+metric:'No classified countries'}</div><div class="p2kw-world-list">${top.map((r,i)=>`<div class="p2kw-entry"><div class="p2kw-entry-main"><strong>${i+1}. ${esc(countryName(r.country))}</strong><small>Verified opponent-country code</small></div><button type="button" data-country="${esc(r.country)}" class="p2kw-chip" aria-label="Show ${esc(countryName(r.country))}">${number(r[metric])}</button></div>`).join('')||'<div class="p2kw-empty">No verified opponent country data is available.</div>'}</div>`;
+    const choose=code=>{const current=rows.find(r=>r.country===code);if(!current)return;selected=current;const detail=main.querySelector('[data-country-detail]');if(detail)detail.textContent=(countryName(code))+' · '+number(current[metric])+' '+metric;main.querySelectorAll('.p2kw-map-dot').forEach(dot=>dot.classList.toggle('is-selected',dot.dataset.country===code));};
     main.querySelectorAll('[data-country]').forEach(node=>{
       node.addEventListener('click',()=>choose(node.dataset.country));
       if(node instanceof SVGElement)node.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose(node.dataset.country);}});
     });
-    wire(async v=>{settings.metric=v;await aroundWorld();});setFoot('Source: canonical P2K opponent metadata');
+    wire(async v=>{settings.metric=v;await aroundWorld();});setFoot('');
   }
 
   const renderers={'club-pulse':clubPulse,'recruitment-radar':recruitmentRadar,'trophy-spotlight':trophySpotlight,'rivalry-spotlight':rivalrySpotlight,'club-progress':clubProgress,'around-the-world':aroundWorld};
