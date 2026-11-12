@@ -78,8 +78,7 @@ function showPlayer(data){
        +miniGrid([['Month rank',p.month?.rank],['Quarter rank',p.quarter?.rank],['Last 30d pts',p.last30?.points]])
        +'<div class="p2kw-subhead"><span>Best arena results</span></div>'
        +miniGrid([['Best arena finish',live.best_rank==null?'—':'#'+num(live.best_rank)],['Arena participations',live.arenas],['Best win streak',live.best_streak]])
-       +row('Longest arena participation streak',p.streaks?.longest_participation_streak??'—')
-       +row('Current arena participation streak',p.streaks?.current_participation_streak??'—');
+       ;
    }
  }
  const tUrl=new URL('Tournaments.html',ROOT);tUrl.searchParams.set('player',user);tUrl.searchParams.set('panel','tournaments');
@@ -123,17 +122,6 @@ async function loadArenaPeriods(user,epoch){
    }catch(error){if(epoch!==playerEpoch)return;console.warn('P2K widget arena period unavailable:',tag,error);arenaPeriods[tag]=null}
    if(epoch===playerEpoch&&activePlayerTab==='arena')showPlayer(playerData);
  }
- // All-time leader search uses canonical, identity-reconciled MCA Results.
- // Do not infer participation streaks from individual CSV filenames in the browser.
- try{
-   const history=await get(ARENAS,{section:'leaders',filter:'current',search:user,sort:'points',direction:'desc'},24000);
-   if(epoch!==playerEpoch)return;
-   const detail=(Array.isArray(history.leaders)?history.leaders:[]).find(x=>key(x.username)===key(user));
-   arenaPeriods.streaks=detail?{
-     longest_participation_streak:detail.longest_participation_streak??null,
-     current_participation_streak:detail.current_participation_streak??null
-   }:null;
- }catch(error){if(epoch!==playerEpoch)return;console.warn('P2K widget MCA participation streaks unavailable',error);arenaPeriods.streaks=null}
  arenaPeriods.loading=false;if(epoch===playerEpoch&&activePlayerTab==='arena')showPlayer(playerData);
 }
 async function lookupPlayer(name){
