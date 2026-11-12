@@ -15,7 +15,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in server/team-points/src/Auth.php server/team-points/public/session.php \
+          for f in server/team-points/src/Auth.php server/team-points/src/RecruitmentHistoryStore.php server/team-points/public/session.php \
               server/team-points/public/recruitment-history.php \
               server/team-points/src/LiveRanksService.php \
               server/team-points/src/McaRenameRecheckService.php \
@@ -29,6 +29,7 @@ jobs:
               assets/js/pages/club-intelligence.js \
               assets/js/pages/mca-rename-review-v2157.js; do node --check "$f"; done
           php tests/test_v2159_admin_session_reconnect.php
+          php tests/test_v2159_recruitment_storage_diagnostics.php
           node tests/test_v2159_team_points_client_recovery.cjs
           php tests/recruitment_history_v2152_test.php
           python3 tests/test_v2152_recruitment_history.py
@@ -71,6 +72,8 @@ jobs:
              "server/team-points/bin/mca-results-sync.php",
              # The v2.15.9 recruitment/session correction
              "server/team-points/src/Auth.php",
+             "server/team-points/src/RecruitmentHistoryStore.php",
+             "server/team-points/public/recruitment-history.php",
              "assets/js/shared/team-points-client.js",
              "RecruitMatch.html",
              "assets/js/pages/recruit-match-v2121-bootstrap.js",
@@ -124,7 +127,7 @@ jobs:
       - name: Validate actual Release Control contract
         shell: bash
         run: |
-          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_Recruitment_Archive_Session_Fix_v2159_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.9" || $p["overlay_file_count"]!==16) exit(1); echo "PASS ".$p["release_id"].PHP_EOL;'
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_Recruitment_Archive_Session_Fix_v2159_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.9" || $p["overlay_file_count"]!==18) exit(1); echo "PASS ".$p["release_id"].PHP_EOL;'
       - uses: actions/upload-artifact@v4
         with:
           name: p2k-recruitment-session-v2159-release-control
