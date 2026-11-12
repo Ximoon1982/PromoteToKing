@@ -1,4 +1,5 @@
 name: P2K v2.15.9 Recruitment archive session regression
+# Requalify complete isolated PHP session harness
 on:
   push:
     paths:
