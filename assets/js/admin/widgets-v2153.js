@@ -2,17 +2,19 @@
 (() => {
   "use strict";
   if(window.P2K_WIDGETS_ADMIN)return;
-  const ids=['club-pulse','recruitment-radar','trophy-spotlight','rivalry-spotlight','club-progress','around-the-world'];
+  const ids=['club-pulse','recruitment-radar','trophy-spotlight','rivalry-spotlight','club-progress','around-the-world','player-spotlight','tournament-winners'];
   const defaults={
     'club-pulse':{period:['7d','30d'],showMembers:[true,false]},
     'recruitment-radar':{window:['24h','48h','72h','7d'],limit:[3,4,6,8]},
     'trophy-spotlight':{mode:['latest','random'],limit:[3,5,8,10]},
     'rivalry-spotlight':{opponent:'text',limit:[3,6,10,15]},
     'club-progress':{metric:['points','boards'],period:['30d','12m']},
-    'around-the-world':{metric:['matches','clubs'],limit:[5,8,10,15]}
+    'around-the-world':{metric:['matches','clubs'],limit:[5,8,10,15]},
+    'player-spotlight':{limit:[3,5],showArena:[true,false],showMedals:[true,false]},
+    'tournament-winners':{limit:[3,5],medalPageSize:[3,6,9]}
   };
-  const labels={period:'Time period',showMembers:'Show member count',window:'Recruitment window',limit:'Items to display',mode:'Trophy order',opponent:'Opponent slug (blank = most frequent)',metric:'Primary metric'};
-  const names={'club-pulse':'Club Points · Pulse','recruitment-radar':'Recruitment Radar','trophy-spotlight':'Trophy Spotlight','rivalry-spotlight':'Rivalry Spotlight','club-progress':'Club Progress','around-the-world':'P2K Around the World'};
+  const labels={period:'Time period',showMembers:'Show member count',window:'Recruitment window',limit:'Items to display',mode:'Trophy order',opponent:'Opponent slug (blank = most frequent)',metric:'Primary metric',showArena:'Include MCA arena scoring',showMedals:'Show tournament medals',medalPageSize:'Medalists per page'};
+  const names={'club-pulse':'Club Points · Pulse','recruitment-radar':'Recruitment Radar','trophy-spotlight':'Trophy Spotlight','rivalry-spotlight':'Rivalry Spotlight','club-progress':'Club Progress','around-the-world':'P2K Around the World','player-spotlight':'Player Spotlight','tournament-winners':'Tournament Winners'};
   const root=new URL('../../../',document.currentScript?.src||location.href);
   const api=new URL('server/widgets/public/api.php',root).href;
   const embed=new URL('server/widgets/public/embed.php',root).href;
@@ -36,7 +38,7 @@
     return'';
   }
   function iframeUrl(id,theme,preview=false){const u=new URL(embed);u.searchParams.set('widget',id);u.searchParams.set('theme',theme||'dark');if(preview)u.searchParams.set('preview','1');return u.href;}
-  const heights={'club-pulse':335,'recruitment-radar':460,'trophy-spotlight':400,'rivalry-spotlight':440,'club-progress':380,'around-the-world':560};
+  const heights={'club-pulse':335,'recruitment-radar':460,'trophy-spotlight':400,'rivalry-spotlight':440,'club-progress':380,'around-the-world':560,'player-spotlight':580,'tournament-winners':590};
   function code(){const settings=drafts[active]||state?.widgets?.[active]||{};const url=iframeUrl(active,settings.theme,false);const height=heights[active]||440;
     const id='p2kw-'+active;
     // The fallback height is suitable for hosts that strip inline scripts.
@@ -60,7 +62,7 @@
     el.querySelector('[data-copy-embed]').onclick=copy;
   }
   function onChange(event){const target=event.target;const key=target.dataset.setting;if(!key)return;let value=target.type==='checkbox'?target.checked:target.value;
-    if(key==='limit')value=Number(value);
+    if(key==='limit'||key==='medalPageSize')value=Number(value);
     drafts[active]={...drafts[active],[key]:value};dirty.add(active);
     const saveButton=host()?.querySelector('[data-widgets-form] button[type=submit]');if(saveButton)saveButton.disabled=false;
     const revert=host()?.querySelector('[data-revert]');if(revert)revert.disabled=false;
