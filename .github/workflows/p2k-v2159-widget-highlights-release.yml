@@ -1,4 +1,4 @@
-name: P2K v2.15.9 fixed-height widget collection polish
+name: P2K v2.15.9 full-width widgets + complete tournament browser
 # Cumulative candidate, preserving recruitment/MCA/8-widget functionality while fixing iframe hosts, artwork, map and search.
 on:
   push:
@@ -7,12 +7,18 @@ on:
     paths:
       - '.github/workflows/p2k-v2159-widget-highlights-release.yml'
       - 'server/widgets/src/WidgetConfigStore.php'
+      - 'server/widgets/src/TournamentWidgetReadService.php'
       - 'server/widgets/public/api.php'
       - 'server/widgets/public/embed.php'
       - 'assets/js/widgets/p2k-spotlight-v2159.js'
       - 'assets/js/widgets/p2k-embed-v2153.js'
+      - 'assets/js/widgets/p2k-progress-chart-v2159.js'
       - 'assets/css/widgets/p2k-embed-v2153.css'
       - 'tests/widget_polish_v2159.test.cjs'
+      - 'tests/widget_progress_v2159.test.cjs'
+      - 'tests/test_v2159_widget_tournaments.php'
+      - 'trophies/index.html'
+      - 'assets/js/admin/trophy-gallery-public-v2121.js'
       - 'tests/widget_collection_v2153_test.php'
       - 'assets/css/widgets/p2k-spotlight-v2159.css'
       - 'assets/js/admin/widgets-v2153.js'
@@ -54,14 +60,19 @@ jobs:
           node tests/test_v2159_recruit_results_pagination.cjs
           node --check assets/js/widgets/p2k-spotlight-v2159.js
           node --check assets/js/widgets/p2k-embed-v2153.js
+          node --check assets/js/widgets/p2k-progress-chart-v2159.js
+          node --check assets/js/admin/trophy-gallery-public-v2121.js
           node --check assets/js/admin/widgets-v2153.js
           node --check assets/js/admin/admin-shell.js
           node --check assets/js/admin/tool-registry.js
           php -l server/widgets/src/WidgetConfigStore.php
+          php -l server/widgets/src/TournamentWidgetReadService.php
           php -l server/widgets/public/api.php
           php -l server/widgets/public/embed.php
           php tests/widget_collection_v2153_test.php
+          php tests/test_v2159_widget_tournaments.php
           node tests/widget_spotlights_v2159.test.cjs
+          node tests/widget_progress_v2159.test.cjs
           node tests/widget_polish_v2159.test.cjs
           php tests/recruitment_history_v2152_test.php
           python3 tests/test_v2152_recruitment_history.py
@@ -100,6 +111,8 @@ jobs:
             {"version":"2.15.9","source_head":"20b7f08fa14b290d9e6636c1867cb6e6bbdc5743"},
             # Previous qualified widget collection candidate (may now be public).
             {"version":"2.15.9","source_head":"cfe9281654f522506378cc77d50737311e0f652a"},
+            # Previous qualified fixed-height widget release, if promoted.
+            {"version":"2.15.9","source_head":"0fbbf62a82de0d5de997c4ecef141b09d3858d18"},
           ]
           paths=[
              "VERSION","ui-v2.html",
@@ -122,10 +135,14 @@ jobs:
              "assets/js/pages/recruit-match-ui-helpers.js",
              # Two new widgets and their native control panels.
              "server/widgets/src/WidgetConfigStore.php",
+             "server/widgets/src/TournamentWidgetReadService.php",
              "server/widgets/public/api.php",
              "server/widgets/public/embed.php",
+             "trophies/index.html",
+             "assets/js/admin/trophy-gallery-public-v2121.js",
              "assets/js/widgets/p2k-spotlight-v2159.js",
              "assets/js/widgets/p2k-embed-v2153.js",
+             "assets/js/widgets/p2k-progress-chart-v2159.js",
              "assets/css/widgets/p2k-embed-v2153.css",
              "assets/css/widgets/p2k-spotlight-v2159.css",
              "assets/js/admin/widgets-v2153.js",
@@ -163,12 +180,12 @@ jobs:
                 "accepted_public_builds":accepted}
           (pkg/"CANDIDATE_RELEASE.json").write_text(json.dumps(meta,indent=2)+"\n")
           (pkg/"README.txt").write_text(
-             "P2K v2.15.9 - Player Spotlight + Tournament Winners widget collection addition.\n"
+             "P2K v2.15.9 - Full-width widgets, unlimited trophies/tournaments and Club Progress reference graph.\n"
              "Upload via Release Control and preview before promotion; no SSH required.\n"
              "Same-admin reauthorization preserves valid CSRF; expired sessions now yield recoverable 401.\n"
              "JS client retries stale CSRF at most once, and completed scan CSV can be retried without a new scan.\n"
              "Includes cumulative MCA/recruitment fixes from v2.15.7-v2.15.9.\n"
-             "Retains eight existing 260px embeds; all fixed height, scriptless HTML, auto-theme defaults, improved trophy/map/player/tournament behavior; no scoring/DB migration or auto-deploy.\n")
+             "Preserves eight 260px embeds; square Club Progress with labeled references and trend, unrestricted tournament browsing, gallery deep-links and full width. No schema migration or deployment.\n")
           out=dist/(stem+".zip")
           with zipfile.ZipFile(out,"w",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
               for file in pkg.rglob("*"):
@@ -182,7 +199,7 @@ jobs:
       - name: Validate actual Release Control contract
         shell: bash
         run: |
-          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_Widgets_FixedHeight_Polish_v2159_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.9" || $p["overlay_file_count"]!==29) exit(1); echo "PASS ".$p["release_id"].PHP_EOL;'
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_Widgets_FixedHeight_Polish_v2159_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.9" || $p["overlay_file_count"]!==33) exit(1); echo "PASS ".$p["release_id"].PHP_EOL;'
       - uses: actions/upload-artifact@v4
         with:
           name: p2k-widgets-fixed-height-polish-v2159-release-control
