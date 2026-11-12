@@ -54,7 +54,7 @@ assert(spot.includes("matched_medalists"));
 assert(api.includes("TournamentWidgetReadService::read"));
 assert(tourService.includes("matched_medalists"));
 assert(tourService.includes("strcasecmp($username,$search)===0"));
-assert(api.includes("strtoupper")||api.includes("stripos"));
+assert(tourService.includes("stripos"));
 assert(html.includes("p2k-embed-v2153.js?v=p2k-2159-widgets-3"));
 assert(html.includes("p2k-spotlight-v2159.js?v=p2k-2159-widgets-3"));
 console.log("PASS improved player/Live details, tournament medalist searches, fixed classification and cache versions");
