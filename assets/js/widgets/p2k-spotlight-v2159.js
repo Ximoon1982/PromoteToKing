@@ -154,15 +154,16 @@ async function loadPlayerHome(){
  try{const response=await get(SPOT,{action:'spotlight-leaders'});if(epoch!==playerEpoch)return;setStatus('LIVE');setFoot('');playerHome(response)}
  catch(error){setStatus('Unavailable');announce('Player leaderboards are temporarily unavailable: '+(error.message||error))}
 }
-const tour={recent:[],selected:0,medalPage:1,search:'',searchKind:'tournament',searchPage:1,searchResults:[],pagination:{page:1,pages:1,total:0},epoch:0};
+const tour={recent:[],selected:0,selectedSearch:null,medalPage:1,search:'',searchKind:'tournament',searchPage:1,searchResults:[],pagination:{page:1,pages:1,total:0},epoch:0};
 function podiumRows(t){const p=t?.podium||{},out=[];for(const [type,symbol] of [['gold','🥇'],['silver','🥈'],['bronze','🥉']])for(const item of Array.isArray(p[type])?p[type]:[]){const name=typeof item==='string'?item:String(item?.username||item?.name||'');if(name.trim())out.push({name,type,symbol})}return out}
 function renderTour(){
- const active=tour.recent[tour.selected],items=podiumRows(active),size=clamped(config.medalPageSize||3,1,20),pages=Math.max(1,Math.ceil(items.length/size)),page=Math.min(pages,Math.max(1,tour.medalPage));tour.medalPage=page;
+ const active=tour.selectedSearch||tour.recent[tour.selected],items=podiumRows(active),size=clamped(config.medalPageSize||3,1,20),pages=Math.max(1,Math.ceil(items.length/size)),page=Math.min(pages,Math.max(1,tour.medalPage));tour.medalPage=page;
  const pageItems=items.slice((page-1)*size,page*size);
  const link=safeLink(active?.webUrl)||TOURNAMENT_PAGE,title=active?.name||'No finished tournament';
+ const activeStatus=String(active?.status||'unknown').replaceAll('_',' '),activeStatusClass=key(active?.status)==='finished'?'is-finished':key(active?.status).includes('progress')?'is-progress':'';
  main.innerHTML='<form class="p2kw-search" id="p2kwTournamentSearch"><input type="search" id="p2kwTournamentInput" maxlength="80" placeholder="Tournament or medalist" aria-label="Search tournament or medalist" value="'+esc(tour.search)+'"><button type="submit">Search</button></form>'
- +'<div class="p2kw-widget-nav"><button class="p2kw-mini-button" id="p2kwPrevT" '+(tour.selected<=0?'disabled':'')+'>◀</button><span>Completed '+(tour.recent.length?tour.selected+1:0)+' / '+tour.recent.length+'</span><button class="p2kw-mini-button" id="p2kwNextT" '+(tour.selected>=tour.recent.length-1?'disabled':'')+'>▶</button></div>'
- +(active?'<div class="p2kw-subhead"><a class="p2kw-title-link" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(title)+'</a><span class="p2kw-status-chip is-finished">Finished</span></div>':'<p class="p2kw-empty">No finished tournament is available.</p>')
+ +'<div class="p2kw-widget-nav"><button class="p2kw-mini-button" id="p2kwPrevT" '+(tour.selected<=0?'disabled':'')+'>◀</button><span>(tour.selectedSearch?'Search result':'Completed '+(tour.recent.length?tour.selected+1:0)+' / '+tour.recent.length)+'</span><button class="p2kw-mini-button" id="p2kwNextT" '+(tour.selected>=tour.recent.length-1?'disabled':'')+'>▶</button></div>'
+ +(active?'<div class="p2kw-subhead"><a class="p2kw-title-link" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(title)+'</a><span class="p2kw-status-chip '+activeStatusClass+'">'+esc(activeStatus)+'</span></div>':'<p class="p2kw-empty">No finished tournament is available.</p>')
  +'<div class="p2kw-subhead"><span>Medalists</span><span class="p2kw-small">'+items.length+' awarded positions</span></div>'
  +(pageItems.length?pageItems.map(x=>'<div class="p2kw-entry p2kw-medalist-row"><span class="p2kw-medal-symbol">'+x.symbol+'</span><div class="p2kw-entry-main"><strong>'+esc(x.name)+' <span class="p2kw-medal-inline">'+esc(x.type)+' medal</span></strong></div></div>').join(''):'<p class="p2kw-notice">No published medalist for this tournament.</p>')
  +'<div class="p2kw-widget-nav"><button class="p2kw-mini-button" id="p2kwMedalPrev" '+(page<=1?'disabled':'')+'>Previous</button><span>Medal page '+page+' / '+pages+'</span><button class="p2kw-mini-button" id="p2kwMedalNext" '+(page>=pages?'disabled':'')+'>Next</button></div>'
@@ -171,14 +172,14 @@ function renderTour(){
  +(!tour.searchResults.length?'<p class="p2kw-notice">No tournament matches this search.</p>':'')
  +'<div class="p2kw-widget-nav"><button class="p2kw-mini-button" id="p2kwTourSearchPrev" '+(tour.pagination.page<=1?'disabled':'')+'>Previous</button><span>Page '+tour.pagination.page+' / '+tour.pagination.pages+' · '+tour.pagination.total+' matches</span><button class="p2kw-mini-button" id="p2kwTourSearchNext" '+(tour.pagination.page>=tour.pagination.pages?'disabled':'')+'>Next</button></div>':'');
  main.querySelector('#p2kwTournamentSearch').onsubmit=e=>{e.preventDefault();tour.search=main.querySelector('#p2kwTournamentInput').value.trim();tour.searchPage=1;void fetchTournaments()};
- main.querySelector('#p2kwPrevT').onclick=()=>{tour.selected=Math.max(0,tour.selected-1);tour.medalPage=1;renderTour()};
- main.querySelector('#p2kwNextT').onclick=()=>{tour.selected=Math.min(tour.recent.length-1,tour.selected+1);tour.medalPage=1;renderTour()};
+ main.querySelector('#p2kwPrevT').onclick=()=>{tour.selectedSearch=null;tour.selected=Math.max(0,tour.selected-1);tour.medalPage=1;renderTour()};
+ main.querySelector('#p2kwNextT').onclick=()=>{tour.selectedSearch=null;tour.selected=Math.min(tour.recent.length-1,tour.selected+1);tour.medalPage=1;renderTour()};
  main.querySelector('#p2kwMedalPrev').onclick=()=>{tour.medalPage--;renderTour()};
  main.querySelector('#p2kwMedalNext').onclick=()=>{tour.medalPage++;renderTour()};
  main.querySelector('#p2kwClearSearch')?.addEventListener('click',()=>{tour.search='';tour.searchResults=[];tour.pagination={page:1,pages:1,total:0};renderTour()});
  main.querySelector('#p2kwTourSearchPrev')?.addEventListener('click',()=>{tour.searchPage--;void fetchTournaments()});
  main.querySelector('#p2kwTourSearchNext')?.addEventListener('click',()=>{tour.searchPage++;void fetchTournaments()});
- main.querySelectorAll('[data-tour-index]').forEach(b=>b.onclick=()=>{const selected=tour.searchResults[Number(b.dataset.tourIndex)];if(!selected)return;tour.recent=[selected,...tour.recent.filter(x=>x.slug!==selected.slug||x.name!==selected.name)].slice(0,Math.max(5,config.limit||5));tour.selected=0;tour.medalPage=1;renderTour()});
+ main.querySelectorAll('[data-tour-index]').forEach(b=>b.onclick=()=>{const selected=tour.searchResults[Number(b.dataset.tourIndex)];if(!selected)return;tour.selectedSearch=selected;tour.medalPage=1;renderTour()});
  notify();
 }
 async function fetchTournaments(){
