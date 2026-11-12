@@ -60,7 +60,7 @@ try{
     // Expose actionable, non-sensitive error classes without filesystem paths.
     error_log('P2K recruitment history storage: '.$e->safeCode.' '.$e->getMessage());
     $status=in_array($e->safeCode,['RECRUITMENT_MATCH_INVALID','RECRUITMENT_CSV_SIZE'],true)?400:503;
-    Http::json(['ok'=>false,'error'=>['code'=>$e->safeCode,'message'=>$e->safeMessage]],$status);
+    Http::json(['ok'=>false,'error'=>['code'=>$e->safeCode,'message'=>$e->getMessage()]],$status);
 }catch(Throwable $e){
     error_log('P2K recruitment history: '.$e);
     Http::json(['ok'=>false,'error'=>['code'=>'SERVER_ERROR','message'=>'Recruitment history operation failed safely.']],500);
