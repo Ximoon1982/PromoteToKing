@@ -6,14 +6,14 @@
   const defaults={
     'club-pulse':{period:['7d','30d'],showMembers:[true,false]},
     'recruitment-radar':{window:['24h','48h','72h','7d'],limit:[3,4,6,8]},
-    'trophy-spotlight':{mode:['latest','random'],limit:[3,5,8,10]},
+    'trophy-spotlight':{mode:['latest','random']},
     'rivalry-spotlight':{opponent:'text',limit:[3,6,10,15]},
-    'club-progress':{metric:['points','boards'],period:['30d','12m']},
+    'club-progress':{lowerReferencePoints:'number',lowerReferenceLabel:'reference-label',upperReferencePoints:'number',upperReferenceLabel:'reference-label'},
     'around-the-world':{metric:['matches','clubs'],limit:[5,8,10,15]},
     'player-spotlight':{limit:[3,5],showArena:[true,false],showMedals:[true,false]},
     'tournament-winners':{limit:[3,5],medalPageSize:[3,6,9]}
   };
-  const labels={period:'Time period',showMembers:'Show member count',window:'Recruitment window',limit:'Items to display',mode:'Trophy order',opponent:'Opponent slug (blank = most frequent)',metric:'Primary metric',showArena:'Include MCA arena scoring',showMedals:'Show tournament medals',medalPageSize:'Medalists per page'};
+  const labels={period:'Time period',showMembers:'Show member count',window:'Recruitment window',limit:'Items to display',mode:'Trophy order',opponent:'Opponent slug (blank = most frequent)',metric:'Primary metric',showArena:'Include MCA arena scoring',showMedals:'Show tournament medals',medalPageSize:'Medalists per page',lowerReferencePoints:'Lower reference · Club Points',lowerReferenceLabel:'Lower reference label',upperReferencePoints:'Upper reference · Club Points',upperReferenceLabel:'Upper reference label'};
   const names={'club-pulse':'Club Points · Pulse','recruitment-radar':'Recruitment Radar','trophy-spotlight':'Trophy Spotlight','rivalry-spotlight':'Rivalry Spotlight','club-progress':'Club Progress','around-the-world':'P2K Around the World','player-spotlight':'Player Spotlight','tournament-winners':'Tournament Winners'};
   const root=new URL('../../../',document.currentScript?.src||location.href);
   const api=new URL('server/widgets/public/api.php',root).href;
@@ -31,6 +31,8 @@
   function host(){return document.querySelector('#adminShellNativeDetailHost[data-native-detail^="p2k-widget-"]');}
   function message(value,ok=''){const n=host()?.querySelector('[data-widgets-message]');if(n){n.textContent=value||'';n.className='p2kw-admin-status'+(ok?' '+ok:'');}}
   function opts(name,value){const alternatives=defaults[active]?.[name];if(alternatives==='text')return`<input type="text" maxlength="160" data-setting="${name}" value="${esc(value)}" placeholder="Leave empty for the most frequent rival">`;
+    if(alternatives==='number')return`<input type="number" inputmode="decimal" min="0.01" max="999999999" step="0.01" data-setting="${name}" value="${esc(value??'')}" placeholder="Optional points threshold">`;
+    if(alternatives==='reference-label')return`<input type="text" maxlength="32" data-setting="${name}" value="${esc(value??'')}" placeholder="Optional label (e.g. #9)">`;
     if(Array.isArray(alternatives)){
       if(typeof alternatives[0]==='boolean')return`<input type="checkbox" data-setting="${name}" ${value?'checked':''}>`;
       return`<select data-setting="${name}">${alternatives.map(v=>`<option value="${esc(v)}" ${String(value)===String(v)?'selected':''}>${esc(String(v))}</option>`).join('')}</select>`;
