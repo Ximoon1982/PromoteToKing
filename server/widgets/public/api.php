@@ -99,69 +99,24 @@ try {
     }
     if($action==='tournament-highlights' && $method==='GET') {
         require_once dirname(__DIR__,2).'/tournaments/src/bootstrap.php';
+        require_once dirname(__DIR__).'/src/TournamentWidgetReadService.php';
         $search=trim((string)($_GET['search']??''));
         if(strlen($search)>80)api_error(400,'INVALID_SEARCH','Tournament search is too long.');
-        $page=max(1,min(500,(int)($_GET['page']??1)));
+        $page=max(1,(int)($_GET['page']??1));
+        $completedPage=max(1,(int)($_GET['completed_page']??1));
         $indexer=new \P2K\Tournaments\BrowseIndex();
         $config=p2k_tp_config();
         $cache=new ResponseCache(is_array($config['storage']??null)?$config['storage']:[]);
-        $key='widgets-tournament-highlights-v2159-medalist-search-v2|'.$indexer->signature().'|'.hash('sha256',strtolower($search).'|'.$page);
-        $entry=$cache->remember($key,120,static function()use($indexer,$search,$page):array{
+        $key='widgets-tournament-highlights-v2159-all-finished-v3|'.$indexer->signature().'|'.
+            hash('sha256',strtolower($search).'|'.$page.'|'.$completedPage);
+        $entry=$cache->remember($key,120,static function()use($indexer,$search,$page,$completedPage):array{
             $archive=$indexer->index();
-            $all=is_array($archive['tournaments']??null)?$archive['tournaments']:[];
-            $items=array_values(array_filter($all,'is_array'));
-            // Respect stored, admin-maintained tournament status. Only explicitly
-            // completed items qualify for the recent winners rotation.
-            usort($items,static function(array $a,array $b):int{
-                $value=static function(array $t):string{foreach(['finishAt','periodSort','period'] as $field){$v=trim((string)($t[$field]??''));if($v!=='')return $v;}return '';};
-                return strnatcasecmp($value($b),$value($a));
-            });
-            $project=static function(array $t):array{
-                return [
-                    'name'=>(string)($t['name']??$t['title']??$t['slug']??'Tournament'),
-                    'slug'=>(string)($t['slug']??''),
-                    'status'=>(string)($t['status']??'unknown'),
-                    'period'=>(string)($t['period']??''),
-                    'finishAt'=>(string)($t['finishAt']??''),
-                    'webUrl'=>(string)($t['webUrl']??$t['url']??''),
-                    'podium'=>is_array($t['podium']??null)?$t['podium']:[],
-                ];
-            };
-            $finished=array_values(array_filter($items,static fn(array $t):bool=>strtolower(trim((string)($t['status']??'')))==='finished'));
-            $recent=array_map($project,array_slice($finished,0,5));
-            // Search by tournament title or a *medalist* (not merely any entrant).
-            // BrowseIndex already filters excluded podium accounts, so these
-            // results honor the Hall of Fame's fair-play exclusions.
-            $tournamentMatches=[];$exactPlayers=[];$partialPlayers=[];
-            if($search!=='')foreach($items as $t){
-                $title=(string)($t['name']??$t['title']??'');
-                $slug=(string)($t['slug']??'');
-                if(stripos($title,$search)!==false||stripos($slug,$search)!==false)$tournamentMatches[]=$project($t);
-                $foundExact=[];$foundPartial=[];
-                foreach(['gold','silver','bronze'] as $metal){
-                    foreach(is_array($t['podium'][$metal]??null)?$t['podium'][$metal]:[] as $raw){
-                        $username=trim((string)(is_array($raw)?($raw['username']??$raw['name']??''):$raw));
-                        if($username==='')continue;
-                        $record=['username'=>$username,'medal'=>$metal];
-                        if(strcasecmp($username,$search)===0)$foundExact[]=$record;
-                        elseif(stripos($username,$search)!==false)$foundPartial[]=$record;
-                    }
-                }
-                if($foundExact!==[]){$row=$project($t);$row['matched_medalists']=$foundExact;$exactPlayers[]=$row;}
-                if($foundPartial!==[]){$row=$project($t);$row['matched_medalists']=$foundPartial;$partialPlayers[]=$row;}
-            }
-            // Exact username takes priority over coincidental tournament title.
-            // Otherwise prefer title matches, then partial username matches.
-            $kind='tournament';$found=$tournamentMatches;
-            if($exactPlayers!==[]){$kind='player';$found=$exactPlayers;}
-            elseif($tournamentMatches===[]&&$partialPlayers!==[]){$kind='player';$found=$partialPlayers;}
-            $size=10;$total=count($found);$pages=max(1,(int)ceil($total/$size));$current=min($page,$pages);
-            return [
-                'ok'=>true,'recent'=>$recent,'search_kind'=>$kind,
-                'matches'=>array_slice($found,($current-1)*$size,$size),
-                'pagination'=>['page'=>$current,'pages'=>$pages,'total'=>$total,'per_page'=>$size],
-                'source'=>'Finalized tournament archive with medalist exclusions'
-            ];
+            $tournaments=is_array($archive['tournaments']??null)?$archive['tournaments']:[];
+            // BrowseIndex excludes disqualified medalists. Never query raw,
+            // unfiltered archive data for public results.
+            return \P2K\Widgets\TournamentWidgetReadService::read(
+                $tournaments,$search,$page,$completedPage
+            );
         },600);
         \P2K\TeamPoints\Http::jsonCacheable($entry['payload'],200,60,300,$entry['etag']);
     }
