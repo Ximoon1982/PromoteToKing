@@ -52,8 +52,7 @@
    const x=p=>x1+(p-visibleStart)/Math.max(1,xEnd-visibleStart)*(x2-x1);
    const y=p=>Math.max(top,Math.min(bottom,bottom-(p-yMin)/span*(bottom-top)));
    const ppath=history.map((p,i)=>(i?"L":"M")+x(p.day).toFixed(2)+" "+y(p.value).toFixed(2)).join(" ");
-   const ticks=Array.from({length:5},(_,i)=>{const val=yMin+i*span/4,py=y(val);return
-     '<path d="M'+x1+' '+py.toFixed(1)+'H'+x2+'" stroke="var(--border)" stroke-width=".65"/>'+
+   const ticks=Array.from({length:5},(_,i)=>{const val=yMin+i*span/4,py=y(val);return '<path d="M'+x1+' '+py.toFixed(1)+'H'+x2+'" stroke="var(--border)" stroke-width=".65"/>'+
      '<text x="2" y="'+(py+3).toFixed(1)+'" fill="var(--muted)" font-size="8.5">'+xml(pointsValue(val))+'</text>'
    }).join("");
    const refs=[[lower,lowerLabel],[upper,upperLabel]].filter(([val])=>val!==null).map(([val,label])=>{
