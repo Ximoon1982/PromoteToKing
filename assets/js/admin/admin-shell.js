@@ -39,7 +39,9 @@ const ADMIN_DETAIL_DEFS = {
       {key:"trophy-spotlight",label:"Trophy Spotlight",mode:"native",nativeKey:"p2k-widget-trophy-spotlight"},
       {key:"rivalry-spotlight",label:"Rivalry Spotlight",mode:"native",nativeKey:"p2k-widget-rivalry-spotlight"},
       {key:"club-progress",label:"Club Progress",mode:"native",nativeKey:"p2k-widget-club-progress"},
-      {key:"around-the-world",label:"P2K Around the World",mode:"native",nativeKey:"p2k-widget-around-the-world"}
+      {key:"around-the-world",label:"P2K Around the World",mode:"native",nativeKey:"p2k-widget-around-the-world"},
+      {key:"player-spotlight",label:"Player Spotlight",mode:"native",nativeKey:"p2k-widget-player-spotlight"},
+      {key:"tournament-winners",label:"Tournament Winners",mode:"native",nativeKey:"p2k-widget-tournament-winners"}
     ]}
   },
   opponents: {
@@ -96,9 +98,9 @@ return `<article class="dashboard-admin-shell-card dashboard-admin-release-contr
 }
 function adminWidgetsCard(){
 return `<article class="dashboard-admin-shell-card" data-admin-shell-card="widgets" data-admin-detail="widgets" data-admin-detail-tab="match-showcase" data-admin-detail-category="team" role="link" tabindex="0" aria-label="Manage widgets">
-<header class="dashboard-admin-shell-card-head"><div><span class="dashboard-admin-shell-eyebrow">Team</span><h3>Widgets</h3></div><span class="dashboard-admin-shell-status is-good">7 modules</span></header>
-<p>Configure the Match Showcase and six live, embeddable club widgets. Each has a separate tab, preview and iframe HTML.</p>
-<div class="dashboard-admin-shell-metrics"><div class="dashboard-admin-shell-metric"><span>Widgets</span><strong>7</strong><small>Independent settings</small></div><div class="dashboard-admin-shell-metric"><span>Embeds</span><strong>260px</strong><small>Public read-only views</small></div></div>
+<header class="dashboard-admin-shell-card-head"><div><span class="dashboard-admin-shell-eyebrow">Team</span><h3>Widgets</h3></div><span class="dashboard-admin-shell-status is-good">9 modules</span></header>
+<p>Configure the Match Showcase and eight live, embeddable club widgets. Each has a separate tab, preview and iframe HTML.</p>
+<div class="dashboard-admin-shell-metrics"><div class="dashboard-admin-shell-metric"><span>Widgets</span><strong>9</strong><small>Independent settings</small></div><div class="dashboard-admin-shell-metric"><span>Embeds</span><strong>260px</strong><small>Public read-only views</small></div></div>
 <div class="dashboard-admin-shell-meta"><span><b>Source</b><em>Green Analytics · Trophy Gallery · Opponent data</em></span><span><b>Setup</b><em>Preview and copy iframe</em></span></div>
 <footer class="dashboard-admin-shell-actions"><span class="dashboard-button">Manage Widgets</span></footer></article>`;
 }
