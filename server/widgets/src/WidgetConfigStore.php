@@ -33,9 +33,9 @@ final class WidgetConfigStore {
         return $common + match ($id) {
             'club-pulse'=>['period'=>'7d','showMembers'=>true],
             'recruitment-radar'=>['window'=>'48h','limit'=>4],
-            'trophy-spotlight'=>['limit'=>5,'mode'=>'latest'],
+            'trophy-spotlight'=>['mode'=>'latest'],
             'rivalry-spotlight'=>['opponent'=>'','limit'=>6],
-            'club-progress'=>['period'=>'30d','metric'=>'points'],
+            'club-progress'=>['lowerReferencePoints'=>'','lowerReferenceLabel'=>'','upperReferencePoints'=>'','upperReferenceLabel'=>''],
             'around-the-world'=>['metric'=>'matches','limit'=>8],
             'player-spotlight'=>['limit'=>5,'showArena'=>true,'showMedals'=>true],
             'tournament-winners'=>['limit'=>5,'medalPageSize'=>3],
@@ -68,6 +68,21 @@ final class WidgetConfigStore {
         }
         foreach (['theme'=>['dark','light','auto'],'period'=>['7d','30d','12m'],'window'=>['24h','48h','72h','7d'],'metric'=>['points','boards','matches','clubs'],'mode'=>['latest','random']] as $key=>$options) {
             if (isset($settings[$key]) && !in_array($settings[$key],$options,true)) throw new InvalidArgumentException('Invalid '.$key.' option');
+        }
+        if ($id==='club-progress') {
+            foreach (['lowerReferencePoints','upperReferencePoints'] as $field) {
+                $value=(string)$settings[$field];
+                if($value!=='' && (!preg_match('/^\\d{1,9}(?:\\.\\d{1,2})?$/D',$value) || (float)$value<=0)) {
+                    throw new InvalidArgumentException($field.' must be a positive numeric score (up to 2 decimals).');
+                }
+            }
+            foreach (['lowerReferenceLabel','upperReferenceLabel'] as $field) {
+                if(strlen((string)$settings[$field])>32)throw new InvalidArgumentException($field.' is too long.');
+            }
+            if($settings['lowerReferencePoints']!=='' && $settings['upperReferencePoints']!==''
+               && (float)$settings['lowerReferencePoints'] >= (float)$settings['upperReferencePoints']) {
+                throw new InvalidArgumentException('Upper reference must be greater than lower reference.');
+            }
         }
         if ($settings['title']==='') throw new InvalidArgumentException('Widget title is required');
         return $settings;
