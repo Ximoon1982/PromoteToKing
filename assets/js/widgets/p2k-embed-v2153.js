@@ -128,17 +128,20 @@
   }
 
   async function clubProgress(){
-    const payload=await get(`${INSIGHTS}?section=progression`),graphs=payload.data?.graphs||{};
-    const raw=settings.metric==='boards'?(graphs.dailyBoards||[]).map(x=>({date:x.date,value:Number(x.finished)||0})):(graphs.scoreProgression?.actual||[]);
-    if(!raw.length){main.innerHTML='<div class="p2kw-empty">No historical progression series is available.</div>';return;}
-    const len=settings.period==='12m'?366:30,rows=raw.slice(-len),value=rows.at(-1)?.value||0;
-    const first=Number(rows[0]?.value)||0,last=Number(value)||0;
-    const change=settings.metric==='boards'?rows.reduce((n,x)=>n+Number(x.value||0),0):last-first;
-    const bars=rows.filter((_,i)=>i%Math.max(1,Math.floor(rows.length/24))===0).slice(-24);
-    const max=Math.max(1,...bars.map(x=>Number(x.value)||0));
-    main.innerHTML=`<div class="p2kw-total-row"><div><div class="p2kw-label">${settings.metric==='boards'?'Finished boards/day':'Club Points'}</div><div class="p2kw-big">${number(settings.metric==='boards'?change:last)}</div></div><div class="p2kw-delta">${settings.metric==='boards'?'Total in range':'+'+number(change)}<div class="p2kw-small">${settings.period}</div></div></div>${seg([['30d','30 days'],['12m','12 months']],settings.period,()=>{})}${settings.metric==='boards'?`<div class="p2kw-bars">${bars.map(x=>`<div class="p2kw-bar" style="height:${Math.max(3,Math.round(100*(Number(x.value)||0)/max))}%" title="${esc(x.date)}: ${number(x.value)}"></div>`).join('')}</div>`:spark(rows)}${seg([['points','Club Points'],['boards','Boards']],settings.metric,()=>{})}<div class="p2kw-subhead"><span>Period</span><span class="p2kw-small">${esc(date(rows[0].date+'T00:00:00Z'))} — ${esc(date(rows.at(-1).date+'T00:00:00Z'))}</span></div><div class="p2kw-notice">Historical, actual data only. Forecast values are excluded.</div>`;
-    const buttons=main.querySelectorAll('[data-choice]');buttons.forEach(b=>b.onclick=async()=>{const val=b.dataset.choice;if(val==='points'||val==='boards')settings.metric=val;else settings.period=val;await clubProgress();});
-    setFoot('Source: P2K Green Analytics · cumulative progression');
+    const payload=await get(`${INSIGHTS}?section=progression`);
+    const actual=payload.data?.graphs?.scoreProgression?.actual||[];
+    const chart=window.P2K_PROGRESS_CHART;
+    if(!chart?.render)throw new Error('Club Progress chart renderer is unavailable.');
+    const logo=new URL('assets/images/p2k-logo.jpg',ROOT).href;
+    const result=chart.render(actual,settings,logo);
+    if(!result.svg){
+      main.innerHTML='<div class="p2kw-empty">'+esc(result.message||'Club Points history is unavailable.')+'</div>';
+    }else{
+      main.innerHTML='<div class="p2kw-total-row p2kw-progress-total"><div><div class="p2kw-label">Club Points</div><div class="p2kw-big">'+esc(number(result.last))+'</div></div></div>'
+        +result.svg
+        +(result.message?'<div class="p2kw-progress-forecast">'+esc(result.message)+'</div>':'');
+    }
+    setFoot('');
   }
 
   const coord={US:[56,48],CA:[54,30],MX:[48,67],BR:[89,98],AR:[82,115],GB:[121,34],FR:[124,44],DE:[133,41],ES:[118,53],IT:[136,53],PT:[111,55],NL:[129,39],BE:[126,42],LU:[129,43],CH:[132,46],AT:[138,45],PL:[142,39],CZ:[137,43],UA:[157,45],RU:[188,26],TR:[159,58],EG:[152,72],ZA:[158,111],NG:[135,85],IN:[191,81],PK:[180,75],CN:[213,61],JP:[234,70],KR:[229,69],AU:[235,112],NZ:[251,119],SE:[133,26],NO:[128,27],FI:[141,26],GR:[146,56],RO:[148,49],HU:[143,46],BG:[151,53],RS:[146,52],HR:[142,51],BA:[144,52],IL:[157,69],IR:[174,69],SA:[168,76],ID:[218,94],PH:[232,83],TH:[210,84],VN:[217,85],MY:[215,92],SG:[216,96],CO:[74,89],CL:[76,109],PE:[76,99],VE:[79,83],UY:[89,114],UY:[89,115],DK:[130,35],IE:[115,37],IS:[108,25],MA:[115,66],DZ:[130,70],TN:[135,64],KE:[156,91],ET:[160,85],TZ:[156,97],ZW:[159,105],BY:[152,40],LT:[150,36],LV:[149,33],EE:[149,30],GE:[165,56],AM:[165,58],AZ:[171,59],KZ:[187,46],UZ:[184,57],AF:[181,67],BD:[200,80],NP:[194,76],LK:[198,94],TW:[230,76],HK:[220,78],AE:[174,76],QA:[175,76]};
