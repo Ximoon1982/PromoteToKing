@@ -38,7 +38,7 @@ final class WidgetConfigStore {
             'club-progress'=>['lowerReferencePoints'=>'','lowerReferenceLabel'=>'','upperReferencePoints'=>'','upperReferenceLabel'=>''],
             'around-the-world'=>['metric'=>'matches','limit'=>8],
             'player-spotlight'=>['limit'=>5,'showArena'=>true,'showMedals'=>true],
-            'tournament-winners'=>['limit'=>5,'medalPageSize'=>3],
+            'tournament-winners'=>['medalPageSize'=>3],
         };
     }
 
@@ -63,7 +63,7 @@ final class WidgetConfigStore {
                 if (!is_int($value) || $value<1 || $value>20) throw new InvalidArgumentException('Invalid widget limit');
                 $settings[$key]=$value;
             } else {
-                $settings[$key]=self::scalarString($value,$key==='title'?64:($key==='opponent'?160:24));
+                $settings[$key]=self::scalarString($value,$key==='title'?64:($key==='opponent'?160:(str_ends_with($key,'ReferenceLabel')?32:24)));
             }
         }
         foreach (['theme'=>['dark','light','auto'],'period'=>['7d','30d','12m'],'window'=>['24h','48h','72h','7d'],'metric'=>['points','boards','matches','clubs'],'mode'=>['latest','random']] as $key=>$options) {
