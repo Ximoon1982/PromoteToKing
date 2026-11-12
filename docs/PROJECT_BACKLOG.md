@@ -90,7 +90,8 @@
 **Implemented changes reported:** same-admin reauthorization keeps valid CSRF/session ID; expired session or identity switch rotates securely; bounded one-time JS retry only for definite CSRF/session failure; completed scan CSV retained for manual archive retry without repeating scan.  
 **Evidence files:** `server/team-points/src/Auth.php`, `assets/js/shared/team-points-client.js`, `assets/js/pages/recruit-match.js`, `tests/test_v2159_admin_session_reconnect.php`, `tests/test_v2159_team_points_client_recovery.cjs`.  
 **Remaining acceptance:** Run tests in a recovered exact checkout; verify long scan plus competing tabs, expired session, real unauthorized denial, same-origin protection, archive/download and retry on production-like preview; no duplicate archive entries or loss of generated CSV.  
-**Last action:** Branch changes verified 2026-11-12, full live qualification not yet verified.
+**New evidence, 2026-11-12:** User attachment from match #2019306: 2,774 live-verified, 1,638 eligible; both archive retry and history listing show generic `Recruitment history operation failed safely.` The previous session-only fix did not solve this. The generic 500 originates from `server/team-points/public/recruitment-history.php` catch-all and can conceal non-auth PHP/storage exceptions. Added typed filesystem errors in `RecruitmentHistoryStore`, removal of unconditional mbstring dependency, endpoint safe diagnostic codes, and regression coverage. User-visible end-to-end save is **not yet verified**. No automatic fallback to a new storage directory (would orphan historical archives).
+**Last action:** Committed diagnostic/storage compatibility changes in v2.15.9 on 2026-11-12; qualify candidate and use specific new error code to verify the live cause.
 
 ### P2K-BL-008 — MCA rename correlation operational verification
 **Status:** VERIFY (feature already implemented in v2.15.8; not a request to redesign).  
