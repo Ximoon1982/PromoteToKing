@@ -113,7 +113,7 @@ try {
             // Respect stored, admin-maintained tournament status. Only explicitly
             // completed items qualify for the recent winners rotation.
             usort($items,static function(array $a,array $b):int{
-                $value=static fn(array $t):string=>trim((string)($t['finishAt']??$t['periodSort']??$t['period']??''));
+                $value=static function(array $t):string{foreach(['finishAt','periodSort','period'] as $field){$v=trim((string)($t[$field]??''));if($v!=='')return $v;}return '';};
                 return strnatcasecmp($value($b),$value($a));
             });
             $project=static function(array $t):array{
