@@ -35,6 +35,7 @@ jobs:
               server/team-points/public/mca-renames.php; do php -l "$f"; done
           for f in assets/js/shared/team-points-client.js \
               assets/js/pages/recruit-match.js \
+              assets/js/pages/recruit-match-ui-helpers.js \
               assets/js/pages/recruit-match-v2121-bootstrap.js \
               assets/js/pages/team-points-features.js \
               assets/js/pages/club-intelligence.js \
@@ -44,6 +45,7 @@ jobs:
           php tests/test_v2159_recruitment_default_runtime_path.php
           php -n tests/test_v2159_recruitment_storage_diagnostics.php
           node tests/test_v2159_team_points_client_recovery.cjs
+          node tests/test_v2159_recruit_results_pagination.cjs
           php tests/recruitment_history_v2152_test.php
           python3 tests/test_v2152_recruitment_history.py
           php tests/test_v2158_mca_csv_recheck.php
@@ -75,6 +77,8 @@ jobs:
             {"version":"2.15.9","source_head":"5959cca55d0aae1b78f628b54d292db82d91a1a5"},
             # The preceding fully qualified archive runtime-path repair candidate.
             {"version":"2.15.9","source_head":"ea358dd8f76d9e2715e07957ef25a679bb35aa13"},
+            # Last verified public repair candidate.
+            {"version":"2.15.9","source_head":"90ade479a2bcf230704b57a465c91e4ba194983b"},
           ]
           paths=[
              "VERSION","ui-v2.html",
@@ -94,6 +98,7 @@ jobs:
              "server/team-points/public/recruitment-history.php",
              "assets/js/shared/team-points-client.js",
              "RecruitMatch.html",
+             "assets/js/pages/recruit-match-ui-helpers.js",
              "assets/js/pages/recruit-match-v2121-bootstrap.js",
              "assets/js/pages/recruit-match.js",
           ]
@@ -145,7 +150,7 @@ jobs:
       - name: Validate actual Release Control contract
         shell: bash
         run: |
-          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_Recruitment_Archive_Session_Fix_v2159_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.9" || $p["overlay_file_count"]!==18) exit(1); echo "PASS ".$p["release_id"].PHP_EOL;'
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_Recruitment_Archive_Session_Fix_v2159_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.9" || $p["overlay_file_count"]!==19) exit(1); echo "PASS ".$p["release_id"].PHP_EOL;'
       - uses: actions/upload-artifact@v4
         with:
           name: p2k-recruitment-session-v2159-release-control
