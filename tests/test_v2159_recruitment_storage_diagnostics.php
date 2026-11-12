@@ -31,6 +31,9 @@ try {
     $entry=$store->archive(2019306,'P2K match',"username,rating\nalpha,1400\n");
     if (!is_file($store->pathFor($entry))) throw new RuntimeException('Valid archival failed');
     if ($store->page(1)['total'] !== 1) throw new RuntimeException('Valid archive was not indexed');
+    // Unicode-safe truncation must also work under `php -n` (no mbstring).
+    $unicodeEntry=$store->archive(2019307,str_repeat('é',301),"username,rating\nalpha,1400\n");
+    if (($unicodeEntry['match_name'] ?? '') !== str_repeat('é',300)) throw new RuntimeException('Unicode name truncated incorrectly');
     echo "PASS explicit storage errors, no invisible directory fallback, no orphan CSV, normal archive\n";
 } finally {
     foreach(glob($root.'/history/*')?:[] as $f) if(is_file($f)) @unlink($f);
