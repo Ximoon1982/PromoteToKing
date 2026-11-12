@@ -71,6 +71,10 @@ jobs:
             {"version":"2.15.7","source_head":"2be367793b1720d6df9afcf80af3a39a83787086"},
             {"version":"2.15.8","source_head":"d539f9e5893e5d7b2be5ef6e4bfa68630dc4f7db"},
             {"version":"2.15.9","source_head":"e449ac12fabc9266df59f9f87b49bd116ece9e60"},
+            # Previously qualified same-version public candidate (now promoted).
+            {"version":"2.15.9","source_head":"5959cca55d0aae1b78f628b54d292db82d91a1a5"},
+            # The preceding fully qualified archive runtime-path repair candidate.
+            {"version":"2.15.9","source_head":"ea358dd8f76d9e2715e07957ef25a679bb35aa13"},
           ]
           paths=[
              "VERSION","ui-v2.html",
