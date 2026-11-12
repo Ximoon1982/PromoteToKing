@@ -1,0 +1,180 @@
+name: P2K v2.15.9 Player Spotlight + Tournament Winners Release Control
+# Cumulative candidate, preserving recruitment/MCA work and adding two native P2K embeds.
+on:
+  push:
+    branches:
+      - 'release/v2.15.9'
+    paths:
+      - '.github/workflows/p2k-v2159-widget-highlights-release.yml'
+      - 'server/widgets/src/WidgetConfigStore.php'
+      - 'server/widgets/public/api.php'
+      - 'server/widgets/public/embed.php'
+      - 'assets/js/widgets/p2k-spotlight-v2159.js'
+      - 'assets/css/widgets/p2k-spotlight-v2159.css'
+      - 'assets/js/admin/widgets-v2153.js'
+      - 'assets/js/admin/admin-shell.js'
+      - 'assets/js/admin/tool-registry.js'
+      - 'ui-v2.html'
+      - 'tests/widget_spotlights_v2159.test.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify CSRF fix and historical MCA compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in server/team-points/src/Auth.php server/team-points/src/RecruitmentHistoryStore.php server/team-points/public/session.php \
+              server/team-points/public/recruitment-history.php \
+              server/team-points/src/LiveRanksService.php \
+              server/team-points/src/McaRenameRecheckService.php \
+              server/team-points/src/McaRenameReviewService.php \
+              server/team-points/bin/mca-results-sync.php \
+              server/team-points/public/mca-renames.php; do php -l "$f"; done
+          for f in assets/js/shared/team-points-client.js \
+              assets/js/pages/recruit-match.js \
+              assets/js/pages/recruit-match-ui-helpers.js \
+              assets/js/pages/recruit-match-v2121-bootstrap.js \
+              assets/js/pages/team-points-features.js \
+              assets/js/pages/club-intelligence.js \
+              assets/js/pages/mca-rename-review-v2157.js; do node --check "$f"; done
+          php tests/test_v2159_admin_session_reconnect.php
+          php tests/test_v2159_recruitment_storage_diagnostics.php
+          php tests/test_v2159_recruitment_default_runtime_path.php
+          php -n tests/test_v2159_recruitment_storage_diagnostics.php
+          node tests/test_v2159_team_points_client_recovery.cjs
+          node tests/test_v2159_recruit_results_pagination.cjs
+          node --check assets/js/widgets/p2k-spotlight-v2159.js
+          node --check assets/js/admin/widgets-v2153.js
+          node --check assets/js/admin/admin-shell.js
+          node --check assets/js/admin/tool-registry.js
+          php -l server/widgets/src/WidgetConfigStore.php
+          php -l server/widgets/public/api.php
+          php -l server/widgets/public/embed.php
+          php tests/widget_collection_v2153_test.php
+          node tests/widget_spotlights_v2159.test.cjs
+          php tests/recruitment_history_v2152_test.php
+          python3 tests/test_v2152_recruitment_history.py
+          php tests/test_v2158_mca_csv_recheck.php
+          python3 tests/test_v2158_mca_recheck_contract.py
+          python3 tests/test_v2157_mca_miac_review.py
+          python3 tests/test_v2156_mca_uploaded_dates.py
+          python3 tests/test_v2155_mca_results_priority.py
+      - name: Create cumulative v2.15.9 Release Control candidate ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess,zipfile,re
+          root=pathlib.Path(".")
+          dist=pathlib.Path("dist");dist.mkdir(exist_ok=True)
+          stem="P2K_Widget_Spotlights_v2159_ReleaseControl_Upload"
+          pkg=dist/stem
+          payload=pkg/"payload";payload.mkdir(parents=True)
+          version="2.15.9"
+          head=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip()
+          # Exact known public release heads only. The candidate is cumulative
+          # over MCA 2.15.7/2.15.8, to avoid losing earlier functionality.
+          accepted=[
+            {"version":"2.15.6","source_head":"9c92b999d8111c2af7dad78054aa65c275eecb24"},
+            {"version":"2.15.7","source_head":"2be367793b1720d6df9afcf80af3a39a83787086"},
+            {"version":"2.15.8","source_head":"d539f9e5893e5d7b2be5ef6e4bfa68630dc4f7db"},
+            {"version":"2.15.9","source_head":"e449ac12fabc9266df59f9f87b49bd116ece9e60"},
+            # Previously qualified same-version public candidate (now promoted).
+            {"version":"2.15.9","source_head":"5959cca55d0aae1b78f628b54d292db82d91a1a5"},
+            # The preceding fully qualified archive runtime-path repair candidate.
+            {"version":"2.15.9","source_head":"ea358dd8f76d9e2715e07957ef25a679bb35aa13"},
+            # Last verified public repair candidate.
+            {"version":"2.15.9","source_head":"90ade479a2bcf230704b57a465c91e4ba194983b"},
+            # Cumulative v2.15.9 pagination + CSV recovery candidate, if promoted.
+            {"version":"2.15.9","source_head":"20b7f08fa14b290d9e6636c1867cb6e6bbdc5743"},
+          ]
+          paths=[
+             "VERSION","ui-v2.html",
+             # MCA 2.15.7 + 2.15.8 preserved for older public bases
+             "TeamPointsAdmin.html",
+             "assets/js/pages/team-points-features.js",
+             "assets/js/pages/mca-rename-review-v2157.js",
+             "assets/js/pages/club-intelligence.js",
+             "server/team-points/src/LiveRanksService.php",
+             "server/team-points/src/McaRenameReviewService.php",
+             "server/team-points/src/McaRenameRecheckService.php",
+             "server/team-points/public/mca-renames.php",
+             "server/team-points/bin/mca-results-sync.php",
+             # The v2.15.9 recruitment/session correction
+             "server/team-points/src/Auth.php",
+             "server/team-points/src/RecruitmentHistoryStore.php",
+             "server/team-points/public/recruitment-history.php",
+             "assets/js/shared/team-points-client.js",
+             "RecruitMatch.html",
+             "assets/js/pages/recruit-match-ui-helpers.js",
+             # Two new widgets and their native control panels.
+             "server/widgets/src/WidgetConfigStore.php",
+             "server/widgets/public/api.php",
+             "server/widgets/public/embed.php",
+             "assets/js/widgets/p2k-spotlight-v2159.js",
+             "assets/css/widgets/p2k-spotlight-v2159.css",
+             "assets/js/admin/widgets-v2153.js",
+             "assets/js/admin/admin-shell.js",
+             "assets/js/admin/tool-registry.js",
+             "assets/js/pages/recruit-match-v2121-bootstrap.js",
+             "assets/js/pages/recruit-match.js",
+          ]
+          recovery=[
+             "ReleaseControl.php",
+             "server/release-control/src/bootstrap.php",
+             "server/release-control/src/ReleasePackageUploadInstaller.php",
+             "server/release-control/src/FilesystemCleanupManager.php",
+          ]
+          for path in paths+recovery:
+              src=root/path
+              if not src.is_file():raise RuntimeError("Missing source: "+path)
+              target=payload/path;target.parent.mkdir(parents=True,exist_ok=True)
+              target.write_bytes(src.read_bytes())
+          (payload/"VERSION").write_text(version+"\n")
+          key="p2k-"+version+"-"+head[:12]+"-"+hashlib.sha256((head+"|recruitment-admin-session-recovery-v2159").encode()).hexdigest()[:16]
+          uiPath=payload/"ui-v2.html"
+          ui=uiPath.read_text()
+          ui=re.sub(r"p2k-\d+\.\d+\.\d+-[a-f0-9]{12}-[a-f0-9]{16}",key,ui,flags=re.I)
+          ui=ui.replace("p2k-2.15.3-widgets-20261111",key)
+          if "</head>" not in ui: raise RuntimeError("Missing UI head")
+          ui=ui.replace("</head>",'<meta name="p2k-build" content="'+key+'">\n</head>',1)
+          uiPath.write_text(ui)
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          (pkg/"CANDIDATE_PAYLOAD.sha256").write_text("".join(sha(payload/p)+"  ./"+p+"\n" for p in sorted(paths)))
+          (pkg/"RECOVERY_PLANE.sha256").write_text("".join(sha(payload/p)+"  ./"+p+"\n" for p in sorted(recovery)))
+          meta={"schema_version":1,"version":version,"source_head":head,
+                "cache_key":key,"build_id":"p2k-widget-spotlights-v2159-"+head[:12],
+                "payload_manifest_sha256":sha(pkg/"CANDIDATE_PAYLOAD.sha256"),
+                "accepted_public_builds":accepted}
+          (pkg/"CANDIDATE_RELEASE.json").write_text(json.dumps(meta,indent=2)+"\n")
+          (pkg/"README.txt").write_text(
+             "P2K v2.15.9 - Player Spotlight + Tournament Winners widget collection addition.\n"
+             "Upload via Release Control and preview before promotion; no SSH required.\n"
+             "Same-admin reauthorization preserves valid CSRF; expired sessions now yield recoverable 401.\n"
+             "JS client retries stale CSRF at most once, and completed scan CSV can be retried without a new scan.\n"
+             "Includes cumulative MCA/recruitment fixes from v2.15.7-v2.15.9.\n"
+             "Adds two read-only 260px embeds with independent admin settings; no scoring/DB migration or auto-deploy.\n")
+          out=dist/(stem+".zip")
+          with zipfile.ZipFile(out,"w",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+              for file in pkg.rglob("*"):
+                  if file.is_file():z.write(file,file.relative_to(pkg))
+          with zipfile.ZipFile(out) as z:
+              assert z.testzip() is None
+              assert len(z.namelist())==len(paths)+len(recovery)+4
+          print("Output ZIP",out,"version",version,"bytes",out.stat().st_size)
+          print("source head",head,"sha256",sha(out),"accepted",accepted)
+          PY
+      - name: Validate actual Release Control contract
+        shell: bash
+        run: |
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_Recruitment_Archive_Session_Fix_v2159_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.9" || $p["overlay_file_count"]!==27) exit(1); echo "PASS ".$p["release_id"].PHP_EOL;'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-widget-spotlights-v2159-release-control
+          path: dist/P2K_Recruitment_Archive_Session_Fix_v2159_ReleaseControl_Upload.zip
+          retention-days: 7
