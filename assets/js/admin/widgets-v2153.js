@@ -11,7 +11,7 @@
     'club-progress':{lowerReferencePoints:'number',lowerReferenceLabel:'reference-label',upperReferencePoints:'number',upperReferenceLabel:'reference-label'},
     'around-the-world':{metric:['matches','clubs'],limit:[5,8,10,15]},
     'player-spotlight':{limit:[3,5],showArena:[true,false],showMedals:[true,false]},
-    'tournament-winners':{limit:[3,5],medalPageSize:[3,6,9]}
+    'tournament-winners':{medalPageSize:[3,6,9]}
   };
   const labels={period:'Time period',showMembers:'Show member count',window:'Recruitment window',limit:'Items to display',mode:'Trophy order',opponent:'Opponent slug (blank = most frequent)',metric:'Primary metric',showArena:'Include MCA arena scoring',showMedals:'Show tournament medals',medalPageSize:'Medalists per page',lowerReferencePoints:'Lower reference · Club Points',lowerReferenceLabel:'Lower reference label',upperReferencePoints:'Upper reference · Club Points',upperReferenceLabel:'Upper reference label'};
   const names={'club-pulse':'Club Points · Pulse','recruitment-radar':'Recruitment Radar','trophy-spotlight':'Trophy Spotlight','rivalry-spotlight':'Rivalry Spotlight','club-progress':'Club Progress','around-the-world':'P2K Around the World','player-spotlight':'Player Spotlight','tournament-winners':'Tournament Winners'};
