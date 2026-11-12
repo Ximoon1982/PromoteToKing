@@ -13,7 +13,23 @@ try {
     foreach (WidgetConfigStore::IDS as $id) ensure(($start['widgets'][$id]['theme']??'')==='auto','Auto default theme: '.$id);
     ensure(($start['widgets']['player-spotlight']['limit']??0)===5,'Player Spotlight top-five defaults');
     ensure(($start['widgets']['tournament-winners']['medalPageSize']??0)===3,'Tournament Winners three-medalist pages');
-    ensure(($start['widgets']['tournament-winners']['limit']??0)===5,'Five recent finished tournaments');
+    ensure(!array_key_exists('limit',$start['widgets']['tournament-winners']),'No completed tournament browse cap');
+    ensure(!array_key_exists('limit',$start['widgets']['trophy-spotlight']),'No published trophy cap');
+    $thresholds=WidgetConfigStore::normalize('club-progress',[
+        'lowerReferencePoints'=>'395000','lowerReferenceLabel'=>'Current #10',
+        'upperReferencePoints'=>'435000','upperReferenceLabel'=>'Target position #9'
+    ]);
+    ensure(($thresholds['upperReferencePoints']??'')==='435000','Reference values and labels supported');
+    ensure(($thresholds['upperReferenceLabel']??'')==='Target position #9','Custom reference label survives');
+    try{
+        WidgetConfigStore::normalize('club-progress',['lowerReferencePoints'=>'450000','upperReferencePoints'=>'400000']);
+        throw new RuntimeException('Missing validation for inverted references');
+    }catch(InvalidArgumentException){}
+    try{
+        WidgetConfigStore::normalize('club-progress',['upperReferencePoints'=>'not-a-number']);
+        throw new RuntimeException('Missing validation for non-numeric references');
+    }catch(InvalidArgumentException){}
+
     $revision=$start['revision'];
     $change=$store->get('club-pulse');$change['title']='Club Points — P2K';$change['period']='30d';
     $saved=$store->save('club-pulse',$change,$revision);
