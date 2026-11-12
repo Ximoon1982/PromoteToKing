@@ -55,8 +55,8 @@ assert(api.includes("TournamentWidgetReadService::read"));
 assert(tourService.includes("matched_medalists"));
 assert(tourService.includes("strcasecmp($username,$search)===0"));
 assert(tourService.includes("stripos"));
-assert(html.includes("p2k-embed-v2153.js?v=p2k-2159-widgets-3"));
-assert(html.includes("p2k-spotlight-v2159.js?v=p2k-2159-widgets-3"));
+assert(html.includes("p2k-embed-v2153.js?v=p2k-2159-widgets-4"));
+assert(html.includes("p2k-spotlight-v2159.js?v=p2k-2159-widgets-4"));
 console.log("PASS improved player/Live details, tournament medalist searches, fixed classification and cache versions");
 
 // Outer panel fills the entire 260px iframe; no exterior four-pixel root padding.
