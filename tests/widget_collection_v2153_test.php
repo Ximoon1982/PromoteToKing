@@ -8,14 +8,19 @@ $tmp=sys_get_temp_dir().'/p2k-widget-store-'.bin2hex(random_bytes(6));
 try {
     $store=new WidgetConfigStore($tmp);
     $start=$store->read();
-    ensure(count($start['widgets'])===6,'Six widget defaults');
+    ensure(count($start['widgets'])===8,'Eight widget defaults');
     ensure(($start['widgets']['club-pulse']['period']??'')==='7d','Pulse defaults');
+    ensure(($start['widgets']['player-spotlight']['limit']??0)===5,'Player Spotlight top-five defaults');
+    ensure(($start['widgets']['tournament-winners']['medalPageSize']??0)===3,'Tournament Winners three-medalist pages');
+    ensure(($start['widgets']['tournament-winners']['limit']??0)===5,'Five recent finished tournaments');
     $revision=$start['revision'];
     $change=$store->get('club-pulse');$change['title']='Club Points — P2K';$change['period']='30d';
     $saved=$store->save('club-pulse',$change,$revision);
     ensure($saved['revision']===$revision+1,'Revision increment');
     ensure($store->get('club-pulse')['title']==='Club Points — P2K','Persist Unicode title');
     ensure($store->get('around-the-world')['metric']==='matches','Independent settings preserved');
+    ensure($store->get('player-spotlight')['showArena']===true,'Old settings retain new widget defaults');
+    ensure($store->get('tournament-winners')['medalPageSize']===3,'Independent tournament settings preserved');
     try{$store->save('club-pulse',$change,$revision);throw new RuntimeException('Expected conflict');}
     catch(RevisionConflict $error){ensure($error->current['revision']===$saved['revision'],'Conflict returns current revision');}
     foreach ([['title'=>''],['theme'=>'invalid'],['enabled'=>'true'],['title'=>'<script>'.str_repeat('a',64)]] as $invalid){
