@@ -1,0 +1,41 @@
+name: P2K v2.15.9 Recruitment archive session regression
+on:
+  push:
+    paths:
+      - '.github/workflows/p2k-v2159-recruitment-auth-qualification.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate recruitment history session and CSRF recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l server/team-points/src/Auth.php
+          php -l server/team-points/public/recruitment-history.php
+          php -l server/team-points/public/session.php
+          node --check assets/js/shared/team-points-client.js
+          node --check assets/js/pages/recruit-match.js
+          node --check assets/js/pages/recruit-match-v2121-bootstrap.js
+          php tests/test_v2159_admin_session_reconnect.php
+          node tests/test_v2159_team_points_client_recovery.cjs
+          php tests/recruitment_history_v2152_test.php
+          python3 tests/test_v2152_recruitment_history.py
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path("RecruitMatch.html").read_text()
+          boot=Path("assets/js/pages/recruit-match-v2121-bootstrap.js").read_text()
+          controller=Path("assets/js/pages/recruit-match.js").read_text()
+          ui=Path("ui-v2.html").read_text()
+          for phrase in ["assets/js/shared/team-points-client.js?v=2.15.9-admin-session-recovery","p2kRetryRecruitmentArchive"]:
+              assert phrase in html,phrase
+          assert "2.15.9-session-recovery" in boot
+          assert "pendingArchive({match,csv:state.resultCsv})" in controller
+          assert "retryPendingArchive()" in controller
+          assert "team-points-client.js?v=2.15.9-admin-session-recovery" in ui
+          print("PASS recruitment standalone/embedded cache and manual retry contract")
+          PY
