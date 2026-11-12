@@ -34,7 +34,13 @@ final class Auth
             throw new ApiException('A secured administrator session is required.', 401, 'ADMIN_SESSION_REQUIRED');
         }
         $provided = self::header('X-P2K-Admin-Token');
-        if ($provided === '' || !hash_equals($expected, $provided)) {
+        // When a previously authenticated browser session has expired, no
+        // legacy machine token is sent. Give the secured client a recoverable
+        // 401 instead of ADMIN_AUTH_FAILED (which it must not retry).
+        if ($provided === '') {
+            throw new ApiException('The secured Team Points administrator session has expired. Please reconnect.', 401, 'ADMIN_SESSION_REQUIRED');
+        }
+        if (!hash_equals($expected, $provided)) {
             throw new ApiException('Administrator authorization failed.', 403, 'ADMIN_AUTH_FAILED');
         }
     }
@@ -58,9 +64,24 @@ final class Auth
     public static function createAdminSession(string $username): string
     {
         self::startSession(true);
+        $username = strtolower(trim($username));
+        $existingUser = (string)($_SESSION[self::SESSION_USERNAME] ?? '');
+        $existingCsrf = (string)($_SESSION[self::SESSION_CSRF] ?? '');
+        $expiresAt = (int)($_SESSION[self::SESSION_EXPIRES] ?? 0);
+        if ($username !== '' && $existingUser === $username
+            && $existingCsrf !== '' && $expiresAt > time()) {
+            // A second iframe/tab connecting as the SAME already-authorized
+            // administrator must not invalidate every outstanding CSRF token.
+            // Sliding expiry is still refreshed on each authenticated access.
+            $_SESSION[self::SESSION_EXPIRES] = time() + self::sessionLifetime();
+            return $existingCsrf;
+        }
+
+        // First authentication, expired session, or identity switch:
+        // regenerate the session ID to prevent fixation.
         session_regenerate_id(true);
         $csrf = bin2hex(random_bytes(24));
-        $_SESSION[self::SESSION_USERNAME] = strtolower(trim($username));
+        $_SESSION[self::SESSION_USERNAME] = $username;
         $_SESSION[self::SESSION_CSRF] = $csrf;
         $_SESSION[self::SESSION_EXPIRES] = time() + self::sessionLifetime();
         return $csrf;
