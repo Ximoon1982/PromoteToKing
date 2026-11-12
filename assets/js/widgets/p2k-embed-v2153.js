@@ -67,7 +67,7 @@
     const payload=await get(`${TROPHIES}?action=list`);
     const records=Array.isArray(payload.records)?payload.records:[];
     if(!records.length){main.innerHTML='<div class="p2kw-empty">No published trophies are available yet.</div>';setFoot('Trophy Gallery');return;}
-    const limit=Math.max(1,Math.min(20,settings.limit));let selected=records.slice(0,limit);
+    let selected=[...records]; // All published trophies; only the active image is loaded.
     if(settings.mode==='random'){
       // Stable daily rotation: different days feature different trophies without
       // making the widget jump to a different item on each page refresh.
@@ -95,7 +95,9 @@
       const art=[media(t.vignette_media_id),link(t.vignette_url),media(t.modal_media_id),link(t.modal_url),legacy]
         .filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i);
       const title=t.title||t.competition||'Trophy';const badge=t.award_date?date(t.award_date+'T12:00:00Z'):'Achievement';
-      const safeLink=link(t.award_page||t.competition_page||'');
+      const galleryUrl=new URL('trophies/',ROOT);
+      if(t.id)galleryUrl.searchParams.set('trophyId',String(t.id));
+      const safeLink=t.id?galleryUrl.href:link(t.award_page||t.competition_page||'');
       main.innerHTML=`<div class="p2kw-label p2kw-center">${esc(t.league||t.competition||'Club achievement')}</div><div class="p2kw-trophy">${art.length?`<img src="${esc(art[0])}" data-trophy-image alt="${esc(title)}" loading="lazy">`:'<span class="p2kw-trophy-fallback" aria-hidden="true">🏆</span>'}</div><div class="p2kw-trophy-name">${esc(title)}</div><div class="p2kw-small p2kw-center">${esc(badge)}</div><div class="p2kw-toolbar"><button type="button" data-prev aria-label="Previous trophy">‹</button><span class="p2kw-small">${index+1} / ${selected.length}</span><button type="button" data-next aria-label="Next trophy">›</button></div>${safeLink?`<div class="p2kw-center" style="margin-top:8px"><a class="p2kw-action" href="${esc(safeLink)}" target="_blank" rel="noopener noreferrer">View achievement</a></div>`:''}`;
       const image=main.querySelector('[data-trophy-image]');
       if(image){let alternative=1;image.onerror=()=>{if(alternative<art.length)image.src=art[alternative++];else{image.onerror=null;image.replaceWith(Object.assign(document.createElement('span'),{className:'p2kw-trophy-fallback',textContent:'🏆'}));}};}
