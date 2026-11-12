@@ -51,10 +51,10 @@ const playerHeader=()=>'<form class="p2kw-search" id="p2kwPlayerForm"><input id=
 function playerHome(data){
  const daily=(Array.isArray(data.daily)?data.daily:[]).slice(0,Math.min(5,config.limit||5));
  const arena=config.showArena===false?[]:(Array.isArray(data.arena)?data.arena:[]).slice(0,Math.min(5,config.limit||5));
- function leaders(items){return items.map((p,i)=>'<div class="p2kw-entry"><span class="p2kw-chip">'+(i+1)+'</span><div class="p2kw-entry-main"><button type="button" class="p2kw-player-link" data-username="'+esc(p.username)+'">'+esc(p.username)+'</button></div><span class="p2kw-chip">'+esc(num(p.points))+'</span></div>').join('')||'<div class="p2kw-notice">No published leaderboard rows.</div>'}
+ function leaders(items){return items.map((p,i)=>'<div class="p2kw-entry"><span class="p2kw-leader-position">'+(i+1)+'</span><div class="p2kw-entry-main"><button type="button" class="p2kw-player-link" data-username="'+esc(p.username)+'">'+esc(p.username)+'</button></div><strong class="p2kw-leader-score">'+esc(num(p.points))+'</strong></div>').join('')||'<div class="p2kw-notice">No published leaderboard rows.</div>'}
  main.innerHTML=playerHeader()+'<div class="p2kw-subhead"><span>Daily · Top '+daily.length+'</span><span class="p2kw-small">Team Points</span></div>'+leaders(daily)
  +(config.showArena===false?'':'<div class="p2kw-subhead"><span>MCA Arenas · Top '+arena.length+'</span><span class="p2kw-small">Live points</span></div>'+leaders(arena))
- +'<div class="p2kw-notice">Current members · Published Green / MCA totals</div>';
+;
  bindPlayerSearch();main.querySelectorAll('[data-username]').forEach(el=>el.onclick=()=>{const input=main.querySelector('#p2kwPlayerSearch');input.value=el.dataset.username;void lookupPlayer(el.dataset.username)});notify();
 }
 function showPlayer(data){
@@ -66,25 +66,27 @@ function showPlayer(data){
  if(activePlayerTab==='daily'){
    const overall=pos.overall||{},month=pos.month||{},quarter=pos.quarter||{},last30=pos.last30||{};
    const change=Number(overall.position_change),valid=overall.position_change!==null&&overall.position_change!==undefined;
-   details='<div class="p2kw-total-row"><div><div class="p2kw-label">Daily Team Points</div><div class="p2kw-big">'+esc(num(daily.points))+'</div></div><span class="p2kw-chip">#'+esc(num(daily.team_position))+' overall</span></div>'
+   details='<div class="p2kw-total-row"><div><div class="p2kw-label">Daily Team Points</div><div class="p2kw-big">'+esc(num(daily.points))+'</div></div><div class="p2kw-big-position"><strong>#'+esc(num(daily.team_position))+'</strong><small>Overall</small></div></div>'
     +miniGrid([['This month rank',month.team_position],['This quarter rank',quarter.team_position],['Last 30d pts',last30.points]])
     +row('Overall leaderboard evolution (1m)',valid?(change>0?'↑ '+change:change<0?'↓ '+Math.abs(change):'— No change'):'—')
-    +(overall.previous_position!=null?row('Rank 1 month ago','#'+num(overall.previous_position)):'')
-    +'<div class="p2kw-standings-note">Monthly/quarterly standings use the current member population and finished Daily points in the selected period.</div>';
+    +(overall.previous_position!=null?row('Rank 1 month ago','#'+num(overall.previous_position)):'');
  }else{
    if(!live?.available){details='<p class="p2kw-empty">No published Arena score for this current member.</p>'}
    else {
      const p=arenaPeriods||{};
-     details='<div class="p2kw-total-row"><div><div class="p2kw-label">Arena / Live points</div><div class="p2kw-big">'+esc(num(live.points))+'</div></div><span class="p2kw-chip">#'+esc(num(live.team_position))+' overall</span></div>'
+     details='<div class="p2kw-total-row"><div><div class="p2kw-label">Arena / Live points</div><div class="p2kw-big">'+esc(num(live.points))+'</div></div><div class="p2kw-big-position"><strong>#'+esc(num(live.team_position))+'</strong><small>Overall</small></div></div>'
        +miniGrid([['Month rank',p.month?.rank],['Quarter rank',p.quarter?.rank],['Last 30d pts',p.last30?.points]])
-       +'<div class="p2kw-standings-note">'+(p.loading?'Loading period-specific arena standings…':'Arena periods are calculated from dated MCA Results CSVs. Missing data is shown as —.')+'</div>';
+       +'<div class="p2kw-subhead"><span>Best arena results</span></div>'
+       +miniGrid([['Best arena finish',live.best_rank==null?'—':'#'+num(live.best_rank)],['Arena participations',live.arenas],['Best win streak',live.best_streak]])
+       +row('Longest arena participation streak',p.streaks?.longest_participation_streak??'—')
+       +row('Current arena participation streak',p.streaks?.current_participation_streak??'—');
    }
  }
  const tUrl=new URL('Tournaments.html',ROOT);tUrl.searchParams.set('player',user);tUrl.searchParams.set('panel','tournaments');
  main.innerHTML=playerHeader()+'<div class="p2kw-subhead"><span>'+esc(user)+'</span><button id="p2kwTopButton" type="button" class="p2kw-mini-button">Top 5</button></div>'
  +'<div class="p2kw-ranks">'+rankCard('Daily team rank',daily.rank,'daily')+rankCard('Live arena rank',live?.rank,'live')+'</div>'
  +tab+details
- +(config.showMedals!==false?'<div class="p2kw-subhead"><span><a class="p2kw-title-link" href="'+esc(tUrl.href)+'" target="_blank" rel="noopener">Tournament medals</a></span><span class="p2kw-small">Podiums</span></div><div class="p2kw-medals">'+medal('🥇',medals.gold)+medal('🥈',medals.silver)+medal('🥉',medals.bronze)+'</div>':'');
+ +(activePlayerTab==='daily'&&config.showMedals!==false?'<div class="p2kw-subhead"><span><a class="p2kw-title-link" href="'+esc(tUrl.href)+'" target="_blank" rel="noopener">Tournament medals</a></span><span class="p2kw-small">Podiums</span></div><div class="p2kw-medals">'+medal('🥇',medals.gold)+medal('🥈',medals.silver)+medal('🥉',medals.bronze)+'</div>':'');
  bindPlayerSearch();main.querySelector('#p2kwTopButton').onclick=()=>{currentUser='';void loadPlayerHome()};
  main.querySelectorAll('[data-scoretab]').forEach(b=>b.onclick=()=>{activePlayerTab=b.dataset.scoretab;showPlayer(data);if(activePlayerTab==='arena'&&arenaPeriods===null&&live?.available)void loadArenaPeriods(user,playerEpoch)});
  notify();
@@ -121,6 +123,17 @@ async function loadArenaPeriods(user,epoch){
    }catch(error){if(epoch!==playerEpoch)return;console.warn('P2K widget arena period unavailable:',tag,error);arenaPeriods[tag]=null}
    if(epoch===playerEpoch&&activePlayerTab==='arena')showPlayer(playerData);
  }
+ // All-time leader search uses canonical, identity-reconciled MCA Results.
+ // Do not infer participation streaks from individual CSV filenames in the browser.
+ try{
+   const history=await get(ARENAS,{section:'leaders',filter:'current',search:user,sort:'points',direction:'desc'},24000);
+   if(epoch!==playerEpoch)return;
+   const detail=(Array.isArray(history.leaders)?history.leaders:[]).find(x=>key(x.username)===key(user));
+   arenaPeriods.streaks=detail?{
+     longest_participation_streak:detail.longest_participation_streak??null,
+     current_participation_streak:detail.current_participation_streak??null
+   }:null;
+ }catch(error){if(epoch!==playerEpoch)return;console.warn('P2K widget MCA participation streaks unavailable',error);arenaPeriods.streaks=null}
  arenaPeriods.loading=false;if(epoch===playerEpoch&&activePlayerTab==='arena')showPlayer(playerData);
 }
 async function lookupPlayer(name){
@@ -132,13 +145,13 @@ async function lookupPlayer(name){
    const response=await get(HALL,{username:requested},24000);
    if(epoch!==playerEpoch)return;
    playerData=response;activePlayerTab='daily';periodData={};arenaPeriods=null;
-   if(response.found){currentUser=String(response.username||requested);setStatus('LIVE');setFoot('Green Daily · MCA Results · tournament archive');showPlayer(response);void loadDailyPeriods(currentUser,epoch)}
+   if(response.found){currentUser=String(response.username||requested);setStatus('LIVE');setFoot('');showPlayer(response);void loadDailyPeriods(currentUser,epoch)}
    else{setStatus('NO MATCH');showPlayer(response)}
  }catch(error){if(epoch!==playerEpoch)return;setStatus('Unavailable');main.innerHTML=playerHeader()+'<p class="p2kw-empty">'+esc(error.message||'Player data unavailable')+'</p>';bindPlayerSearch()}
 }
 async function loadPlayerHome(){
  const epoch=++playerEpoch;playerData=null;periodData={};arenaPeriods=null;activePlayerTab='daily';setStatus('Loading…');
- try{const response=await get(SPOT,{action:'spotlight-leaders'});if(epoch!==playerEpoch)return;setStatus('LIVE');setFoot('Current members · Green + published MCA Results');playerHome(response)}
+ try{const response=await get(SPOT,{action:'spotlight-leaders'});if(epoch!==playerEpoch)return;setStatus('LIVE');setFoot('');playerHome(response)}
  catch(error){setStatus('Unavailable');announce('Player leaderboards are temporarily unavailable: '+(error.message||error))}
 }
 const tour={recent:[],selected:0,medalPage:1,search:'',searchPage:1,searchResults:[],pagination:{page:1,pages:1,total:0},epoch:0};
