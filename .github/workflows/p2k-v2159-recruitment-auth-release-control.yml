@@ -1,4 +1,5 @@
 name: P2K v2.15.9 Recruitment archive session Release Control upload
+# Requalified with storage diagnostics and Unicode-safe no-mbstring regression.
 on:
   push:
     paths:
