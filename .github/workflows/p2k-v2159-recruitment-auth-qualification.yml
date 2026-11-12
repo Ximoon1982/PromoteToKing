@@ -17,12 +17,14 @@ jobs:
         run: |
           set -euo pipefail
           php -l server/team-points/src/Auth.php
+          php -l server/team-points/src/RecruitmentHistoryStore.php
           php -l server/team-points/public/recruitment-history.php
           php -l server/team-points/public/session.php
           node --check assets/js/shared/team-points-client.js
           node --check assets/js/pages/recruit-match.js
           node --check assets/js/pages/recruit-match-v2121-bootstrap.js
           php tests/test_v2159_admin_session_reconnect.php
+          php tests/test_v2159_recruitment_storage_diagnostics.php
           node tests/test_v2159_team_points_client_recovery.cjs
           php tests/recruitment_history_v2152_test.php
           python3 tests/test_v2152_recruitment_history.py
