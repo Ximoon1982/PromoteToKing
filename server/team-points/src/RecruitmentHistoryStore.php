@@ -27,7 +27,10 @@ final class RecruitmentHistoryStore
     public static function fromConfig(array $config): self
     {
         $runtime=rtrim(trim((string)($config['storage']['runtime_dir']??'')),'/\\');
-        if($runtime==='') $runtime=dirname(P2K_TP_ROOT,2).'/data/runtime-v280';
+        // __DIR__ is server/team-points/src. P2K_TP_ROOT contains a literal
+        // '/src/..' suffix, so dirname(P2K_TP_ROOT,2) incorrectly points
+        // under server/team-points instead of the persistent site root.
+        if($runtime==='') $runtime=dirname(__DIR__,3).'/data/runtime-v280';
         return new self($runtime.'/recruitment-history');
     }
 
