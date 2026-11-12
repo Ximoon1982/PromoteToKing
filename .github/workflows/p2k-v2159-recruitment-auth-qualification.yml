@@ -28,6 +28,7 @@ jobs:
           php tests/test_v2159_recruitment_default_runtime_path.php
           php -n tests/test_v2159_recruitment_storage_diagnostics.php
           node tests/test_v2159_team_points_client_recovery.cjs
+          node tests/test_v2159_recruit_results_pagination.cjs
           php tests/recruitment_history_v2152_test.php
           python3 tests/test_v2152_recruitment_history.py
           python3 - <<'PY'
