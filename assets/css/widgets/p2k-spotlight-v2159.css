@@ -62,7 +62,7 @@
 .p2kw-hof-subhead select{width:89px;max-width:89px;min-width:89px;padding:4px 1px 4px 5px;border:1px solid var(--border);border-radius:5px;background:var(--card);color:var(--text);font:800 9px Arial}
 .p2kw-hof-list{min-width:0}
 .p2kw-hof-list.is-expanded{max-height:min(645px,calc(100vh - 270px));min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;overscroll-behavior:contain}
-.p2kw-hof-more{display:block;width:100%;padding:7px 5px;margin:5px 0 12px}
+.p2kw-hof-more{display:block;min-height:0;width:auto;padding:1px 0;margin:1px 0 5px auto;border:0;border-radius:0;background:transparent;color:var(--muted);text-decoration:underline;text-underline-offset:2px;font:700 9px/1.2 Arial;cursor:pointer}.p2kw-hof-more:hover{color:var(--gold)}
 .p2kw-hof-pagination{margin:7px 0;min-height:28px}
 .p2kw-hof-pagination span{font-size:9px}
 .p2kw-hof-list .p2kw-entry{min-height:29px}
