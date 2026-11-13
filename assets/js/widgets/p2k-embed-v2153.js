@@ -60,7 +60,7 @@
     const league=soon.filter(classifyMatch),friendlies=soon.length-league.length;
     const list=soon.slice(0,Math.min(10,settings.limit));
     main.innerHTML=`<div class="p2kw-total-row"><div><div class="p2kw-label">Starting in ${esc(settings.window)}</div><div class="p2kw-big">${number(soon.length)}</div></div><div class="p2kw-small">${number(upcoming.length)} total scheduled</div></div>${seg([['24h','24h'],['48h','48h'],['72h','72h'],['7d','7d']],settings.window,()=>{})}<div class="p2kw-metric-grid">${kv('League',number(league.length))}${kv('Friendly',number(friendlies))}${kv('Next starts',upcoming.length?date(Number(upcoming[0].startTime)*1000):'—')}</div><div class="p2kw-subhead"><span>Upcoming registration</span><span class="p2kw-small">Earliest first</span></div>${list.map(m=>`<div class="p2kw-entry"><div class="p2kw-entry-main"><strong title="${esc(m.name||'')}">${esc(m.opponentName||m.name||'Match')}</strong><small>${esc(date(Number(m.startTime)*1000))} · ${classifyMatch(m)?'League':'Friendly'}</small></div>${link(m.url)?`<a class="p2kw-action" href="${esc(link(m.url))}" target="_blank" rel="noopener noreferrer">Join</a>`:''}</div>`).join('')||'<div class="p2kw-empty">No matches starting in this window.</div>'}<div class="p2kw-notice">Shows verified upcoming registrations. Player shortfalls are not inferred without live roster data.</div>`;
-    wire(async v=>{settings.window=v;await recruitmentRadar();});setFoot('Source: current Green match catalogue');
+    wire(async v=>{settings.window=v;await recruitmentRadar();});setFoot('');
   }
 
   async function trophySpotlight(){
