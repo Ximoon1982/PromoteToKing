@@ -51,12 +51,11 @@
   };
   const range=detail=>{
     if(!detail?.verified)return '—';
-    if(detail.minRatingKnown===false&&detail.maxRatingKnown===false)return '—';
-    const min=detail.minRating===null?null:Math.max(0,Number(detail.minRating)||0);
-    const max=Number(detail.maxRating)||0;
-    if(detail.maxRatingKnown===false)return min===null?'—':min+'–?';
-    if(!max)return min===null?'?+':min?min+'+':'Open';
-    return min===null?'?–'+max:min?min+'–'+max:'U'+max;
+    // Chess.com omits the minimum setting for an unrestricted 0 rating floor.
+    const min=Math.max(0,Number(detail.minRating)||0),max=Number(detail.maxRating)||0;
+    if(detail.maxRatingKnown===false)return max>0?(min?min+'–'+max:'U'+max):'Rating cap unavailable';
+    if(!max)return min?min+'+':'Open';
+    return min?min+'–'+max:'U'+max;
   };
   function availableWithin(windowLabel){
     const now=Date.now()/1000,max=now+(hoursFor[windowLabel]||48)*3600;
@@ -127,7 +126,10 @@
     if(!state.username)return true;
     if(!state.profile||!detail?.verified)return false;
     if(detail.alreadyRegistered||detail.locked===true)return false;
-    if(detail.minRatingKnown===false||detail.maxRatingKnown===false)return false;
+    // Missing minimum is 0, not a reason to suppress the match.
+    // A missing maximum cap is genuinely unverified: keep the match visible
+    // provisionally, with a clear caveat, rather than returning an empty list.
+    if(detail.maxRatingKnown===false&&Number(detail.maxRating)>0)return false;
     const maxPlayers=Number(detail.maximumPlayers)||0;
     if(maxPlayers>0&&Number(detail.oursCount)>=maxPlayers)return false;
     const rating=state.profile[ratingKind(detail)];
@@ -157,6 +159,9 @@
       })();
       const tc=timeControl(info?.timeControl||m.timeControl);
       const attr=range(info);
+      const provisional=state.username&&info?.verified&&info.maxRatingKnown===false;
+      const eligibilityNote=provisional?' · rating cap not confirmed':'';
+
       const needsText=info?.verified&&need.verified?(need.baseline>0?number(need.baseline)+' short':need.priority?'Lineup improvement needed':'No additional players needed'):'';
       return '<div class="p2kw-entry p2kw-radar-entry"><div class="p2kw-entry-main">'+
         '<strong title="'+enc(m.name||name)+'">'+enc(name)+'</strong>'+
@@ -165,7 +170,8 @@
           '<span class="p2kw-radar-pill '+(league(m)?'is-league':'is-friendly')+'">'+(league(m)?'League':'Friendly')+'</span>'+
           '<span class="p2kw-radar-rating">'+enc(attr)+'</span>'+
           '<span class="p2kw-radar-control">'+enc(tc)+'</span></div>'+
-        (needsText?'<small class="p2kw-radar-need">'+enc(needsText)+'</small>':'')+
+        (needsText?'<small class="p2kw-radar-need">'+enc(needsText+eligibilityNote)+'</small>':
+          provisional?'<small class="p2kw-radar-need">Rating cap not confirmed in Green</small>':'')+
         '</div>'+(safeUrl?'<a class="p2kw-action" href="'+enc(safeUrl)+'" target="_blank" rel="noopener noreferrer">Join</a>':'')+
         '</div>';
     }).join('');
