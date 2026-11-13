@@ -157,6 +157,8 @@ jobs:
           tool=shutil.which("magick") or shutil.which("convert")
           if tool:
               subprocess.run([tool,str(source),"-filter","Lanczos","-resize","512x512","-quality","88",str(out)],check=True)
+          elif shutil.which("ffmpeg"):
+              subprocess.run(["ffmpeg","-nostdin","-loglevel","error","-y","-i",str(source),"-vf","scale=512:512:flags=lanczos","-frames:v","1",str(out)],check=True)
           else:
               try:
                   from PIL import Image
