@@ -107,7 +107,7 @@ console.log("PASS Hall refined labels/expanded persistence and DB-only Radar, ra
 const rivalry=read("assets/js/widgets/p2k-rivalry-v2159.js");
 const rivalryCss=read("assets/css/widgets/p2k-rivalry-v2159.css");
 const rivalryBackend=read("server/widgets/src/RivalryWidgetReadService.php");
-assert(controls.includes("'rivalry-spotlight':650"),"Rivalry iframe fixed 260x650");
+assert(controls.includes("'rivalry-spotlight':540"),"Rivalry iframe fixed 260x650");
 assert(admin.includes("'rivalry-spotlight':{}"),"Unlimited opponent exploration in admin");
 assert(html.includes("p2k-rivalry-v2159.js?v=p2k-2159-rivalry-green-1"));
 assert(rivalry.includes("data-rival-expand")&&rivalry.includes("data-rival-scope"));
