@@ -29,10 +29,10 @@ with sync_playwright() as p:
       });
       window.shell.adminShellActivate();
     }''')
-    assert page.locator('#adminShellDetailTabs a').count()==9
+    assert page.locator('#adminShellDetailTabs a').count()==10
     assert page.locator('#adminShellNativeDetailHost').get_attribute('data-native-detail')=='p2k-widget-club-pulse'
     assert page.evaluate('window.lastMountedWidget')=='club-pulse'
-    for tab,kind in [('match-showcase','match-showcase'),('recruitment-radar','p2k-widget-recruitment-radar'),('trophy-spotlight','p2k-widget-trophy-spotlight'),('rivalry-spotlight','p2k-widget-rivalry-spotlight'),('club-progress','p2k-widget-club-progress'),('around-the-world','p2k-widget-around-the-world'),('player-spotlight','p2k-widget-player-spotlight'),('tournament-winners','p2k-widget-tournament-winners')]:
+    for tab,kind in [('match-showcase','match-showcase'),('recruitment-radar','p2k-widget-recruitment-radar'),('trophy-spotlight','p2k-widget-trophy-spotlight'),('rivalry-spotlight','p2k-widget-rivalry-spotlight'),('club-progress','p2k-widget-club-progress'),('around-the-world','p2k-widget-around-the-world'),('player-spotlight','p2k-widget-player-spotlight'),('tournament-winners','p2k-widget-tournament-winners'),('hall-of-fame','p2k-widget-hall-of-fame')]:
         page.evaluate('(tab)=>{window.shellState.adminDetailTab=tab;window.shell.adminShellActivate()}',tab)
         assert page.locator('#adminShellNativeDetailHost').get_attribute('data-native-detail')==kind
     assert page.evaluate('window.showcaseMounted===true')
@@ -42,5 +42,5 @@ with sync_playwright() as p:
     assert markup.find('data-admin-shell-card="widgets"')!=-1
     assert 'data-v2122-events-showcase' not in markup, 'Existing showcase must not be duplicated under Competitions'
     assert len(page.errors if hasattr(page,'errors') else [])==0
-    print('PASS: Team > Widgets card, 9 subtabs, Match Showcase migration, and native routing')
+    print('PASS: Team > Widgets card, 10 subtabs, Match Showcase migration, and native routing')
     browser.close()
