@@ -165,6 +165,12 @@ CREATE TABLE IF NOT EXISTS p2k_g_matches (
   time_control VARCHAR(64) NULL,
   max_rating SMALLINT UNSIGNED NULL,
   max_rating_state ENUM('unknown','capped','open','unavailable') NOT NULL DEFAULT 'unknown',
+  -- Additive recruitment facts from the same Green match-detail refresh.
+  -- NULL is "not observed"; 0 is an explicitly unrestricted value.
+  min_rating SMALLINT UNSIGNED NULL,
+  min_team_players SMALLINT UNSIGNED NULL,
+  max_team_players SMALLINT UNSIGNED NULL,
+  registration_locked TINYINT(1) NULL,
   start_epoch BIGINT NULL,
   end_epoch BIGINT NULL,
   board_count INT UNSIGNED NULL,
