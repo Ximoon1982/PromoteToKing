@@ -25,6 +25,7 @@ final class GreenRepository
             'index_time_class','index_result','club_verified','verified_club_slug',
             'club_side','scoring_eligible','exclusion_reason','trusted_legacy',
             'fact_source','max_rating','max_rating_state',
+            'min_rating','min_team_players','max_team_players','registration_locked',
         ],
         'p2k_g_state'=>[
             'public_read_target','migration_phase','gab_status','gab_phase',
@@ -171,6 +172,10 @@ final class GreenRepository
             'fact_source'=>"VARCHAR(32) NOT NULL DEFAULT 'api' AFTER trusted_legacy",
             'max_rating'=>"SMALLINT UNSIGNED NULL AFTER time_control",
             'max_rating_state'=>"ENUM('unknown','capped','open','unavailable') NOT NULL DEFAULT 'unknown' AFTER max_rating",
+            'min_rating'=>"SMALLINT UNSIGNED NULL AFTER max_rating_state",
+            'min_team_players'=>"SMALLINT UNSIGNED NULL AFTER min_rating",
+            'max_team_players'=>"SMALLINT UNSIGNED NULL AFTER min_team_players",
+            'registration_locked'=>"TINYINT(1) NULL AFTER max_team_players"
         ];
         foreach($columns as $name=>$definition){
             if(!$this->columnExists('p2k_g_matches',$name))$this->core->exec('ALTER TABLE p2k_g_matches ADD COLUMN '.$name.' '.$definition);
@@ -1103,6 +1108,27 @@ final class GreenRepository
         $settings=is_array($payload['settings']??null)?$payload['settings']:[];
         $cap=$this->ratingCapObservation($payload,$old['max_rating']??null,(string)($old['max_rating_state']??'unknown'));
         $maxRating=$cap['max_rating'];$maxRatingState=$cap['state'];
+        // Persist only registration facts supplied by the same Green match-detail
+        // fetch. NULL means unknown, not unrestricted or unlocked.
+        $readOptional=static function(array $keys)use($settings,$payload):?int{
+            foreach($keys as $key){
+                $v=$settings[$key]??$payload[$key]??null;
+                if($v===null||$v===''||!is_numeric($v))continue;
+                $n=(int)$v;return $n>=0&&$n<=65535?$n:null;
+            }
+            return null;
+        };
+        $minRating=$readOptional(['min_rating','minimum_rating']);
+        $minPlayers=$readOptional(['min_team_players','minimum_players']);
+        $maxPlayers=$readOptional(['max_team_players','maximum_players']);
+        $registrationLocked=null;
+        foreach(['locked','is_locked','registration_locked'] as $flag){
+            if(array_key_exists($flag,$club)){
+                $val=filter_var($club[$flag],FILTER_VALIDATE_BOOLEAN,FILTER_NULL_ON_FAILURE);
+                $registrationLocked=$val===null?null:(int)$val;
+                break;
+            }
+        }
         $timeClass=strtolower(trim((string)($settings['time_class']??$payload['time_class']??'')));
         $boards=max(0,(int)($payload['boards']??0));
         $score=is_numeric($club['score']??null)?(float)$club['score']:null;$oppScore=is_numeric($opp['score']??null)?(float)$opp['score']:null;
@@ -1122,8 +1148,8 @@ final class GreenRepository
             $exclusion=$old['exclusion_reason']??null;
         }
 
-        $q=$this->core->prepare('UPDATE p2k_g_matches SET web_url=?,name=?,opponent_name=?,opponent_url=?,status=?,club_verified=1,verified_club_slug=?,club_side=?,scoring_eligible=?,exclusion_reason=?,fact_source=?,rules=?,time_class=?,time_control=?,max_rating=?,max_rating_state=?,start_epoch=?,end_epoch=CASE WHEN trusted_legacy=1 THEN end_epoch ELSE ? END,board_count=?,p2k_score=?,opponent_score=?,result=?,competition_points=?,is_void=?,payload_hash=?,last_http_status=?,last_observed_at=UTC_TIMESTAMP(),last_verified_at=UTC_TIMESTAMP(),retry_after=NULL WHERE match_id=?');
-        $q->execute([(string)($payload['url']??''),(string)($payload['name']??''),(string)($opp['name']??''),(string)($opp['url']??$opp['@id']??''),$status,$this->clubSlug,'team_'.$clubIdx,$eligible?1:0,$exclusion,$trusted?'trusted_legacy_csv':'api',(string)($settings['rules']??''),$timeClass,(string)($settings['time_control']??$settings['time_per_move']??''),$maxRating,$maxRatingState,is_numeric($payload['start_time']??null)?(int)$payload['start_time']:null,is_numeric($payload['end_time']??null)?(int)$payload['end_time']:null,$boards?:null,$score,$oppScore,$result,$points,$void?1:0,$hash,$httpStatus,$id]);
+        $q=$this->core->prepare('UPDATE p2k_g_matches SET web_url=?,name=?,opponent_name=?,opponent_url=?,status=?,club_verified=1,verified_club_slug=?,club_side=?,scoring_eligible=?,exclusion_reason=?,fact_source=?,rules=?,time_class=?,time_control=?,max_rating=?,max_rating_state=?,min_rating=?,min_team_players=?,max_team_players=?,registration_locked=?,start_epoch=?,end_epoch=CASE WHEN trusted_legacy=1 THEN end_epoch ELSE ? END,board_count=?,p2k_score=?,opponent_score=?,result=?,competition_points=?,is_void=?,payload_hash=?,last_http_status=?,last_observed_at=UTC_TIMESTAMP(),last_verified_at=UTC_TIMESTAMP(),retry_after=NULL WHERE match_id=?');
+        $q->execute([(string)($payload['url']??''),(string)($payload['name']??''),(string)($opp['name']??''),(string)($opp['url']??$opp['@id']??''),$status,$this->clubSlug,'team_'.$clubIdx,$eligible?1:0,$exclusion,$trusted?'trusted_legacy_csv':'api',(string)($settings['rules']??''),$timeClass,(string)($settings['time_control']??$settings['time_per_move']??''),$maxRating,$maxRatingState,$minRating,$minPlayers,$maxPlayers,$registrationLocked,is_numeric($payload['start_time']??null)?(int)$payload['start_time']:null,is_numeric($payload['end_time']??null)?(int)$payload['end_time']:null,$boards?:null,$score,$oppScore,$result,$points,$void?1:0,$hash,$httpStatus,$id]);
 
         $boardEligible=$timeClass==='daily'&&!$void&&in_array($status,['registered','in_progress','finished'],true)&&$boards>0;
         if(!$boardEligible){
