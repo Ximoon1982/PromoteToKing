@@ -6,16 +6,12 @@ use PDO;
 use P2K\TeamPoints\ResponseCache;
 
 /**
- * Bounded, read-only Chess.com registration assessment for Recruitment Radar.
- * The source of truth for match inclusion is the verified Green match catalogue.
- * Chess.com match sheets supply current lineup and rating restrictions; cached
- * roster names are never emitted to other visitors in the public API.
+ * Legacy normalization helpers and compatibility readers.
+ * All runtime reads delegate to Green; no visitor-triggered Chess.com fetches.
  */
 final class RecruitmentRadarReadService
 {
     public const BATCH_MAX=4;
-    private const SHEET_TTL=600;
-    private const SHEET_STALE=3600;
 
     public static function username(string $name):string {
         $name=trim($name);
@@ -41,23 +37,7 @@ final class RecruitmentRadarReadService
         return $found;
     }
 
-    public static function readJson(string $url):array {
-        // Only call with internally built Chess.com API paths, never user URLs.
-        $context=stream_context_create(['http'=>[
-            'method'=>'GET','timeout'=>2.5,'ignore_errors'=>true,
-            'header'=>"Accept: application/json\r\nUser-Agent: P2K-RecruitmentRadar/2.15.9\r\n"
-        ]]);
-        $body=@file_get_contents($url,false,$context,0,1500000);
-        $headers=$http_response_header??[];
-        $status=0;
-        foreach($headers as $line)if(preg_match('/^HTTP\/\S+\s+(\d{3})/i',$line,$m))$status=(int)$m[1];
-        if($body===false||$status!==200)throw new \RuntimeException('Chess.com match/profile information temporarily unavailable.');
-        $json=json_decode($body,true);
-        if(!is_array($json))throw new \RuntimeException('Chess.com returned an unreadable response.');
-        return $json;
-    }
-
-    /** Keep the unmodified, cached public match-sheet facts for future username filtering. */
+    /** Pure historical normalization fixture; not used for new live fetches. */
     public static function parseMatch(array $sheet,string $club,int $id,string $defaultTimeControl=''):array {
         $teams=$sheet['teams']??[];
         if(!is_array($teams))$teams=[];
@@ -114,29 +94,12 @@ final class RecruitmentRadarReadService
         return $cached;
     }
 
-    /**
-     * Uses the existing protected filesystem response cache. Network timeouts
-     * never make a guessed match priority look verified.
-     */
-    public static function batch(PDO $core,ResponseCache $cache,string $club,array $ids,string $username='',?callable $fetch=null):array {
-        $allowed=self::validMatchIds($core,$club,$ids,time());
-        $fetch=$fetch??[self::class,'readJson'];
-        $rows=[];
-        foreach($ids as $id){
-            $id=(int)$id;
-            if(!isset($allowed[$id]))continue;
-            try{
-                $key='p2k-radar-match-v2159|'.$club.'|'.$id;
-                $entry=$cache->remember($key,self::SHEET_TTL,static function()use($fetch,$club,$id,$allowed):array{
-                    $sheet=$fetch('https://api.chess.com/pub/match/'.$id);
-                    return self::parseMatch($sheet,$club,$id,$allowed[$id]);
-                },self::SHEET_STALE);
-                $rows[]=self::publicMatch($entry['payload'],$username);
-            }catch(\Throwable $error){
-                $rows[]=['verified'=>false,'matchId'=>$id,'reason'=>'live_match_unavailable','alreadyRegistered'=>false];
-            }
-        }
-        return ['ok'=>true,'rows'=>$rows];
+    /** Compatibility route; cache argument kept for callers, but never fetches. */
+    public static function batch(PDO $core,ResponseCache $cache,string $club,array $ids,string $username='',?callable $fetch=null):array
+    {
+        if($fetch!==null)throw new \LogicException('Recruitment Radar live Chess.com fetches are disabled.');
+        require_once __DIR__.'/RecruitmentRadarGreenReadService.php';
+        return RecruitmentRadarGreenReadService::batch($core,$club,$ids,$username);
     }
 
     public static function playerRatings(array $stats,string $username):array {
@@ -152,14 +115,11 @@ final class RecruitmentRadarReadService
         ];
     }
 
-    public static function player(ResponseCache $cache,string $username,?callable $fetch=null):array {
-        $username=self::username($username);
-        $fetch=$fetch??[self::class,'readJson'];
-        $key='p2k-radar-ratings-v2159|'.strtolower($username);
-        $entry=$cache->remember($key,300,static function()use($fetch,$username):array{
-            $stats=$fetch('https://api.chess.com/pub/player/'.rawurlencode(strtolower($username)).'/stats');
-            return self::playerRatings($stats,$username);
-        },900);
-        return $entry['payload'];
+    public static function player(ResponseCache $cache,string $username,?callable $fetch=null):array
+    {
+        if($fetch!==null)throw new \LogicException('Recruitment Radar live Chess.com fetches are disabled.');
+        require_once __DIR__.'/RecruitmentRadarGreenReadService.php';
+        return RecruitmentRadarGreenReadService::player(\P2K\TeamPoints\PublicReadDatabase::core(),$username);
     }
+
 }
