@@ -123,6 +123,22 @@
         });
       }
 
+      function logValidUsernameSearch(username, synchronized) {
+        // Search events are separate from completed analysis events. Log each
+        // deliberate valid search immediately, including zero results or errors.
+        if (synchronized || !/^[A-Za-z0-9_-]{2,25}$/.test(String(username || "").trim())) return;
+        const endpoint = window.P2K_SITE_CONFIG?.serverStorage?.matchAssistantLogEndpoint;
+        if (!endpoint) return;
+        void fetch(endpoint, {
+          method: "POST", credentials: "same-origin", cache: "no-store",
+          keepalive: true,
+          headers: { "Content-Type": "application/json", "X-P2K-Request": "match-assistant-log" },
+          body: JSON.stringify({ event: "name-search", username: String(username).trim() })
+        }).catch(() => {
+          /* Audit logging must not delay or interrupt match recommendations. */
+        });
+      }
+
       function logCompletedAnalysis(username, matchesFound, synchronized) {
         if (synchronized) return;
         const endpoint = window.P2K_SITE_CONFIG?.serverStorage?.matchAssistantLogEndpoint;
@@ -1290,6 +1306,7 @@
           usernameInput.focus();
           return;
         }
+        logValidUsernameSearch(username, synchronized);
 
         const run = {
           cancelled: false,
