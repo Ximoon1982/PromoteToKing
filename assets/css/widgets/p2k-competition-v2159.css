@@ -1,0 +1,49 @@
+/* P2K Competition composite. Exactly one 260px host iframe, script-free host. */
+/* The child pages remain byte-for-byte the existing Showcase/Radar/Rivals embeds. */
+body[data-widget="competition"] .p2kw-panel{
+  border:0;border-radius:11px;padding:8px 0 0;
+}
+body[data-widget="competition"] .p2kw-head{
+  margin:0 0 4px;padding:0 10px;min-height:23px;
+}
+body[data-widget="competition"] .p2kw-content{
+  flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
+  scrollbar-width:thin;overscroll-behavior:contain;
+}
+body[data-widget="competition"] .p2kw-foot{display:none}
+.p2kw-competition{width:260px;max-width:100%;min-width:0;overflow:hidden}
+.p2kw-competition-tabs{
+  display:flex;width:calc(100% - 10px);margin:2px 5px 8px;
+  padding:2px;gap:2px;min-height:31px;
+}
+.p2kw-competition-tabs button{
+  display:block;flex:1;min-width:0;padding:6px 2px;font-size:10px;line-height:1.1;
+  font-weight:900;text-align:center;white-space:nowrap;cursor:pointer;
+}
+.p2kw-competition-tabs button[aria-selected="true"]{
+  background:linear-gradient(135deg,#d98d18,#f6b73c);
+  color:#17110a;
+}
+.p2kw-competition-tabs button:focus-visible{
+  outline:2px solid var(--blue);outline-offset:2px;
+}
+.p2kw-competition-view{width:260px;max-width:100%;min-width:0;margin:0;padding:0}
+.p2kw-competition-view[hidden]{display:none!important}
+.p2kw-competition-frame{
+  display:block;width:260px;max-width:100%;margin:0;padding:0;border:0;
+  background:transparent;overflow:auto;
+}
+.p2kw-competition-assistant{
+  padding:5px 6px 8px;text-align:center;
+}
+.p2kw-competition-assistant a{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;min-height:29px;padding:5px 7px;
+  border:1px solid color-mix(in srgb,var(--gold) 48%,var(--border));
+  border-radius:7px;background:color-mix(in srgb,var(--gold) 8%,var(--low));
+  color:var(--gold);font-size:10.5px;font-weight:900;text-decoration:none;
+  line-height:1.25;
+}
+.p2kw-competition-assistant a:hover{
+  background:color-mix(in srgb,var(--gold) 16%,var(--low));
+}
