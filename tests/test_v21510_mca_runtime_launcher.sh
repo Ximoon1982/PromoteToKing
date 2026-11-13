@@ -31,6 +31,15 @@ printf '{"mode":"slots","public_release":"%s","public_manifest_sha256":"%s","can
 # Switching the public slot to an older one must immediately switch the CLI worker.
 printf '{"mode":"slots","public_release":"%s","public_manifest_sha256":"%s","candidate_release":"%s"}\n' "$ONE" "$HASH" "$TWO" > "$FAKE/data/runtime-v280/release-control/state.json"
 [[ "$(read_target)" == *"/runtime-trees/$ONE/app/server/team-points/bin/mca-results-sync.php" ]] || { echo 'rollback routing mismatch';exit 1; }
+# One-time bootstrap checks and applies only in an isolated fake physical root.
+printf '#!/usr/bin/env bash\necho old-cron\n' > "$FAKE/cron-mca-arena-v2.10.9.sh"
+bash "$ROOT_REPO/tools/install-mca-cron-dispatcher-v21510.sh" "$FAKE" --check > "$TMP/preflight.out"
+grep -q old-cron "$FAKE/cron-mca-arena-v2.10.9.sh"
+bash "$ROOT_REPO/tools/install-mca-cron-dispatcher-v21510.sh" "$FAKE" --apply > "$TMP/applied.out"
+[[ "$(bash "$FAKE/cron-mca-arena-v2.10.9.sh" --print-target)" == *"/runtime-trees/$ONE/app/server/team-points/bin/mca-results-sync.php" ]] || { echo 'Physical CRON activation did not route to public slot';exit 1; }
+compgen -G "$FAKE/cron-mca-arena-v2.10.9.sh.before-v21510-*" > /dev/null || { echo 'Missing physical launcher backup';exit 1; }
+bash "$ROOT_REPO/tools/install-mca-cron-dispatcher-v21510.sh" "$FAKE" --apply > "$TMP/idempotent.out"
+grep -q 'Already installed' "$TMP/idempotent.out"
 # A malformed public state must fail closed, never silently run stale physical code.
 echo '{"mode":"slots","public_release":"../evil","public_manifest_sha256":"bad"}' > "$FAKE/data/runtime-v280/release-control/state.json"
 if read_target > "$TMP/invalid.out" 2>&1; then echo 'Invalid release accepted';exit 1;fi
