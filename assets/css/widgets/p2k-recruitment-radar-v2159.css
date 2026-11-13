@@ -11,3 +11,14 @@
 .p2kw-radar-entry .p2kw-radar-need{color:var(--gold);font-weight:700}
 .p2kw-radar-entry .p2kw-action{flex:0 0 auto;margin-top:2px}
 .p2kw-radar-hint{font-size:9px;color:var(--muted);line-height:1.35;margin:9px 0 3px}
+
+/* One compact metadata line: UTC date, Showcase-style category accent, rating,
+   daily time control. Nothing in this row causes horizontal iframe overflow. */
+.p2kw-radar-meta{display:flex;align-items:center;flex-wrap:nowrap;gap:3px;white-space:nowrap;overflow:hidden;margin-top:4px;min-width:0;max-width:100%;font-size:8.4px;line-height:1.25;color:var(--muted)}
+.p2kw-radar-meta span{display:block;flex:0 1 auto;min-width:0;white-space:nowrap}
+.p2kw-radar-meta .p2kw-radar-date{flex:0 0 auto}
+.p2kw-radar-meta .p2kw-radar-pill{flex:0 0 auto;border-radius:999px;border:1px solid;padding:2px 4px;font-size:8px;font-weight:900}
+.p2kw-radar-pill.is-league{border-color:rgba(246,183,60,.53);background:rgba(246,183,60,.14);color:var(--gold)}
+.p2kw-radar-pill.is-friendly{border-color:rgba(104,171,204,.5);background:rgba(104,171,204,.13);color:var(--blue)}
+.p2kw-radar-meta .p2kw-radar-rating{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis}
+.p2kw-radar-meta .p2kw-radar-control{flex:0 0 auto}
