@@ -29,7 +29,7 @@ with sync_playwright() as p:
       });
       window.shell.adminShellActivate();
     }''')
-    assert page.locator('#adminShellDetailTabs a').count()==10
+    assert page.locator('#adminShellDetailTabs a').count()==11
     assert page.locator('#adminShellNativeDetailHost').get_attribute('data-native-detail')=='p2k-widget-club-pulse'
     assert page.evaluate('window.lastMountedWidget')=='club-pulse'
     for tab,kind in [('match-showcase','match-showcase'),('recruitment-radar','p2k-widget-recruitment-radar'),('trophy-spotlight','p2k-widget-trophy-spotlight'),('rivalry-spotlight','p2k-widget-rivalry-spotlight'),('club-progress','p2k-widget-club-progress'),('around-the-world','p2k-widget-around-the-world'),('player-spotlight','p2k-widget-player-spotlight'),('tournament-winners','p2k-widget-tournament-winners'),('hall-of-fame','p2k-widget-hall-of-fame'),('competition','p2k-widget-competition')]:
