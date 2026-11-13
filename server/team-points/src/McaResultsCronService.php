@@ -247,8 +247,22 @@ final class McaResultsCronService
         // 100; choosing by arena ID alone would starve missing Results sources.
         // NOT EXISTS is intentionally evaluated against *processed* files, not
         // downloads/uploads still waiting for validation and scoring.
+        // Recently completed arenas can have delayed Chess.com publication: retry
+        // only missing-Results failures every 30 minutes for the first seven days.
+        // Old or enrichment-only errors stay manual, and retries retain exact page progress.
         $q=$this->pdo->prepare("SELECT a.* FROM p2k_lr_arena_acquisition a
-            WHERE a.club_slug=? AND a.status='pending'
+            WHERE a.club_slug=? AND (
+                a.status='pending'
+                OR (a.status='error'
+                    AND a.stage IN ('results','clubs','players')
+                    AND a.event_date >= DATE_SUB(UTC_DATE(), INTERVAL 7 DAY)
+                    AND a.updated_at <= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 MINUTE)
+                    AND NOT EXISTS (
+                        SELECT 1 FROM p2k_lr_files ready
+                        WHERE ready.club_slug=a.club_slug AND ready.arena_id=a.arena_id
+                          AND ready.status='processed' AND ready.row_count>0
+                    ))
+            )
             ORDER BY CASE WHEN NOT EXISTS (
                 SELECT 1 FROM p2k_lr_files f
                 WHERE f.club_slug=a.club_slug AND f.arena_id=a.arena_id
