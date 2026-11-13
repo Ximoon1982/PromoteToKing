@@ -229,6 +229,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: p2k-radar-hall-refinements-v2159-release-control
-          path: dist/P2K_Hall_of_Fame_v2159_ReleaseControl_Upload.zip
+          path: dist/P2K_Radar_Hall_Refinements_v2159_ReleaseControl_Upload.zip
           if-no-files-found: error
           retention-days: 7
