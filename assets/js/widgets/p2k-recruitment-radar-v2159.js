@@ -87,7 +87,7 @@
         const candidate=Math.max(min,Math.min(max||Infinity,2000));
         const projected=[...ours,candidate].sort((a,b)=>b-a);
         const improved=lineup.compareRecruitmentLineupsCheap(projected,other,maximum);
-        const targetShare=league(match)?.55:.5;
+        const targetShare=league(match) ? 0.55 : 0.50;
         strengthen=Number.isFinite(current.expectedScoreShare)
           &&Number.isFinite(improved.expectedScoreShare)
           &&current.expectedScoreShare<targetShare-.002
