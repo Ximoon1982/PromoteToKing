@@ -1,5 +1,5 @@
-name: P2K v2.15.9 Rivalry/Radar/Search audit corrections
-# Cumulative v2.15.9 candidate preserving existing MCA, recruitment and nine widgets.
+name: P2K v2.15.9 Competition combined widget qualification
+# Cumulative v2.15.9 candidate preserving MCA/recruitment, original Showcase and nine existing widgets.
 on:
   push:
     branches:
@@ -29,16 +29,20 @@ on:
       - 'assets/js/pages/find-match.js'
       - 'assets/js/pages/club-intelligence.js'
       - 'assets/js/widgets/p2k-rivalry-v2159.js'
+      - 'assets/js/widgets/p2k-competition-v2159.js'
       - 'assets/js/shared/recruitment-lineup-core.js'
       - 'assets/js/widgets/p2k-progress-chart-v2159.js'
       - 'assets/css/widgets/p2k-embed-v2153.css'
       - 'assets/css/widgets/p2k-recruitment-radar-v2159.css'
       - 'assets/css/widgets/p2k-rivalry-v2159.css'
+      - 'assets/css/widgets/p2k-competition-v2159.css'
       - 'tests/widget_polish_v2159.test.cjs'
       - 'tests/widget_progress_v2159.test.cjs'
       - 'tests/widget_hall_of_fame_v2159.test.cjs'
       - 'tests/widget_recruitment_radar_v2159.test.cjs'
       - 'tests/widget_rivalry_v2159.test.cjs'
+      - 'tests/widget_competition_v2159.test.cjs'
+      - 'tests/admin_widgets_shell_v2153.py'
       - 'tests/test_v2159_green_radar_rivalry.php'
       - 'tests/test_v2159_search_audit.php'
       - 'tests/test_v2159_rivalry_league_rating.php'
@@ -92,6 +96,7 @@ jobs:
           node --check assets/js/pages/find-match.js
           node --check assets/js/pages/club-intelligence.js
           node --check assets/js/widgets/p2k-rivalry-v2159.js
+          node --check assets/js/widgets/p2k-competition-v2159.js
           node --check assets/js/shared/recruitment-lineup-core.js
           node --check assets/js/widgets/p2k-progress-chart-v2159.js
           node --check assets/js/admin/trophy-gallery-public-v2121.js
@@ -124,6 +129,7 @@ jobs:
           node tests/widget_hall_of_fame_v2159.test.cjs
           node tests/widget_recruitment_radar_v2159.test.cjs
           node tests/widget_rivalry_v2159.test.cjs
+          node tests/widget_competition_v2159.test.cjs
           node tests/widget_progress_v2159.test.cjs
           node tests/widget_polish_v2159.test.cjs
           php tests/recruitment_history_v2152_test.php
@@ -141,7 +147,7 @@ jobs:
           import hashlib,json,pathlib,subprocess,zipfile,re
           root=pathlib.Path(".")
           dist=pathlib.Path("dist");dist.mkdir(exist_ok=True)
-          stem="P2K_Rivalry_Radar_SearchFix_v2159_ReleaseControl_Upload"
+          stem="P2K_Competition_v2159_ReleaseControl_Upload"
           pkg=dist/stem
           payload=pkg/"payload";payload.mkdir(parents=True)
           version="2.15.9"
@@ -173,6 +179,8 @@ jobs:
             {"version":"2.15.9","source_head":"514a095809c031ca6e7972a727861137bbf5dfe7"},
             # Most recent confirmed qualified Green-only Rivalry/Radar candidate.
             {"version":"2.15.9","source_head":"8b6d2c752cb1b13d8eda816262a92ac3e408fe58"},
+            # Latest user-confirmed installed Rivalry/Radar/SearchAudit baseline.
+            {"version":"2.15.9","source_head":"e690f0fc23630f104413c2c7211aff976d0d82a6"},
           ]
           paths=[
              "VERSION","ui-v2.html",
@@ -193,7 +201,7 @@ jobs:
              "assets/js/shared/team-points-client.js",
              "RecruitMatch.html",
              "assets/js/pages/recruit-match-ui-helpers.js",
-             # Two new widgets and their native control panels.
+             # All existing widgets plus the new Competition composite and native control panels.
              "server/widgets/src/WidgetConfigStore.php",
              "server/widgets/src/TournamentWidgetReadService.php",
              "server/widgets/src/HallOfFameLeaderboardService.php",
@@ -217,11 +225,13 @@ jobs:
              "assets/js/widgets/p2k-embed-v2153.js",
              "assets/js/widgets/p2k-recruitment-radar-v2159.js",
              "assets/js/widgets/p2k-rivalry-v2159.js",
+             "assets/js/widgets/p2k-competition-v2159.js",
              "assets/js/shared/recruitment-lineup-core.js",
              "assets/js/widgets/p2k-progress-chart-v2159.js",
              "assets/css/widgets/p2k-embed-v2153.css",
              "assets/css/widgets/p2k-recruitment-radar-v2159.css",
              "assets/css/widgets/p2k-rivalry-v2159.css",
+             "assets/css/widgets/p2k-competition-v2159.css",
              "assets/css/widgets/p2k-spotlight-v2159.css",
              "assets/js/admin/widgets-v2153.js",
              "assets/js/admin/admin-shell.js",
@@ -254,17 +264,17 @@ jobs:
           (pkg/"CANDIDATE_PAYLOAD.sha256").write_text("".join(sha(payload/p)+"  ./"+p+"\n" for p in sorted(paths)))
           (pkg/"RECOVERY_PLANE.sha256").write_text("".join(sha(payload/p)+"  ./"+p+"\n" for p in sorted(recovery)))
           meta={"schema_version":1,"version":version,"source_head":head,
-                "cache_key":key,"build_id":"p2k-widget-spotlights-v2159-"+head[:12],
+                "cache_key":key,"build_id":"p2k-widget-competition-v2159-"+head[:12],
                 "payload_manifest_sha256":sha(pkg/"CANDIDATE_PAYLOAD.sha256"),
                 "accepted_public_builds":accepted}
           (pkg/"CANDIDATE_RELEASE.json").write_text(json.dumps(meta,indent=2)+"\n")
           (pkg/"README.txt").write_text(
-             "P2K v2.15.9 - Corrected Rivalry league outcomes, Radar U rating/personality, and UTC search logs.\n"
+             "P2K v2.15.9 - Competition combined Showcase / Match calls / Rivals widget.\n"
              "Upload via Release Control and preview before promotion; no SSH required.\n"
              "Same-admin reauthorization preserves valid CSRF; expired sessions now yield recoverable 401.\n"
              "JS client retries stale CSRF at most once, and completed scan CSV can be retried without a new scan.\n"
              "Includes cumulative MCA/recruitment fixes from v2.15.7-v2.15.9.\n"
-             "Preserves nine embeds and all earlier MCA/recruitment fixes. Rivalry search supports name/slug/URL, avatars, 25-row unlimited pages and Total/Friendly/League results. Radar consumes only Green snapshots and widens empty time windows. Four nullable registration fields migrate additively via the existing Green worker. Every valid submitted name is logged in Traffic/Visitors with UTC timestamp and source. No deployment.\n")
+             "Preserves ten embeds and all earlier MCA/recruitment fixes. Rivalry search supports name/slug/URL, avatars, 25-row unlimited pages and Total/Friendly/League results. Radar consumes only Green snapshots and widens empty time windows. Four nullable registration fields migrate additively via the existing Green worker. Every valid submitted name is logged in Traffic/Visitors with UTC timestamp and source. Competition reuses the exact existing Showcase, Radar and Rivalry embed pages, and offers the same Match Assistant link below Radar. It only loads a child view when selected, preserving its state on return. No deployment.\n")
           out=dist/(stem+".zip")
           with zipfile.ZipFile(out,"w",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
               for file in pkg.rglob("*"):
@@ -278,10 +288,10 @@ jobs:
       - name: Validate actual Release Control contract
         shell: bash
         run: |
-          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_Rivalry_Radar_SearchFix_v2159_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.9" || $p["overlay_file_count"]!==52) exit(1); echo "PASS ".$p["release_id"].PHP_EOL;'
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_Competition_v2159_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.9" || $p["overlay_file_count"]!==54) exit(1); echo "PASS ".$p["release_id"].PHP_EOL;'
       - uses: actions/upload-artifact@v4
         with:
-          name: p2k-rivalry-radar-searchfix-v2159-release-control
+          name: p2k-competition-v2159-release-control
           path: dist/P2K_Rivalry_Radar_SearchFix_v2159_ReleaseControl_Upload.zip
           if-no-files-found: error
           retention-days: 7
