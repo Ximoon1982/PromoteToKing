@@ -42,7 +42,8 @@ const ADMIN_DETAIL_DEFS = {
       {key:"around-the-world",label:"P2K Around the World",mode:"native",nativeKey:"p2k-widget-around-the-world"},
       {key:"player-spotlight",label:"Player Spotlight",mode:"native",nativeKey:"p2k-widget-player-spotlight"},
       {key:"tournament-winners",label:"Tournament Winners",mode:"native",nativeKey:"p2k-widget-tournament-winners"},
-      {key:"hall-of-fame",label:"Hall of Fame",mode:"native",nativeKey:"p2k-widget-hall-of-fame"}
+      {key:"hall-of-fame",label:"Hall of Fame",mode:"native",nativeKey:"p2k-widget-hall-of-fame"},
+      {key:"competition",label:"Competition",mode:"native",nativeKey:"p2k-widget-competition"}
     ]}
   },
   opponents: {
@@ -100,7 +101,7 @@ return `<article class="dashboard-admin-shell-card dashboard-admin-release-contr
 function adminWidgetsCard(){
 return `<article class="dashboard-admin-shell-card" data-admin-shell-card="widgets" data-admin-detail="widgets" data-admin-detail-tab="match-showcase" data-admin-detail-category="team" role="link" tabindex="0" aria-label="Manage widgets">
 <header class="dashboard-admin-shell-card-head"><div><span class="dashboard-admin-shell-eyebrow">Team</span><h3>Widgets</h3></div><span class="dashboard-admin-shell-status is-good">10 modules</span></header>
-<p>Configure the Match Showcase and nine live, embeddable club widgets. Each has a separate tab, preview and iframe HTML.</p>
+<p>Configure the Match Showcase and ten live, embeddable club widgets. Each has a separate tab, preview and iframe HTML.</p>
 <div class="dashboard-admin-shell-metrics"><div class="dashboard-admin-shell-metric"><span>Widgets</span><strong>10</strong><small>Independent settings</small></div><div class="dashboard-admin-shell-metric"><span>Embeds</span><strong>260px</strong><small>Public read-only views</small></div></div>
 <div class="dashboard-admin-shell-meta"><span><b>Source</b><em>Green Analytics · Trophy Gallery · Opponent data</em></span><span><b>Setup</b><em>Preview and copy iframe</em></span></div>
 <footer class="dashboard-admin-shell-actions"><span class="dashboard-button">Manage Widgets</span></footer></article>`;
