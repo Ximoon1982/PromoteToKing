@@ -24,6 +24,7 @@ checkV2159(Rival::SUGGESTIONS>=5,'Several fuzzy club suggestions');
 
 $root=dirname(__DIR__);
 $green=file_get_contents($root.'/server/widgets/src/RecruitmentRadarGreenReadService.php');
+$legacyRadar=file_get_contents($root.'/server/widgets/src/RecruitmentRadarReadService.php');
 $api=file_get_contents($root.'/server/widgets/public/api.php');
 $schema=file_get_contents($root.'/server/team-points-green/sql/core-schema.sql');
 $ingest=file_get_contents($root.'/server/team-points-green/src/GreenRepository.php');
@@ -31,6 +32,7 @@ $rival=file_get_contents($root.'/server/widgets/src/RivalryWidgetReadService.php
 $js=file_get_contents($root.'/assets/js/widgets/p2k-recruitment-radar-v2159.js');
 $embedding=file_get_contents($root.'/server/widgets/public/embed.php');
 checkV2159(!str_contains($green,'file_get_contents(')&&!str_contains($green,'curl_'),'Green Radar service has zero external HTTP capability');
+checkV2159(!str_contains($legacyRadar,'file_get_contents(')&&!str_contains($legacyRadar,'https://api.chess.com/pub/match/'),'Legacy compatibility has no external match API capability');
 checkV2159(!str_contains($rival,'file_get_contents(')&&!str_contains($rival,'curl_'),'Rivalry service has zero external HTTP capability');
 checkV2159(str_contains($api,'RecruitmentRadarGreenReadService::catalog')&&str_contains($api,'RecruitmentRadarGreenReadService::player'),'All public Radar reads use Green');
 checkV2159(!str_contains($api,'RecruitmentRadarReadService::batch')&&!str_contains($api,'RecruitmentRadarReadService::player'),'Legacy network reader no longer routed');
