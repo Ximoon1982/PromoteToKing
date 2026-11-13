@@ -20,8 +20,8 @@ header('Cache-Control: private, no-cache, max-age=30');
 <html lang="en" class="p2kw-theme-<?=htmlspecialchars($theme,ENT_QUOTES)?>"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark light">
 <title><?=htmlspecialchars((string)$settings['title'],ENT_QUOTES)?> — P2K Widget</title>
-<link rel="stylesheet" href="../../../assets/css/widgets/p2k-embed-v2153.css?v=p2k-2159-widgets-4">
-<link rel="stylesheet" href="../../../assets/css/widgets/p2k-spotlight-v2159.css?v=p2k-2159-widgets-4">
+<link rel="stylesheet" href="../../../assets/css/widgets/p2k-embed-v2153.css?v=p2k-2159-widgets-5-hof">
+<link rel="stylesheet" href="../../../assets/css/widgets/p2k-spotlight-v2159.css?v=p2k-2159-widgets-5-hof">
 </head><body data-widget="<?=htmlspecialchars($widget,ENT_QUOTES)?>" data-preview="<?=$preview?'1':'0'?>">
 <main class="p2kw-root" id="p2kwRoot" aria-live="polite">
 <?php if(!$settings['enabled']&&!$preview): ?>
@@ -32,12 +32,12 @@ header('Cache-Control: private, no-cache, max-age=30');
 </main>
 <?php if($settings['enabled']||$preview): ?>
 <?php if(in_array($widget,['player-spotlight','tournament-winners','hall-of-fame'],true)): ?>
-<script src="../../../assets/js/widgets/p2k-spotlight-v2159.js?v=p2k-2159-widgets-4" defer></script>
+<script src="../../../assets/js/widgets/p2k-spotlight-v2159.js?v=p2k-2159-widgets-5-hof" defer></script>
 <?php else: ?>
 <?php if($widget==='club-progress'): ?>
-<script src="../../../assets/js/widgets/p2k-progress-chart-v2159.js?v=p2k-2159-widgets-4" defer></script>
+<script src="../../../assets/js/widgets/p2k-progress-chart-v2159.js?v=p2k-2159-widgets-5-hof" defer></script>
 <?php endif; ?>
-<script src="../../../assets/js/widgets/p2k-embed-v2153.js?v=p2k-2159-widgets-4" defer></script>
+<script src="../../../assets/js/widgets/p2k-embed-v2153.js?v=p2k-2159-widgets-5-hof" defer></script>
 <?php endif; ?>
 <?php endif; ?>
 </body></html>
