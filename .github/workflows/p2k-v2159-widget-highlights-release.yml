@@ -1,5 +1,5 @@
-name: P2K v2.15.9 Hall of Fame + Recruitment Radar qualification
-# Cumulative v2.15.9 candidate preserving MCA, recruitment, all nine widgets and public data.
+name: P2K v2.15.9 Green Radar + Rivalry directory qualification
+# Cumulative v2.15.9 candidate preserving existing MCA, recruitment and nine widgets.
 on:
   push:
     branches:
@@ -10,19 +10,27 @@ on:
       - 'server/widgets/src/TournamentWidgetReadService.php'
       - 'server/widgets/src/HallOfFameLeaderboardService.php'
       - 'server/widgets/src/RecruitmentRadarReadService.php'
+      - 'server/widgets/src/RecruitmentRadarGreenReadService.php'
+      - 'server/widgets/src/RivalryWidgetReadService.php'
+      - 'server/team-points-green/src/GreenRepository.php'
+      - 'server/team-points-green/sql/core-schema.sql'
       - 'server/widgets/public/api.php'
       - 'server/widgets/public/embed.php'
       - 'assets/js/widgets/p2k-spotlight-v2159.js'
       - 'assets/js/widgets/p2k-embed-v2153.js'
       - 'assets/js/widgets/p2k-recruitment-radar-v2159.js'
+      - 'assets/js/widgets/p2k-rivalry-v2159.js'
       - 'assets/js/shared/recruitment-lineup-core.js'
       - 'assets/js/widgets/p2k-progress-chart-v2159.js'
       - 'assets/css/widgets/p2k-embed-v2153.css'
       - 'assets/css/widgets/p2k-recruitment-radar-v2159.css'
+      - 'assets/css/widgets/p2k-rivalry-v2159.css'
       - 'tests/widget_polish_v2159.test.cjs'
       - 'tests/widget_progress_v2159.test.cjs'
       - 'tests/widget_hall_of_fame_v2159.test.cjs'
       - 'tests/widget_recruitment_radar_v2159.test.cjs'
+      - 'tests/widget_rivalry_v2159.test.cjs'
+      - 'tests/test_v2159_green_radar_rivalry.php'
       - 'tests/test_v2159_recruitment_radar.php'
       - 'tests/test_v2159_hall_of_fame_calendar.php'
       - 'tests/test_v2159_widget_tournaments.php'
@@ -70,6 +78,7 @@ jobs:
           node --check assets/js/widgets/p2k-spotlight-v2159.js
           node --check assets/js/widgets/p2k-embed-v2153.js
           node --check assets/js/widgets/p2k-recruitment-radar-v2159.js
+          node --check assets/js/widgets/p2k-rivalry-v2159.js
           node --check assets/js/shared/recruitment-lineup-core.js
           node --check assets/js/widgets/p2k-progress-chart-v2159.js
           node --check assets/js/admin/trophy-gallery-public-v2121.js
@@ -80,15 +89,20 @@ jobs:
           php -l server/widgets/src/TournamentWidgetReadService.php
           php -l server/widgets/src/HallOfFameLeaderboardService.php
           php -l server/widgets/src/RecruitmentRadarReadService.php
+          php -l server/widgets/src/RecruitmentRadarGreenReadService.php
+          php -l server/widgets/src/RivalryWidgetReadService.php
+          php -l server/team-points-green/src/GreenRepository.php
           php -l server/widgets/public/api.php
           php -l server/widgets/public/embed.php
           php tests/widget_collection_v2153_test.php
           php tests/test_v2159_widget_tournaments.php
           php tests/test_v2159_recruitment_radar.php
+          php tests/test_v2159_green_radar_rivalry.php
           php tests/test_v2159_hall_of_fame_calendar.php
           node tests/widget_spotlights_v2159.test.cjs
           node tests/widget_hall_of_fame_v2159.test.cjs
           node tests/widget_recruitment_radar_v2159.test.cjs
+          node tests/widget_rivalry_v2159.test.cjs
           node tests/widget_progress_v2159.test.cjs
           node tests/widget_polish_v2159.test.cjs
           php tests/recruitment_history_v2152_test.php
@@ -106,7 +120,7 @@ jobs:
           import hashlib,json,pathlib,subprocess,zipfile,re
           root=pathlib.Path(".")
           dist=pathlib.Path("dist");dist.mkdir(exist_ok=True)
-          stem="P2K_Radar_Hall_Refinements_v2159_ReleaseControl_Upload"
+          stem="P2K_Rivalry_Radar_Green_v2159_ReleaseControl_Upload"
           pkg=dist/stem
           payload=pkg/"payload";payload.mkdir(parents=True)
           version="2.15.9"
@@ -134,6 +148,8 @@ jobs:
             {"version":"2.15.9","source_head":"7da49b47d78b791f247383ef8fad2a0cb6d800ad"},
             # Confirmed deployed Hall of Fame baseline.
             {"version":"2.15.9","source_head":"6d5037e0c376ddf7313b63126c29401e1e2d7275"},
+            # Previously qualified Radar/Hall update, if it was promoted.
+            {"version":"2.15.9","source_head":"514a095809c031ca6e7972a727861137bbf5dfe7"},
           ]
           paths=[
              "VERSION","ui-v2.html",
@@ -159,6 +175,10 @@ jobs:
              "server/widgets/src/TournamentWidgetReadService.php",
              "server/widgets/src/HallOfFameLeaderboardService.php",
              "server/widgets/src/RecruitmentRadarReadService.php",
+             "server/widgets/src/RecruitmentRadarGreenReadService.php",
+             "server/widgets/src/RivalryWidgetReadService.php",
+             "server/team-points-green/src/GreenRepository.php",
+             "server/team-points-green/sql/core-schema.sql",
              "server/widgets/public/api.php",
              "server/widgets/public/embed.php",
              "trophies/index.html",
@@ -166,10 +186,12 @@ jobs:
              "assets/js/widgets/p2k-spotlight-v2159.js",
              "assets/js/widgets/p2k-embed-v2153.js",
              "assets/js/widgets/p2k-recruitment-radar-v2159.js",
+             "assets/js/widgets/p2k-rivalry-v2159.js",
              "assets/js/shared/recruitment-lineup-core.js",
              "assets/js/widgets/p2k-progress-chart-v2159.js",
              "assets/css/widgets/p2k-embed-v2153.css",
              "assets/css/widgets/p2k-recruitment-radar-v2159.css",
+             "assets/css/widgets/p2k-rivalry-v2159.css",
              "assets/css/widgets/p2k-spotlight-v2159.css",
              "assets/js/admin/widgets-v2153.js",
              "assets/js/admin/admin-shell.js",
@@ -206,12 +228,12 @@ jobs:
                 "accepted_public_builds":accepted}
           (pkg/"CANDIDATE_RELEASE.json").write_text(json.dumps(meta,indent=2)+"\n")
           (pkg/"README.txt").write_text(
-             "P2K v2.15.9 - Recruitment Radar verified priority + player eligibility and Hall of Fame refinements.\n"
+             "P2K v2.15.9 - Green-only Recruitment Radar and unlimited Rivalry directory.\n"
              "Upload via Release Control and preview before promotion; no SSH required.\n"
              "Same-admin reauthorization preserves valid CSRF; expired sessions now yield recoverable 401.\n"
              "JS client retries stale CSRF at most once, and completed scan CSV can be retried without a new scan.\n"
              "Includes cumulative MCA/recruitment fixes from v2.15.7-v2.15.9.\n"
-             "Preserves nine embeds, Hall of Fame title/state fixes, verified live recruitment need with cached sheets and Daily/960 personalized ratings. Fixed 260px scriptless iframes. No schema migration/deployment.\n")
+             "Preserves nine embeds and all earlier MCA/recruitment fixes. Rivalry search supports name/slug/URL, avatars, 25-row unlimited pages and Total/Friendly/League results. Radar consumes only Green snapshots and widens empty time windows. Four nullable registration fields migrate additively via the existing Green worker. No deployment.\n")
           out=dist/(stem+".zip")
           with zipfile.ZipFile(out,"w",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
               for file in pkg.rglob("*"):
@@ -225,10 +247,10 @@ jobs:
       - name: Validate actual Release Control contract
         shell: bash
         run: |
-          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_Radar_Hall_Refinements_v2159_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.9" || $p["overlay_file_count"]!==38) exit(1); echo "PASS ".$p["release_id"].PHP_EOL;'
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_Rivalry_Radar_Green_v2159_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.9" || $p["overlay_file_count"]!==44) exit(1); echo "PASS ".$p["release_id"].PHP_EOL;'
       - uses: actions/upload-artifact@v4
         with:
-          name: p2k-radar-hall-refinements-v2159-release-control
+          name: p2k-rivalry-radar-green-v2159-release-control
           path: dist/P2K_Radar_Hall_Refinements_v2159_ReleaseControl_Upload.zip
           if-no-files-found: error
           retention-days: 7
