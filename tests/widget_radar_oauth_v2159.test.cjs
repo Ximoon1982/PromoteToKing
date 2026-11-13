@@ -57,6 +57,8 @@ const wait=()=>new Promise(resolve=>setTimeout(resolve,55));
   assert(signed.main.innerHTML.includes("For Ximoon"),"Verified identity shown");
   assert(!signed.main.innerHTML.includes('id="p2kwRadarForm"'),"No generic search form for signed-in users");
   assert(signed.list.innerHTML.includes("U1500"),"Automatically personalized eligible match displayed");
+  assert(signed.main.innerHTML.includes('class="p2kw-radar-summary"'),"Authenticated Radar retains a compact summary");
+  assert(!signed.main.innerHTML.includes("Rating-matched opportunities"),"Authenticated summary uses numeric upcoming count");
   assert.equal(signed.calls.filter(x=>x.action==="radar-player").length,1,"Exactly one auto-search/audit event");
   assert.equal(signed.calls.filter(x=>x.action==="radar-catalog").length,1,"No redundant generic catalogue fetch");
   assert.equal(signed.calls.find(x=>x.action==="radar-catalog").player,"Ximoon");

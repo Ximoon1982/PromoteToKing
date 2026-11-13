@@ -172,8 +172,8 @@
       return '<div class="p2kw-entry p2kw-radar-entry"><div class="p2kw-entry-main">'+
         '<strong title="'+enc(m.name||name)+'">'+enc(name)+'</strong>'+
         '<div class="p2kw-radar-meta" title="'+enc(fmtDate(m.startTime)+' · '+(league(m)?'League':'Friendly')+' · '+attr+' · '+timeControl(info?.timeControl||m.timeControl))+'">'+
-          '<span class="p2kw-radar-date">'+enc(shortDate(m.startTime))+'</span>'+
           '<span class="p2kw-radar-pill '+(league(m)?'is-league':'is-friendly')+'">'+(league(m)?'League':'Friendly')+'</span>'+
+          '<span class="p2kw-radar-date">'+enc(shortDate(m.startTime))+'</span>'+
           '<span class="p2kw-radar-rating">'+enc(attr)+'</span>'+
           '<span class="p2kw-radar-control">'+enc(tc)+'</span></div>'+
         (needsText?'<small class="p2kw-radar-need">'+enc(needsText)+'</small>':'')+
@@ -188,7 +188,7 @@
     resolveWindow();
     const qualified=results().length;
     if(count)count.textContent=number(qualified);
-    if(overview)overview.textContent=state.username?'Rating-matched opportunities':number(state.upcoming.length)+' upcoming matches';
+    if(overview)overview.textContent=number(state.upcoming.length)+' upcoming matches';
     list.innerHTML=entries()||'<p class="p2kw-empty">'+(state.fetching?
       'Checking recruitment opportunities…':
       state.username&&!state.profile?(state.authenticatedUser?'Your ratings are temporarily unavailable.':'Player ratings unavailable. Check the username or retry.'):
@@ -238,12 +238,15 @@
     state.fetching=false;refresh();
   }
   function shell(){
-    main.innerHTML='<div class="p2kw-total-row"><div><div class="p2kw-label">Matches matching filters</div><div class="p2kw-big" id="p2kwRadarCount">—</div></div><div class="p2kw-small" id="p2kwRadarOverview"></div></div>'+
+    main.innerHTML='<div class="p2kw-radar-summary" aria-label="Match counts">'+
+      '<span class="p2kw-radar-summary-label">Matches matching filters</span>'+
+      '<span id="p2kwRadarCount">—</span>'+
+      '<span id="p2kwRadarOverview"></span></div>'+
       '<nav class="p2kw-seg p2kw-radar-scope" aria-label="Recruitment selection"><button type="button" data-radar-scope="priority" aria-pressed="'+(state.scope==='priority')+'">Priority</button><button type="button" data-radar-scope="all" aria-pressed="'+(state.scope==='all')+'">All</button></nav>'+
       (state.authenticatedUser?'<div class="p2kw-radar-identity"><span>For '+enc(state.authenticatedUser)+'</span><small>Verified Chess.com account</small></div>':'<form class="p2kw-search p2kw-radar-search" id="p2kwRadarForm"><input type="search" name="username" autocomplete="off" spellcheck="false" maxlength="25" aria-label="Chess.com username" placeholder="Chess.com username" value="'+enc(state.draft)+'"><button type="submit">Find</button></form>')+
       '<nav class="p2kw-seg p2kw-radar-window" aria-label="Starting within">'+
        Object.keys(hoursFor).map(k=>'<button type="button" data-radar-window="'+k+'" aria-pressed="'+(k===state.window)+'">'+k+'</button>').join('')+'</nav>'+
-      '<div class="p2kw-subhead"><strong>Recruitment opportunities</strong><span class="p2kw-small">Priority = verified need</span></div>'+
+      '<div class="p2kw-subhead p2kw-radar-subhead"><strong>Upcoming matches</strong></div>'+
       '<div id="p2kwRadarList"></div><p class="p2kw-radar-hint" id="p2kwRadarHint"></p>';
     main.querySelectorAll('[data-radar-scope]').forEach(b=>b.onclick=()=>{
       state.scope=b.dataset.radarScope;
