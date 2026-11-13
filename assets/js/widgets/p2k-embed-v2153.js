@@ -124,7 +124,7 @@
       main.querySelector('[data-prev]').onclick=()=>{index=(index-1+view.length)%view.length;draw();};main.querySelector('[data-next]').onclick=()=>{index=(index+1)%view.length;draw();};notifySize();
     };
     // Configured opponents appear first even when outside the ordinary top-100 ranking.
-    draw();setFoot('Green Analytics · historical match outcomes');
+    draw();setFoot('');
   }
 
   async function clubProgress(){
