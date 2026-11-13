@@ -1,0 +1,371 @@
+name: P2K v2.15.10 MCA runtime recovery and integer Club Points qualification
+# Cumulative v2.15.9 candidate preserving MCA/recruitment, original Showcase and nine existing widgets.
+on:
+  push:
+    branches:
+      - 'release/v2.15.10'
+    paths:
+      - '.github/workflows/p2k-v21510-mca-progress-release.yml'
+      - 'server/team-points/src/McaArenaParser.php'
+      - 'server/team-points/src/McaResultsCronService.php'
+      - 'cron-mca-arena-v2.10.9.sh'
+      - 'tools/install-mca-cron-dispatcher-v21510.sh'
+      - 'tests/test_v21510_mca_runtime_launcher.sh'
+      - 'tests/test_v21510_progress_ticks.js'
+      - 'server/widgets/src/WidgetConfigStore.php'
+      - 'server/widgets/src/TournamentWidgetReadService.php'
+      - 'server/widgets/src/HallOfFameLeaderboardService.php'
+      - 'server/widgets/src/RecruitmentRadarReadService.php'
+      - 'server/widgets/src/RecruitmentRadarGreenReadService.php'
+      - 'server/widgets/src/RivalryWidgetReadService.php'
+      - 'server/team-points-green/src/GreenCompatibility.php'
+      - 'server/shared/NameSearchUsage.php'
+      - 'api/router.php'
+      - 'server/team-points/src/bootstrap.php'
+      - 'server/team-points/public/intelligence.php'
+      - 'FindMatch.htm'
+      - 'ClubIntelligence.html'
+      - 'server/team-points-green/src/GreenRepository.php'
+      - 'server/team-points-green/sql/core-schema.sql'
+      - 'server/widgets/public/api.php'
+      - 'server/widgets/public/embed.php'
+      - 'server/events-showcase/public/embed-card.php'
+      - 'assets/js/widgets/p2k-spotlight-v2159.js'
+      - 'assets/js/widgets/p2k-embed-v2153.js'
+      - 'assets/js/widgets/p2k-recruitment-radar-v2159.js'
+      - 'assets/js/pages/find-match.js'
+      - 'assets/js/pages/club-intelligence.js'
+      - 'assets/js/widgets/p2k-rivalry-v2159.js'
+      - 'assets/js/widgets/p2k-competition-v2159.js'
+      - 'assets/js/shared/recruitment-lineup-core.js'
+      - 'assets/js/widgets/p2k-progress-chart-v2159.js'
+      - 'assets/images/p2k-progress-logo.webp'
+      - 'assets/css/widgets/p2k-embed-v2153.css'
+      - 'assets/css/widgets/p2k-recruitment-radar-v2159.css'
+      - 'assets/css/widgets/p2k-rivalry-v2159.css'
+      - 'assets/css/widgets/p2k-competition-v2159.css'
+      - 'tests/widget_polish_v2159.test.cjs'
+      - 'tests/widget_progress_v2159.test.cjs'
+      - 'tests/widget_hall_of_fame_v2159.test.cjs'
+      - 'tests/widget_recruitment_radar_v2159.test.cjs'
+      - 'tests/widget_radar_oauth_v2159.test.cjs'
+      - 'tests/widget_rivalry_v2159.test.cjs'
+      - 'tests/widget_competition_v2159.test.cjs'
+      - 'tests/admin_widgets_shell_v2153.py'
+      - 'tests/test_v2159_green_radar_rivalry.php'
+      - 'tests/test_v2159_search_audit.php'
+      - 'tests/test_v2159_rivalry_league_rating.php'
+      - 'tests/test_v2159_recruitment_radar.php'
+      - 'tests/test_v2159_hall_of_fame_calendar.php'
+      - 'tests/test_v2159_widget_tournaments.php'
+      - 'trophies/index.html'
+      - 'assets/js/admin/trophy-gallery-public-v2121.js'
+      - 'tests/widget_collection_v2153_test.php'
+      - 'assets/css/widgets/p2k-spotlight-v2159.css'
+      - 'assets/js/admin/widgets-v2153.js'
+      - 'assets/js/admin/admin-shell.js'
+      - 'assets/js/admin/tool-registry.js'
+      - 'ui-v2.html'
+      - 'tests/widget_spotlights_v2159.test.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+  workflow_dispatch:
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify CSRF fix and historical MCA compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in server/team-points/src/Auth.php server/team-points/src/RecruitmentHistoryStore.php server/team-points/public/session.php \
+              server/team-points/public/recruitment-history.php \
+              server/team-points/src/LiveRanksService.php \
+              server/team-points/src/McaRenameRecheckService.php \
+              server/team-points/src/McaRenameReviewService.php \
+              server/team-points/bin/mca-results-sync.php \
+              server/team-points/public/mca-renames.php; do php -l "$f"; done
+          for f in assets/js/shared/team-points-client.js \
+              assets/js/pages/recruit-match.js \
+              assets/js/pages/recruit-match-ui-helpers.js \
+              assets/js/pages/recruit-match-v2121-bootstrap.js \
+              assets/js/pages/team-points-features.js \
+              assets/js/pages/club-intelligence.js \
+              assets/js/pages/mca-rename-review-v2157.js; do node --check "$f"; done
+          php tests/test_v2159_admin_session_reconnect.php
+          php tests/test_v2159_recruitment_storage_diagnostics.php
+          php tests/test_v2159_recruitment_default_runtime_path.php
+          php -n tests/test_v2159_recruitment_storage_diagnostics.php
+          node tests/test_v2159_team_points_client_recovery.cjs
+          node tests/test_v2159_recruit_results_pagination.cjs
+          node --check assets/js/widgets/p2k-spotlight-v2159.js
+          node --check assets/js/widgets/p2k-embed-v2153.js
+          node --check assets/js/widgets/p2k-recruitment-radar-v2159.js
+          node --check assets/js/pages/find-match.js
+          node --check assets/js/pages/club-intelligence.js
+          node --check assets/js/widgets/p2k-rivalry-v2159.js
+          node --check assets/js/widgets/p2k-competition-v2159.js
+          node --check assets/js/shared/recruitment-lineup-core.js
+          node --check assets/js/widgets/p2k-progress-chart-v2159.js
+          node --check assets/js/admin/trophy-gallery-public-v2121.js
+          node --check assets/js/admin/widgets-v2153.js
+          node --check assets/js/admin/admin-shell.js
+          node --check assets/js/admin/tool-registry.js
+          php -l server/widgets/src/WidgetConfigStore.php
+          php -l server/widgets/src/TournamentWidgetReadService.php
+          php -l server/widgets/src/HallOfFameLeaderboardService.php
+          php -l server/widgets/src/RecruitmentRadarReadService.php
+          php -l server/widgets/src/RecruitmentRadarGreenReadService.php
+          php -l server/widgets/src/RivalryWidgetReadService.php
+          php -l server/team-points-green/src/GreenRepository.php
+          php -l server/team-points-green/src/GreenCompatibility.php
+          php -l server/shared/NameSearchUsage.php
+          php -l api/router.php
+          php -l server/team-points/src/bootstrap.php
+          php -l server/team-points/public/intelligence.php
+          php -l server/widgets/public/api.php
+          php -l server/widgets/public/embed.php
+          php tests/widget_collection_v2153_test.php
+          php tests/test_v2159_widget_tournaments.php
+          php tests/test_v2159_recruitment_radar.php
+          php tests/test_v2159_green_radar_rivalry.php
+          php tests/test_v2159_search_audit.php
+          php tests/test_v2159_rivalry_league_rating.php
+          python3 tests/test_v2150_traffic_match_assistant.py
+          php tests/test_v2159_hall_of_fame_calendar.php
+          node tests/widget_spotlights_v2159.test.cjs
+          node tests/widget_hall_of_fame_v2159.test.cjs
+          node tests/widget_recruitment_radar_v2159.test.cjs
+          node tests/widget_radar_oauth_v2159.test.cjs
+          node tests/widget_rivalry_v2159.test.cjs
+          node tests/widget_competition_v2159.test.cjs
+          node tests/widget_progress_v2159.test.cjs
+          node tests/widget_polish_v2159.test.cjs
+          php tests/recruitment_history_v2152_test.php
+          python3 tests/test_v2152_recruitment_history.py
+          php tests/test_v2158_mca_csv_recheck.php
+          python3 tests/test_v2158_mca_recheck_contract.py
+          python3 tests/test_v2157_mca_miac_review.py
+          python3 tests/test_v2156_mca_uploaded_dates.py
+          python3 tests/test_v2155_mca_results_priority.py
+      - name: Verify committed high-resolution Club Progress WebP
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,pathlib
+          p=pathlib.Path("assets/images/p2k-progress-logo.webp")
+          b=p.read_bytes()
+          assert b[:4]==b"RIFF" and b[8:12]==b"WEBP", "Invalid WebP header"
+          assert hashlib.sha256(b).hexdigest()=="d81c972c0c2bbf65c758c3ed1f5876927d0386c3fb33eec1af2aa234234f2021", "Club Progress logo has changed"
+          print("Verified committed P2K logo WebP",p,len(b),"bytes; 512x512 from user-supplied 1024x1024 master")
+          PY
+      - name: Validate MCA retries, promoted runtime selection and integer chart ticks
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l server/team-points/src/McaArenaParser.php
+          php -l server/team-points/src/McaResultsCronService.php
+          php -l server/team-points/bin/mca-results-sync.php
+          bash -n cron-mca-arena-v2.10.9.sh
+          bash -n tools/install-mca-cron-dispatcher-v21510.sh
+          bash tests/test_v21510_mca_runtime_launcher.sh
+          node tests/test_v21510_progress_ticks.js
+          python3 - <<'PY'
+          from pathlib import Path
+          parser=Path("server/team-points/src/McaArenaParser.php").read_text()
+          service=Path("server/team-points/src/McaResultsCronService.php").read_text()
+          assert "tournaments-live-view-total-score" in parser
+          assert "DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 MINUTE)" in service
+          assert "DATE_SUB(UTC_DATE(), INTERVAL 7 DAY)" in service
+          print("MCA nested club scores and delayed-result retry policy: PASS")
+          PY
+      - name: Create cumulative v2.15.10 Release Control and physical CRON bootstrap ZIPs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess,zipfile,re
+          root=pathlib.Path(".")
+          dist=pathlib.Path("dist");dist.mkdir(exist_ok=True)
+          stem="P2K_MCA_Progress_v21510_ReleaseControl_Upload"
+          pkg=dist/stem
+          payload=pkg/"payload";payload.mkdir(parents=True)
+          version="2.15.10"
+          head=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip()
+          # Exact known public release heads only. The candidate is cumulative
+          # over MCA 2.15.7/2.15.8, to avoid losing earlier functionality.
+          accepted=[
+            {"version":"2.15.9","source_head":"58ea3f81454a5c1008afd6768de95070ff6c2063"},
+            {"version":"2.15.6","source_head":"9c92b999d8111c2af7dad78054aa65c275eecb24"},
+            {"version":"2.15.7","source_head":"2be367793b1720d6df9afcf80af3a39a83787086"},
+            {"version":"2.15.8","source_head":"d539f9e5893e5d7b2be5ef6e4bfa68630dc4f7db"},
+            {"version":"2.15.9","source_head":"e449ac12fabc9266df59f9f87b49bd116ece9e60"},
+            # Previously qualified same-version public candidate (now promoted).
+            {"version":"2.15.9","source_head":"5959cca55d0aae1b78f628b54d292db82d91a1a5"},
+            # The preceding fully qualified archive runtime-path repair candidate.
+            {"version":"2.15.9","source_head":"ea358dd8f76d9e2715e07957ef25a679bb35aa13"},
+            # Last verified public repair candidate.
+            {"version":"2.15.9","source_head":"90ade479a2bcf230704b57a465c91e4ba194983b"},
+            # Cumulative v2.15.9 pagination + CSV recovery candidate, if promoted.
+            {"version":"2.15.9","source_head":"20b7f08fa14b290d9e6636c1867cb6e6bbdc5743"},
+            # Previous qualified widget collection candidate (may now be public).
+            {"version":"2.15.9","source_head":"cfe9281654f522506378cc77d50737311e0f652a"},
+            # Previous qualified fixed-height widget release, if promoted.
+            {"version":"2.15.9","source_head":"0fbbf62a82de0d5de997c4ecef141b09d3858d18"},
+            # Last fully qualified P2K widget candidate.
+            {"version":"2.15.9","source_head":"7da49b47d78b791f247383ef8fad2a0cb6d800ad"},
+            # Confirmed deployed Hall of Fame baseline.
+            {"version":"2.15.9","source_head":"6d5037e0c376ddf7313b63126c29401e1e2d7275"},
+            # Previously qualified Radar/Hall update, if it was promoted.
+            {"version":"2.15.9","source_head":"514a095809c031ca6e7972a727861137bbf5dfe7"},
+            # Most recent confirmed qualified Green-only Rivalry/Radar candidate.
+            {"version":"2.15.9","source_head":"8b6d2c752cb1b13d8eda816262a92ac3e408fe58"},
+            # Latest user-confirmed installed Rivalry/Radar/SearchAudit baseline.
+            {"version":"2.15.9","source_head":"e690f0fc23630f104413c2c7211aff976d0d82a6"},
+            # Previous validated Competition release, if promoted.
+            {"version":"2.15.9","source_head":"439d83c5b3de38f1a8a9ac958e31b827a7121aa7"},
+            # Most recently qualified Competition installer (may have been promoted).
+            {"version":"2.15.9","source_head":"ff7d3ac0d846ac589932a546fb2716bf63747a7d"},
+            # Latest qualified compact Competition public baseline (if promoted).
+            {"version":"2.15.9","source_head":"3a6f41750e7089988d279669a22b048c36d3f246"},
+            # Most recently qualified Competition layout and Radar UI candidate.
+            {"version":"2.15.9","source_head":"afb44e70fe1a3bf0e7dc899145b41e76238fc74a"},
+            # Previously qualified Club Progress design candidate, if promoted.
+            {"version":"2.15.9","source_head":"bd494d58e2546bbe5409a198b3a37ebcf0325a67"},
+            # Most recent fully qualified Hall of Fame labels and Club Progress release.
+            {"version":"2.15.9","source_head":"c0b554e8b96dd5c6292f15344f0b9e24d4260057"},
+          ]
+          paths=[
+             "VERSION","ui-v2.html",
+             # MCA 2.15.7 + 2.15.8 preserved for older public bases
+             "TeamPointsAdmin.html",
+             "assets/js/pages/team-points-features.js",
+             "assets/js/pages/mca-rename-review-v2157.js",
+             "assets/js/pages/club-intelligence.js",
+             "server/team-points/src/LiveRanksService.php",
+             "server/team-points/src/McaRenameReviewService.php",
+             "server/team-points/src/McaRenameRecheckService.php",
+             "server/team-points/public/mca-renames.php",
+             "server/team-points/bin/mca-results-sync.php",
+             "server/team-points/src/McaArenaParser.php",
+             "server/team-points/src/McaResultsCronService.php",
+             "cron-mca-arena-v2.10.9.sh",
+             # The v2.15.9 recruitment/session correction
+             "server/team-points/src/Auth.php",
+             "server/team-points/src/RecruitmentHistoryStore.php",
+             "server/team-points/public/recruitment-history.php",
+             "assets/js/shared/team-points-client.js",
+             "RecruitMatch.html",
+             "assets/js/pages/recruit-match-ui-helpers.js",
+             # All existing widgets plus the new Competition composite and native control panels.
+             "server/widgets/src/WidgetConfigStore.php",
+             "server/widgets/src/TournamentWidgetReadService.php",
+             "server/widgets/src/HallOfFameLeaderboardService.php",
+             "server/widgets/src/RecruitmentRadarReadService.php",
+             "server/widgets/src/RecruitmentRadarGreenReadService.php",
+             "server/widgets/src/RivalryWidgetReadService.php",
+             "server/team-points-green/src/GreenCompatibility.php",
+             "server/shared/NameSearchUsage.php",
+             "api/router.php",
+             "server/team-points/src/bootstrap.php",
+             "server/team-points/public/intelligence.php",
+             "FindMatch.htm",
+             "ClubIntelligence.html",
+             "server/team-points-green/src/GreenRepository.php",
+             "server/team-points-green/sql/core-schema.sql",
+             "server/widgets/public/api.php",
+             "server/widgets/public/embed.php",
+             "server/events-showcase/public/embed-card.php",
+             "trophies/index.html",
+             "assets/js/admin/trophy-gallery-public-v2121.js",
+             "assets/js/widgets/p2k-spotlight-v2159.js",
+             "assets/js/widgets/p2k-embed-v2153.js",
+             "assets/js/widgets/p2k-recruitment-radar-v2159.js",
+             "assets/js/widgets/p2k-rivalry-v2159.js",
+             "assets/js/widgets/p2k-competition-v2159.js",
+             "assets/js/shared/recruitment-lineup-core.js",
+             "assets/js/widgets/p2k-progress-chart-v2159.js",
+             "assets/images/p2k-progress-logo.webp",
+             "assets/css/widgets/p2k-embed-v2153.css",
+             "assets/css/widgets/p2k-recruitment-radar-v2159.css",
+             "assets/css/widgets/p2k-rivalry-v2159.css",
+             "assets/css/widgets/p2k-competition-v2159.css",
+             "assets/css/widgets/p2k-spotlight-v2159.css",
+             "assets/js/admin/widgets-v2153.js",
+             "assets/js/admin/admin-shell.js",
+             "assets/js/admin/tool-registry.js",
+             "assets/js/pages/recruit-match-v2121-bootstrap.js",
+             "assets/js/pages/recruit-match.js",
+             "assets/js/pages/find-match.js",
+          ]
+          recovery=[
+             "ReleaseControl.php",
+             "server/release-control/src/bootstrap.php",
+             "server/release-control/src/ReleasePackageUploadInstaller.php",
+             "server/release-control/src/FilesystemCleanupManager.php",
+          ]
+          for path in paths+recovery:
+              src=root/path
+              if not src.is_file():raise RuntimeError("Missing source: "+path)
+              target=payload/path;target.parent.mkdir(parents=True,exist_ok=True)
+              target.write_bytes(src.read_bytes())
+          (payload/"VERSION").write_text(version+"\n")
+          key="p2k-"+version+"-"+head[:12]+"-"+hashlib.sha256((head+"|mca-cron-progress-v21510").encode()).hexdigest()[:16]
+          uiPath=payload/"ui-v2.html"
+          ui=uiPath.read_text()
+          ui=re.sub(r"p2k-\d+\.\d+\.\d+-[a-f0-9]{12}-[a-f0-9]{16}",key,ui,flags=re.I)
+          ui=ui.replace("p2k-2.15.3-widgets-20261111",key)
+          if "</head>" not in ui: raise RuntimeError("Missing UI head")
+          ui=ui.replace("</head>",'<meta name="p2k-build" content="'+key+'">\n</head>',1)
+          uiPath.write_text(ui)
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          (pkg/"CANDIDATE_PAYLOAD.sha256").write_text("".join(sha(payload/p)+"  ./"+p+"\n" for p in sorted(paths)))
+          (pkg/"RECOVERY_PLANE.sha256").write_text("".join(sha(payload/p)+"  ./"+p+"\n" for p in sorted(recovery)))
+          meta={"schema_version":1,"version":version,"source_head":head,
+                "cache_key":key,"build_id":"p2k-mca-progress-v21510-"+head[:12],
+                "payload_manifest_sha256":sha(pkg/"CANDIDATE_PAYLOAD.sha256"),
+                "accepted_public_builds":accepted}
+          (pkg/"CANDIDATE_RELEASE.json").write_text(json.dumps(meta,indent=2)+"\n")
+          (pkg/"README.txt").write_text(
+             "P2K v2.15.10 - MCA runtime dispatch, retry, Club Results parser, integer chart ticks.\n"
+             "Upload via Release Control, preview and promote. A one-time SSH CRON activation is supplied separately.\n"
+             "Same-admin reauthorization preserves valid CSRF; expired sessions now yield recoverable 401.\n"
+             "JS client retries stale CSRF at most once, and completed scan CSV can be retried without a new scan.\n"
+             "Includes cumulative MCA/recruitment fixes from v2.15.7-v2.15.9.\n"
+             "Preserves ten embeds and all earlier MCA/recruitment fixes. Rivalry search supports name/slug/URL, avatars, 25-row unlimited pages and Total/Friendly/League results. Radar consumes only Green snapshots and widens empty time windows. Four nullable registration fields migrate additively via the existing Green worker. Every valid submitted name is logged in Traffic/Visitors with UTC timestamp and source. Competition has a transparent Showcase and opaque header, a 565px viewport with fixed Match Assistant footer, scrollable content, and child loading status. Unrestricted maximum ratings show as Open. Competition hides redundant inner Radar and Rivals headings, keeps its own LIVE indicator, and shows Radar's compact single-line count summary, Upcoming matches heading, and category pill ahead of the date. Standalone widgets retain their headers. Club Progress uses a square bordered chart, full-color club logo, blue forecast, and target-aligned horizon. Hall of Fame player selector labels are shortened to Daily Matches and Multi Club Arenas. Club Progress is now Grinding the leaderboard, with graph-only content, square border and an optimized WebP derived from the repository's original P2K logo. The committed 512x512 WebP is derived from the user's 1024x1024 full-size club logo and is verified before packaging. Trophy Spotlight links open the matching Gallery trophy. Rival detail club names link to validated Chess.com URLs, replacing the bottom link. Standalone Showcase remains unchanged. No deployment.\n")
+          out=dist/(stem+".zip")
+          with zipfile.ZipFile(out,"w",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+              for file in pkg.rglob("*"):
+                  if file.is_file():z.write(file,file.relative_to(pkg))
+          with zipfile.ZipFile(out) as z:
+              assert z.testzip() is None
+              assert len(z.namelist())==len(paths)+len(recovery)+4
+          print("Output ZIP",out,"version",version,"bytes",out.stat().st_size)
+          print("source head",head,"sha256",sha(out),"accepted",accepted)
+          bootstrap=dist/"P2K_MCA_Runtime_Dispatch_v21510_SSH_Bootstrap.zip"
+          with zipfile.ZipFile(bootstrap,"w",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+              for src in ["cron-mca-arena-v2.10.9.sh","tools/install-mca-cron-dispatcher-v21510.sh"]:
+                  z.write(root/src,"P2K_MCA_Runtime_Dispatch_v21510/"+src)
+              z.writestr("P2K_MCA_Runtime_Dispatch_v21510/README.txt",
+                  "One-time physical CRON activation for P2K v2.15.10.\n"
+                  "1. Unzip on IONOS; run bash tools/install-mca-cron-dispatcher-v21510.sh <physical P2K root> --check\n"
+                  "2. If verified, repeat with --apply; a timestamped backup is created.\n"
+                  "3. After promotion, run bash cron-mca-arena-v2.10.9.sh --print-target\n"
+                  "No change to the cron schedule, database, or public release state.\n")
+          print("SSH bootstrap ZIP",bootstrap,"SHA256:",sha(bootstrap))
+          PY
+      - name: Validate actual Release Control contract
+        shell: bash
+        run: |
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $p=(new P2K\ReleaseControl\ReleaseCandidatePackage("dist/P2K_MCA_Progress_v21510_ReleaseControl_Upload"))->validate(); if($p["version"]!=="2.15.10" || $p["overlay_file_count"]!==59) exit(1); echo "PASS ".$p["release_id"].PHP_EOL;'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-mca-progress-v21510-release-control
+          path: |
+            dist/P2K_MCA_Progress_v21510_ReleaseControl_Upload.zip
+            dist/P2K_MCA_Runtime_Dispatch_v21510_SSH_Bootstrap.zip
+          if-no-files-found: error
+          retention-days: 7
