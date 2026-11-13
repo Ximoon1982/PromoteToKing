@@ -8,11 +8,13 @@ $tmp=sys_get_temp_dir().'/p2k-widget-store-'.bin2hex(random_bytes(6));
 try {
     $store=new WidgetConfigStore($tmp);
     $start=$store->read();
-    ensure(count($start['widgets'])===8,'Eight widget defaults');
+    ensure(count($start['widgets'])===9,'Nine widget defaults');
     ensure(($start['widgets']['club-pulse']['period']??'')==='7d','Pulse defaults');
     foreach (WidgetConfigStore::IDS as $id) ensure(($start['widgets'][$id]['theme']??'')==='auto','Auto default theme: '.$id);
     ensure(($start['widgets']['player-spotlight']['limit']??0)===5,'Player Spotlight top-five defaults');
     ensure(($start['widgets']['tournament-winners']['medalPageSize']??0)===3,'Tournament Winners three-medalist pages');
+    ensure(($start['widgets']['hall-of-fame']['medalPageSize']??0)===3,'Hall of Fame shares tournament medal pagination defaults');
+    ensure(($start['widgets']['hall-of-fame']['title']??'')==='Hall of Fame','Hall of Fame has independent title');
     ensure(!array_key_exists('limit',$start['widgets']['tournament-winners']),'No completed tournament browse cap');
     ensure(!array_key_exists('limit',$start['widgets']['trophy-spotlight']),'No published trophy cap');
     $thresholds=WidgetConfigStore::normalize('club-progress',[
