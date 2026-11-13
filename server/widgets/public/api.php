@@ -120,6 +120,27 @@ try {
         json_response(200,\P2K\Widgets\RecruitmentRadarGreenReadService::catalog($core,$club,$name));
     }
 
+    if(in_array($action,['rivalry-page','rivalry-search','rivalry-detail'],true) && $method==='GET'){
+        require_once dirname(__DIR__).'/src/RivalryWidgetReadService.php';
+        $core=PublicReadDatabase::core();$analytics=PublicReadDatabase::analytics();
+        $app=p2k_tp_config();
+        $club=strtolower(trim((string)($app['app']['club_slug']??'promote-to-king')));
+        if($action==='rivalry-page'){
+            $repo=new \P2K\TeamPoints\Repository($core,$analytics);
+            $page=max(1,min(100000,(int)($_GET['page']??1)));
+            $response=\P2K\Widgets\RivalryWidgetReadService::page($repo,$core,$club,$page);
+        }elseif($action==='rivalry-search'){
+            $response=\P2K\Widgets\RivalryWidgetReadService::suggestions(
+                $core,$analytics,$club,(string)($_GET['query']??'')
+            );
+        }else{
+            $response=\P2K\Widgets\RivalryWidgetReadService::detail(
+                $core,$analytics,$club,(string)($_GET['slug']??'')
+            );
+        }
+        json_response(200,$response);
+    }
+
     // Read-only spotlight widgets reuse canonical Green member and MCA projections.
     // No widget-owned leaderboard, scores, or mutable result store is introduced.
     if($action==='spotlight-leaders' && $method==='GET') {
