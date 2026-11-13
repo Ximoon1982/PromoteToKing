@@ -108,7 +108,7 @@
       const info=state.details.get(String(m.matchId));
       return {match:m,info,need:demand(m,info)};
     }).filter(r=>eligible(r.match,r.info));
-    const selected=state.scope==='priority'?resultsFilterPriority(results):results;
+    const selected=state.scope==='priority'?resultsFilterPriority(matches):matches;
     function resultsFilterPriority(list){return list.filter(r=>r.need.verified&&r.need.priority)}
     if(state.scope==='priority'){
       selected.sort((a,b)=>b.need.score-a.need.score||Number(a.match.startTime)-Number(b.match.startTime));
@@ -205,6 +205,7 @@
           state.profile=null;
         }
       }
+      if(name&&!state.profile){state.fetching=false;refresh();return;}
       void scan();
     };
     refresh();
