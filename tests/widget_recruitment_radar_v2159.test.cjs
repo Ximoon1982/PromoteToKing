@@ -90,7 +90,7 @@ const wait=()=>new Promise(resolve=>setTimeout(resolve,55));
  assert(list.innerHTML.includes("p2kw-radar-meta"),"All match fields grouped in one metadata row");
  assert(main.innerHTML.includes('class="p2kw-radar-summary"'),"Compact single-line summary is used");
  assert(!main.innerHTML.includes('class="p2kw-big" id="p2kwRadarCount"'),"Counts use normal text size");
- assert(main.innerHTML.includes('class="p2kw-radar-subhead"><strong>Upcoming matches</strong>'),"List heading is Upcoming matches");
+ assert(main.innerHTML.includes('class="p2kw-subhead p2kw-radar-subhead"><strong>Upcoming matches</strong>'),"List heading is Upcoming matches");
  assert(!main.innerHTML.includes("Recruitment opportunities")&&!main.innerHTML.includes("Priority = verified need"),"Redundant labels removed");
  assert.equal(overview.textContent,"4 upcoming matches","Total upcoming shows for anonymous visitor");
  const meta=(list.innerHTML.match(/<div class="p2kw-radar-meta"[^>]*>(.*?)<\/div>/s)||[])[1]||"";
