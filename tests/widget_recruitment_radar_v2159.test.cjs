@@ -42,6 +42,7 @@ const matches=[
  {matchId:"1001",name:"League One",opponentName:"League One",url:"https://www.chess.com/club/matches/1001",startTime:now+8*3600,category:"league",timeControl:"86400"},
  {matchId:"1002",name:"Friendly Two",opponentName:"Friendly Two",url:"https://www.chess.com/club/matches/1002",startTime:now+14*3600,category:"friendly",timeControl:"259200"},
  {matchId:"1003",name:"League 960",opponentName:"League 960",url:"https://www.chess.com/club/matches/1003",startTime:now+36*3600,category:"league",timeControl:"259200"},
+ {matchId:"1004",name:"U1500 League",opponentName:"U1500 League",url:"https://www.chess.com/club/matches/1004",startTime:now+25*3600,category:"league",timeControl:"86400"},
 ];
 const data={
  "1001":{verified:true,matchId:1001,minRating:1400,maxRating:1800,minimumPlayers:3,maximumPlayers:20,
@@ -49,7 +50,9 @@ const data={
  "1002":{verified:true,matchId:1002,minRating:1600,maxRating:2000,minimumPlayers:3,maximumPlayers:20,
    oursCount:4,opponentCount:4,oursRatings:[1600,1700,1800,1950],opponentRatings:[1600,1700,1800,1850],rules:"chess",timeControl:"259200",locked:false,minRatingKnown:true,maxRatingKnown:true},
  "1003":{verified:true,matchId:1003,minRating:1800,maxRating:2100,minimumPlayers:2,maximumPlayers:20,
-   oursCount:1,opponentCount:3,oursRatings:[1880],opponentRatings:[1900,1990,2050],rules:"chess960",timeControl:"259200",locked:false,minRatingKnown:true,maxRatingKnown:true}
+   oursCount:1,opponentCount:3,oursRatings:[1880],opponentRatings:[1900,1990,2050],rules:"chess960",timeControl:"259200",locked:false,minRatingKnown:true,maxRatingKnown:true},
+ "1004":{verified:true,matchId:1004,minRating:null,maxRating:1500,minimumPlayers:2,maximumPlayers:30,
+   oursCount:1,opponentCount:3,oursRatings:[1400],opponentRatings:[1200,1300,1400],rules:"chess",timeControl:"86400",locked:false,minRatingKnown:false,maxRatingKnown:true}
 };
 const window={P2K_RECRUITMENT_LINEUP_CORE:{
  compareRecruitmentLineupsCheap(a,b){return {expectedScoreShare:a.length>=b.length?.6:.38}}
@@ -61,7 +64,7 @@ const fetch=async u=>{
  if(action==="config")output={ok:true,settings:{enabled:true,window:"48h",limit:4}};
  else if(action==="radar-catalog")output={ok:true,source:"Green synchronized DB",matches,
     details:Object.keys(data).map(id=>({...data[id],alreadyRegistered:who.toLowerCase()==="alpha"&&id==="1001"}))};
- else if(action==="radar-player")output={ok:true,username:"Alpha",available:true,classical:1550,chess960:1950,statsCheckedAt:"2026-11-13 10:00:00"};
+ else if(action==="radar-player")output={ok:true,username:who,available:true,classical:who==="Beta"?1300:1550,chess960:1950,statsCheckedAt:"2026-11-13 10:00:00"};
  else throw Error("Unexpected fetch "+url.href);
  return {ok:true,status:200,json:async()=>output};
 };
@@ -89,6 +92,11 @@ const wait=()=>new Promise(resolve=>setTimeout(resolve,55));
  assert(list.innerHTML.includes("League 960"),"Chess960 rating used for 960 match");
  controls.get("[data-radar-scope]")[0].onclick();
  assert(list.innerHTML.includes("League 960"),"Personalized priority matches verified need and eligibility");
+ usernameInput.value="Beta";await form.onsubmit({preventDefault(){}});await wait();
+ assert(list.innerHTML.includes("U1500 League"),"Unset minimum rating admits an eligible 1300-rated user");
+ assert(list.innerHTML.includes("U1500"),"Missing lower bound renders as U1500 rather than ?–1500");
+ assert(!list.innerHTML.includes("?–1500"),"Unspecified minimum no longer printed as unknown");
+ usernameInput.value="Alpha";await form.onsubmit({preventDefault(){}});await wait();
  controls.get("[data-radar-window]")[0].onclick();await wait();
  assert(list.innerHTML.includes("League 960"),"Empty 24h expands to the 48h opportunity");
  assert(hint.textContent.includes("showing 48h"),"Automatic expansion disclosed to visitor");
