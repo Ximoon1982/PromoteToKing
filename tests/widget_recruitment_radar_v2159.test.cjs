@@ -45,32 +45,23 @@ const matches=[
 ];
 const data={
  "1001":{verified:true,matchId:1001,minRating:1400,maxRating:1800,minimumPlayers:3,maximumPlayers:20,
-   oursCount:2,opponentCount:4,oursRatings:[1500,1700],opponentRatings:[1600,1800,1900,1950],rules:"chess",timeControl:"86400",locked:false},
+   oursCount:2,opponentCount:4,oursRatings:[1500,1700],opponentRatings:[1600,1800,1900,1950],rules:"chess",timeControl:"86400",locked:false,minRatingKnown:true,maxRatingKnown:true},
  "1002":{verified:true,matchId:1002,minRating:1600,maxRating:2000,minimumPlayers:3,maximumPlayers:20,
-   oursCount:4,opponentCount:4,oursRatings:[1600,1700,1800,1950],opponentRatings:[1600,1700,1800,1850],rules:"chess",timeControl:"259200",locked:false},
+   oursCount:4,opponentCount:4,oursRatings:[1600,1700,1800,1950],opponentRatings:[1600,1700,1800,1850],rules:"chess",timeControl:"259200",locked:false,minRatingKnown:true,maxRatingKnown:true},
  "1003":{verified:true,matchId:1003,minRating:1800,maxRating:2100,minimumPlayers:2,maximumPlayers:20,
-   oursCount:1,opponentCount:3,oursRatings:[1880],opponentRatings:[1900,1990,2050],rules:"chess960",timeControl:"259200",locked:false}
+   oursCount:1,opponentCount:3,oursRatings:[1880],opponentRatings:[1900,1990,2050],rules:"chess960",timeControl:"259200",locked:false,minRatingKnown:true,maxRatingKnown:true}
 };
 const window={P2K_RECRUITMENT_LINEUP_CORE:{
- recruitmentMetrics({match,p2kTeam,opponentTeam}){
-   const ours=p2kTeam.players.length,other=opponentTeam.players.length;
-   const target=Math.max(Number(match.settings.min_team_players)||0,other);
-   const baseline=Math.max(0,target-ours);
-   return {count:baseline,baseline,ready:baseline===0};
- }
+ compareRecruitmentLineupsCheap(a,b){return {expectedScoreShare:a.length>=b.length?.6:.38}}
 }};
 const fetch=async u=>{
- const url=new URL(String(u)),action=url.searchParams.get("action");
- calls.push({action,ids:url.searchParams.get("ids"),player:url.searchParams.get("player")});
+ const url=new URL(String(u)),action=url.searchParams.get("action"),who=url.searchParams.get("player")||"";
+ calls.push({action,url:url.href,player:who});
  let output;
  if(action==="config")output={ok:true,settings:{enabled:true,window:"48h",limit:4}};
- else if(action==="catalog")output={ok:true,matches};
- else if(action==="radar-batch"){
-    const who=url.searchParams.get("player")||"";
-    output={ok:true,rows:(url.searchParams.get("ids")||"").split(",").map(id=>({
-        ...data[id],alreadyRegistered:who.toLowerCase()==="alpha"&&id==="1001"
-    }))};
- }else if(action==="radar-player")output={ok:true,username:"Alpha",classical:1550,chess960:1950};
+ else if(action==="radar-catalog")output={ok:true,source:"Green synchronized DB",matches,
+    details:Object.keys(data).map(id=>({...data[id],alreadyRegistered:who.toLowerCase()==="alpha"&&id==="1001"}))};
+ else if(action==="radar-player")output={ok:true,username:"Alpha",available:true,classical:1550,chess960:1950,statsCheckedAt:"2026-11-13 10:00:00"};
  else throw Error("Unexpected fetch "+url.href);
  return {ok:true,status:200,json:async()=>output};
 };
@@ -79,30 +70,32 @@ const wait=()=>new Promise(resolve=>setTimeout(resolve,55));
 (async()=>{
  await wait();
  assert.equal(status.textContent,"LIVE");
- assert.equal(calls.filter(x=>x.action==="radar-batch").length,1,"At most four match sheets requested in one batch");
- assert(calls.some(x=>x.action==="radar-batch"&&x.ids==="1001,1002,1003"));
- assert(list.innerHTML.includes("League One"));
- assert(list.innerHTML.includes("League 960"));
- assert(!list.innerHTML.includes("Friendly Two"),"Priority must suppress matches not needing recruitment");
- assert(list.innerHTML.includes("1400–1800"),"Match rating restrictions shown");
- assert(list.innerHTML.includes("1 day/move"),"Match time control displayed");
- assert(!list.innerHTML.includes("Source: current Green match catalogue"));
+ assert.equal(calls.filter(x=>x.action==="radar-catalog").length,1,"One DB-only catalog call, no per-match fetches");
+ assert(!calls.some(x=>x.action==="radar-batch"),"No match-sheet fanout even with a cold cache");
+ assert(calls.every(x=>new URL(x.url).hostname==="www.promotetoking.org"),"No browser Chess.com API requests");
+ assert(list.innerHTML.includes("League One")&&list.innerHTML.includes("League 960"));
+ assert(!list.innerHTML.includes("Friendly Two"),"Default Priority must suppress matches without recruitment need");
+ assert(list.innerHTML.includes("1400–1800"),"Rating restrictions shown");
+ assert(list.innerHTML.includes("1d/m"),"Compact daily time control displayed");
+ assert(list.innerHTML.includes("p2kw-radar-pill is-league"),"League accent pill displayed");
+ assert(list.innerHTML.includes("p2kw-radar-meta"),"All match fields grouped in one metadata row");
  controls.get("[data-radar-scope]")[1].onclick();
  assert(list.innerHTML.includes("Friendly Two"),"All mode retains non-priority matches");
  usernameInput.value="Alpha";form.onsubmit({preventDefault(){}});await wait();
  assert(calls.some(x=>x.action==="radar-player"&&x.player==="Alpha"));
- assert(calls.some(x=>x.action==="radar-batch"&&x.player==="Alpha"));
- assert(!list.innerHTML.includes("League One"),"Already-registered match removed for user");
- assert(!list.innerHTML.includes("Friendly Two"),"Rating 1550 is outside 1600-2000");
- assert(list.innerHTML.includes("League 960"),"Correct Chess960 1950 rating allows 1800-2100 match");
+ assert(calls.some(x=>x.action==="radar-catalog"&&x.player==="Alpha"));
+ assert(!list.innerHTML.includes("League One"),"Already registered match excluded");
+ assert(!list.innerHTML.includes("Friendly Two"),"Standard rating outside match window");
+ assert(list.innerHTML.includes("League 960"),"Chess960 rating used for 960 match");
  controls.get("[data-radar-scope]")[0].onclick();
- assert(list.innerHTML.includes("League 960"),"Personalized priority is the intersection of eligibility and need");
+ assert(list.innerHTML.includes("League 960"),"Personalized priority matches verified need and eligibility");
  controls.get("[data-radar-window]")[0].onclick();await wait();
- assert(!list.innerHTML.includes("League 960"),"24h window removes a 36h match");
- assert(!list.innerHTML.includes("League One"),"Registered match remains excluded");
+ assert(list.innerHTML.includes("League 960"),"Empty 24h expands to the 48h opportunity");
+ assert(hint.textContent.includes("showing 48h"),"Automatic expansion disclosed to visitor");
+ assert(!list.innerHTML.includes("League One"),"Registration exclusion preserved across fallback");
  assert.equal(foot.textContent,"");
  const scripts=fs.readFileSync(path.join(__dirname,"../server/widgets/public/embed.php"),"utf8");
  assert(scripts.includes("p2k-recruitment-radar-v2159.js"));
  assert(scripts.includes("recruitment-lineup-core.js"));
- console.log("PASS Radar priorities, All, rating/time-control metadata, personalized Daily/960 filtering, registered exclusion, and 24h window");
+ console.log("PASS Radar Green-only catalog, priority/all, one-line pills, rating personalization, registered exclusion and automatic window widening");
 })().catch(e=>{console.error(e);process.exitCode=1});
