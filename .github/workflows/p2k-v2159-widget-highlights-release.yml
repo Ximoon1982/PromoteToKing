@@ -282,6 +282,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: p2k-rivalry-radar-searchfix-v2159-release-control
-          path: dist/P2K_Rivalry_Radar_Green_v2159_ReleaseControl_Upload.zip
+          path: dist/P2K_Rivalry_Radar_SearchFix_v2159_ReleaseControl_Upload.zip
           if-no-files-found: error
           retention-days: 7
