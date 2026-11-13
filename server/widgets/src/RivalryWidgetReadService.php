@@ -10,6 +10,12 @@ final class RivalryWidgetReadService
 {
     public const PAGE_SIZE=25;
     public const SUGGESTIONS=8;
+    private const LEAGUE_NAME_PATTERN='(^|[^A-Z0-9])(1WL|TCMAC|KOTML|TMCL|WKCL|PCL|CW)([^A-Z0-9]|$)';
+
+    public static function isLeagueName(string $name):bool
+    {
+        return preg_match('/'.self::LEAGUE_NAME_PATTERN.'/i',$name)===1;
+    }
 
     public static function searchTerm(string $raw):string
     {
@@ -165,7 +171,7 @@ final class RivalryWidgetReadService
         // rebuilt, derive league classification from the canonical match-name
         // codes as well as the persisted flag. This is read-only and covers
         // historical records without a costly full regeneration.
-        $leagueSql="CASE WHEN is_league=1 OR UPPER(COALESCE(match_name,'')) REGEXP '(^|[^A-Z0-9])(1WL|TCMAC|KOTML|TMCL|WKCL|PCL|CW)([^A-Z0-9]|$)' THEN 1 ELSE 0 END";
+        $leagueSql="CASE WHEN is_league=1 OR UPPER(COALESCE(match_name,'')) REGEXP '" . self::LEAGUE_NAME_PATTERN . "' THEN 1 ELSE 0 END";
         $sql="SELECT {$leagueSql} league_category,COUNT(*) matches,
           COALESCE(SUM(result='win'),0) wins,
           COALESCE(SUM(result='draw'),0) draws,
