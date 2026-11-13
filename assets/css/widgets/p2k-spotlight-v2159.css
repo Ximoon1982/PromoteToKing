@@ -50,3 +50,20 @@
 .p2kw-widget-panel .p2kw-medalist-row .p2kw-medal-symbol{font-size:19px;width:25px}
 .p2kw-widget-panel .p2kw-medal-inline{font-size:11px;font-weight:650;color:var(--muted);white-space:nowrap;margin-left:3px}
 .p2kw-widget-panel .p2kw-medal-match{font-size:10px;white-space:normal;line-height:1.4;margin-top:3px}
+
+/* Hall of Fame: fixed-width, fixed-height iframe, with independently scrolling
+   25-row Leaderboards. Panel width remains exactly 260px including its border. */
+.p2kw-hof-tabs{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr;gap:3px;margin:0 0 7px;padding:2px;border:1px solid var(--border);border-radius:8px;background:var(--low)}
+.p2kw-hof-tabs button{border:0;background:transparent;color:var(--muted);border-radius:6px;padding:7px 4px;font:900 10.5px Arial;cursor:pointer}
+.p2kw-hof-tabs button[aria-pressed=true]{background:var(--fill);color:#17110a}
+.p2kw-hof-tabs button:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+.p2kw-hof-subhead{min-height:28px;gap:5px;margin-top:9px;margin-bottom:3px}
+.p2kw-hof-subhead strong{font-size:11px;line-height:1.2;white-space:nowrap}
+.p2kw-hof-subhead select{width:89px;max-width:89px;min-width:89px;padding:4px 1px 4px 5px;border:1px solid var(--border);border-radius:5px;background:var(--card);color:var(--text);font:800 9px Arial}
+.p2kw-hof-list{min-width:0}
+.p2kw-hof-list.is-expanded{max-height:645px;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;overscroll-behavior:contain}
+.p2kw-hof-more{display:block;width:100%;padding:7px 5px;margin:5px 0 12px}
+.p2kw-hof-pagination{margin:7px 0;min-height:28px}
+.p2kw-hof-pagination span{font-size:9px}
+.p2kw-hof-list .p2kw-entry{min-height:29px}
+.p2kw-hof-list .p2kw-player-link{overflow-wrap:anywhere}
