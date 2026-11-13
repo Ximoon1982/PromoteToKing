@@ -1,11 +1,10 @@
-/* P2K v2.15.9 Recruitment Radar: verified, cached demand + rating-personalized matches.
+/* P2K v2.15.9 Recruitment Radar: synchronized Green database only.
    Loads only within the P2K iframe; host pages need no scripts. */
 (() => {
   'use strict';
   if(document.body.dataset.widget!=='recruitment-radar')return;
   const ROOT=new URL('../../../',document.currentScript.src);
   const API=new URL('server/widgets/public/api.php',ROOT);
-  const CATALOG=new URL('server/events-showcase/public/api.php',ROOT);
   const main=document.getElementById('p2kwContent');
   const status=document.getElementById('p2kwStatus');
   const foot=document.getElementById('p2kwFoot');
@@ -15,9 +14,11 @@
   const fmtDate=seconds=>{const d=new Date(Number(seconds)*1000);return Number.isFinite(d.getTime())
     ?new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(d)+' UTC':'—';};
   const hoursFor={ '24h':24,'48h':48,'72h':72,'7d':168 };
+  const windows=Object.keys(hoursFor);
+  const shortDate=seconds=>{const d=new Date(Number(seconds)*1000);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',day:'numeric',month:'short'}).format(d):'—';};
   const state={settings:null,window:'48h',scope:'priority',catalog:[],upcoming:[],
     details:new Map(),needs:new Map(),username:'',draft:'',profile:null,
-    fetching:false,scanned:0,total:0,scanToken:0,notice:'',error:''};
+    fetching:false,scanned:0,total:0,scanToken:0,notice:'',error:'',effectiveWindow:'48h',baseDetails:[],partial:false};
   const get=async(address,signal)=>{
     const url=new URL(address);const ac=new AbortController();
     const timer=setTimeout(()=>ac.abort(),15000);
@@ -37,28 +38,47 @@
   const league=match=>match.category==='league'||match.isLeague===true;
   const timeControl=value=>{
     const raw=String(value??'').trim();
-    if(!raw)return 'Time control unavailable';
-    const match=raw.match(/^(?:\d+\/)?(\d+)$/);
-    if(match){
-      const seconds=Number(match[1]);
-      if(seconds>=86400&&seconds%86400===0)return (seconds/86400)+' day'+(seconds===86400?'':'s')+'/move';
-      if(seconds>=3600&&seconds%3600===0)return (seconds/3600)+'h/move';
-      if(seconds>=60&&seconds%60===0)return (seconds/60)+'m/move';
-      return seconds+'s/move';
+    if(!raw)return '—';
+    const ratio=raw.match(/^(\d+)\/(\d+)$/);
+    const seconds=ratio?(Number(ratio[2])/Math.max(1,Number(ratio[1]))):/^\d+$/.test(raw)?Number(raw):null;
+    if(seconds!==null&&Number.isFinite(seconds)&&seconds>0){
+      if(seconds>=86400)return (Math.round(seconds/86400*10)/10)+'d/m';
+      if(seconds>=3600)return (Math.round(seconds/3600*10)/10)+'h/m';
+      if(seconds>=60)return (Math.round(seconds/60*10)/10)+'m/m';
+      return seconds+'s/m';
     }
-    return raw.replace(/_/g,' ').slice(0,35);
+    return raw.replace(/_/g,' ').slice(0,16);
   };
   const range=detail=>{
-    if(!detail?.verified)return 'Rating range unavailable';
-    const min=Math.max(0,Number(detail.minRating)||0),max=Number(detail.maxRating)||0;
-    if(!max)return min?min+'+':'Open rating';
-    return min?min+'–'+max:'U'+max;
+    if(!detail?.verified)return '—';
+    if(detail.minRatingKnown===false&&detail.maxRatingKnown===false)return '—';
+    const min=detail.minRating===null?null:Math.max(0,Number(detail.minRating)||0);
+    const max=Number(detail.maxRating)||0;
+    if(detail.maxRatingKnown===false)return min===null?'—':min+'–?';
+    if(!max)return min===null?'?+':min?min+'+':'Open';
+    return min===null?'?–'+max:min?min+'–'+max:'U'+max;
   };
-  const activeMatches=()=>{
-    const now=Date.now()/1000,max=now+(hoursFor[state.window]||48)*3600;
+  function availableWithin(windowLabel){
+    const now=Date.now()/1000,max=now+(hoursFor[windowLabel]||48)*3600;
     return state.catalog.filter(m=>Number(m.startTime)>now&&Number(m.startTime)<=max)
       .sort((a,b)=>Number(a.startTime)-Number(b.startTime)||Number(a.matchId)-Number(b.matchId));
-  };
+  }
+  // Widen only when no results match the selected priority, player, and window.
+  // The selected button remains unchanged so the wider effective window is clear.
+  function resolveWindow(){
+    const from=Math.max(0,windows.indexOf(state.window));
+    for(let i=from;i<windows.length;i++){
+      const label=windows[i],possible=availableWithin(label);
+      const qualifying=possible.filter(m=>{
+        const info=state.details.get(String(m.matchId));
+        return eligible(m,info)&&(state.scope==='all'||demand(m,info).priority);
+      });
+      if(qualifying.length||i===windows.length-1){
+        state.effectiveWindow=label;state.upcoming=possible;
+        return;
+      }
+    }
+  }
   const ratingKind=detail=>/960/.test(String(detail?.rules||'').toLowerCase())?'chess960':'classical';
   function demand(match,detail){
     if(!detail?.verified)return {verified:false,priority:false,count:0,baseline:0};
@@ -106,7 +126,8 @@
   function eligible(match,detail){
     if(!state.username)return true;
     if(!state.profile||!detail?.verified)return false;
-    if(detail.alreadyRegistered||detail.locked)return false;
+    if(detail.alreadyRegistered||detail.locked===true)return false;
+    if(detail.minRatingKnown===false||detail.maxRatingKnown===false)return false;
     const maxPlayers=Number(detail.maximumPlayers)||0;
     if(maxPlayers>0&&Number(detail.oursCount)>=maxPlayers)return false;
     const rating=state.profile[ratingKind(detail)];
@@ -135,12 +156,15 @@
         try{const u=new URL(m.url,ROOT);return u.protocol==='https:'||u.protocol==='http:'?u.href:'';}catch{return'';}
       })();
       const tc=timeControl(info?.timeControl||m.timeControl);
-      const attr=info?.verified?range(info)+' · '+tc:'Details pending · '+tc;
+      const attr=range(info);
       const needsText=info?.verified&&need.verified?(need.baseline>0?number(need.baseline)+' short':need.priority?'Lineup improvement needed':'No additional players needed'):'';
       return '<div class="p2kw-entry p2kw-radar-entry"><div class="p2kw-entry-main">'+
         '<strong title="'+enc(m.name||name)+'">'+enc(name)+'</strong>'+
-        '<small>'+enc(fmtDate(m.startTime))+' · '+(league(m)?'League':'Friendly')+'</small>'+
-        '<small>'+enc(attr)+'</small>'+
+        '<div class="p2kw-radar-meta" title="'+enc(fmtDate(m.startTime)+' · '+(league(m)?'League':'Friendly')+' · '+attr+' · '+timeControl(info?.timeControl||m.timeControl))+'">'+
+          '<span class="p2kw-radar-date">'+enc(shortDate(m.startTime))+'</span>'+
+          '<span class="p2kw-radar-pill '+(league(m)?'is-league':'is-friendly')+'">'+(league(m)?'League':'Friendly')+'</span>'+
+          '<span class="p2kw-radar-rating">'+enc(attr)+'</span>'+
+          '<span class="p2kw-radar-control">'+enc(tc)+'</span></div>'+
         (needsText?'<small class="p2kw-radar-need">'+enc(needsText)+'</small>':'')+
         '</div>'+(safeUrl?'<a class="p2kw-action" href="'+enc(safeUrl)+'" target="_blank" rel="noopener noreferrer">Join</a>':'')+
         '</div>';
@@ -150,7 +174,7 @@
     const list=main.querySelector('#p2kwRadarList'),hint=main.querySelector('#p2kwRadarHint');
     const count=main.querySelector('#p2kwRadarCount'),overview=main.querySelector('#p2kwRadarOverview');
     if(!list||!hint)return;
-    const seen=state.upcoming.filter(m=>state.details.has(String(m.matchId))).length;
+    resolveWindow();
     const qualified=results().length;
     if(count)count.textContent=number(qualified);
     if(overview)overview.textContent=state.username?'Rating-matched opportunities':number(state.upcoming.length)+' upcoming matches';
@@ -159,11 +183,12 @@
       state.username&&!state.profile?'Player ratings unavailable. Correct the username or retry.':
       'No matches match these filters.')+'</p>';
     let note=state.error||state.notice||'';
-    if(state.fetching)note='Checking live registration sheets · '+seen+' / '+state.upcoming.length;
+    if(state.fetching)note='Reading synchronized Green match data…';
     else{
+      if(state.effectiveWindow!==state.window)note=(note?note+' · ':'')+'No matching opportunities in '+state.window+'; showing '+state.effectiveWindow;
       const unavailable=state.upcoming.filter(m=>!state.details.get(String(m.matchId))?.verified).length;
       if(unavailable)note=(note?note+' · ':'')+unavailable+' match'+(unavailable===1?'':'es')+' could not be verified';
-      else if(!note)note='Registration needs checked';
+      else if(!note)note='Synchronized Green data; no live Chess.com requests';
     }
     hint.textContent=note;
     status.textContent=state.fetching?'Checking…':state.error?'PARTIAL':'LIVE';
@@ -186,69 +211,49 @@
       if(state.window===b.dataset.radarWindow)return;
       state.window=b.dataset.radarWindow;
       main.querySelectorAll('[data-radar-window]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
-      state.upcoming=activeMatches();state.needs.clear();refresh();
-      void scan();
+      state.needs.clear();refresh();
     });
     const form=main.querySelector('#p2kwRadarForm'),input=form.querySelector('input');
     input.oninput=()=>{state.draft=input.value;};
     form.onsubmit=async(event)=>{
       event.preventDefault();
       const name=input.value.trim();
-      if(name&& !/^[a-zA-Z0-9_-]{2,25}$/.test(name)){
+      if(name&&!/^[a-zA-Z0-9_-]{2,25}$/.test(name)){
         state.error='Enter a valid Chess.com username.';refresh();return;
       }
-      state.username=name;state.draft=name;state.profile=null;
-      state.details.clear();state.needs.clear();state.error='';state.notice='';
-      // Invalidate in-flight scans before changing the personalized context.
-      ++state.scanToken;state.fetching=false;
-      refresh();
-      if(name){
-        try{
-          state.fetching=true;refresh();
-          const profile=await get(url('radar-player',{player:name}));
-          if(state.username!==name)return;
-          state.profile=profile;
-          state.error=(profile.classical==null&&profile.chess960==null)
-            ?'No published Daily rating available for this username.':'';
-        }catch(error){
-          if(state.username!==name)return;
-          state.error='Player ratings could not be verified: '+(error.message||error);
-          state.profile=null;
-        }
-      }
-      if(name&&!state.profile){state.fetching=false;refresh();return;}
-      void scan();
-    };
-    refresh();
-  }
-  async function scan(){
-    const generation=++state.scanToken;
-    state.fetching=true;state.upcoming=activeMatches();state.total=state.upcoming.length;state.scanned=0;
-    refresh();
-    const pending=state.upcoming.filter(m=>!state.details.has(String(m.matchId)));
-    for(let i=0;i<pending.length;i+=4){
-      if(generation!==state.scanToken)return;
-      const batch=pending.slice(i,i+4),ids=batch.map(m=>m.matchId);
+      const generation=++state.scanToken;
+      state.username=name;state.draft=name;state.profile=null;state.error='';state.notice='';
+      state.needs.clear();
+      state.fetching=true;refresh();
       try{
-        const payload=await get(url('radar-batch',{ids:ids.join(','),player:state.username}));
-        if(generation!==state.scanToken)return;
-        for(const record of payload.rows||[]){
-          state.details.set(String(record.matchId),record);
-          const m=state.upcoming.find(x=>String(x.matchId)===String(record.matchId));
-          if(m)demand(m,record);
+        if(name){
+          const [profile,catalog]=await Promise.all([
+            get(url('radar-player',{player:name})),
+            get(url('radar-catalog',{player:name}))
+          ]);
+          if(generation!==state.scanToken)return;
+          state.profile=profile;
+          state.catalog=Array.isArray(catalog.matches)?catalog.matches:[];
+          state.details=new Map((catalog.details||[]).map(d=>[String(d.matchId),d]));
+          state.error=(profile.classical==null&&profile.chess960==null)
+            ?'No Green Daily/Chess960 ratings are available for this username.':'';
+          if(profile.statsCheckedAt){
+            state.notice='Ratings checked: '+String(profile.statsCheckedAt)+' UTC';
+          }
+        }else{
+          const catalog=await get(url('radar-catalog'));
+          if(generation!==state.scanToken)return;
+          state.catalog=Array.isArray(catalog.matches)?catalog.matches:[];
+          state.details=new Map((catalog.details||[]).map(d=>[String(d.matchId),d]));
         }
       }catch(error){
         if(generation!==state.scanToken)return;
-        for(const item of batch)state.details.set(String(item.matchId),{
-          matchId:item.matchId,verified:false,reason:'live_match_unavailable'
-        });
-        state.notice='Some live registrations could not be checked.';
+        state.error='Green recruitment data unavailable: '+(error.message||error);
       }
       if(generation!==state.scanToken)return;
-      state.scanned=Math.min(state.upcoming.length,i+4);refresh();
-    }
-    if(generation!==state.scanToken)return;
-    state.fetching=false;refresh();
+      state.fetching=false;refresh();
+    };
+    refresh();
   }
   (async()=>{
     try{
@@ -258,9 +263,10 @@
         main.innerHTML='<div class="p2kw-empty">Widget not published.</div>';return;
       }
       state.window=hoursFor[state.settings.window]?state.settings.window:'48h';
-      const catalog=await get(new URL('server/events-showcase/public/api.php?action=catalog',ROOT));
+      const catalog=await get(url('radar-catalog'));
       state.catalog=Array.isArray(catalog.matches)?catalog.matches:[];
-      state.upcoming=activeMatches();shell();void scan();
+      state.details=new Map((catalog.details||[]).map(d=>[String(d.matchId),d]));
+      shell();refresh();
     }catch(error){
       main.innerHTML='<p class="p2kw-empty">Recruitment catalogue temporarily unavailable: '+enc(error.message||error)+'</p>';
       status.textContent='Unavailable';
