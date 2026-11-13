@@ -93,29 +93,31 @@ try {
         \P2K\TeamPoints\Http::jsonCacheable($entry['payload'],200,60,180,$entry['etag']);
     }
 
-    // Bounded public reads: the Green catalogue controls match IDs; cached Chess.com
-    // sheets supply live roster/rating needs. No arbitrary upstream URL proxying.
-    if($action==='radar-batch' && $method==='GET') {
-        require_once dirname(__DIR__).'/src/RecruitmentRadarReadService.php';
-        $raw=trim((string)($_GET['ids']??''));
-        if($raw===''||strlen($raw)>64||!preg_match('/^\d+(?:,\d+){0,3}$/D',$raw)) {
-            api_error(400,'INVALID_MATCH_IDS','Select up to four numeric match IDs.');
-        }
-        $player=trim((string)($_GET['player']??''));
-        if($player!=='')$player=\P2K\Widgets\RecruitmentRadarReadService::username($player);
+    // ALL recruitment reads are from the Green synchronized DB. The Green
+    // maintenance worker alone owns Chess.com HTTP requests.
+    if(in_array($action,['radar-catalog','radar-batch','radar-player'],true) && $method==='GET') {
+        require_once dirname(__DIR__).'/src/RecruitmentRadarGreenReadService.php';
+        $core=PublicReadDatabase::core();
         $config=p2k_tp_config();
         $club=strtolower(trim((string)($config['app']['club_slug']??'promote-to-king')));
-        $cache=new ResponseCache(is_array($config['storage']??null)?$config['storage']:[]);
-        json_response(200,\P2K\Widgets\RecruitmentRadarReadService::batch(
-            PublicReadDatabase::core(),$cache,$club,explode(',',$raw),$player
-        ));
-    }
-    if($action==='radar-player' && $method==='GET') {
-        require_once dirname(__DIR__).'/src/RecruitmentRadarReadService.php';
-        $name=\P2K\Widgets\RecruitmentRadarReadService::username((string)($_GET['player']??''));
-        $config=p2k_tp_config();
-        $cache=new ResponseCache(is_array($config['storage']??null)?$config['storage']:[]);
-        json_response(200,\P2K\Widgets\RecruitmentRadarReadService::player($cache,$name));
+        $name=\P2K\Widgets\RecruitmentRadarGreenReadService::username(
+            (string)($_GET['player']??'')
+        );
+        if($action==='radar-player'){
+            json_response(200,\P2K\Widgets\RecruitmentRadarGreenReadService::player($core,$name));
+        }
+        if($action==='radar-batch'){
+            $raw=trim((string)($_GET['ids']??''));
+            if($raw===''||strlen($raw)>64||!preg_match('/^\d+(?:,\d+){0,3}$/D',$raw)){
+                api_error(400,'INVALID_MATCH_IDS','Select up to four numeric match IDs.');
+            }
+            json_response(200,\P2K\Widgets\RecruitmentRadarGreenReadService::batch(
+                $core,$club,explode(',',$raw),$name
+            ));
+        }
+        // Single bounded 7-day Green read replaces the widget's per-match
+        // external API fan-out. No upstream requests or on-demand refresh.
+        json_response(200,\P2K\Widgets\RecruitmentRadarGreenReadService::catalog($core,$club,$name));
     }
 
     // Read-only spotlight widgets reuse canonical Green member and MCA projections.
