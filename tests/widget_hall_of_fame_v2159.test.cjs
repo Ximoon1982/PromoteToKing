@@ -3,7 +3,7 @@
 const assert=require("node:assert/strict");
 const fs=require("node:fs"),vm=require("node:vm"),path=require("node:path");
 const src=fs.readFileSync(path.join(__dirname,"../assets/js/widgets/p2k-spotlight-v2159.js"),"utf8");
-const requests=[],buttons={};
+const requests=[],buttons={},controls={};
 const makeControl=(dataset={})=>({dataset,onclick:null,callbacks:{},addEventListener(type,cb){this.callbacks[type]=cb},fire(type,value){this.callbacks[type]?.({target:{value}})}});
 const form=makeControl(),search=makeControl(),select=makeControl();
 search.value="";select.value="all";
@@ -17,8 +17,8 @@ const main={innerHTML:"",scrollTop:0,parentNode:{insertBefore(element){assert.eq
    return buttons[selector];
  },
  querySelectorAll(selector){
-   if(selector==="[data-hof-more]")return ["daily","arena"].map(kind=>makeControl({hofMore:kind}));
-   if(selector==="[data-hof-page]")return [-1,1].map(page=>makeControl({hofPage:String(page)}));
+   if(selector==="[data-hof-more]")return controls[selector]??=(["daily","arena"].map(kind=>makeControl({hofMore:kind})));
+   if(selector==="[data-hof-page]")return controls[selector]??=([-1,1].map(page=>makeControl({hofPage:String(page)})));
    if(selector==="[data-username]")return [];
    if(selector==="[data-scoretab]")return ["daily","arena"].map(tab=>makeControl({scoretab:tab}));
    if(selector==="[data-tour-index]")return [];
