@@ -81,7 +81,7 @@ function drawHallTabs(){
    (v==='leaderboards'?'Leaderboards':'Tournaments')+'</button>').join('');
 }
 function hallTitle(kind){
- return kind==='daily'?'Daily Matches':'Multi Club Arenas';
+ return kind==='daily'?'Daily Match Points':'Multi Club Arenas Points';
 }
 function hallItems(data,expanded){
  const items=Array.isArray(data?.rows)?data.rows:[];
@@ -95,7 +95,7 @@ function hallItems(data,expanded){
 function renderHallHome(){
  if(!isHall||hallMode!=='leaderboards')return;
  const mode=hallExpanded,periodLabels={all:'All time',quarter:'Quarter',month:'Month'};
- const periodSelect='<select id="p2kwHofPeriod" aria-label="Daily Matches leaderboard period">'+
+ const periodSelect='<select id="p2kwHofPeriod" aria-label="Daily Match Points leaderboard period">'+
    ['all','quarter','month'].map(p=>'<option value="'+p+'" '+(p===hallScope?'selected':'')+'>'+periodLabels[p]+'</option>').join('')+'</select>';
  let html=playerHeader();
  for(const kind of ['daily','arena']){
@@ -106,7 +106,7 @@ function renderHallHome(){
    if(!data){html+='<p class="p2kw-loading-status">Loading leaderboard…</p>';continue}
    html+=hallItems(data,Boolean(mode));
    if(!mode){
-     html+='<button type="button" class="p2kw-mini-button p2kw-hof-more" data-hof-more="'+kind+'">More '+hallTitle(kind)+'</button>';
+     html+='<button type="button" class="p2kw-mini-button p2kw-hof-more" data-hof-more="'+kind+'">show more+'</button>';
    }else{
      const pagination=data.pagination||{};
      html+='<div class="p2kw-widget-nav p2kw-hof-pagination">'+
@@ -121,7 +121,7 @@ function renderHallHome(){
  main.querySelector('#p2kwHofPeriod')?.addEventListener('change',event=>{
    const next=event.target.value;
    if(!['all','quarter','month'].includes(next)||next===hallScope)return;
-   hallScope=next;hallExpanded=null;hallPage=1;hallPages.daily=null;hallTop.daily=null;
+   hallScope=next;hallPage=1;hallPages.daily=null;hallTop.daily=null;
    renderHallHome();void hallFetch('daily',1);
  });
  main.querySelectorAll('[data-hof-more]').forEach(button=>button.onclick=()=>{
