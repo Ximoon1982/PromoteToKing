@@ -196,7 +196,7 @@ function showPlayer(data){
  if(!data?.found||!data.daily){main.innerHTML=playerHeader()+'<p class="p2kw-empty">No current member matched that name.</p><button class="p2kw-mini-button" id="p2kwBackTop">'+(isHall?'Back to leaderboard':'Show top five')+'</button>';bindPlayerSearch();main.querySelector('#p2kwBackTop').onclick=()=>{currentUser='';void loadPlayerHome()};return}
  const daily=data.daily,live=data.live,medals=data.tournaments||{},user=data.username||daily.username||currentUser;
  const pos=periodData||{};
- const tab='<nav class="p2kw-seg" aria-label="Player scoring"><button type="button" data-scoretab="daily" aria-pressed="'+(activePlayerTab==='daily')+'">'+(isHall?'Daily Matches':'Daily')+'</button><button type="button" data-scoretab="arena" aria-pressed="'+(activePlayerTab==='arena')+'">'+(isHall?'Multi Club Arenas':'Arenas')+'</button></nav>';
+ const tab='<nav class="p2kw-seg" aria-label="Player scoring"><button type="button" data-scoretab="daily" aria-pressed="'+(activePlayerTab==='daily')+'">'+(isHall?'Daily Match Points':'Daily')+'</button><button type="button" data-scoretab="arena" aria-pressed="'+(activePlayerTab==='arena')+'">'+(isHall?'Multi Club Arenas Points':'Arenas')+'</button></nav>';
  let details='';
  if(activePlayerTab==='daily'){
    const overall=pos.overall||{},month=pos.month||{},quarter=pos.quarter||{},last30=pos.last30||{};
