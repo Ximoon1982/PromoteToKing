@@ -24,7 +24,13 @@ def test_missing_results_are_prioritized_over_requeued_enrichment():
     assert 'f.club_slug=a.club_slug AND f.arena_id=a.arena_id' in body
     assert re.search(r'THEN 0 ELSE 1 END ASC,\s*a\.priority DESC,\s*a\.arena_id DESC', body)
     assert 'LIMIT 1' in body, 'Worker must be bounded'
-    assert "WHERE a.club_slug=? AND a.status='pending'" in body
+    assert "WHERE a.club_slug=? AND (" in body
+    assert "a.status='pending'" in body, 'Normal queue must stay eligible'
+    assert "a.status='error'" in body, 'Recent missing-Results errors must be retryable'
+    assert "a.stage IN ('results','clubs','players')" in body
+    assert 'DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 MINUTE)' in body
+    assert 'DATE_SUB(UTC_DATE(), INTERVAL 7 DAY)' in body
+    assert "ready.status='processed' AND ready.row_count>0" in body, 'Do not retry enrichment-only failures'
 
 
 def test_existing_worker_and_scoring_contracts_are_preserved():
