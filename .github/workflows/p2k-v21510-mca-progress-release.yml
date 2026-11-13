@@ -12,6 +12,7 @@ on:
       - 'tools/install-mca-cron-dispatcher-v21510.sh'
       - 'tests/test_v21510_mca_runtime_launcher.sh'
       - 'tests/test_v21510_progress_ticks.js'
+      - 'tests/test_v2155_mca_results_priority.py'
       - 'server/widgets/src/WidgetConfigStore.php'
       - 'server/widgets/src/TournamentWidgetReadService.php'
       - 'server/widgets/src/HallOfFameLeaderboardService.php'
