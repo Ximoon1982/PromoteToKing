@@ -106,7 +106,7 @@ function renderHallHome(){
    if(!data){html+='<p class="p2kw-loading-status">Loading leaderboard…</p>';continue}
    html+=hallItems(data,Boolean(mode));
    if(!mode){
-     html+='<button type="button" class="p2kw-mini-button p2kw-hof-more" data-hof-more="'+kind+'">show more+'</button>';
+     html+='<button type="button" class="p2kw-mini-button p2kw-hof-more" data-hof-more="'+kind+'">show more</button>';
    }else{
      const pagination=data.pagination||{};
      html+='<div class="p2kw-widget-nav p2kw-hof-pagination">'+
