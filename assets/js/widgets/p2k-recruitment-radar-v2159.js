@@ -64,34 +64,45 @@
     if(!detail?.verified)return {verified:false,priority:false,count:0,baseline:0};
     const sig=String(match.matchId);
     if(state.needs.has(sig))return state.needs.get(sig);
-    const min=Number(detail.minRating)||0,max=Number(detail.maxRating)||0;
-    const bounds={min_rating:min,max_rating:max||0};
-    const ours=Array.isArray(detail.oursRatings)?detail.oursRatings:[];
-    const other=Array.isArray(detail.opponentRatings)?detail.opponentRatings:[];
-    const minPlayers=Number(detail.minimumPlayers)||0,maxPlayers=Number(detail.maximumPlayers)||0;
-    let plan=null;
-    try{
-      if(lineup?.recruitmentMetrics){
-        plan=lineup.recruitmentMetrics({
-          match:{settings:{...bounds,min_team_players:minPlayers,max_team_players:maxPlayers,rules:detail.rules}},
-          p2kTeam:{players:ours.map(r=>({rating:r})),locked:Boolean(detail.locked)},
-          opponentTeam:{players:other.map(r=>({rating:r}))},
-          isLeague:league(match)
-        });
-      }
-    }catch(error){console.warn('Recruitment demand projection unavailable',error);}
-    // No guesses when the shared recruitment algorithm could not run.
-    const verified=plan!==null;
-    const count=verified?Math.max(0,Number(plan.count)||0):0;
-    const baseline=verified?Math.max(0,Number(plan.baseline)||0):0;
-    const priority=verified&&!detail.locked&&!plan.ready&&count>0;
+    const min=Math.max(0,Number(detail.minRating)||0),max=Number(detail.maxRating)||0;
+    const filter=values=>(Array.isArray(values)?values:[])
+      .map(Number).filter(r=>Number.isFinite(r)&&r>=min&&(!max||r<=max))
+      .sort((a,b)=>b-a);
+    const ours=filter(detail.oursRatings),other=filter(detail.opponentRatings);
+    const minimum=Math.max(0,Number(detail.minimumPlayers)||0);
+    const maximum=Number(detail.maximumPlayers)>0?Number(detail.maximumPlayers):Infinity;
+    // Identical player-deficit envelope to Recruitment Demand Planner:
+    // match the larger of mandatory and opposing eligible lineup, capped at the
+    // match's maximum team size. Do not infer a deficit from names or timing.
+    const target=Math.min(maximum,Math.max(minimum,other.length));
+    const baseline=Math.max(0,target-ours.length);
+    const below=ours.length<minimum;
+    let strengthen=false;
+    // Cheap expected-score projection from the shared recruitment engine:
+    // avoids running the expensive full multi-bucket portfolio optimizer in a
+    // public iframe, which would stall mobile browsers for large rosters.
+    if(baseline===0&&ours.length<maximum&&other.length>0&&lineup?.compareRecruitmentLineupsCheap){
+      try{
+        const current=lineup.compareRecruitmentLineupsCheap(ours,other,maximum);
+        const candidate=Math.max(min,Math.min(max||Infinity,2000));
+        const projected=[...ours,candidate].sort((a,b)=>b-a);
+        const improved=lineup.compareRecruitmentLineupsCheap(projected,other,maximum);
+        const targetShare=league(match)?.55:.5;
+        strengthen=Number.isFinite(current.expectedScoreShare)
+          &&Number.isFinite(improved.expectedScoreShare)
+          &&current.expectedScoreShare<targetShare-.002
+          &&improved.expectedScoreShare-current.expectedScoreShare>.005;
+      }catch(error){console.warn('Radar lineup comparison unavailable',error);}
+    }
+    const priority=!detail.locked&&(baseline>0||strengthen);
     const hours=Math.max(0,(Number(match.startTime)*1000-Date.now())/3600000);
-    const below=Number(detail.oursCount)<minPlayers;
-    const score=(baseline*15)+(league(match)?70:0)+(hours<48?80:0)+(below?100:0)+(priority&&baseline===0?20:0);
-    const result={verified,priority,count,baseline,score,below};
+    const score=(baseline*15)+(league(match)?70:0)+(hours<48?80:0)
+      +(below?100:0)+(strengthen?20:0);
+    const result={verified:true,priority,count:baseline,baseline,score,below,strengthen};
     state.needs.set(sig,result);
     return result;
   }
+
   function eligible(match,detail){
     if(!state.username)return true;
     if(!state.profile||!detail?.verified)return false;
