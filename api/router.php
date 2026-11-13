@@ -41,6 +41,11 @@ try {
             if ($method === 'POST') {
                 require_write_header('match-assistant-log');
                 $body = body_json(16384);
+                if (($body['event'] ?? '') === 'name-search') {
+                    $name=(string)($body['username']??'');
+                    $entry=\P2K\Shared\NameSearchUsage::record(root_dir(),$name,'match-assistant');
+                    json_response(201,['ok'=>true,'recorded'=>true,'timestamp'=>$entry['timestamp']]);
+                }
                 $username = strtolower(trim((string)($body['username'] ?? '')));
                 $count = filter_var($body['matchesFound'] ?? null, FILTER_VALIDATE_INT);
                 if ($username === '' || strlen($username) > 128 || $count === false || $count < 0) throw new InvalidArgumentException('invalid log entry');
