@@ -51,16 +51,24 @@
    if(yMax===null)yMax=largest+baseSpan*.16;
    if(endValue!==null)yMax=Math.max(yMax,endValue+Math.max(1,(endValue-yMin)*.08));
    if(yMax<=yMin){yMin=Math.max(0,smallest-baseSpan*.15);yMax=largest+baseSpan*.15+1}
+   // Keep at least one integer point visible on very narrow reference ranges.
+   if(yMax-yMin<1){yMin=Math.max(0,Math.floor(yMin));yMax=Math.max(yMin+1,Math.ceil(yMax));}
    const x1=42,x2=246,top=14,bottom=223,span=yMax-yMin;
    const x=p=>x1+(p-visibleStart)/Math.max(1,xEnd-visibleStart)*(x2-x1);
    const y=p=>Math.max(top,Math.min(bottom,bottom-(p-yMin)/span*(bottom-top)));
    const ppath=history.map((p,i)=>(i?"L":"M")+x(p.day).toFixed(2)+" "+y(p.value).toFixed(2)).join(" ");
-   const ticks=Array.from({length:5},(_,i)=>{const val=yMin+i*span/4,py=y(val);return '<path d="M'+x1+' '+py.toFixed(1)+'H'+x2+'" stroke="var(--border)" stroke-width=".65"/>'+
-     '<text x="2" y="'+(py+3).toFixed(1)+'" fill="var(--muted)" font-size="8.5" paint-order="stroke" stroke="var(--card)" stroke-width="1.5">'+xml(pointsValue(val))+'</text>'
+   // Axis tick values are whole Club Points; preserve full precision in graph/projection math.
+   // The step is at least 1, preventing duplicate integer labels for narrow ranges.
+   const tickStep=Math.max(1,Math.ceil(span/4));
+   const firstTick=Math.ceil(yMin/tickStep)*tickStep;
+   const ticks=Array.from({length:Math.min(6,Math.max(0,Math.floor((yMax-firstTick)/tickStep)+1))},(_,i)=>{
+     const val=firstTick+i*tickStep,py=y(val);
+     return '<path d="M'+x1+' '+py.toFixed(1)+'H'+x2+'" stroke="var(--border)" stroke-width=".65"/>'+
+       '<text x="2" y="'+(py+3).toFixed(1)+'" fill="var(--muted)" font-size="8.5" paint-order="stroke" stroke="var(--card)" stroke-width="1.5">'+xml(Math.round(val).toLocaleString("en-GB"))+'</text>';
    }).join("");
    const refs=[[lower,lowerLabel],[upper,upperLabel]].filter(([val])=>val!==null).map(([val,label])=>{
      const py=y(val),short=label.length>14?label.slice(0,13)+"…":label;
-     return '<g><title>'+xml((label||"Reference")+" · "+pointsValue(val))+'</title>'+
+     return '<g><title>'+xml((label||"Reference")+" · "+Math.round(val).toLocaleString("en-GB"))+'</title>'+
        '<path d="M'+x1+' '+py.toFixed(1)+'H'+x2+'" stroke="var(--gold)" stroke-width="1.25" opacity=".9"/>'+
        (short?'<text x="'+(x2-1)+'" y="'+(py<=top+6?py+12:py-4).toFixed(1)+'" text-anchor="end" fill="var(--gold)" font-size="10" font-weight="800" paint-order="stroke" stroke="var(--card)" stroke-width="2">'+xml(short)+'</text>':"")+
        '</g>';
