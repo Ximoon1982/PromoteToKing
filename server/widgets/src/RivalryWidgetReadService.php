@@ -81,7 +81,8 @@ final class RivalryWidgetReadService
     private static function normal(string $s):string
     {
         $s=strtolower(trim($s));
-        return preg_replace('/[^a-z0-9]+/',' ',iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$s)?:$s)?:'';
+        $ascii=function_exists('iconv')?iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$s):false;
+        return trim(preg_replace('/[^a-z0-9]+/',' ',($ascii!==false?$ascii:$s))?:'');
     }
 
     public static function suggestions(PDO $core,PDO $analytics,string $club,string $raw):array
@@ -108,9 +109,10 @@ final class RivalryWidgetReadService
                 elseif(str_contains($candidate,' '.$query))$score=max($score,780);
                 elseif(str_contains($candidate,$query))$score=max($score,690);
                 else{
-                    $distance=min(levenshtein(substr($candidate,0,100),substr($query,0,100)),
-                        ...array_map(static fn(string $part):int=>levenshtein(substr($part,0,50),substr($query,0,50)),
-                        array_slice(array_filter(explode(' ',$candidate)),0,12)));
+                    $distance=levenshtein(substr($candidate,0,100),substr($query,0,100));
+                    foreach(array_slice(array_values(array_filter(explode(' ',$candidate))),0,12) as $part){
+                        $distance=min($distance,levenshtein(substr($part,0,50),substr($query,0,50)));
+                    }
                     $threshold=max(2,min(7,(int)ceil(strlen($query)*.34)));
                     if($distance<=$threshold)$score=max($score,520-$distance*45);
                 }
