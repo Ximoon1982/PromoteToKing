@@ -50,7 +50,8 @@ assert(css.includes(".p2kw-progress-chart{")&&css.includes("border-radius:0")&&c
 const widgetSource=fs.readFileSync(path.join(__dirname,"../assets/js/widgets/p2k-embed-v2153.js"),"utf8");
 assert(widgetSource.includes("assets/images/p2k-progress-logo.webp"),"Chart uses the generated optimized image");
 assert(widgetSource.includes("main.innerHTML=result.svg;"),"Club Progress displays only the chart beneath its heading");
-assert(!widgetSource.includes('class="p2kw-label">Club Points</div>'),"Club Progress no longer has a redundant points count heading");
+const progressFunction=widgetSource.slice(widgetSource.indexOf("async function clubProgress"),widgetSource.indexOf("const coord=",widgetSource.indexOf("async function clubProgress")));
+assert(!progressFunction.includes('class="p2kw-label">Club Points</div>'),"Only Club Progress drops its points count (Club Pulse is unchanged)");
 const store=fs.readFileSync(path.join(__dirname,"../server/widgets/src/WidgetConfigStore.php"),"utf8");
 assert(store.includes("'club-progress'=>'Grinding the leaderboard'"),"Club Progress is renamed");
 const embed=fs.readFileSync(path.join(__dirname,"../server/widgets/public/embed.php"),"utf8");
