@@ -43,6 +43,7 @@ const matches=[
  {matchId:"1002",name:"Friendly Two",opponentName:"Friendly Two",url:"https://www.chess.com/club/matches/1002",startTime:now+14*3600,category:"friendly",timeControl:"259200"},
  {matchId:"1003",name:"League 960",opponentName:"League 960",url:"https://www.chess.com/club/matches/1003",startTime:now+36*3600,category:"league",timeControl:"259200"},
  {matchId:"1004",name:"U1500 League",opponentName:"U1500 League",url:"https://www.chess.com/club/matches/1004",startTime:now+25*3600,category:"league",timeControl:"86400"},
+ {matchId:"1005",name:"Open Rating Match",opponentName:"Open Rating Match",url:"https://www.chess.com/club/matches/1005",startTime:now+56*3600,category:"league",timeControl:"86400"},
 ];
 const data={
  "1001":{verified:true,matchId:1001,minRating:1400,maxRating:1800,minimumPlayers:3,maximumPlayers:20,
@@ -52,7 +53,9 @@ const data={
  "1003":{verified:true,matchId:1003,minRating:1800,maxRating:2100,minimumPlayers:2,maximumPlayers:20,
    oursCount:1,opponentCount:3,oursRatings:[1880],opponentRatings:[1900,1990,2050],rules:"chess960",timeControl:"259200",locked:false,minRatingKnown:true,maxRatingKnown:true},
  "1004":{verified:true,matchId:1004,minRating:null,maxRating:1500,minimumPlayers:2,maximumPlayers:30,
-   oursCount:1,opponentCount:3,oursRatings:[1400],opponentRatings:[1200,1300,1400],rules:"chess",timeControl:"86400",locked:false,minRatingKnown:false,maxRatingKnown:true}
+   oursCount:1,opponentCount:3,oursRatings:[1400],opponentRatings:[1200,1300,1400],rules:"chess",timeControl:"86400",locked:false,minRatingKnown:false,maxRatingKnown:true},
+ "1005":{verified:true,matchId:1005,minRating:null,maxRating:null,minimumPlayers:2,maximumPlayers:30,
+   oursCount:1,opponentCount:3,oursRatings:[1400],opponentRatings:[1200,1300,1400],rules:"chess",timeControl:"86400",locked:false,minRatingKnown:true,maxRatingKnown:false}
 };
 const window={P2K_RECRUITMENT_LINEUP_CORE:{
  compareRecruitmentLineupsCheap(a,b){return {expectedScoreShare:a.length>=b.length?.6:.38}}
@@ -104,6 +107,11 @@ const wait=()=>new Promise(resolve=>setTimeout(resolve,55));
  assert(list.innerHTML.includes("League 960"),"Empty 24h expands to the 48h opportunity");
  assert(hint.textContent.includes("showing 48h"),"Automatic expansion disclosed to visitor");
  assert(!list.innerHTML.includes("League One"),"Registration exclusion preserved across fallback");
+ controls.get("[data-radar-window]")[3].onclick();await wait();
+ assert(list.innerHTML.includes("Open Rating Match"),"Unrestricted upper rating does not exclude personalized results");
+ assert(list.innerHTML.includes("Open"),"Missing rating cap displays as Open");
+ assert(!list.innerHTML.includes("Rating cap unavailable"),"No misleading unknown cap label");
+ assert(!hint.textContent.includes("Synchronized Green")&&!hint.textContent.includes("Chess.com requests"),"No internal technical hints");
  assert.equal(foot.textContent,"");
  const scripts=fs.readFileSync(path.join(__dirname,"../server/widgets/public/embed.php"),"utf8");
  assert(scripts.includes("p2k-recruitment-radar-v2159.js"));

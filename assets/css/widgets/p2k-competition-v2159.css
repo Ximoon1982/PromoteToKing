@@ -1,46 +1,37 @@
-/* P2K Competition composite. Exactly one 260px host iframe, script-free host. */
-/* The child pages remain byte-for-byte the existing Showcase/Radar/Rivals embeds. */
+/* P2K Competition — compact transparent cards and fixed button position. */
 body[data-widget="competition"] .p2kw-panel{
-  border:0;border-radius:11px;padding:10px 0 0;
+  border:0;border-radius:0;padding:0;background:transparent;box-shadow:none;
 }
-body[data-widget="competition"] .p2kw-head{
-  margin:0 0 8px;padding:0 10px;min-height:23px;
+body[data-widget="competition"] .p2kw-competition-chrome{
+  flex:0 0 auto;min-width:0;margin:0 0 7px;padding:8px 8px 7px;
+  border:1px solid var(--border);border-radius:10px;background:var(--panel);
 }
-body[data-widget="competition"] .p2kw-content{
-  flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
-  scrollbar-width:thin;overscroll-behavior:contain;
-}
-body[data-widget="competition"] .p2kw-foot{display:none}
-.p2kw-competition{width:260px;max-width:100%;min-width:0;overflow:hidden}
-/* Hall of Fame's shared rounded-rectangle selector; three equal Competition tabs. */
+body[data-widget="competition"] .p2kw-head{margin:0 0 7px;padding:0;min-height:20px}
+body[data-widget="competition"] .p2kw-content{flex:1 1 auto;min-height:0;overflow:hidden}
+.p2kw-competition{width:260px;max-width:100%;height:100%;min-height:0;overflow:hidden}
+.p2kw-competition-views{height:100%;min-height:0}
 .p2kw-competition-tabs{
-  flex:0 0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
-  width:calc(100% - 18px);margin:0 9px 7px;padding:2px;gap:3px;
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:3px;width:100%;margin:0;padding:2px;
 }
 .p2kw-competition-tabs button{min-width:0;white-space:nowrap;padding:7px 2px}
-.p2kw-competition-tabs button[aria-selected="true"]{
-  background:var(--fill);color:#17110a;
-}
-.p2kw-competition-tabs button:focus-visible{
-  outline:2px solid var(--blue);outline-offset:-2px;
-}
-.p2kw-competition-view{width:260px;max-width:100%;min-width:0;margin:0;padding:0}
+.p2kw-competition-tabs button[aria-selected="true"]{background:var(--fill);color:#17110a}
+.p2kw-competition-tabs button:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+.p2kw-competition-view{width:260px;max-width:100%;height:100%;min-height:0;margin:0;padding:0}
 .p2kw-competition-view[hidden]{display:none!important}
 .p2kw-competition-frame{
-  display:block;width:260px;max-width:100%;margin:0;padding:0;border:0;
-  background:transparent;overflow:auto;
+  display:block;width:260px;max-width:100%;height:100%;margin:0;padding:0;
+  border:0;background:transparent;overflow:auto;
 }
-.p2kw-competition-assistant{
-  padding:5px 6px 8px;text-align:center;
+body[data-widget="competition"] .p2kw-foot.p2kw-competition-assistant{
+  display:block;flex:0 0 auto;border:0;margin:7px 0 0;padding:0;
 }
+body[data-widget="competition"] .p2kw-foot.p2kw-competition-assistant[hidden]{display:none!important}
 .p2kw-competition-assistant a{
-  display:flex;align-items:center;justify-content:center;
-  width:100%;min-height:29px;padding:5px 7px;
+  display:flex;align-items:center;justify-content:center;width:100%;
+  min-height:29px;padding:5px 7px;
   border:1px solid color-mix(in srgb,var(--gold) 48%,var(--border));
   border-radius:7px;background:color-mix(in srgb,var(--gold) 8%,var(--low));
-  color:var(--gold);font-size:10.5px;font-weight:900;text-decoration:none;
-  line-height:1.25;
+  color:var(--gold);font-size:10.5px;font-weight:900;text-decoration:none;line-height:1.25;
 }
-.p2kw-competition-assistant a:hover{
-  background:color-mix(in srgb,var(--gold) 16%,var(--low));
-}
+.p2kw-competition-assistant a:hover{background:color-mix(in srgb,var(--gold) 16%,var(--low))}

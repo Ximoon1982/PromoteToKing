@@ -7,6 +7,7 @@
   if(document.body.dataset.widget !== 'competition')return;
   const main=document.getElementById('p2kwContent');
   const status=document.getElementById('p2kwStatus');
+  const foot=document.getElementById('p2kwFoot');
   if(!main)return;
 
   const root=new URL('../../../',document.currentScript.src);
@@ -15,13 +16,15 @@
   const preview=document.body.dataset.preview==='1';
   const modes=[
     {id:'showcase',label:'Showcase',title:'Current P2K Match Showcase',
-      path:'server/events-showcase/public/embed-card.php',height:690},
+      path:'server/events-showcase/public/embed-card.php'},
     {id:'match-calls',label:'Match calls',title:'P2K Recruitment Radar',
-      path:'server/widgets/public/embed.php',child:'recruitment-radar',height:650},
+      path:'server/widgets/public/embed.php',child:'recruitment-radar'},
     {id:'rivals',label:'Rivals',title:'P2K Rivalry Spotlight',
-      path:'server/widgets/public/embed.php',child:'rivalry-spotlight',height:540}
+      path:'server/widgets/public/embed.php',child:'rivalry-spotlight'}
   ];
   const views=new Map();
+  const loadStates=new Map();
+  const viewportHeight=565;
   let active='showcase';
 
   // Use the Hall of Fame navigation surface, outside the scrollable view.
@@ -35,7 +38,55 @@
     ' data-competition-tab="'+mode.id+'" aria-selected="'+(index===0)+'"'+
     ' tabindex="'+(index===0?'0':'-1')+'">'+mode.label+'</button>'
   ).join('');
-  main.parentNode.insertBefore(nav,main);
+  // Only the heading and selector use an opaque panel; the cards remain transparent.
+  const chrome=document.createElement('div');
+  chrome.className='p2kw-competition-chrome';
+  const header=main.parentNode.querySelector('.p2kw-head');
+  main.parentNode.insertBefore(chrome,main);
+  if(header)chrome.append(header);
+  chrome.append(nav);
+  // One anchored footer in both Showcase and Match calls; none in Rivals.
+  if(foot){
+    foot.className='p2kw-foot p2kw-competition-assistant';
+    const link=document.createElement('a');
+    link.href=matchAssistant;
+    link.target='_blank';
+    link.rel='noopener noreferrer';
+    link.textContent='Open P2K match selection assistant';
+    foot.append(link);
+  }
+  function setStatus(id,value){
+    const normalized=value==='LIVE'?'LIVE':value==='PARTIAL'?'PARTIAL':
+      value==='Unavailable'?'Unavailable':'Loading…';
+    loadStates.set(id,normalized);
+    if(active===id&&status)status.textContent=normalized;
+  }
+  function observeChild(mode,frame){
+    try{
+      const doc=frame.contentDocument;
+      const target=mode.id==='showcase'?
+        doc?.documentElement:doc?.getElementById('p2kwStatus');
+      if(!target){setStatus(mode.id,'Unavailable');return;}
+      const refresh=()=>{
+        const value=mode.id==='showcase'?
+          target.getAttribute('data-p2kw-load-state'):target.textContent;
+        const normalized=String(value||'').trim().toLowerCase();
+        setStatus(mode.id,normalized==='live'?'LIVE':
+          normalized==='partial'?'PARTIAL':
+          normalized==='unavailable'?'Unavailable':'Loading…');
+      };
+      if(typeof MutationObserver!=='undefined'){
+        new MutationObserver(refresh).observe(target,{
+          attributes:true,childList:true,characterData:true,subtree:true,
+          attributeFilter:['data-p2kw-load-state']
+        });
+      }
+      refresh();
+    }catch{
+      // Do not claim a successful load if the child cannot be inspected.
+      setStatus(mode.id,'Unavailable');
+    }
+  }
   main.innerHTML=
     '<div class="p2kw-competition">'+
       '<div class="p2kw-competition-views">'+
@@ -52,6 +103,7 @@
     const pane=main.querySelector('#p2kwCompetitionPanel-'+mode.id);
     const childUrl=new URL(mode.path,root);
     childUrl.searchParams.set('theme',explicitTheme);
+    if(mode.id==='showcase')childUrl.searchParams.set('via','competition');
     if(mode.child){
       childUrl.searchParams.set('widget',mode.child);
       childUrl.searchParams.set('via','competition');
@@ -61,8 +113,8 @@
     frame.className='p2kw-competition-frame p2kw-competition-frame-'+mode.id;
     frame.title=mode.title;
     frame.width='260';
-    frame.height=String(mode.height);
-    frame.style.height=mode.height+'px';
+    frame.height=String(viewportHeight);
+    frame.style.height='100%';
     frame.style.width='260px';
     frame.style.maxWidth='100%';
     frame.setAttribute('loading','eager');
@@ -71,18 +123,9 @@
     frame.src=childUrl.href;
     pane.append(frame);
 
-    if(mode.id==='match-calls'){
-      const footer=document.createElement('div');
-      footer.className='p2kw-competition-assistant';
-      const link=document.createElement('a');
-      link.href=matchAssistant;
-      link.target='_blank';
-      link.rel='noopener noreferrer';
-      // Same destination and button text as the existing Events Showcase.
-      link.textContent='Open P2K match selection assistant';
-      footer.append(link);
-      pane.append(footer);
-    }
+    frame.addEventListener('load',()=>observeChild(mode,frame));
+    frame.addEventListener('error',()=>setStatus(mode.id,'Unavailable'));
+
     views.set(mode.id,pane);
     return pane;
   }
@@ -99,7 +142,8 @@
       if(tab){tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;}
       if(panel)panel.hidden=!selected;
     });
-    if(status)status.textContent=mode.label;
+    if(foot)foot.hidden=mode.id==='rivals';
+    if(status)status.textContent=loadStates.get(mode.id)||'Loading…';
     main.scrollTop=0;
     if(focus)nav.querySelector('#p2kwCompetitionTab-'+mode.id)?.focus();
     return pane;

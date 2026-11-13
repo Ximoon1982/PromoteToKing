@@ -65,7 +65,6 @@
     if(!detail?.verified)return '—';
     // Chess.com omits the minimum setting for an unrestricted 0 rating floor.
     const min=Math.max(0,Number(detail.minRating)||0),max=Number(detail.maxRating)||0;
-    if(detail.maxRatingKnown===false)return max>0?(min?min+'–'+max:'U'+max):'Rating cap unavailable';
     if(!max)return min?min+'+':'Open';
     return min?min+'–'+max:'U'+max;
   };
@@ -138,10 +137,7 @@
     if(!state.username)return true;
     if(!state.profile||!detail?.verified)return false;
     if(detail.alreadyRegistered||detail.locked===true)return false;
-    // Missing minimum is 0, not a reason to suppress the match.
-    // A missing maximum cap is genuinely unverified: keep the match visible
-    // provisionally, with a clear caveat, rather than returning an empty list.
-    if(detail.maxRatingKnown===false&&Number(detail.maxRating)>0)return false;
+    // An absent upper rating bound is open; numeric bounds are enforced below.
     const maxPlayers=Number(detail.maximumPlayers)||0;
     if(maxPlayers>0&&Number(detail.oursCount)>=maxPlayers)return false;
     const rating=state.profile[ratingKind(detail)];
@@ -171,8 +167,6 @@
       })();
       const tc=timeControl(info?.timeControl||m.timeControl);
       const attr=range(info);
-      const provisional=state.username&&info?.verified&&info.maxRatingKnown===false;
-      const eligibilityNote=provisional?' · rating cap not confirmed':'';
 
       const needsText=info?.verified&&need.verified?(need.baseline>0?number(need.baseline)+' short':need.priority?'Lineup improvement needed':'No additional players needed'):'';
       return '<div class="p2kw-entry p2kw-radar-entry"><div class="p2kw-entry-main">'+
@@ -182,8 +176,7 @@
           '<span class="p2kw-radar-pill '+(league(m)?'is-league':'is-friendly')+'">'+(league(m)?'League':'Friendly')+'</span>'+
           '<span class="p2kw-radar-rating">'+enc(attr)+'</span>'+
           '<span class="p2kw-radar-control">'+enc(tc)+'</span></div>'+
-        (needsText?'<small class="p2kw-radar-need">'+enc(needsText+eligibilityNote)+'</small>':
-          provisional?'<small class="p2kw-radar-need">Rating cap not confirmed in Green</small>':'')+
+        (needsText?'<small class="p2kw-radar-need">'+enc(needsText)+'</small>':'')+
         '</div>'+(safeUrl?'<a class="p2kw-action" href="'+enc(safeUrl)+'" target="_blank" rel="noopener noreferrer">Join</a>':'')+
         '</div>';
     }).join('');
@@ -197,16 +190,15 @@
     if(count)count.textContent=number(qualified);
     if(overview)overview.textContent=state.username?'Rating-matched opportunities':number(state.upcoming.length)+' upcoming matches';
     list.innerHTML=entries()||'<p class="p2kw-empty">'+(state.fetching?
-      'Assessing verified recruitment needs…':
-      state.username&&!state.profile?(state.authenticatedUser?'Player ratings unavailable for your Chess.com account.':'Player ratings unavailable. Correct the username or retry.'):
+      'Checking recruitment opportunities…':
+      state.username&&!state.profile?(state.authenticatedUser?'Your ratings are temporarily unavailable.':'Player ratings unavailable. Check the username or retry.'):
       'No matches match these filters.')+'</p>';
     let note=state.error||state.notice||'';
-    if(state.fetching)note='Reading synchronized Green match data…';
+    if(state.fetching)note='Checking match recommendations…';
     else{
       if(state.effectiveWindow!==state.window)note=(note?note+' · ':'')+'No matching opportunities in '+state.window+'; showing '+state.effectiveWindow;
       const unavailable=state.upcoming.filter(m=>!state.details.get(String(m.matchId))?.verified).length;
-      if(unavailable)note=(note?note+' · ':'')+unavailable+' match'+(unavailable===1?'':'es')+' could not be verified';
-      else if(!note)note='Synchronized Green data; no live Chess.com requests';
+      if(unavailable)note=(note?note+' · ':'')+unavailable+' match'+(unavailable===1?'':'es')+' temporarily unavailable';
     }
     hint.textContent=note;
     status.textContent=state.fetching?'Checking…':state.error?'PARTIAL':'LIVE';
@@ -228,7 +220,7 @@
         state.catalog=Array.isArray(catalog.matches)?catalog.matches:[];
         state.details=new Map((catalog.details||[]).map(d=>[String(d.matchId),d]));
         state.error=(profile.classical==null&&profile.chess960==null)
-          ?'No Green Daily/Chess960 ratings are available for this username.':'';
+          ?'No Daily or Chess960 rating is available for this player.':'';
         if(profile.statsCheckedAt){
           state.notice='Ratings checked: '+String(profile.statsCheckedAt)+' UTC';
         }
@@ -240,7 +232,7 @@
       }
     }catch(error){
       if(generation!==state.scanToken)return;
-      state.error='Green recruitment data unavailable: '+(error.message||error);
+      state.error='Match recommendations are temporarily unavailable.';
     }
     if(generation!==state.scanToken)return;
     state.fetching=false;refresh();
@@ -298,7 +290,7 @@
       }
       shell();refresh();
     }catch(error){
-      main.innerHTML='<p class="p2kw-empty">Recruitment catalogue temporarily unavailable: '+enc(error.message||error)+'</p>';
+      main.innerHTML='<p class="p2kw-empty">Match recommendations are temporarily unavailable.</p>';
       status.textContent='Unavailable';
     }
   })();

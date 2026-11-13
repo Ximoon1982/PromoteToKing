@@ -7,124 +7,131 @@ const showcase=read("server/events-showcase/public/embed-card.php");
 const embed=read("server/widgets/public/embed.php");
 const admin=read("assets/js/admin/widgets-v2153.js");
 const css=read("assets/css/widgets/p2k-competition-v2159.css");
-
 class Node{
-  constructor(tag){this.tagName=tag;this.children=[];this.listeners={};this.attrs={};
-    this.style={};this.dataset={};this.hidden=false;this.tabIndex=-1;this.scrollTop=18;
-    this.value="";this.textContent="";this.innerHTML="";this.focused=false;}
-  append(n){this.children.push(n);}
-  addEventListener(name,fn){this.listeners[name]=fn;}
-  setAttribute(name,value){this.attrs[name]=String(value);}
-  getAttribute(name){return this.attrs[name]??null;}
-  focus(){this.focused=true;}
+ constructor(tag){this.tagName=tag;this.children=[];this.listeners={};this.attrs={};
+   this.style={};this.dataset={};this.hidden=false;this.tabIndex=-1;this.scrollTop=23;
+   this.textContent="";this.innerHTML="";this.focused=false;}
+ append(child){this.children.push(child);}
+ addEventListener(name,fn){this.listeners[name]=fn;}
+ setAttribute(name,value){this.attrs[name]=String(value);}
+ getAttribute(name){return this.attrs[name]??null;}
+ focus(){this.focused=true;}
 }
 function run(mode="0",theme="dark",widget="competition"){
-  const main=new Node("main"),status=new Node("span"),nav=new Node("nav");
-  main.parentNode={insertBefore(node,target){assert.strictEqual(node,nav);assert.strictEqual(target,main);}};
-  nav.querySelector=selector=>{const id=selector.match(/^#p2kwCompetitionTab-(showcase|match-calls|rivals)$/);return id?tabs.get(id[1]):null;};
-  const panels=new Map(),tabs=new Map();
-  for(const name of ["showcase","match-calls","rivals"]){
-    panels.set(name,new Node("section"));
-    tabs.set(name,new Node("button"));
-  }
-  main.querySelector=selector=>{
-    const x=selector.match(/^#p2kwCompetition(Tab|Panel)-(showcase|match-calls|rivals)$/);
-    if(!x)return null;
-    return x[1]==="Panel"?panels.get(x[2]):null;
-  };
-  const document={
-    body:{dataset:{widget,preview:mode}},
-    currentScript:{src:"https://www.promotetoking.org/assets/js/widgets/p2k-competition-v2159.js"},
-    documentElement:{className:"p2kw-theme-"+theme},
-    getElementById(id){return id==="p2kwContent"?main:id==="p2kwStatus"?status:null;},
-    createElement(tag){return tag==="nav"?nav:new Node(tag);}
-  };
-  const context={document,URL,Map,console,Array,String,Number};
-  vm.runInNewContext(source,context,{filename:"p2k-competition-v2159.js"});
-  return {main,status,panels,tabs,nav};
+ const main=new Node("main"),status=new Node("span"),nav=new Node("nav"),chrome=new Node("div");
+ const head=new Node("header"),foot=new Node("footer"),panels=new Map(),tabs=new Map();
+ for(const name of ["showcase","match-calls","rivals"]){
+   panels.set(name,new Node("section"));tabs.set(name,new Node("button"));
+ }
+ main.parentNode={
+   querySelector(selector){return selector===".p2kw-head"?head:null;},
+   insertBefore(child,target){assert.strictEqual(child,chrome);assert.strictEqual(target,main);}
+ };
+ main.querySelector=selector=>{
+   const match=selector.match(/^#p2kwCompetitionPanel-(showcase|match-calls|rivals)$/);
+   return match?panels.get(match[1]):null;
+ };
+ nav.querySelector=selector=>{
+   const match=selector.match(/^#p2kwCompetitionTab-(showcase|match-calls|rivals)$/);
+   return match?tabs.get(match[1]):null;
+ };
+ const document={
+   body:{dataset:{widget,preview:mode}},
+   currentScript:{src:"https://www.promotetoking.org/assets/js/widgets/p2k-competition-v2159.js"},
+   documentElement:{className:"p2kw-theme-"+theme},
+   getElementById(id){return {p2kwContent:main,p2kwStatus:status,p2kwFoot:foot}[id]??null;},
+   createElement(tag){return tag==="nav"?nav:tag==="div"?chrome:new Node(tag);}
+ };
+ vm.runInNewContext(source,{document,URL,Map,console,Array,String,Number},{filename:"p2k-competition-v2159.js"});
+ return {main,status,nav,chrome,head,foot,panels,tabs};
 }
-const fixture=run(),{main,status,panels,tabs,nav}=fixture;
-assert.equal(status.textContent,"Showcase","Default selector is Showcase");
-assert.match(nav.innerHTML,/role="tab"/);
-assert.equal(nav.getAttribute("role"),"tablist");
-assert.equal(nav.getAttribute("aria-label"),"Competition widget views");
+const fixture=run(),{main,status,nav,chrome,head,foot,panels,tabs}=fixture;
+assert.equal(status.textContent,"Loading…","Do not duplicate the selected tab in status");
+assert.equal(chrome.className,"p2kw-competition-chrome");
+assert.deepEqual(chrome.children,[head,nav],"Header and selector share one opaque box");
 assert.equal(nav.className,"p2kw-hof-tabs p2kw-competition-tabs");
-assert(!main.innerHTML.includes("p2kw-competition-tabs"),"Top selector outside scrolling content");
-assert.equal(panels.get("showcase").children.length,1,"Only Showcase loads at startup");
-assert.equal(panels.get("match-calls").children.length,0,"No Radar fetch on Showcase startup");
-assert.equal(panels.get("rivals").children.length,0,"No Rivals fetch on Showcase startup");
+assert.equal(nav.getAttribute("role"),"tablist");
+assert(!main.innerHTML.includes("p2kw-competition-tabs"),"Selector sits outside scrolling region");
+assert.equal(foot.className,"p2kw-foot p2kw-competition-assistant");
+assert.equal(foot.children.length,1,"One permanent footer button");
+assert.equal(foot.hidden,false);
+assert.equal(foot.children[0].textContent,"Open P2K match selection assistant");
+assert.equal(foot.children[0].href,"https://www.promotetoking.org/");
+assert.equal(foot.children[0].target,"_blank");
+assert.equal(foot.children[0].rel,"noopener noreferrer");
+assert.equal(panels.get("showcase").children.length,1);
+assert.equal(panels.get("match-calls").children.length,0,"Radar is loaded lazily");
+assert.equal(panels.get("rivals").children.length,0,"Rivalry is loaded lazily");
 const showcaseFrame=panels.get("showcase").children[0];
-assert.match(showcaseFrame.src,/server\/events-showcase\/public\/embed-card\.php\?theme=dark$/);
-assert.equal(showcaseFrame.height,"690");
+const showcaseURL=new URL(showcaseFrame.src);
+assert.equal(showcaseURL.pathname,"/server/events-showcase/public/embed-card.php");
+assert.equal(showcaseURL.searchParams.get("theme"),"dark");
+assert.equal(showcaseURL.searchParams.get("via"),"competition");
+assert.equal(showcaseFrame.height,"565");
+assert.equal(showcaseFrame.style.height,"100%");
 assert.equal(showcaseFrame.title,"Current P2K Match Showcase");
-assert.equal(tabs.get("showcase").getAttribute("aria-selected"),"true");
-assert.equal(tabs.get("match-calls").tabIndex,-1);
-
+showcaseFrame.contentDocument={documentElement:{getAttribute(){return "loading";}}};
+showcaseFrame.listeners.load();
+assert.equal(status.textContent,"Loading…");
+showcaseFrame.contentDocument={documentElement:{getAttribute(){return "live";}}};
+showcaseFrame.listeners.load();
+assert.equal(status.textContent,"LIVE","Status reflects Showcase data ready");
 tabs.get("match-calls").listeners.click();
-assert.equal(status.textContent,"Match calls");
+assert.equal(status.textContent,"Loading…","Newly selected Radar is still loading");
+assert.equal(foot.hidden,false,"Showcase and Radar share footer position");
 assert.equal(panels.get("showcase").hidden,true);
-assert.equal(panels.get("match-calls").hidden,false);
 const radarPane=panels.get("match-calls");
-assert.equal(radarPane.children.length,2,"Radar iframe followed by assistant CTA");
-const radarFrame=radarPane.children[0],footer=radarPane.children[1],link=footer.children[0];
-const radar=new URL(radarFrame.src);
-assert.equal(radar.pathname,"/server/widgets/public/embed.php");
-assert.equal(radar.searchParams.get("widget"),"recruitment-radar");
-assert.equal(radar.searchParams.get("via"),"competition");
-assert.equal(radar.searchParams.get("theme"),"dark");
-assert.equal(radarFrame.height,"650");
-assert.equal(link.textContent,"Open P2K match selection assistant");
-assert.equal(link.href,"https://www.promotetoking.org/");
-assert.equal(link.target,"_blank");
-assert.equal(link.rel,"noopener noreferrer");
-assert(showcase.includes(link.textContent),"CTA text exactly matches existing Showcase");
-assert(showcase.includes('href="https://www.promotetoking.org/"'),"CTA target exactly matches existing Showcase");
-
+assert.equal(radarPane.children.length,1,"No button below child iframe");
+const radarFrame=radarPane.children[0],radarURL=new URL(radarFrame.src);
+assert.equal(radarURL.pathname,"/server/widgets/public/embed.php");
+assert.equal(radarURL.searchParams.get("widget"),"recruitment-radar");
+assert.equal(radarURL.searchParams.get("via"),"competition");
+assert.equal(radarURL.searchParams.get("theme"),"dark");
+assert.equal(radarFrame.height,"565");
+assert.equal(radarFrame.style.height,"100%");
+radarFrame.contentDocument={getElementById(){return {textContent:"PARTIAL"};}};
+radarFrame.listeners.load();
+assert.equal(status.textContent,"PARTIAL","Status uses selected child state");
 tabs.get("rivals").listeners.click();
-assert.equal(status.textContent,"Rivals");
-const rivalPane=panels.get("rivals"),rivalFrame=rivalPane.children[0],rival=new URL(rivalFrame.src);
-assert.equal(rival.searchParams.get("widget"),"rivalry-spotlight");
-assert.equal(rival.searchParams.get("via"),"competition");
-assert.equal(rivalFrame.height,"540");
-assert.equal(panels.get("match-calls").hidden,true);
-assert.equal(rivalPane.hidden,false);
+assert.equal(foot.hidden,true,"Rivals does not show match-selection footer");
+assert.equal(status.textContent,"Loading…");
+const rivalPane=panels.get("rivals"),rivalFrame=rivalPane.children[0];
+assert.equal(new URL(rivalFrame.src).searchParams.get("widget"),"rivalry-spotlight");
+assert.equal(rivalFrame.height,"565");
 tabs.get("match-calls").listeners.click();
-assert.strictEqual(radarPane.children[0],radarFrame,"Switching back must not recreate Radar or re-trigger username search");
-assert.strictEqual(radarPane.children[1],footer,"Radar CTA is not duplicated");
-assert.equal(panels.get("showcase").children.length,1,"Showcase remains mounted");
-assert.equal(panels.get("rivals").children.length,1,"Rivals remains mounted");
-assert.equal(main.scrollTop,0,"Outer Competition content returns to top on switch");
-
-// Accessible keyboard support; theme and private admin preview are passed through.
+assert.strictEqual(radarPane.children[0],radarFrame,"Switching tabs preserves existing iframe");
+assert.equal(radarPane.children.length,1);
+assert.equal(foot.children.length,1,"Shared CTA never duplicates");
+assert.equal(foot.hidden,false);
+assert.equal(status.textContent,"PARTIAL","Returning to Radar restores its state");
+assert.equal(main.scrollTop,0);
+tabs.get("showcase").listeners.click();
+assert.strictEqual(panels.get("showcase").children[0],showcaseFrame,"Showcase remains mounted");
+assert.equal(status.textContent,"LIVE");
 let prevented=false;
-tabs.get("match-calls").listeners.keydown({key:"ArrowRight",preventDefault(){prevented=true;}});
+tabs.get("showcase").listeners.keydown({key:"ArrowRight",preventDefault(){prevented=true;}});
 assert(prevented);
-assert.equal(status.textContent,"Rivals");
-assert(tabs.get("rivals").focused);
-assert.equal(tabs.get("rivals").getAttribute("aria-selected"),"true");
-tabs.get("rivals").listeners.keydown({key:"Home",preventDefault(){}});
-assert.equal(status.textContent,"Showcase");
+assert(tabs.get("match-calls").focused);
+assert.equal(status.textContent,"PARTIAL");
 const preview=run("1","auto");
 preview.tabs.get("match-calls").listeners.click();
-assert.equal(new URL(preview.panels.get("match-calls").children[0].src).searchParams.get("preview"),"1");
-assert.equal(new URL(preview.panels.get("match-calls").children[0].src).searchParams.get("theme"),"auto");
-const wrong=run("0","light","recruitment-radar");
-assert.equal(wrong.panels.get("showcase").children.length,0,"Script does not run inside other widgets");
-
-// Publication independent, and only allowed compositional children bypass standalone disabled setting.
+const previewURL=new URL(preview.panels.get("match-calls").children[0].src);
+assert.equal(previewURL.searchParams.get("preview"),"1");
+assert.equal(previewURL.searchParams.get("theme"),"auto");
+assert.equal(run("0","light","recruitment-radar").panels.get("showcase").children.length,0);
 assert(embed.includes("in_array($widget,['recruitment-radar','rivalry-spotlight'],true)"));
 assert(embed.includes("$store->get('competition')['enabled']"));
-assert(embed.includes("$published=(bool)$settings['enabled']||$viaCompetition"));
-assert(embed.includes("($preview||$viaCompetition)?'1':'0'"));
 assert(embed.includes("p2k-competition-v2159.js"));
-assert(embed.includes("p2k-competition-v2159.css"));
-assert(admin.includes("'competition':785"));
-assert(admin.includes("'competition':'Competition'"));
-assert(css.includes(".p2kw-competition-view[hidden]{display:none!important}"));
-assert(css.includes("width:260px"));
+assert(admin.includes("'competition':565"));
 assert(css.includes("grid-template-columns:repeat(3,minmax(0,1fr))"));
-assert(css.includes("background:var(--fill)"));
-assert(source.includes("main.parentNode.insertBefore(nav,main)"));
-assert(!source.includes("api.chess.com"),"Composite itself must make no Chess.com API calls");
-assert(!source.includes("fetch("),"Composite makes no duplicate public API requests");
-console.log("PASS Competition card Showcase, fixed Hall of Fame-style navigation, preserved lazy children, assistant CTA, keyboard tabs and 260px/785px embed");
+assert(css.includes("background:transparent"),"Outer frame must remain transparent");
+assert(css.includes("background:var(--panel)"),"Only header/selector gets card backdrop");
+assert(css.includes("height:100%"),"Child content gets fixed viewport");
+assert(css.includes(".p2kw-foot.p2kw-competition-assistant[hidden]"));
+assert(showcase.includes("pc-competition-embed .pc-footer{display:none!important}"),"Embedded Showcase hides its duplicate footer");
+assert(showcase.includes('data-p2kw-load-state="loading"'));
+assert(showcase.includes("dataset.p2kwLoadState='live'"));
+assert(showcase.includes('class="pc-theme-'),"Standalone cards remain unchanged");
+assert(source.includes("new MutationObserver(refresh)"));
+assert(!source.includes("api.chess.com")&&!source.includes("fetch("),"Parent must not fetch extra data");
+console.log("PASS Competition compact transparent viewport, fixed shared CTA, live/partial loading state, keyboard navigation, standalone Showcase isolation and child state persistence");

@@ -92,7 +92,7 @@ const radar=read("assets/js/widgets/p2k-recruitment-radar-v2159.js");
 const radarStyles=read("assets/css/widgets/p2k-recruitment-radar-v2159.css");
 const radarBackend=read("server/widgets/src/RecruitmentRadarGreenReadService.php");
 assert(controls.includes("'recruitment-radar':650"),"Radar iframe remains fixed at 260×650px");
-assert(html.includes("p2k-recruitment-radar-v2159.js?v=p2k-2159-radar-auth-1"),"Radar OAuth code must invalidate its cached embed script");
+assert(html.includes("p2k-recruitment-radar-v2159.js?v=p2k-2159-radar-auth-2"),"Radar OAuth code must invalidate its cached embed script");
 assert(html.includes("recruitment-lineup-core.js?v=p2k-2159-rivalry-green-1"));
 assert(radar.includes("data-radar-scope")&&radar.includes("data-radar-window"));
 assert(radar.includes("compareRecruitmentLineupsCheap"),"Radar uses cheap canonical lineup projection");
