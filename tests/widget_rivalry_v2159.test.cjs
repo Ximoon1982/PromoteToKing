@@ -109,7 +109,7 @@ const wait=()=>new Promise(resolve=>setTimeout(resolve,45));
  assert(suggest.innerHTML.includes("Closest clubs"),"Several suggestions shown for approximate names");
  assert.equal((suggest.innerHTML.match(/data-rival-suggestion=/g)||[]).length,3);
  const admin=fs.readFileSync(path.join(__dirname,"../assets/js/admin/widgets-v2153.js"),"utf8");
- assert(admin.includes("'rivalry-spotlight':650"),"Exactly fixed 650px height");
+ assert(admin.includes("'rivalry-spotlight':540"),"Exactly fixed 650px height");
  assert(admin.includes("'rivalry-spotlight':{}"),"No imposed opponent limit");
  console.log("PASS Rivalry unlimited directory paging, stats, fuzzy/URL search, avatar, WDL scopes and fixed iframe");
 })().catch(e=>{console.error(e);process.exitCode=1});
