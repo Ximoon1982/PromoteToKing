@@ -66,6 +66,33 @@ try {
         \P2K\TeamPoints\Http::jsonCacheable($entry['payload'],200,300,1200,$entry['etag']);
     }
 
+    if($action==='hall-leaderboard' && $method==='GET') {
+        require_once dirname(__DIR__).'/src/HallOfFameLeaderboardService.php';
+        $kind=strtolower(trim((string)($_GET['kind']??'daily')));
+        $period=strtolower(trim((string)($_GET['period']??'all')));
+        if(!in_array($kind,['daily','arena'],true)||!in_array($period,['all','month','quarter'],true)) {
+            api_error(400,'INVALID_LEADERBOARD','Unknown Hall of Fame leaderboard or period.');
+        }
+        $page=max(1,min(100000,(int)($_GET['page']??1)));
+        if($kind==='arena')$period='all';
+        $app=p2k_tp_config();
+        $club=strtolower(trim((string)($app['app']['club_slug']??'promote-to-king')));
+        $repository=new \P2K\TeamPoints\Repository(PublicReadDatabase::core(),PublicReadDatabase::analytics());
+        if(!$repository->schemaInstalled())api_error(503,'SCHEMA_NOT_INSTALLED','Team Points data is not available.');
+        $generation=$repository->publicReadGenerationToken($club,true,true);
+        $cache=new ResponseCache(is_array($app['storage']??null)?$app['storage']:[]);
+        $key='hof-leaderboard-v2159-v1|'.$club.'|'.$generation.'|'.gmdate('Y-m-d').'|'.$kind.'|'.$period.'|'.$page;
+        $entry=$cache->remember($key,120,static function()use($kind,$period,$page,$repository,$cache,$generation,$club):array{
+            if($kind==='arena')return \P2K\Widgets\HallOfFameLeaderboardService::arena(
+                PublicReadDatabase::analytics(),$club,$page
+            );
+            return \P2K\Widgets\HallOfFameLeaderboardService::daily(
+                $repository,$cache,$generation,$club,$period,$page
+            );
+        },600);
+        \P2K\TeamPoints\Http::jsonCacheable($entry['payload'],200,60,180,$entry['etag']);
+    }
+
     // Read-only spotlight widgets reuse canonical Green member and MCA projections.
     // No widget-owned leaderboard, scores, or mutable result store is introduced.
     if($action==='spotlight-leaders' && $method==='GET') {
