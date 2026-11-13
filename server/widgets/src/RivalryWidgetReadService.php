@@ -160,17 +160,23 @@ final class RivalryWidgetReadService
             if(preg_match('/^[a-z0-9_-]{2,160}$/D',$alias))$aliases[]=$alias;
         }
         $aliases=array_values(array_unique($aliases));
-        $sql="SELECT is_league,COUNT(*) matches,
+        // The historical Green compatibility projection previously wrote
+        // is_league=0 for every match. Until its existing materializations are
+        // rebuilt, derive league classification from the canonical match-name
+        // codes as well as the persisted flag. This is read-only and covers
+        // historical records without a costly full regeneration.
+        $leagueSql="CASE WHEN is_league=1 OR UPPER(COALESCE(match_name,'')) REGEXP '(^|[^A-Z0-9])(1WL|TCMAC|KOTML|TMCL|WKCL|PCL|CW)([^A-Z0-9]|$)' THEN 1 ELSE 0 END";
+        $sql="SELECT {$leagueSql} league_category,COUNT(*) matches,
           COALESCE(SUM(result='win'),0) wins,
           COALESCE(SUM(result='draw'),0) draws,
           COALESCE(SUM(result='loss'),0) losses
           FROM p2k_an_match_facts WHERE club_slug=? AND is_void=0 AND status='finished'
           AND opponent_slug IN (".implode(',',array_fill(0,count($aliases),'?')).")
-          GROUP BY is_league";
+          GROUP BY league_category";
         $q=$analytics->prepare($sql);$q->execute(array_merge([$club],$aliases));
         $splits=['total'=>self::emptySplit(),'friendly'=>self::emptySplit(),'league'=>self::emptySplit()];
         foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){
-            $key=(int)$row['is_league']===1?'league':'friendly';
+            $key=(int)$row['league_category']===1?'league':'friendly';
             $stats=[
                 'matches'=>(int)$row['matches'],'wins'=>(int)$row['wins'],
                 'draws'=>(int)$row['draws'],'losses'=>(int)$row['losses'],
