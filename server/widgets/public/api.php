@@ -104,6 +104,13 @@ try {
             (string)($_GET['player']??'')
         );
         if($action==='radar-player'){
+            // One server timestamp per valid submitted username, including
+            // searches yielding no ratings or no recommendations.
+            try {
+                \P2K\Shared\NameSearchUsage::record(root_dir(),$name,'recruitment-radar');
+            } catch(\Throwable $usageError) {
+                error_log('Recruitment Radar name search audit: '.$usageError->getMessage());
+            }
             json_response(200,\P2K\Widgets\RecruitmentRadarGreenReadService::player($core,$name));
         }
         if($action==='radar-batch'){
