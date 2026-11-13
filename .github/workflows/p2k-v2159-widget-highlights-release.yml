@@ -33,6 +33,7 @@ on:
       - 'assets/js/widgets/p2k-competition-v2159.js'
       - 'assets/js/shared/recruitment-lineup-core.js'
       - 'assets/js/widgets/p2k-progress-chart-v2159.js'
+      - 'assets/images/p2k-progress-logo.webp'
       - 'assets/css/widgets/p2k-embed-v2153.css'
       - 'assets/css/widgets/p2k-recruitment-radar-v2159.css'
       - 'assets/css/widgets/p2k-rivalry-v2159.css'
@@ -142,35 +143,17 @@ jobs:
           python3 tests/test_v2157_mca_miac_review.py
           python3 tests/test_v2156_mca_uploaded_dates.py
           python3 tests/test_v2155_mca_results_priority.py
-      - name: Prepare optimized Club Progress background
+      - name: Verify committed high-resolution Club Progress WebP
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import pathlib,shutil,subprocess,sys
-          source=pathlib.Path("assets/images/p2k-logo.jpg")
-          out=pathlib.Path("assets/images/p2k-progress-logo.webp")
-          if not source.is_file():
-              raise RuntimeError("P2K original GitHub logo is missing")
-          # The currently committed source is 160x160. Resize to 512 for the
-          # widget's 2x screen rendering without changing its original artwork.
-          tool=shutil.which("magick") or shutil.which("convert")
-          if tool:
-              subprocess.run([tool,str(source),"-filter","Lanczos","-resize","512x512","-quality","88",str(out)],check=True)
-          elif shutil.which("ffmpeg"):
-              subprocess.run(["ffmpeg","-nostdin","-loglevel","error","-y","-i",str(source),"-vf","scale=512:512:flags=lanczos","-frames:v","1",str(out)],check=True)
-          else:
-              try:
-                  from PIL import Image
-              except ImportError:
-                  subprocess.run([sys.executable,"-m","pip","install","--quiet","Pillow"],check=True)
-                  from PIL import Image
-              with Image.open(source) as im:
-                  im.convert("RGB").resize((512,512),Image.Resampling.LANCZOS).save(out,"WEBP",quality=88)
-          payload=out.read_bytes()
-          assert payload[:4]==b"RIFF" and payload[8:12]==b"WEBP", "Invalid generated WebP"
-          assert len(payload)>1000
-          print("P2K Club Progress WebP",out,len(payload),"bytes; source",source)
+          import hashlib,pathlib
+          p=pathlib.Path("assets/images/p2k-progress-logo.webp")
+          b=p.read_bytes()
+          assert b[:4]==b"RIFF" and b[8:12]==b"WEBP", "Invalid WebP header"
+          assert hashlib.sha256(b).hexdigest()=="d81c972c0c2bbf65c758c3ed1f5876927d0386c3fb33eec1af2aa234234f2021", "Club Progress logo has changed"
+          print("Verified committed P2K logo WebP",p,len(b),"bytes; 512x512 from user-supplied 1024x1024 master")
           PY
       - name: Create cumulative v2.15.9 Release Control candidate ZIP
         shell: bash
@@ -321,7 +304,7 @@ jobs:
              "Same-admin reauthorization preserves valid CSRF; expired sessions now yield recoverable 401.\n"
              "JS client retries stale CSRF at most once, and completed scan CSV can be retried without a new scan.\n"
              "Includes cumulative MCA/recruitment fixes from v2.15.7-v2.15.9.\n"
-             "Preserves ten embeds and all earlier MCA/recruitment fixes. Rivalry search supports name/slug/URL, avatars, 25-row unlimited pages and Total/Friendly/League results. Radar consumes only Green snapshots and widens empty time windows. Four nullable registration fields migrate additively via the existing Green worker. Every valid submitted name is logged in Traffic/Visitors with UTC timestamp and source. Competition has a transparent Showcase and opaque header, a 565px viewport with fixed Match Assistant footer, scrollable content, and child loading status. Unrestricted maximum ratings show as Open. Competition hides redundant inner Radar and Rivals headings, keeps its own LIVE indicator, and shows Radar's compact single-line count summary, Upcoming matches heading, and category pill ahead of the date. Standalone widgets retain their headers. Club Progress now uses a rounded bordered card, the full-color club logo, a distinct blue projection and an axis ending just beyond its calculated target crossing. Hall of Fame player selector labels are shortened to Daily Matches and Multi Club Arenas. Club Progress is now Grinding the leaderboard, with graph-only content, square border and an optimized WebP derived from the repository's original P2K logo. The checked-in logo source is 160x160; enlargement does not invent high-resolution details. Trophy Spotlight links open the matching Gallery trophy. Rival detail club names link to validated Chess.com URLs, replacing the bottom link. Standalone Showcase remains unchanged. No deployment.\n")
+             "Preserves ten embeds and all earlier MCA/recruitment fixes. Rivalry search supports name/slug/URL, avatars, 25-row unlimited pages and Total/Friendly/League results. Radar consumes only Green snapshots and widens empty time windows. Four nullable registration fields migrate additively via the existing Green worker. Every valid submitted name is logged in Traffic/Visitors with UTC timestamp and source. Competition has a transparent Showcase and opaque header, a 565px viewport with fixed Match Assistant footer, scrollable content, and child loading status. Unrestricted maximum ratings show as Open. Competition hides redundant inner Radar and Rivals headings, keeps its own LIVE indicator, and shows Radar's compact single-line count summary, Upcoming matches heading, and category pill ahead of the date. Standalone widgets retain their headers. Club Progress uses a square bordered chart, full-color club logo, blue forecast, and target-aligned horizon. Hall of Fame player selector labels are shortened to Daily Matches and Multi Club Arenas. Club Progress is now Grinding the leaderboard, with graph-only content, square border and an optimized WebP derived from the repository's original P2K logo. The committed 512x512 WebP is derived from the user's 1024x1024 full-size club logo and is verified before packaging. Trophy Spotlight links open the matching Gallery trophy. Rival detail club names link to validated Chess.com URLs, replacing the bottom link. Standalone Showcase remains unchanged. No deployment.\n")
           out=dist/(stem+".zip")
           with zipfile.ZipFile(out,"w",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
               for file in pkg.rglob("*"):
