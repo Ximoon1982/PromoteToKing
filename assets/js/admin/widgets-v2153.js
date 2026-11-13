@@ -43,7 +43,7 @@
   function iframeUrl(id,theme,preview=false){const u=new URL(embed);u.searchParams.set('widget',id);u.searchParams.set('theme',theme||'auto');if(preview)u.searchParams.set('preview','1');return u.href;}
   // All embed snippets are standalone iframe-only HTML. The host must not need
   // inline scripts or postMessage resizing; previews use the same fixed heights.
-  const heights={'club-pulse':350,'recruitment-radar':520,'trophy-spotlight':490,'rivalry-spotlight':520,'club-progress':430,'around-the-world':780,'player-spotlight':760,'tournament-winners':1050,'hall-of-fame':940};
+  const heights={'club-pulse':350,'recruitment-radar':520,'trophy-spotlight':490,'rivalry-spotlight':520,'club-progress':430,'around-the-world':780,'player-spotlight':760,'tournament-winners':1050,'hall-of-fame':680};
   function code(){
     const settings=drafts[active]||state?.widgets?.[active]||{};
     const url=iframeUrl(active,settings.theme,false),height=heights[active]||600;
