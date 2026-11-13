@@ -11,6 +11,65 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Compare current failed and successful arena fetches (read-only)
+        shell: bash
+        run: |
+          php <<'PHP'
+          <?php
+          require 'server/team-points/src/McaArenaParser.php';
+          use P2K\TeamPoints\McaArenaParser;
+          $arena=[
+            'failed-31179196'=>'https://www.chess.com/tournament/live/arena/we-love-thursdays-5-0-2h-31179196',
+            'worked-31176000'=>'https://www.chess.com/tournament/live/arena/we-love-wednesdays-3-0-2h-31176000',
+          ];
+          $agents=[
+            'worker'=>'PromoteToKing/2.10.9.4 MCA Arena Acquisition (+https://www.promotetoking.org)',
+            'browser'=>'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+          ];
+          foreach($agents as $agent=>$ua) {
+            foreach($arena as $name=>$base) {
+              foreach(['clubs'=>'?clubs=1&players=1&pairings=1','csv'=>'/download-results'] as $kind=>$suffix) {
+                $ch=curl_init($base.$suffix);
+                curl_setopt_array($ch,[
+                  CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>5,
+                  CURLOPT_CONNECTTIMEOUT=>6,CURLOPT_TIMEOUT=>16,CURLOPT_USERAGENT=>$ua,CURLOPT_ENCODING=>'',
+                  CURLOPT_HTTPHEADER=>['Accept: text/html,text/csv;q=0.9,*/*;q=0.5','Accept-Language: en-US,en;q=0.8'],
+                ]);
+                $raw=curl_exec($ch);
+                $http=(int)curl_getinfo($ch,CURLINFO_RESPONSE_CODE);
+                $final=(string)curl_getinfo($ch,CURLINFO_EFFECTIVE_URL);
+                $mime=(string)curl_getinfo($ch,CURLINFO_CONTENT_TYPE);
+                $err=curl_error($ch);
+                curl_close($ch);
+                $body=is_string($raw)?$raw:'';
+                $out=['arena'=>$name,'agent'=>$agent,'type'=>$kind,'status'=>$http,
+                  'length'=>strlen($body),'content_type'=>$mime,'final_url'=>$final,'error'=>$err,
+                  'sha256'=>substr(hash('sha256',$body),0,20)];
+                if($kind==='clubs'){
+                  $a=stripos($body,'Club Results');
+                  $b=$a===false?false:stripos($body,'Player Results',$a+12);
+                  $section=$a===false?$body:($b===false?substr($body,$a):substr($body,$a,$b-$a));
+                  $clubs=$http===200?McaArenaParser::clubRows($body):[];
+                  $out+=['club_header_present'=>$a!==false,'body_tables'=>preg_match_all('~<tbody\b~i',$body),
+                    'club_section_tables'=>preg_match_all('~<tbody\b~i',$section),
+                    'club_href_matches'=>preg_match_all('~https?://www\.chess\.com/club/~i',$section),
+                    'rank_markers'=>preg_match_all('~#\s*\d+~',$section),
+                    'score_cell_markers'=>preg_match_all('~table-text-right~i',$section),
+                    'parsed_clubs'=>count($clubs),
+                    'first_club'=>$clubs[0]['club_slug']??null,
+                    'section_prefix'=>substr(preg_replace('~\s+~',' ',strip_tags($section))??'',0,240)];
+                }else{
+                  $parsed=$http===200?McaArenaParser::resultsCsv($body):['clubs'=>[],'players'=>[]];
+                  $out+=['csv_parsed_clubs'=>count($parsed['clubs']??[]),
+                    'csv_parsed_players'=>count($parsed['players']??[]),
+                    'csv_head'=>substr(preg_replace('/\s+/',' ',$body)??'',0,160)];
+                }
+                echo 'MCA_TARGET_DIAG ',json_encode($out,JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE),PHP_EOL;
+                usleep(1100000);
+              }
+            }
+          }
+          PHP
       - name: Probe MCA page pagination and parse without touching live database
         shell: bash
         run: |
