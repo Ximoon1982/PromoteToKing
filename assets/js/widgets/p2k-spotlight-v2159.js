@@ -4,7 +4,8 @@
  */
 (()=>{"use strict";
 const id=document.body.dataset.widget;
-if(!['player-spotlight','tournament-winners'].includes(id))return;
+const isHall=id==='hall-of-fame';
+if(!['player-spotlight','tournament-winners','hall-of-fame'].includes(id))return;
 const main=document.getElementById('p2kwContent'),status=document.getElementById('p2kwStatus'),foot=document.getElementById('p2kwFoot');
 if(!main||!status||!foot)return;
 document.querySelector('.p2kw-panel')?.classList.add('p2kw-widget-panel');
@@ -47,6 +48,138 @@ function miniGrid(entries){return '<div class="p2kw-metric-grid">'+entries.map((
 function row(label,value){return '<div class="p2kw-progress-row"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>'}
 function announce(message){main.innerHTML='<p class="p2kw-empty">'+esc(message)+'</p>';notify()}
 let config={},currentUser='',playerEpoch=0,arenaPeriods=null,playerData=null,periodData={},activePlayerTab='daily';
+
+// Hall of Fame uses the same detailed player/tournament renderers as the two
+// standalone widgets. Only its compact/expanded leaderboard differs.
+let hallMode='leaderboards',hallScope='all',hallExpanded=null,hallPage=1,hallEpoch=0;
+const hallPages={daily:null,arena:null};
+let hallTabs=null;
+if(isHall){
+  hallTabs=document.createElement('nav');
+  hallTabs.className='p2kw-hof-tabs';
+  hallTabs.setAttribute('aria-label','Hall of Fame sections');
+  main.parentNode.insertBefore(hallTabs,main);
+  hallTabs.addEventListener('click',event=>{
+    const button=event.target.closest('[data-hof-mode]');
+    if(!button)return;
+    const target=button.dataset.hofMode;
+    if(target===hallMode)return;
+    hallMode=target;
+    playerEpoch++;tour.epoch++;hallEpoch++;
+    currentUser='';setFoot('');main.scrollTop=0;
+    drawHallTabs();
+    if(target==='tournaments')void fetchTournaments();
+    else void loadPlayerHome();
+  });
+  drawHallTabs();
+}
+function drawHallTabs(){
+ if(!hallTabs)return;
+ hallTabs.innerHTML=['leaderboards','tournaments'].map(v=>
+   '<button type="button" data-hof-mode="'+v+'" aria-pressed="'+(hallMode===v)+'">'+
+   (v==='leaderboards'?'Leaderboards':'Tournaments')+'</button>').join('');
+}
+function hallTitle(kind){
+ return kind==='daily'?'Daily Matches':'Multi Club Arenas';
+}
+function hallItems(data,expanded){
+ const items=Array.isArray(data?.rows)?data.rows:[];
+ const list=expanded?items:items.slice(0,5);
+ return '<div class="p2kw-hof-list'+(expanded?' is-expanded':'')+'">'+
+   (list.length?list.map((p,i)=>'<div class="p2kw-entry"><span class="p2kw-leader-position">'+
+     esc(p.rank||i+1)+'</span><div class="p2kw-entry-main"><button type="button" class="p2kw-player-link" data-username="'+esc(p.username)+'">'+esc(p.username)+'</button></div>'+
+     '<strong class="p2kw-leader-score">'+esc(num(p.points))+'</strong></div>').join('')
+   :'<p class="p2kw-empty">No eligible players in this period.</p>')+'</div>';
+}
+function renderHallHome(){
+ if(!isHall||hallMode!=='leaderboards')return;
+ const mode=hallExpanded,periodLabels={all:'All time',quarter:'Quarter',month:'Month'};
+ const periodSelect='<select id="p2kwHofPeriod" aria-label="Daily Matches leaderboard period">'+
+   ['all','quarter','month'].map(p=>'<option value="'+p+'" '+(p===hallScope?'selected':'')+'>'+periodLabels[p]+'</option>').join('')+'</select>';
+ let html=playerHeader();
+ for(const kind of ['daily','arena']){
+   if(mode&&kind!==mode)continue;
+   const data=hallPages[kind];
+   html+='<div class="p2kw-subhead p2kw-hof-subhead"><strong>'+hallTitle(kind)+'</strong>'+
+     (kind==='daily'?periodSelect:'')+'</div>';
+   if(!data){html+='<p class="p2kw-loading-status">Loading leaderboard…</p>';continue}
+   html+=hallItems(data,Boolean(mode));
+   if(!mode){
+     html+='<button type="button" class="p2kw-mini-button p2kw-hof-more" data-hof-more="'+kind+'">More '+hallTitle(kind)+'</button>';
+   }else{
+     const pagination=data.pagination||{};
+     html+='<div class="p2kw-widget-nav p2kw-hof-pagination">'+
+       '<button class="p2kw-mini-button" type="button" data-hof-page="-1" '+(pagination.page<=1?'disabled':'')+'>Previous</button>'+
+       '<span>Page '+num(pagination.page||1)+' / '+num(pagination.total_pages||1)+' · '+num(pagination.total_rows||0)+' players</span>'+
+       '<button class="p2kw-mini-button" type="button" data-hof-page="1" '+(pagination.page>=pagination.total_pages?'disabled':'')+'>Next</button></div>'+
+       '<button type="button" class="p2kw-mini-button p2kw-hof-more" data-hof-back>Back to top five</button>';
+   }
+ }
+ main.innerHTML=html;
+ bindPlayerSearch();
+ main.querySelector('#p2kwHofPeriod')?.addEventListener('change',event=>{
+   const next=event.target.value;
+   if(!['all','quarter','month'].includes(next)||next===hallScope)return;
+   hallScope=next;hallExpanded=null;hallPage=1;hallPages.daily=null;
+   renderHallHome();void hallFetch('daily',1);
+ });
+ main.querySelectorAll('[data-hof-more]').forEach(button=>button.onclick=()=>{
+   hallExpanded=button.dataset.hofMore;hallPage=1;
+   void hallFetch(hallExpanded,1);
+ });
+ main.querySelector('[data-hof-back]')?.addEventListener('click',()=>{
+   hallExpanded=null;hallPage=1;renderHallHome();main.scrollTop=0;
+ });
+ main.querySelectorAll('[data-hof-page]').forEach(button=>button.onclick=()=>{
+   const direction=Number(button.dataset.hofPage)||0;
+   const pagination=hallPages[hallExpanded]?.pagination||{};
+   const next=Math.max(1,Math.min(pagination.total_pages||1,(pagination.page||1)+direction));
+   if(next!==(pagination.page||1)){hallPage=next;void hallFetch(hallExpanded,next);}
+ });
+ main.querySelectorAll('[data-username]').forEach(button=>button.onclick=()=>{
+   currentUser=button.dataset.username;
+   void lookupPlayer(currentUser);
+ });
+ notify();
+}
+async function hallFetch(kind,page=1){
+ if(!isHall||hallMode!=='leaderboards')return;
+ const epoch=++hallEpoch,scope=kind==='daily'?hallScope:'all';
+ setStatus('Loading…');
+ try{
+   const response=await get(SPOT,{action:'hall-leaderboard',kind,period:scope,page},24000);
+   if(epoch!==hallEpoch||hallMode!=='leaderboards'||scope!==(kind==='daily'?hallScope:'all'))return;
+   hallPages[kind]=response;
+   if(hallExpanded===kind)hallPage=response.pagination?.page||1;
+   setStatus('LIVE');renderHallHome();
+ }catch(error){
+   if(epoch!==hallEpoch||hallMode!=='leaderboards')return;
+   setStatus('Unavailable');announce('Leaderboard temporarily unavailable: '+(error.message||error));
+ }
+}
+async function hallLoadHome(){
+ if(!isHall||hallMode!=='leaderboards')return;
+ if(hallExpanded){
+   if(hallPages[hallExpanded]?.pagination?.page===hallPage){setStatus('LIVE');renderHallHome();}
+   else await hallFetch(hallExpanded,hallPage);
+   return;
+ }
+ const epoch=++hallEpoch;
+ setStatus('Loading…');renderHallHome();
+ try{
+   const pending=[];
+   if(!hallPages.daily)pending.push(get(SPOT,{action:'hall-leaderboard',kind:'daily',period:hallScope,page:1},24000).then(r=>['daily',r]));
+   if(!hallPages.arena)pending.push(get(SPOT,{action:'hall-leaderboard',kind:'arena',period:'all',page:1},24000).then(r=>['arena',r]));
+   const values=await Promise.all(pending);
+   if(epoch!==hallEpoch||hallMode!=='leaderboards')return;
+   values.forEach(([kind,response])=>hallPages[kind]=response);
+   setStatus('LIVE');renderHallHome();
+ }catch(error){
+   if(epoch!==hallEpoch||hallMode!=='leaderboards')return;
+   setStatus('Unavailable');announce('Leaderboard temporarily unavailable: '+(error.message||error));
+ }
+}
+
 const playerHeader=()=>'<form class="p2kw-search" id="p2kwPlayerForm"><input id="p2kwPlayerSearch" type="search" maxlength="80" autocomplete="off" spellcheck="false" aria-label="Chess.com member username" placeholder="Search member username" value="'+esc(currentUser)+'"><button type="submit">Find</button></form>';
 function playerHome(data){
  const daily=(Array.isArray(data.daily)?data.daily:[]).slice(0,Math.min(5,config.limit||5));
@@ -58,10 +191,10 @@ function playerHome(data){
  bindPlayerSearch();main.querySelectorAll('[data-username]').forEach(el=>el.onclick=()=>{const input=main.querySelector('#p2kwPlayerSearch');input.value=el.dataset.username;void lookupPlayer(el.dataset.username)});notify();
 }
 function showPlayer(data){
- if(!data?.found||!data.daily){main.innerHTML=playerHeader()+'<p class="p2kw-empty">No current member matched that name.</p><button class="p2kw-mini-button" id="p2kwBackTop">Show top five</button>';bindPlayerSearch();main.querySelector('#p2kwBackTop').onclick=()=>{currentUser='';void loadPlayerHome()};return}
+ if(!data?.found||!data.daily){main.innerHTML=playerHeader()+'<p class="p2kw-empty">No current member matched that name.</p><button class="p2kw-mini-button" id="p2kwBackTop">'+(isHall?'Back to leaderboard':'Show top five')+'</button>';bindPlayerSearch();main.querySelector('#p2kwBackTop').onclick=()=>{currentUser='';void loadPlayerHome()};return}
  const daily=data.daily,live=data.live,medals=data.tournaments||{},user=data.username||daily.username||currentUser;
  const pos=periodData||{};
- const tab='<nav class="p2kw-seg" aria-label="Player scoring"><button type="button" data-scoretab="daily" aria-pressed="'+(activePlayerTab==='daily')+'">Daily</button><button type="button" data-scoretab="arena" aria-pressed="'+(activePlayerTab==='arena')+'">Arenas</button></nav>';
+ const tab='<nav class="p2kw-seg" aria-label="Player scoring"><button type="button" data-scoretab="daily" aria-pressed="'+(activePlayerTab==='daily')+'">'+(isHall?'Daily Matches':'Daily')+'</button><button type="button" data-scoretab="arena" aria-pressed="'+(activePlayerTab==='arena')+'">'+(isHall?'Multi Club Arenas':'Arenas')+'</button></nav>';
  let details='';
  if(activePlayerTab==='daily'){
    const overall=pos.overall||{},month=pos.month||{},quarter=pos.quarter||{},last30=pos.last30||{};
@@ -82,7 +215,7 @@ function showPlayer(data){
    }
  }
  const tUrl=new URL('Tournaments.html',ROOT);tUrl.searchParams.set('player',user);tUrl.searchParams.set('panel','tournaments');
- main.innerHTML=playerHeader()+'<div class="p2kw-subhead"><span>'+esc(user)+'</span><button id="p2kwTopButton" type="button" class="p2kw-mini-button">Top 5</button></div>'
+ main.innerHTML=playerHeader()+'<div class="p2kw-subhead"><span>'+esc(user)+'</span><button id="p2kwTopButton" type="button" class="p2kw-mini-button">'+(isHall?'Back to leaderboard':'Top 5')+'</button></div>'
  +'<div class="p2kw-ranks">'+rankCard('Daily team rank',daily.rank,'daily')+rankCard('Live arena rank',live?.rank,'live')+'</div>'
  +tab+details
  +(activePlayerTab==='daily'&&config.showMedals!==false?'<div class="p2kw-subhead"><span><a class="p2kw-title-link" href="'+esc(tUrl.href)+'" target="_blank" rel="noopener">Tournament medals</a></span><span class="p2kw-small">Podiums</span></div><div class="p2kw-medals">'+medal('🥇',medals.gold)+medal('🥈',medals.silver)+medal('🥉',medals.bronze)+'</div>':'');
@@ -138,6 +271,7 @@ async function lookupPlayer(name){
  }catch(error){if(epoch!==playerEpoch)return;setStatus('Unavailable');main.innerHTML=playerHeader()+'<p class="p2kw-empty">'+esc(error.message||'Player data unavailable')+'</p>';bindPlayerSearch()}
 }
 async function loadPlayerHome(){
+ if(isHall){currentUser='';playerData=null;return hallLoadHome();}
  const epoch=++playerEpoch;playerData=null;periodData={};arenaPeriods=null;activePlayerTab='daily';setStatus('Loading…');
  try{const response=await get(SPOT,{action:'spotlight-leaders'});if(epoch!==playerEpoch)return;setStatus('LIVE');setFoot('');playerHome(response)}
  catch(error){setStatus('Unavailable');announce('Player leaderboards are temporarily unavailable: '+(error.message||error))}
@@ -203,6 +337,6 @@ async function fetchTournaments(){
  }catch(error){if(epoch!==tour.epoch)return;setStatus('Unavailable');if(tour.completed){setFoot('');renderTour()}else announce('Tournament archive unavailable: '+(error.message||error))}
 }
 (async()=>{try{const response=await get(SPOT,{action:'config',widget:id});config=response.settings||{};if(!config.enabled&&document.body.dataset.preview!=='1'){announce('Widget not published');return}
- if(id==='player-spotlight')await loadPlayerHome();else await fetchTournaments();
+ if(id==='player-spotlight'||isHall)await loadPlayerHome();else await fetchTournaments();
  }catch(error){setStatus('Unavailable');announce(error.message||'Unable to load widget configuration')}})();
 })();
