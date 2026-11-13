@@ -70,7 +70,6 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-  workflow_dispatch:
 jobs:
   qualify:
     runs-on: ubuntu-latest
