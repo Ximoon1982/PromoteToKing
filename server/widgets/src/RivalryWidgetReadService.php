@@ -163,7 +163,7 @@ final class RivalryWidgetReadService
           COALESCE(SUM(result='draw'),0) draws,
           COALESCE(SUM(result='loss'),0) losses
           FROM p2k_an_match_facts WHERE club_slug=? AND is_void=0 AND status='finished'
-          AND opponent_slug IN (".implode(',',array_fill(0,count($aliases)),'?').")
+          AND opponent_slug IN (".implode(',',array_fill(0,count($aliases),'?')).")
           GROUP BY is_league";
         $q=$analytics->prepare($sql);$q->execute(array_merge([$club],$aliases));
         $splits=['total'=>self::emptySplit(),'friendly'=>self::emptySplit(),'league'=>self::emptySplit()];
