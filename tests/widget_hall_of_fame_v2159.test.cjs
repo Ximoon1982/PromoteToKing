@@ -91,7 +91,9 @@ const switchMode=(mode)=>nav.callbacks.click({target:{closest:()=>({dataset:{hof
  assert(main.innerHTML.includes("daily-quarter-26"));
  search.value="Alpha";form.onsubmit({preventDefault(){}});await wait();
  assert(main.innerHTML.includes("Back to leaderboard"));
- assert(main.innerHTML.includes("Daily Match Points")&&main.innerHTML.includes("Multi Club Arenas Points"),"shared profile display retains full labels");
+ assert(main.innerHTML.includes('data-scoretab="daily"')&&main.innerHTML.includes('data-scoretab="arena"'),"player scoring selector is present");
+ assert(main.innerHTML.includes('>Daily Matches</button>')&&main.innerHTML.includes('>Multi Club Arenas</button>'),"Hall of Fame profile uses short selector labels");
+ assert(!main.innerHTML.includes('>Daily Match Points</button>')&&!main.innerHTML.includes('>Multi Club Arenas Points</button>'),"old selector labels removed");
  buttons["#p2kwTopButton"].onclick();await wait();
  assert(main.innerHTML.includes("daily-quarter-26"),"profile back restores period and expanded page");
  switchMode("tournaments");await wait();

@@ -55,7 +55,7 @@ header('Cache-Control: private, no-cache, max-age=30');
 <?php elseif($widget==='rivalry-spotlight'): ?>
 <script src="../../../assets/js/widgets/p2k-rivalry-v2159.js?v=p2k-2159-rivalry-green-1" defer></script>
 <?php elseif(in_array($widget,['player-spotlight','tournament-winners','hall-of-fame'],true)): ?>
-<script src="../../../assets/js/widgets/p2k-spotlight-v2159.js?v=p2k-2159-widgets-8-rivalry" defer></script>
+<script src="../../../assets/js/widgets/p2k-spotlight-v2159.js?v=p2k-2159-hof-profile-labels-1" defer></script>
 <?php else: ?>
 <?php if($widget==='club-progress'): ?>
 <script src="../../../assets/js/widgets/p2k-progress-chart-v2159.js?v=p2k-2159-progress-card-1" defer></script>
