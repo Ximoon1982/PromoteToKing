@@ -22,3 +22,7 @@
 .p2kw-radar-pill.is-friendly{border-color:rgba(104,171,204,.5);background:rgba(104,171,204,.13);color:var(--blue)}
 .p2kw-radar-meta .p2kw-radar-rating{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis}
 .p2kw-radar-meta .p2kw-radar-control{flex:0 0 auto}
+
+/* Authenticated member Radar: suppress generic username search. */
+.p2kw-radar-identity{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:7px 6px;margin:2px 0 8px;border:1px solid var(--border);border-radius:7px;background:var(--low);color:var(--gold);font-size:10px;font-weight:800}
+.p2kw-radar-identity small{color:var(--muted);font-size:8px;font-weight:700;text-align:right}

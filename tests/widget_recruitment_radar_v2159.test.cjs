@@ -62,6 +62,7 @@ const fetch=async u=>{
  calls.push({action,url:url.href,player:who});
  let output;
  if(action==="config")output={ok:true,settings:{enabled:true,window:"48h",limit:4}};
+ else if(url.pathname.endsWith("/oauth.php"))output={ok:true,authenticated:false,oauth_verified:false,profile:null};
  else if(action==="radar-catalog")output={ok:true,source:"Green synchronized DB",matches,
     details:Object.keys(data).map(id=>({...data[id],alreadyRegistered:who.toLowerCase()==="alpha"&&id==="1001"}))};
  else if(action==="radar-player")output={ok:true,username:who,available:true,classical:who==="Beta"?1300:1550,chess960:1950,statsCheckedAt:"2026-11-13 10:00:00"};
@@ -73,6 +74,8 @@ const wait=()=>new Promise(resolve=>setTimeout(resolve,55));
 (async()=>{
  await wait();
  assert.equal(status.textContent,"LIVE");
+ assert(calls.some(x=>x.url.includes("/oauth.php?action=session")),"OAuth identity checked first");
+ assert(main.innerHTML.includes("p2kwRadarForm"),"Anonymous visitors retain generic username form");
  assert.equal(calls.filter(x=>x.action==="radar-catalog").length,1,"One DB-only catalog call, no per-match fetches");
  assert(!calls.some(x=>x.action==="radar-batch"),"No match-sheet fanout even with a cold cache");
  assert(calls.every(x=>new URL(x.url).hostname==="www.promotetoking.org"),"No browser Chess.com API requests");

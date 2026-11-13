@@ -15,7 +15,7 @@
   const preview=document.body.dataset.preview==='1';
   const modes=[
     {id:'showcase',label:'Showcase',title:'Current P2K Match Showcase',
-      path:'server/events-showcase/public/embed.php',height:310},
+      path:'server/events-showcase/public/embed-card.php',height:690},
     {id:'match-calls',label:'Match calls',title:'P2K Recruitment Radar',
       path:'server/widgets/public/embed.php',child:'recruitment-radar',height:650},
     {id:'rivals',label:'Rivals',title:'P2K Rivalry Spotlight',
@@ -24,16 +24,20 @@
   const views=new Map();
   let active='showcase';
 
+  // Use the Hall of Fame navigation surface, outside the scrollable view.
+  const nav=document.createElement('nav');
+  nav.className='p2kw-hof-tabs p2kw-competition-tabs';
+  nav.setAttribute('role','tablist');
+  nav.setAttribute('aria-label','Competition widget views');
+  nav.innerHTML=modes.map((mode,index)=>
+    '<button type="button" role="tab" id="p2kwCompetitionTab-'+mode.id+'"'+
+    ' aria-controls="p2kwCompetitionPanel-'+mode.id+'"'+
+    ' data-competition-tab="'+mode.id+'" aria-selected="'+(index===0)+'"'+
+    ' tabindex="'+(index===0?'0':'-1')+'">'+mode.label+'</button>'
+  ).join('');
+  main.parentNode.insertBefore(nav,main);
   main.innerHTML=
     '<div class="p2kw-competition">'+
-      '<nav class="p2kw-seg p2kw-competition-tabs" role="tablist" aria-label="Competition widget views">'+
-        modes.map((mode,index)=>
-          '<button type="button" role="tab" id="p2kwCompetitionTab-'+mode.id+'"'+
-          ' aria-controls="p2kwCompetitionPanel-'+mode.id+'"'+
-          ' data-competition-tab="'+mode.id+'" aria-selected="'+(index===0)+'"'+
-          ' tabindex="'+(index===0?'0':'-1')+'">'+mode.label+'</button>'
-        ).join('')+
-      '</nav>'+
       '<div class="p2kw-competition-views">'+
         modes.map((mode,index)=>
           '<section id="p2kwCompetitionPanel-'+mode.id+'" class="p2kw-competition-view"'+
@@ -90,19 +94,19 @@
     const pane=mount(mode);
     modes.forEach(item=>{
       const selected=item.id===mode.id;
-      const tab=main.querySelector('#p2kwCompetitionTab-'+item.id);
+      const tab=nav.querySelector('#p2kwCompetitionTab-'+item.id);
       const panel=main.querySelector('#p2kwCompetitionPanel-'+item.id);
       if(tab){tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;}
       if(panel)panel.hidden=!selected;
     });
     if(status)status.textContent=mode.label;
     main.scrollTop=0;
-    if(focus)main.querySelector('#p2kwCompetitionTab-'+mode.id)?.focus();
+    if(focus)nav.querySelector('#p2kwCompetitionTab-'+mode.id)?.focus();
     return pane;
   }
 
   modes.forEach((mode,index)=>{
-    const tab=main.querySelector('#p2kwCompetitionTab-'+mode.id);
+    const tab=nav.querySelector('#p2kwCompetitionTab-'+mode.id);
     if(!tab)return;
     tab.addEventListener('click',()=>select(mode.id));
     tab.addEventListener('keydown',event=>{

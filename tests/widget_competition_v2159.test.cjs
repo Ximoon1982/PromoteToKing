@@ -3,7 +3,7 @@ const assert=require("node:assert/strict"),fs=require("node:fs"),vm=require("nod
 const root=path.join(__dirname,"..");
 const read=p=>fs.readFileSync(path.join(root,p),"utf8");
 const source=read("assets/js/widgets/p2k-competition-v2159.js");
-const showcase=read("server/events-showcase/public/embed.php");
+const showcase=read("server/events-showcase/public/embed-card.php");
 const embed=read("server/widgets/public/embed.php");
 const admin=read("assets/js/admin/widgets-v2153.js");
 const css=read("assets/css/widgets/p2k-competition-v2159.css");
@@ -19,7 +19,9 @@ class Node{
   focus(){this.focused=true;}
 }
 function run(mode="0",theme="dark",widget="competition"){
-  const main=new Node("main"),status=new Node("span");
+  const main=new Node("main"),status=new Node("span"),nav=new Node("nav");
+  main.parentNode={insertBefore(node,target){assert.strictEqual(node,nav);assert.strictEqual(target,main);}};
+  nav.querySelector=selector=>{const id=selector.match(/^#p2kwCompetitionTab-(showcase|match-calls|rivals)$/);return id?tabs.get(id[1]):null;};
   const panels=new Map(),tabs=new Map();
   for(const name of ["showcase","match-calls","rivals"]){
     panels.set(name,new Node("section"));
@@ -28,28 +30,32 @@ function run(mode="0",theme="dark",widget="competition"){
   main.querySelector=selector=>{
     const x=selector.match(/^#p2kwCompetition(Tab|Panel)-(showcase|match-calls|rivals)$/);
     if(!x)return null;
-    return x[1]==="Tab"?tabs.get(x[2]):panels.get(x[2]);
+    return x[1]==="Panel"?panels.get(x[2]):null;
   };
   const document={
     body:{dataset:{widget,preview:mode}},
     currentScript:{src:"https://www.promotetoking.org/assets/js/widgets/p2k-competition-v2159.js"},
     documentElement:{className:"p2kw-theme-"+theme},
     getElementById(id){return id==="p2kwContent"?main:id==="p2kwStatus"?status:null;},
-    createElement(tag){return new Node(tag);}
+    createElement(tag){return tag==="nav"?nav:new Node(tag);}
   };
   const context={document,URL,Map,console,Array,String,Number};
   vm.runInNewContext(source,context,{filename:"p2k-competition-v2159.js"});
-  return {main,status,panels,tabs};
+  return {main,status,panels,tabs,nav};
 }
-const fixture=run(),{main,status,panels,tabs}=fixture;
+const fixture=run(),{main,status,panels,tabs,nav}=fixture;
 assert.equal(status.textContent,"Showcase","Default selector is Showcase");
-assert.match(main.innerHTML,/role="tablist" aria-label="Competition widget views"/);
+assert.match(nav.innerHTML,/role="tab"/);
+assert.equal(nav.getAttribute("role"),"tablist");
+assert.equal(nav.getAttribute("aria-label"),"Competition widget views");
+assert.equal(nav.className,"p2kw-hof-tabs p2kw-competition-tabs");
+assert(!main.innerHTML.includes("p2kw-competition-tabs"),"Top selector outside scrolling content");
 assert.equal(panels.get("showcase").children.length,1,"Only Showcase loads at startup");
 assert.equal(panels.get("match-calls").children.length,0,"No Radar fetch on Showcase startup");
 assert.equal(panels.get("rivals").children.length,0,"No Rivals fetch on Showcase startup");
 const showcaseFrame=panels.get("showcase").children[0];
-assert.match(showcaseFrame.src,/server\/events-showcase\/public\/embed\.php\?theme=dark$/);
-assert.equal(showcaseFrame.height,"310");
+assert.match(showcaseFrame.src,/server\/events-showcase\/public\/embed-card\.php\?theme=dark$/);
+assert.equal(showcaseFrame.height,"690");
 assert.equal(showcaseFrame.title,"Current P2K Match Showcase");
 assert.equal(tabs.get("showcase").getAttribute("aria-selected"),"true");
 assert.equal(tabs.get("match-calls").tabIndex,-1);
@@ -116,6 +122,9 @@ assert(admin.includes("'competition':785"));
 assert(admin.includes("'competition':'Competition'"));
 assert(css.includes(".p2kw-competition-view[hidden]{display:none!important}"));
 assert(css.includes("width:260px"));
+assert(css.includes("grid-template-columns:repeat(3,minmax(0,1fr))"));
+assert(css.includes("background:var(--fill)"));
+assert(source.includes("main.parentNode.insertBefore(nav,main)"));
 assert(!source.includes("api.chess.com"),"Composite itself must make no Chess.com API calls");
 assert(!source.includes("fetch("),"Composite makes no duplicate public API requests");
-console.log("PASS Competition default Showcase, lazy preserved child iframes, exact assistant CTA, keyboard tabs, theme/preview, 260px/785px embed and no duplicate API fetch");
+console.log("PASS Competition card Showcase, fixed Hall of Fame-style navigation, preserved lazy children, assistant CTA, keyboard tabs and 260px/785px embed");

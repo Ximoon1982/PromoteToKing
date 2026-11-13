@@ -5,6 +5,7 @@
   if(document.body.dataset.widget!=='recruitment-radar')return;
   const ROOT=new URL('../../../',document.currentScript.src);
   const API=new URL('server/widgets/public/api.php',ROOT);
+  const OAUTH_SESSION=new URL('server/team-points/public/oauth.php?action=session',ROOT);
   const main=document.getElementById('p2kwContent');
   const status=document.getElementById('p2kwStatus');
   const foot=document.getElementById('p2kwFoot');
@@ -17,7 +18,7 @@
   const windows=Object.keys(hoursFor);
   const shortDate=seconds=>{const d=new Date(Number(seconds)*1000);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',day:'numeric',month:'short'}).format(d):'—';};
   const state={settings:null,window:'48h',scope:'priority',catalog:[],upcoming:[],
-    details:new Map(),needs:new Map(),username:'',draft:'',profile:null,
+    details:new Map(),needs:new Map(),username:'',draft:'',profile:null,authenticatedUser:'',
     fetching:false,scanned:0,total:0,scanToken:0,notice:'',error:'',effectiveWindow:'48h',baseDetails:[],partial:false};
   const get=async(address,signal)=>{
     const url=new URL(address);const ac=new AbortController();
@@ -35,6 +36,17 @@
     Object.entries(params).forEach(([k,v])=>out.searchParams.set(k,String(v)));
     return out;
   };
+  async function authenticatedUsername(){
+    try{
+      const identity=await get(OAUTH_SESSION);
+      if(identity?.authenticated!==true||identity?.oauth_verified!==true)return '';
+      const username=String(identity.profile?.username||'').trim();
+      return /^[a-zA-Z0-9_-]{2,25}$/.test(username)?username:'';
+    }catch(error){
+      // Missing/expired third-party OAuth cookies must leave the public widget usable.
+      return '';
+    }
+  }
   const league=match=>match.category==='league'||match.isLeague===true;
   const timeControl=value=>{
     const raw=String(value??'').trim();
@@ -186,7 +198,7 @@
     if(overview)overview.textContent=state.username?'Rating-matched opportunities':number(state.upcoming.length)+' upcoming matches';
     list.innerHTML=entries()||'<p class="p2kw-empty">'+(state.fetching?
       'Assessing verified recruitment needs…':
-      state.username&&!state.profile?'Player ratings unavailable. Correct the username or retry.':
+      state.username&&!state.profile?(state.authenticatedUser?'Player ratings unavailable for your Chess.com account.':'Player ratings unavailable. Correct the username or retry.'):
       'No matches match these filters.')+'</p>';
     let note=state.error||state.notice||'';
     if(state.fetching)note='Reading synchronized Green match data…';
@@ -200,10 +212,43 @@
     status.textContent=state.fetching?'Checking…':state.error?'PARTIAL':'LIVE';
     foot.textContent='';
   }
+  async function loadFor(name){
+    const generation=++state.scanToken;
+    state.username=name;state.draft=name;state.profile=null;state.error='';state.notice='';
+    state.needs.clear();
+    state.fetching=true;refresh();
+    try{
+      if(name){
+        const [profile,catalog]=await Promise.all([
+          get(url('radar-player',{player:name})),
+          get(url('radar-catalog',{player:name}))
+        ]);
+        if(generation!==state.scanToken)return;
+        state.profile=profile;
+        state.catalog=Array.isArray(catalog.matches)?catalog.matches:[];
+        state.details=new Map((catalog.details||[]).map(d=>[String(d.matchId),d]));
+        state.error=(profile.classical==null&&profile.chess960==null)
+          ?'No Green Daily/Chess960 ratings are available for this username.':'';
+        if(profile.statsCheckedAt){
+          state.notice='Ratings checked: '+String(profile.statsCheckedAt)+' UTC';
+        }
+      }else{
+        const catalog=await get(url('radar-catalog'));
+        if(generation!==state.scanToken)return;
+        state.catalog=Array.isArray(catalog.matches)?catalog.matches:[];
+        state.details=new Map((catalog.details||[]).map(d=>[String(d.matchId),d]));
+      }
+    }catch(error){
+      if(generation!==state.scanToken)return;
+      state.error='Green recruitment data unavailable: '+(error.message||error);
+    }
+    if(generation!==state.scanToken)return;
+    state.fetching=false;refresh();
+  }
   function shell(){
     main.innerHTML='<div class="p2kw-total-row"><div><div class="p2kw-label">Matches matching filters</div><div class="p2kw-big" id="p2kwRadarCount">—</div></div><div class="p2kw-small" id="p2kwRadarOverview"></div></div>'+
       '<nav class="p2kw-seg p2kw-radar-scope" aria-label="Recruitment selection"><button type="button" data-radar-scope="priority" aria-pressed="'+(state.scope==='priority')+'">Priority</button><button type="button" data-radar-scope="all" aria-pressed="'+(state.scope==='all')+'">All</button></nav>'+
-      '<form class="p2kw-search p2kw-radar-search" id="p2kwRadarForm"><input type="search" name="username" autocomplete="off" spellcheck="false" maxlength="25" aria-label="Chess.com username" placeholder="Chess.com username" value="'+enc(state.draft)+'"><button type="submit">Find</button></form>'+
+      (state.authenticatedUser?'<div class="p2kw-radar-identity"><span>For '+enc(state.authenticatedUser)+'</span><small>Verified Chess.com account</small></div>':'<form class="p2kw-search p2kw-radar-search" id="p2kwRadarForm"><input type="search" name="username" autocomplete="off" spellcheck="false" maxlength="25" aria-label="Chess.com username" placeholder="Chess.com username" value="'+enc(state.draft)+'"><button type="submit">Find</button></form>')+
       '<nav class="p2kw-seg p2kw-radar-window" aria-label="Starting within">'+
        Object.keys(hoursFor).map(k=>'<button type="button" data-radar-window="'+k+'" aria-pressed="'+(k===state.window)+'">'+k+'</button>').join('')+'</nav>'+
       '<div class="p2kw-subhead"><strong>Recruitment opportunities</strong><span class="p2kw-small">Priority = verified need</span></div>'+
@@ -219,46 +264,19 @@
       main.querySelectorAll('[data-radar-window]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
       state.needs.clear();refresh();
     });
-    const form=main.querySelector('#p2kwRadarForm'),input=form.querySelector('input');
-    input.oninput=()=>{state.draft=input.value;};
-    form.onsubmit=async(event)=>{
-      event.preventDefault();
-      const name=input.value.trim();
-      if(name&&!/^[a-zA-Z0-9_-]{2,25}$/.test(name)){
-        state.error='Enter a valid Chess.com username.';refresh();return;
-      }
-      const generation=++state.scanToken;
-      state.username=name;state.draft=name;state.profile=null;state.error='';state.notice='';
-      state.needs.clear();
-      state.fetching=true;refresh();
-      try{
-        if(name){
-          const [profile,catalog]=await Promise.all([
-            get(url('radar-player',{player:name})),
-            get(url('radar-catalog',{player:name}))
-          ]);
-          if(generation!==state.scanToken)return;
-          state.profile=profile;
-          state.catalog=Array.isArray(catalog.matches)?catalog.matches:[];
-          state.details=new Map((catalog.details||[]).map(d=>[String(d.matchId),d]));
-          state.error=(profile.classical==null&&profile.chess960==null)
-            ?'No Green Daily/Chess960 ratings are available for this username.':'';
-          if(profile.statsCheckedAt){
-            state.notice='Ratings checked: '+String(profile.statsCheckedAt)+' UTC';
-          }
-        }else{
-          const catalog=await get(url('radar-catalog'));
-          if(generation!==state.scanToken)return;
-          state.catalog=Array.isArray(catalog.matches)?catalog.matches:[];
-          state.details=new Map((catalog.details||[]).map(d=>[String(d.matchId),d]));
+    const form=main.querySelector('#p2kwRadarForm');
+    if(form){
+      const input=form.querySelector('input');
+      input.oninput=()=>{state.draft=input.value;};
+      form.onsubmit=event=>{
+        event.preventDefault();
+        const name=input.value.trim();
+        if(name&&!/^[a-zA-Z0-9_-]{2,25}$/.test(name)){
+          state.error='Enter a valid Chess.com username.';refresh();return;
         }
-      }catch(error){
-        if(generation!==state.scanToken)return;
-        state.error='Green recruitment data unavailable: '+(error.message||error);
-      }
-      if(generation!==state.scanToken)return;
-      state.fetching=false;refresh();
-    };
+        return loadFor(name);
+      };
+    }
     refresh();
   }
   (async()=>{
@@ -269,9 +287,15 @@
         main.innerHTML='<div class="p2kw-empty">Widget not published.</div>';return;
       }
       state.window=hoursFor[state.settings.window]?state.settings.window:'48h';
-      const catalog=await get(url('radar-catalog'));
-      state.catalog=Array.isArray(catalog.matches)?catalog.matches:[];
-      state.details=new Map((catalog.details||[]).map(d=>[String(d.matchId),d]));
+      state.authenticatedUser=await authenticatedUsername();
+      if(state.authenticatedUser){
+        // One verified automatic personalized lookup, logged via radar-player.
+        await loadFor(state.authenticatedUser);
+      }else{
+        const catalog=await get(url('radar-catalog'));
+        state.catalog=Array.isArray(catalog.matches)?catalog.matches:[];
+        state.details=new Map((catalog.details||[]).map(d=>[String(d.matchId),d]));
+      }
       shell();refresh();
     }catch(error){
       main.innerHTML='<p class="p2kw-empty">Recruitment catalogue temporarily unavailable: '+enc(error.message||error)+'</p>';

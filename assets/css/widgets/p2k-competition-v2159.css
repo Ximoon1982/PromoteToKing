@@ -1,10 +1,10 @@
 /* P2K Competition composite. Exactly one 260px host iframe, script-free host. */
 /* The child pages remain byte-for-byte the existing Showcase/Radar/Rivals embeds. */
 body[data-widget="competition"] .p2kw-panel{
-  border:0;border-radius:11px;padding:8px 0 0;
+  border:0;border-radius:11px;padding:10px 0 0;
 }
 body[data-widget="competition"] .p2kw-head{
-  margin:0 0 4px;padding:0 10px;min-height:23px;
+  margin:0 0 8px;padding:0 10px;min-height:23px;
 }
 body[data-widget="competition"] .p2kw-content{
   flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
@@ -12,20 +12,17 @@ body[data-widget="competition"] .p2kw-content{
 }
 body[data-widget="competition"] .p2kw-foot{display:none}
 .p2kw-competition{width:260px;max-width:100%;min-width:0;overflow:hidden}
+/* Hall of Fame's shared rounded-rectangle selector; three equal Competition tabs. */
 .p2kw-competition-tabs{
-  display:flex;width:calc(100% - 10px);margin:2px 5px 8px;
-  padding:2px;gap:2px;min-height:31px;
+  flex:0 0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  width:calc(100% - 18px);margin:0 9px 7px;padding:2px;gap:3px;
 }
-.p2kw-competition-tabs button{
-  display:block;flex:1;min-width:0;padding:6px 2px;font-size:10px;line-height:1.1;
-  font-weight:900;text-align:center;white-space:nowrap;cursor:pointer;
-}
+.p2kw-competition-tabs button{min-width:0;white-space:nowrap;padding:7px 2px}
 .p2kw-competition-tabs button[aria-selected="true"]{
-  background:linear-gradient(135deg,#d98d18,#f6b73c);
-  color:#17110a;
+  background:var(--fill);color:#17110a;
 }
 .p2kw-competition-tabs button:focus-visible{
-  outline:2px solid var(--blue);outline-offset:2px;
+  outline:2px solid var(--blue);outline-offset:-2px;
 }
 .p2kw-competition-view{width:260px;max-width:100%;min-width:0;margin:0;padding:0}
 .p2kw-competition-view[hidden]{display:none!important}

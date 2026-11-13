@@ -30,9 +30,9 @@ header('Cache-Control: private, no-cache, max-age=30');
 <title><?=htmlspecialchars((string)$settings['title'],ENT_QUOTES)?> — P2K Widget</title>
 <link rel="stylesheet" href="../../../assets/css/widgets/p2k-embed-v2153.css?v=p2k-2159-widgets-8-rivalry">
 <link rel="stylesheet" href="../../../assets/css/widgets/p2k-spotlight-v2159.css?v=p2k-2159-widgets-8-rivalry">
-<?php if($widget==='recruitment-radar'): ?><link rel="stylesheet" href="../../../assets/css/widgets/p2k-recruitment-radar-v2159.css?v=p2k-2159-rivalry-green-1"><?php endif; ?>
+<?php if($widget==='recruitment-radar'): ?><link rel="stylesheet" href="../../../assets/css/widgets/p2k-recruitment-radar-v2159.css?v=p2k-2159-radar-auth-1"><?php endif; ?>
 <?php if($widget==='rivalry-spotlight'): ?><link rel="stylesheet" href="../../../assets/css/widgets/p2k-rivalry-v2159.css?v=p2k-2159-rivalry-green-1"><?php endif; ?>
-<?php if($widget==='competition'): ?><link rel="stylesheet" href="../../../assets/css/widgets/p2k-competition-v2159.css?v=p2k-2159-competition-1"><?php endif; ?>
+<?php if($widget==='competition'): ?><link rel="stylesheet" href="../../../assets/css/widgets/p2k-competition-v2159.css?v=p2k-2159-competition-2"><?php endif; ?>
 </head><body data-widget="<?=htmlspecialchars($widget,ENT_QUOTES)?>" data-preview="<?=($preview||$viaCompetition)?'1':'0'?>">
 <main class="p2kw-root" id="p2kwRoot" aria-live="polite">
 <?php if(!$published&&!$preview): ?>
@@ -43,10 +43,10 @@ header('Cache-Control: private, no-cache, max-age=30');
 </main>
 <?php if($published||$preview): ?>
 <?php if($widget==='competition'): ?>
-<script src="../../../assets/js/widgets/p2k-competition-v2159.js?v=p2k-2159-competition-1" defer></script>
+<script src="../../../assets/js/widgets/p2k-competition-v2159.js?v=p2k-2159-competition-2" defer></script>
 <?php elseif($widget==='recruitment-radar'): ?>
 <script src="../../../assets/js/shared/recruitment-lineup-core.js?v=p2k-2159-rivalry-green-1" defer></script>
-<script src="../../../assets/js/widgets/p2k-recruitment-radar-v2159.js?v=p2k-2159-rivalry-green-1" defer></script>
+<script src="../../../assets/js/widgets/p2k-recruitment-radar-v2159.js?v=p2k-2159-radar-auth-1" defer></script>
 <?php elseif($widget==='rivalry-spotlight'): ?>
 <script src="../../../assets/js/widgets/p2k-rivalry-v2159.js?v=p2k-2159-rivalry-green-1" defer></script>
 <?php elseif(in_array($widget,['player-spotlight','tournament-winners','hall-of-fame'],true)): ?>

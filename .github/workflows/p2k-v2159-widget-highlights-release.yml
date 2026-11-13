@@ -40,6 +40,7 @@ on:
       - 'tests/widget_progress_v2159.test.cjs'
       - 'tests/widget_hall_of_fame_v2159.test.cjs'
       - 'tests/widget_recruitment_radar_v2159.test.cjs'
+      - 'tests/widget_radar_oauth_v2159.test.cjs'
       - 'tests/widget_rivalry_v2159.test.cjs'
       - 'tests/widget_competition_v2159.test.cjs'
       - 'tests/admin_widgets_shell_v2153.py'
@@ -128,6 +129,7 @@ jobs:
           node tests/widget_spotlights_v2159.test.cjs
           node tests/widget_hall_of_fame_v2159.test.cjs
           node tests/widget_recruitment_radar_v2159.test.cjs
+          node tests/widget_radar_oauth_v2159.test.cjs
           node tests/widget_rivalry_v2159.test.cjs
           node tests/widget_competition_v2159.test.cjs
           node tests/widget_progress_v2159.test.cjs
@@ -181,6 +183,8 @@ jobs:
             {"version":"2.15.9","source_head":"8b6d2c752cb1b13d8eda816262a92ac3e408fe58"},
             # Latest user-confirmed installed Rivalry/Radar/SearchAudit baseline.
             {"version":"2.15.9","source_head":"e690f0fc23630f104413c2c7211aff976d0d82a6"},
+            # Previous validated Competition release, if promoted.
+            {"version":"2.15.9","source_head":"439d83c5b3de38f1a8a9ac958e31b827a7121aa7"},
           ]
           paths=[
              "VERSION","ui-v2.html",
