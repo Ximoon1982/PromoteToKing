@@ -73,13 +73,11 @@
      futureLine='<path d="'+segment+'" stroke="var(--card)" stroke-width="4.5" stroke-dasharray="5 4" fill="none"/>'+
        '<path d="'+segment+'" stroke="var(--blue)" stroke-width="2.6" stroke-dasharray="5 4" stroke-linecap="round" fill="none"/>';
    }
-   // Keep the original club logo full-size and full-color under the data.
-   // Clip all of the backdrop to the chart's rounded card boundaries.
+   // Keep the original club artwork full-size and full-color beneath the chart data.
+   // The chart frame is square; the SVG viewport clips overflow automatically.
    const logo=logoUrl?'<image href="'+xml(logoUrl)+'" x="0" y="0" width="256" height="256" opacity="1" preserveAspectRatio="xMidYMid meet"/>':"";
    const svg='<svg class="p2kw-progress-chart" viewBox="0 0 256 256" role="img" aria-label="Historical club points with distinct blue projection and reference targets" xmlns="http://www.w3.org/2000/svg">'+
-     '<defs><clipPath id="p2kw-progress-card-clip"><rect x="1" y="1" width="254" height="254" rx="14"/></clipPath></defs>'+
-     '<rect x="0.75" y="0.75" width="254.5" height="254.5" rx="14" fill="var(--card)"/>'+
-     '<g clip-path="url(#p2kw-progress-card-clip)">'+logo+'</g>'+
+     '<rect x="0.75" y="0.75" width="254.5" height="254.5" fill="var(--card)"/>'+logo+
      ticks+refs+
      '<path d="'+ppath+'" fill="none" stroke="var(--card)" stroke-width="5.4" opacity=".85" stroke-linecap="round" stroke-linejoin="round"/>'+
      '<path d="'+ppath+'" fill="none" stroke="var(--gold)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'+
@@ -87,7 +85,7 @@
      '<circle cx="'+x(current.day).toFixed(1)+'" cy="'+y(current.value).toFixed(1)+'" r="2.9" fill="var(--gold)"/>'+
      '<text x="'+x1+'" y="244" fill="var(--muted)" font-size="9" paint-order="stroke" stroke="var(--card)" stroke-width="2">'+xml(formatDate(visibleStart))+'</text>'+
      '<text x="'+x2+'" y="244" text-anchor="end" fill="var(--muted)" font-size="9" paint-order="stroke" stroke="var(--card)" stroke-width="2">'+xml(formatDate(xEnd))+'</text>'+
-     '<rect x="0.75" y="0.75" width="254.5" height="254.5" rx="14" fill="none" stroke="var(--border)" stroke-width="1.5" pointer-events="none"/></svg>';
+     '<rect x="0.75" y="0.75" width="254.5" height="254.5" fill="none" stroke="var(--border)" stroke-width="1.5" pointer-events="none"/></svg>';
    let message="";
    if(upper!==null&&upper<=current.value)message=(upperLabel||"Upper reference")+" reached";
    else if(forecastDay!==null)message=(upperLabel||"Upper reference")+" · estimated "+formatDate(forecastDay)+" (recent 30-day trend)";

@@ -36,16 +36,17 @@
       ?'<span class="p2kw-rival-avatar"><img src="'+esc(avatar)+'" loading="lazy" alt=""></span>'
       :'<span class="p2kw-rival-avatar is-fallback" aria-hidden="true">♜</span>';
   };
-  function resultsLink(opponent){
+  function clubName(opponent){
+    const name=esc(opponent?.name||opponent?.slug||'Opponent');
     const raw=String(opponent?.url||'');
     try{
       const u=new URL(raw);
       if(u.protocol==='https:' && (u.hostname==='www.chess.com'||u.hostname==='chess.com')
-        &&u.pathname.startsWith('/club/')){
-        return '<a class="p2kw-action" href="'+esc(u.href)+'" target="_blank" rel="noopener noreferrer">Chess.com club</a>';
+        &&/^\/club\/[a-z0-9_-]+\/?$/i.test(u.pathname) && !u.search && !u.hash){
+        return '<a class="p2kw-rival-name-link" href="'+esc(u.href)+'" target="_blank" rel="noopener noreferrer">'+name+'</a>';
       }
     }catch{}
-    return '';
+    return name;
   }
   function directoryHtml(){
     const data=state.pageData,rows=data?.rows||[],summary=data?.summary||{};
@@ -78,7 +79,7 @@
     const n=w+d+l,pct=v=>n?Math.max(0,100*v/n):0,rate=n?Math.round(100*w/n):null;
     const scopeName={total:'Total',friendly:'Friendly',league:'League'}[state.scope];
     return '<button type="button" class="p2kw-rival-back" data-rival-back>‹ Back to opponents</button>'+
-      '<div class="p2kw-rival-detailhead">'+img(r)+'<div><strong>'+esc(r.name||r.slug)+'</strong>'+
+      '<div class="p2kw-rival-detailhead">'+img(r)+'<div><strong>'+clubName(r)+'</strong>'+
        '<small>'+esc(r.slug||'')+'</small></div></div>'+
       '<div class="p2kw-rival-total"><strong>'+number(r.total)+'</strong><span>Recorded encounters</span></div>'+
       '<nav class="p2kw-seg p2kw-rival-scopes" aria-label="Rivalry result category">'+
@@ -100,7 +101,7 @@
       '<div class="p2kw-metric"><strong>'+number(r.finished)+'</strong><span>Finished</span></div></div>'+
       (state.scope==='total'&&Number(payload.coverage?.category_gap)>0?
         '<p class="p2kw-rival-note">'+number(payload.coverage.category_gap)+' historical results have incomplete category classification.</p>':'')+
-      '<div class="p2kw-rival-clublink">'+resultsLink(r)+'</div>';
+      '';
   }
   function drawContent(){
     const holder=main.querySelector('#p2kwRivalContents');

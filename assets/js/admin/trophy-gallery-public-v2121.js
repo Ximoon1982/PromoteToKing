@@ -284,7 +284,7 @@ async function mountStandalone() {
   // existing card-to-modal handler instead of building another modal.
   const trophyId=String(params().get("trophyId")||"").trim();
   if(trophyId && host.dataset.openedTrophyId!==trophyId) {
-    const cardButton=$("[data-open]",host).find(button=>button.dataset.open===trophyId);
+    const cardButton=$$("[data-open]",host).find(button=>button.dataset.open===trophyId);
     if(cardButton){
       host.dataset.openedTrophyId=trophyId;
       cardButton.click();

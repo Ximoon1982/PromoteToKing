@@ -132,14 +132,14 @@
     const actual=payload.data?.graphs?.scoreProgression?.actual||[];
     const chart=window.P2K_PROGRESS_CHART;
     if(!chart?.render)throw new Error('Club Progress chart renderer is unavailable.');
-    const logo=new URL('assets/images/p2k-logo.jpg',ROOT).href;
+    // The Release Control package includes an optimized derivative of the
+    // repository's original P2K club logo for this 260px square chart.
+    const logo=new URL('assets/images/p2k-progress-logo.webp',ROOT).href;
     const result=chart.render(actual,settings,logo);
     if(!result.svg){
       main.innerHTML='<div class="p2kw-empty">'+esc(result.message||'Club Points history is unavailable.')+'</div>';
     }else{
-      main.innerHTML='<div class="p2kw-total-row p2kw-progress-total"><div><div class="p2kw-label">Club Points</div><div class="p2kw-big">'+esc(number(result.last))+'</div></div></div>'
-        +result.svg
-        +(result.message?'<div class="p2kw-progress-forecast">'+esc(result.message)+'</div>':'');
+      main.innerHTML=result.svg;
     }
     setFoot('');
   }

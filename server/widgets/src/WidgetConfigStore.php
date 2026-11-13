@@ -27,7 +27,7 @@ final class WidgetConfigStore {
         $common = ['enabled'=>true, 'title'=>[
             'club-pulse'=>'Club Pulse', 'recruitment-radar'=>'Recruitment Radar',
             'trophy-spotlight'=>'Trophy Spotlight', 'rivalry-spotlight'=>'Rivalry Spotlight',
-            'club-progress'=>'Club Progress', 'around-the-world'=>'P2K Around the World',
+            'club-progress'=>'Grinding the leaderboard', 'around-the-world'=>'P2K Around the World',
             'player-spotlight'=>'Player Spotlight', 'tournament-winners'=>'Tournament Winners', 'hall-of-fame'=>'Hall of Fame', 'competition'=>'Competition'
         ][$id], 'theme'=>'auto'];
         return $common + match ($id) {
@@ -67,6 +67,10 @@ final class WidgetConfigStore {
             } else {
                 $settings[$key]=self::scalarString($value,$key==='title'?64:($key==='opponent'?160:(str_ends_with($key,'ReferenceLabel')?32:24)));
             }
+        }
+        // Migrate only the prior default label; retain user-customized titles.
+        if ($id==='club-progress' && $settings['title']==='Club Progress') {
+            $settings['title']='Grinding the leaderboard';
         }
         foreach (['theme'=>['dark','light','auto'],'period'=>['7d','30d','12m'],'window'=>['24h','48h','72h','7d'],'metric'=>['points','boards','matches','clubs'],'mode'=>['latest','random']] as $key=>$options) {
             if (isset($settings[$key]) && !in_array($settings[$key],$options,true)) throw new InvalidArgumentException('Invalid '.$key.' option');

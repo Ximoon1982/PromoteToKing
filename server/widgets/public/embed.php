@@ -29,10 +29,10 @@ header('Cache-Control: private, no-cache, max-age=30');
 <html lang="en" class="p2kw-theme-<?=htmlspecialchars($theme,ENT_QUOTES)?>"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark light">
 <title><?=htmlspecialchars((string)$settings['title'],ENT_QUOTES)?> — P2K Widget</title>
-<link rel="stylesheet" href="../../../assets/css/widgets/p2k-embed-v2153.css?v=p2k-2159-progress-card-1">
+<link rel="stylesheet" href="../../../assets/css/widgets/p2k-embed-v2153.css?v=p2k-2159-progress-square-2">
 <link rel="stylesheet" href="../../../assets/css/widgets/p2k-spotlight-v2159.css?v=p2k-2159-widgets-8-rivalry">
 <?php if($widget==='recruitment-radar'): ?><link rel="stylesheet" href="../../../assets/css/widgets/p2k-recruitment-radar-v2159.css?v=p2k-2159-radar-ui-3"><?php endif; ?>
-<?php if($widget==='rivalry-spotlight'): ?><link rel="stylesheet" href="../../../assets/css/widgets/p2k-rivalry-v2159.css?v=p2k-2159-rivalry-green-1"><?php endif; ?>
+<?php if($widget==='rivalry-spotlight'): ?><link rel="stylesheet" href="../../../assets/css/widgets/p2k-rivalry-v2159.css?v=p2k-2159-rival-linked-2"><?php endif; ?>
 <?php if($widget==='competition'): ?><link rel="stylesheet" href="../../../assets/css/widgets/p2k-competition-v2159.css?v=p2k-2159-competition-3"><?php endif; ?>
 <?php if($competitionChild): ?><style>
 /* The parent Competition header already displays the title and LIVE state. */
@@ -53,14 +53,14 @@ header('Cache-Control: private, no-cache, max-age=30');
 <script src="../../../assets/js/shared/recruitment-lineup-core.js?v=p2k-2159-rivalry-green-1" defer></script>
 <script src="../../../assets/js/widgets/p2k-recruitment-radar-v2159.js?v=p2k-2159-radar-ui-3" defer></script>
 <?php elseif($widget==='rivalry-spotlight'): ?>
-<script src="../../../assets/js/widgets/p2k-rivalry-v2159.js?v=p2k-2159-rivalry-green-1" defer></script>
+<script src="../../../assets/js/widgets/p2k-rivalry-v2159.js?v=p2k-2159-rival-linked-2" defer></script>
 <?php elseif(in_array($widget,['player-spotlight','tournament-winners','hall-of-fame'],true)): ?>
 <script src="../../../assets/js/widgets/p2k-spotlight-v2159.js?v=p2k-2159-hof-profile-labels-1" defer></script>
 <?php else: ?>
 <?php if($widget==='club-progress'): ?>
-<script src="../../../assets/js/widgets/p2k-progress-chart-v2159.js?v=p2k-2159-progress-card-1" defer></script>
+<script src="../../../assets/js/widgets/p2k-progress-chart-v2159.js?v=p2k-2159-progress-square-2" defer></script>
 <?php endif; ?>
-<script src="../../../assets/js/widgets/p2k-embed-v2153.js?v=p2k-2159-widgets-8-rivalry" defer></script>
+<script src="../../../assets/js/widgets/p2k-embed-v2153.js?v=p2k-2159-progress-square-2" defer></script>
 <?php endif; ?>
 <?php endif; ?>
 </body></html>

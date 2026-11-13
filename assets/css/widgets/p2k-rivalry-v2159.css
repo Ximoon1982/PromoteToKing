@@ -53,3 +53,7 @@
 .p2kw-rival-coverage{font-size:9px;color:var(--muted)}
 .p2kw-rival-note{font-size:9px;color:var(--muted);line-height:1.3}
 .p2kw-rival-clublink{text-align:center;margin:14px 0}
+
+/* The verified Chess.com club link is part of the opponent heading. */
+.p2kw-rival-name-link{color:inherit;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px;text-decoration-color:var(--gold)}
+.p2kw-rival-name-link:hover,.p2kw-rival-name-link:focus-visible{color:var(--gold)}

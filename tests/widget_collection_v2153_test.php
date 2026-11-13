@@ -16,6 +16,9 @@ try {
     ensure(($start['widgets']['hall-of-fame']['medalPageSize']??0)===3,'Hall of Fame shares tournament medal pagination defaults');
     ensure(($start['widgets']['hall-of-fame']['title']??'')==='Hall of Fame','Hall of Fame has independent title');
     ensure(($start['widgets']['competition']['title']??'')==='Competition','Competition defaults to independent published title');
+    ensure(($start['widgets']['club-progress']['title']??'')==='Grinding the leaderboard','Progress default heading');
+    ensure(WidgetConfigStore::normalize('club-progress',['title'=>'Club Progress'])['title']==='Grinding the leaderboard','Previous default heading migrates in memory');
+    ensure(WidgetConfigStore::normalize('club-progress',['title'=>'My custom progress'])['title']==='My custom progress','User-customized progress headings are preserved');
     ensure(($start['widgets']['competition']['theme']??'')==='auto','Competition uses inherited automatic theme');
     ensure(!array_key_exists('limit',$start['widgets']['competition']),'Combined Competition has no artificial item limit');
     ensure(!array_key_exists('limit',$start['widgets']['tournament-winners']),'No completed tournament browse cap');

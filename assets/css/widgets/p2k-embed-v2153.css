@@ -12,5 +12,5 @@ a,button{font:inherit}button{cursor:pointer}a:focus-visible,button:focus-visible
 
 /* Fixed-width square progress chart, rendered entirely within the iframe. */
 .p2kw-progress-total{padding:1px 0 6px}
-.p2kw-progress-chart{display:block;width:100%;height:auto;aspect-ratio:1/1;border-radius:14px;overflow:hidden;border:1px solid var(--border);background:var(--card);box-shadow:0 5px 16px rgba(0,0,0,.20)}
+.p2kw-progress-chart{display:block;width:100%;height:auto;aspect-ratio:1/1;border-radius:0;overflow:hidden;border:1px solid var(--border);background:var(--card);box-shadow:0 5px 16px rgba(0,0,0,.20)}
 .p2kw-progress-forecast{font-size:10px;font-weight:700;color:var(--gold);line-height:1.4;margin-top:7px;overflow-wrap:anywhere}

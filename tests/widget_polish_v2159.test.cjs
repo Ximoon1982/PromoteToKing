@@ -119,4 +119,30 @@ assert(api.includes("RecruitmentRadarGreenReadService::catalog"));
 assert(!radarBackend.includes("file_get_contents("),"Public Green Radar reader has no HTTP implementation");
 console.log("PASS unlimited Rivalry pages, scope bar, avatars, no old footer and no visitor Chess.com traffic");
 
+// Execute the standalone deep-link handler with two rendered cards.
+const standaloneStart=gallery.indexOf("async function mountStandalone() {");
+const standaloneEnd=gallery.indexOf('\nwindow.addEventListener("popstate"',standaloneStart);
+assert(standaloneStart>=0&&standaloneEnd>standaloneStart,"Standalone gallery handler is present");
+const clicked=[];
+const host={dataset:{}};
+const buttons=[
+  {dataset:{open:"first-trophy"},click(){clicked.push("first-trophy")}},
+  {dataset:{open:"second-trophy"},click(){clicked.push("second-trophy")}}
+];
+const isolated=new Function("$","$$","waitBase","decorate","params",
+  gallery.slice(standaloneStart,standaloneEnd)+"\nreturn mountStandalone;");
+const mount=isolated(
+  key=>key==="#p2kTrophyStandalone"?host:null,
+  (key,scope)=>key==="[data-open]"&&scope===host?buttons:[],
+  async()=>({mountPublic:async()=>{}}),
+  async()=>{},
+  ()=>new URLSearchParams("trophyId=second-trophy")
+);
+(async()=>{
+  await mount();
+  assert.deepEqual(clicked,["second-trophy"],"Trophy deep link opens the selected trophy, not first");
+  await mount();
+  assert.deepEqual(clicked,["second-trophy"],"Trophy deep link does not reopen same modal repeatedly");
+  console.log("PASS Trophy Spotlight deep-link selects exact Gallery trophy");
+})().catch(e=>{console.error(e);process.exitCode=1});
 console.log("PASS full 260px panel, unlimited trophy gallery deep-links, uncapped tournament navigation and square chart");
