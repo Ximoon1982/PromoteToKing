@@ -343,6 +343,21 @@ jobs:
           with zipfile.ZipFile(out) as z:
               assert z.testzip() is None
               assert len(z.namelist())==len(paths)+len(recovery)+4
+              # Guard against previous regression: a cumulative package that silently
+              # omits the parser may validate while leaving old production code active.
+              required=[
+                  "server/team-points/src/McaArenaParser.php",
+                  "server/team-points/src/McaResultsCronService.php",
+                  "server/team-points/bin/mca-results-sync.php",
+                  "cron-mca-arena-v2.10.9.sh",
+                  "assets/js/widgets/p2k-progress-chart-v2159.js",
+              ]
+              for item in required:
+                  assert "payload/"+item in z.namelist(), "Missing mandatory recovery file: "+item
+                  assert z.read("payload/"+item)==(root/item).read_bytes(), "Wrong recovery file: "+item
+              for line in z.read("CANDIDATE_PAYLOAD.sha256").decode().splitlines():
+                  digest,rel=line.split("  ./",1)
+                  assert hashlib.sha256(z.read("payload/"+rel)).hexdigest()==digest, rel
           print("Output ZIP",out,"version",version,"bytes",out.stat().st_size)
           print("source head",head,"sha256",sha(out),"accepted",accepted)
           bootstrap=dist/"P2K_MCA_Runtime_Dispatch_v21510_SSH_Bootstrap.zip"
