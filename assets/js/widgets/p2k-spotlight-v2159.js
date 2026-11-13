@@ -53,6 +53,7 @@ let config={},currentUser='',playerEpoch=0,arenaPeriods=null,playerData=null,per
 // standalone widgets. Only its compact/expanded leaderboard differs.
 let hallMode='leaderboards',hallScope='all',hallExpanded=null,hallPage=1,hallEpoch=0;
 const hallPages={daily:null,arena:null};
+const hallTop={daily:null,arena:null};
 let hallTabs=null;
 if(isHall){
   hallTabs=document.createElement('nav');
@@ -99,7 +100,7 @@ function renderHallHome(){
  let html=playerHeader();
  for(const kind of ['daily','arena']){
    if(mode&&kind!==mode)continue;
-   const data=hallPages[kind];
+   const data=mode?hallPages[kind]:(hallTop[kind]||hallPages[kind]);
    html+='<div class="p2kw-subhead p2kw-hof-subhead"><strong>'+hallTitle(kind)+'</strong>'+
      (kind==='daily'?periodSelect:'')+'</div>';
    if(!data){html+='<p class="p2kw-loading-status">Loading leaderboard…</p>';continue}
@@ -120,7 +121,7 @@ function renderHallHome(){
  main.querySelector('#p2kwHofPeriod')?.addEventListener('change',event=>{
    const next=event.target.value;
    if(!['all','quarter','month'].includes(next)||next===hallScope)return;
-   hallScope=next;hallExpanded=null;hallPage=1;hallPages.daily=null;
+   hallScope=next;hallExpanded=null;hallPage=1;hallPages.daily=null;hallTop.daily=null;
    renderHallHome();void hallFetch('daily',1);
  });
  main.querySelectorAll('[data-hof-more]').forEach(button=>button.onclick=()=>{
@@ -150,6 +151,7 @@ async function hallFetch(kind,page=1){
    const response=await get(SPOT,{action:'hall-leaderboard',kind,period:scope,page},24000);
    if(epoch!==hallEpoch||hallMode!=='leaderboards'||scope!==(kind==='daily'?hallScope:'all'))return;
    hallPages[kind]=response;
+   if((response.pagination?.page||1)===1)hallTop[kind]=response;
    if(hallExpanded===kind)hallPage=response.pagination?.page||1;
    setStatus('LIVE');renderHallHome();
  }catch(error){
@@ -168,11 +170,11 @@ async function hallLoadHome(){
  setStatus('Loading…');renderHallHome();
  try{
    const pending=[];
-   if(!hallPages.daily)pending.push(get(SPOT,{action:'hall-leaderboard',kind:'daily',period:hallScope,page:1},24000).then(r=>['daily',r]));
-   if(!hallPages.arena)pending.push(get(SPOT,{action:'hall-leaderboard',kind:'arena',period:'all',page:1},24000).then(r=>['arena',r]));
+   if(!hallTop.daily)pending.push(get(SPOT,{action:'hall-leaderboard',kind:'daily',period:hallScope,page:1},24000).then(r=>['daily',r]));
+   if(!hallTop.arena)pending.push(get(SPOT,{action:'hall-leaderboard',kind:'arena',period:'all',page:1},24000).then(r=>['arena',r]));
    const values=await Promise.all(pending);
    if(epoch!==hallEpoch||hallMode!=='leaderboards')return;
-   values.forEach(([kind,response])=>hallPages[kind]=response);
+   values.forEach(([kind,response])=>{hallTop[kind]=response;if(!hallPages[kind])hallPages[kind]=response;});
    setStatus('LIVE');renderHallHome();
  }catch(error){
    if(epoch!==hallEpoch||hallMode!=='leaderboards')return;
