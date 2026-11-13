@@ -5,6 +5,7 @@ const calls=[],buttons={};
 const control=()=>({innerHTML:"",textContent:"",value:"",onsubmit:null,onclick:null,listeners:{},
  addEventListener(type,cb){this.listeners[type]=cb},fire(type){this.listeners[type]?.({target:this})}});
 const searchInput=control(),form=control(),suggest=control(),status=control(),foot=control();
+const scopeControls=["total","friendly","league"].map(name=>Object.assign(control(),{dataset:{rivalScope:name}}));
 const holder={innerHTML:"",
  querySelector(selector){
   if(!this.innerHTML.includes(selector.replace(/^\[|]$/g,"").split("=")[0]))return null;
@@ -16,7 +17,7 @@ const holder={innerHTML:"",
    return names.map((name,i)=>Object.assign(control(),{dataset:{rivalSlug:name}}));
   }
   if(selector==="[data-rival-scope]"){
-   return ["total","friendly","league"].map(name=>Object.assign(control(),{dataset:{rivalScope:name}}));
+   return scopeControls;
   }
   return [];
  }
