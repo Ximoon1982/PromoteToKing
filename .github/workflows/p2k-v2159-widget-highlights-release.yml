@@ -190,6 +190,8 @@ jobs:
             {"version":"2.15.9","source_head":"ff7d3ac0d846ac589932a546fb2716bf63747a7d"},
             # Latest qualified compact Competition public baseline (if promoted).
             {"version":"2.15.9","source_head":"3a6f41750e7089988d279669a22b048c36d3f246"},
+            # Most recently qualified Competition layout and Radar UI candidate.
+            {"version":"2.15.9","source_head":"afb44e70fe1a3bf0e7dc899145b41e76238fc74a"},
           ]
           paths=[
              "VERSION","ui-v2.html",
@@ -284,7 +286,7 @@ jobs:
              "Same-admin reauthorization preserves valid CSRF; expired sessions now yield recoverable 401.\n"
              "JS client retries stale CSRF at most once, and completed scan CSV can be retried without a new scan.\n"
              "Includes cumulative MCA/recruitment fixes from v2.15.7-v2.15.9.\n"
-             "Preserves ten embeds and all earlier MCA/recruitment fixes. Rivalry search supports name/slug/URL, avatars, 25-row unlimited pages and Total/Friendly/League results. Radar consumes only Green snapshots and widens empty time windows. Four nullable registration fields migrate additively via the existing Green worker. Every valid submitted name is logged in Traffic/Visitors with UTC timestamp and source. Competition has a transparent Showcase and opaque header, a 565px viewport with fixed Match Assistant footer, scrollable content, and child loading status. Unrestricted maximum ratings show as Open. Competition hides redundant inner Radar and Rivals headings, keeps its own LIVE indicator, and shows Radar's compact single-line count summary, Upcoming matches heading, and category pill ahead of the date. Standalone widgets retain their headers. Standalone Showcase remains unchanged. No deployment.\n")
+             "Preserves ten embeds and all earlier MCA/recruitment fixes. Rivalry search supports name/slug/URL, avatars, 25-row unlimited pages and Total/Friendly/League results. Radar consumes only Green snapshots and widens empty time windows. Four nullable registration fields migrate additively via the existing Green worker. Every valid submitted name is logged in Traffic/Visitors with UTC timestamp and source. Competition has a transparent Showcase and opaque header, a 565px viewport with fixed Match Assistant footer, scrollable content, and child loading status. Unrestricted maximum ratings show as Open. Competition hides redundant inner Radar and Rivals headings, keeps its own LIVE indicator, and shows Radar's compact single-line count summary, Upcoming matches heading, and category pill ahead of the date. Standalone widgets retain their headers. Club Progress now uses a rounded bordered card, the full-color club logo, a distinct blue projection and an axis ending just beyond its calculated target crossing. Standalone Showcase remains unchanged. No deployment.\n")
           out=dist/(stem+".zip")
           with zipfile.ZipFile(out,"w",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
               for file in pkg.rglob("*"):

@@ -1,4 +1,4 @@
-/* P2K 2.15.9 Club Progress: square, read-only points history and bounded linear forecast.
+/* P2K 2.15.9 Club Progress: square, read-only points history and goal-aligned linear forecast.
    Self-contained within the embed iframe; no host script, external chart library, or invented scores. */
 (function(root){"use strict";
  const MS=86400000;
@@ -39,45 +39,55 @@
    const recent=all.filter(p=>p.day>=current.day-30);
    const slope=slopeOf(recent),toUpper=upper!==null&&upper>current.value&&slope!==null?(upper-current.value)/slope:null;
    const forecastDay=toUpper!==null&&toUpper<=3650?current.day+toUpper:null;
-   // A distant ETA is reported, but only 90 days of projection are drawn.
-   const futureEnd=forecastDay===null?current.day:current.day+Math.min(90,toUpper);
-   const visibleStart=history[0].day,xEnd=Math.max(current.day+1,futureEnd);
+   // End the time axis just beyond the estimated crossing of the upper goal.
+   // The projection stays tied to the observed 30-day slope, not invented points.
+   const endValue=forecastDay===null?null:upper+Math.max(1,(upper-current.value)*.04);
+   const futureEnd=endValue===null?current.day:current.day+(endValue-current.value)/slope;
+   const visibleStart=history[0].day,xEnd=Math.max(current.day+.5,futureEnd);
    let yMin=lower,yMax=upper;
    const lows=history.map(p=>p.value),smallest=Math.min(...lows),largest=Math.max(...lows);
    const baseSpan=Math.max(1,largest-smallest);
    if(yMin===null)yMin=Math.max(0,smallest-baseSpan*.16);
    if(yMax===null)yMax=largest+baseSpan*.16;
+   if(endValue!==null)yMax=Math.max(yMax,endValue+Math.max(1,(endValue-yMin)*.08));
    if(yMax<=yMin){yMin=Math.max(0,smallest-baseSpan*.15);yMax=largest+baseSpan*.15+1}
    const x1=42,x2=246,top=14,bottom=223,span=yMax-yMin;
    const x=p=>x1+(p-visibleStart)/Math.max(1,xEnd-visibleStart)*(x2-x1);
    const y=p=>Math.max(top,Math.min(bottom,bottom-(p-yMin)/span*(bottom-top)));
    const ppath=history.map((p,i)=>(i?"L":"M")+x(p.day).toFixed(2)+" "+y(p.value).toFixed(2)).join(" ");
    const ticks=Array.from({length:5},(_,i)=>{const val=yMin+i*span/4,py=y(val);return '<path d="M'+x1+' '+py.toFixed(1)+'H'+x2+'" stroke="var(--border)" stroke-width=".65"/>'+
-     '<text x="2" y="'+(py+3).toFixed(1)+'" fill="var(--muted)" font-size="8.5">'+xml(pointsValue(val))+'</text>'
+     '<text x="2" y="'+(py+3).toFixed(1)+'" fill="var(--muted)" font-size="8.5" paint-order="stroke" stroke="var(--card)" stroke-width="1.5">'+xml(pointsValue(val))+'</text>'
    }).join("");
    const refs=[[lower,lowerLabel],[upper,upperLabel]].filter(([val])=>val!==null).map(([val,label])=>{
      const py=y(val),short=label.length>14?label.slice(0,13)+"…":label;
      return '<g><title>'+xml((label||"Reference")+" · "+pointsValue(val))+'</title>'+
        '<path d="M'+x1+' '+py.toFixed(1)+'H'+x2+'" stroke="var(--gold)" stroke-width="1.25" opacity=".9"/>'+
-       (short?'<text x="'+(x2-1)+'" y="'+(py<=top+6?py+12:py-4).toFixed(1)+'" text-anchor="end" fill="var(--gold)" font-size="10" font-weight="800">'+xml(short)+'</text>':"")+
+       (short?'<text x="'+(x2-1)+'" y="'+(py<=top+6?py+12:py-4).toFixed(1)+'" text-anchor="end" fill="var(--gold)" font-size="10" font-weight="800" paint-order="stroke" stroke="var(--card)" stroke-width="2">'+xml(short)+'</text>':"")+
        '</g>';
    }).join("");
    let futureLine="";
    if(forecastDay!==null){
-     const pointDay=Math.min(forecastDay,current.day+90),projected=current.value+slope*(pointDay-current.day);
-     futureLine='<path d="M'+x(current.day).toFixed(1)+' '+y(current.value).toFixed(1)+
-       'L'+x(pointDay).toFixed(1)+' '+y(projected).toFixed(1)+
-       '" stroke="var(--gold)" stroke-width="2.2" stroke-dasharray="5 4" fill="none" opacity=".75"/>';
+     const projected=current.value+slope*(xEnd-current.day);
+     const segment='M'+x(current.day).toFixed(1)+' '+y(current.value).toFixed(1)+
+       'L'+x(xEnd).toFixed(1)+' '+y(projected).toFixed(1);
+     futureLine='<path d="'+segment+'" stroke="var(--card)" stroke-width="4.5" stroke-dasharray="5 4" fill="none"/>'+
+       '<path d="'+segment+'" stroke="var(--blue)" stroke-width="2.6" stroke-dasharray="5 4" stroke-linecap="round" fill="none"/>';
    }
-   const logo=logoUrl?'<image href="'+xml(logoUrl)+'" x="49" y="25" width="183" height="180" opacity=".17" preserveAspectRatio="xMidYMid meet"/>':"";
-   const svg='<svg class="p2kw-progress-chart" viewBox="0 0 256 256" role="img" aria-label="Historical club points with configurable reference marks and estimated trend" xmlns="http://www.w3.org/2000/svg">'+
-     '<rect x="0" y="0" width="256" height="256" rx="8" fill="var(--card)"/>'+logo+
+   // Keep the original club logo full-size and full-color under the data.
+   // Clip all of the backdrop to the chart's rounded card boundaries.
+   const logo=logoUrl?'<image href="'+xml(logoUrl)+'" x="0" y="0" width="256" height="256" opacity="1" preserveAspectRatio="xMidYMid meet"/>':"";
+   const svg='<svg class="p2kw-progress-chart" viewBox="0 0 256 256" role="img" aria-label="Historical club points with distinct blue projection and reference targets" xmlns="http://www.w3.org/2000/svg">'+
+     '<defs><clipPath id="p2kw-progress-card-clip"><rect x="1" y="1" width="254" height="254" rx="14"/></clipPath></defs>'+
+     '<rect x="0.75" y="0.75" width="254.5" height="254.5" rx="14" fill="var(--card)"/>'+
+     '<g clip-path="url(#p2kw-progress-card-clip)">'+logo+'</g>'+
      ticks+refs+
-     '<path d="'+ppath+'" fill="none" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'+
+     '<path d="'+ppath+'" fill="none" stroke="var(--card)" stroke-width="5.4" opacity=".85" stroke-linecap="round" stroke-linejoin="round"/>'+
+     '<path d="'+ppath+'" fill="none" stroke="var(--gold)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'+
      futureLine+
      '<circle cx="'+x(current.day).toFixed(1)+'" cy="'+y(current.value).toFixed(1)+'" r="2.9" fill="var(--gold)"/>'+
-     '<text x="'+x1+'" y="244" fill="var(--muted)" font-size="9">'+xml(formatDate(visibleStart))+'</text>'+
-     '<text x="'+x2+'" y="244" text-anchor="end" fill="var(--muted)" font-size="9">'+xml(formatDate(xEnd))+'</text></svg>';
+     '<text x="'+x1+'" y="244" fill="var(--muted)" font-size="9" paint-order="stroke" stroke="var(--card)" stroke-width="2">'+xml(formatDate(visibleStart))+'</text>'+
+     '<text x="'+x2+'" y="244" text-anchor="end" fill="var(--muted)" font-size="9" paint-order="stroke" stroke="var(--card)" stroke-width="2">'+xml(formatDate(xEnd))+'</text>'+
+     '<rect x="0.75" y="0.75" width="254.5" height="254.5" rx="14" fill="none" stroke="var(--border)" stroke-width="1.5" pointer-events="none"/></svg>';
    let message="";
    if(upper!==null&&upper<=current.value)message=(upperLabel||"Upper reference")+" reached";
    else if(forecastDay!==null)message=(upperLabel||"Upper reference")+" · estimated "+formatDate(forecastDay)+" (recent 30-day trend)";
