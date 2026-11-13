@@ -31,7 +31,7 @@ header('Cache-Control: private, no-cache, max-age=30');
 <?php endif; ?>
 </main>
 <?php if($settings['enabled']||$preview): ?>
-<?php if(in_array($widget,['player-spotlight','tournament-winners'],true)): ?>
+<?php if(in_array($widget,['player-spotlight','tournament-winners','hall-of-fame'],true)): ?>
 <script src="../../../assets/js/widgets/p2k-spotlight-v2159.js?v=p2k-2159-widgets-4" defer></script>
 <?php else: ?>
 <?php if($widget==='club-progress'): ?>
