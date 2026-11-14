@@ -55,6 +55,10 @@ assert(!progressFunction.includes('class="p2kw-label">Club Points</div>'),"Only 
 const store=fs.readFileSync(path.join(__dirname,"../server/widgets/src/WidgetConfigStore.php"),"utf8");
 assert(store.includes("'club-progress'=>'Grinding the leaderboard'"),"Club Progress is renamed");
 const embed=fs.readFileSync(path.join(__dirname,"../server/widgets/public/embed.php"),"utf8");
-assert(embed.includes("p2k-progress-chart-v2159.js?v=p2k-2159-progress-square-2"),"Updated chart script cache is invalidated");
+assert(embed.includes("hash_file('sha256',$progressChartFile)"),"Chart cache key must be derived from exact chart file content");
+assert(embed.includes("p2k-progress-chart-v2159.js?v=<?=rawurlencode($progressChartVersion)?>"),"Chart URL must use its content-derived cache key");
+assert(!embed.includes("p2k-progress-chart-v2159.js?v=p2k-2159-progress-square-2"),"Old immutable chart URL must not survive");
+const publicRouter=fs.readFileSync(path.join(__dirname,"../PublicRouter.php"),"utf8");
+assert(publicRouter.includes("max-age=31536000, immutable"),"PublicRouter immutable scripts require content-based cache busting");
 assert(embed.includes("p2k-embed-v2153.css?v=p2k-2159-progress-square-2"),"Updated card style cache is invalidated");
 console.log("PASS Club Progress optimized logo, square chart, target projection, title migration and graph-only UI");

@@ -57,8 +57,15 @@ header('Cache-Control: private, no-cache, max-age=30');
 <?php elseif(in_array($widget,['player-spotlight','tournament-winners','hall-of-fame'],true)): ?>
 <script src="../../../assets/js/widgets/p2k-spotlight-v2159.js?v=p2k-2159-hof-profile-labels-1" defer></script>
 <?php else: ?>
-<?php if($widget==='club-progress'): ?>
-<script src="../../../assets/js/widgets/p2k-progress-chart-v2159.js?v=p2k-2159-progress-square-2" defer></script>
+<?php if($widget==='club-progress'):
+// Chart scripts are cached as immutable for one year by PublicRouter.php.
+// Tie the URL revision to the actual served chart bytes, not a release label.
+$progressChartFile=dirname(__DIR__,3).'/assets/js/widgets/p2k-progress-chart-v2159.js';
+$progressChartSha=is_file($progressChartFile)?hash_file('sha256',$progressChartFile):false;
+$progressChartVersion=is_string($progressChartSha)&&preg_match('/^[a-f0-9]{64}$/D',$progressChartSha)
+    ?substr($progressChartSha,0,16):'p2k-21510-progress-axis';
+?>
+<script src="../../../assets/js/widgets/p2k-progress-chart-v2159.js?v=<?=rawurlencode($progressChartVersion)?>" defer></script>
 <?php endif; ?>
 <script src="../../../assets/js/widgets/p2k-embed-v2153.js?v=p2k-2159-progress-square-2" defer></script>
 <?php endif; ?>

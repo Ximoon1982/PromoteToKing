@@ -6,6 +6,7 @@ on:
       - 'release/v2.15.10'
     paths:
       - '.github/workflows/p2k-v21510-mca-progress-release.yml'
+      - 'server/widgets/public/embed.php'
       - 'server/team-points/src/McaArenaParser.php'
       - 'server/team-points/src/McaResultsCronService.php'
       - 'cron-mca-arena-v2.10.9.sh'
@@ -173,6 +174,15 @@ jobs:
           bash -n tools/install-mca-cron-dispatcher-v21510.sh
           bash tests/test_v21510_mca_runtime_launcher.sh
           node tests/test_v21510_progress_ticks.js
+          node tests/widget_progress_v2159.test.cjs
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path("server/widgets/public/embed.php").read_text()
+          assert "hash_file('sha256',$progressChartFile)" in source
+          assert 'p2k-progress-chart-v2159.js?v=<?=rawurlencode($progressChartVersion)?>' in source
+          assert 'p2k-progress-chart-v2159.js?v=p2k-2159-progress-square-2' not in source
+          print("PASS Club Progress content-addressed JS cache busting")
+          PY
           python3 - <<'PY'
           from pathlib import Path
           parser=Path("server/team-points/src/McaArenaParser.php").read_text()
@@ -198,6 +208,7 @@ jobs:
           # Exact known public release heads only. The candidate is cumulative
           # over MCA 2.15.7/2.15.8, to avoid losing earlier functionality.
           accepted=[
+            {"version":"2.15.10","source_head":"ec896440fdfe75e331c7053fb103d4f451f55a59"},
             {"version":"2.15.9","source_head":"58ea3f81454a5c1008afd6768de95070ff6c2063"},
             {"version":"2.15.6","source_head":"9c92b999d8111c2af7dad78054aa65c275eecb24"},
             {"version":"2.15.7","source_head":"2be367793b1720d6df9afcf80af3a39a83787086"},
