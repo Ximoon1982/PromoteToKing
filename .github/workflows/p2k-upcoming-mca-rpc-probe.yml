@@ -1,0 +1,53 @@
+name: Diagnostic - anonymous upcoming MCA TournamentListService probe
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/p2k-upcoming-mca-rpc-probe.yml
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Test precisely identified read-only ListTournaments endpoint
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import urllib.request,urllib.error,json
+          uuid='bed864f0-a893-11ee-9f2a-4b7b5bb29380'
+          req=json.dumps({'clubUuid':uuid,'include':[0,1,2,3,4,5,6]}).encode()
+          route='/chesscom.tournament_list.v1.TournamentListService/ListTournaments'
+          urls=[
+            'https://www.chess.com/service/tournaments-list'+route,
+            'https://www.chess.com'+route,
+            'https://api.chess.com/service/tournaments-list'+route,
+            'https://api.chess.com'+route
+          ]
+          for url in urls:
+            headers={'User-Agent':'PromoteToKing-upcoming-MCA-readonly-diagnostics (+https://www.promotetoking.org)',
+              'Accept':'application/json','Content-Type':'application/json','Connect-Protocol-Version':'1',
+              'Origin':'https://www.chess.com','Referer':'https://www.chess.com/clubs/upcomingevents/promote-to-king?type=multi-club-arena'}
+            request=urllib.request.Request(url,data=req,headers=headers,method='POST')
+            try:
+              with urllib.request.urlopen(request,timeout=20) as x:
+                code=x.status;body=x.read(2500000);mime=x.headers.get('Content-Type','')
+            except urllib.error.HTTPError as e:
+              code=e.code;body=e.read(250000);mime=e.headers.get('Content-Type','')
+            except Exception as e:
+              print('RPC_NETWORK_ERROR',json.dumps({'url':url,'error':str(e)[:220]}));continue
+            try:
+              result=json.loads(body)
+              if isinstance(result,dict):
+                matches=result.get('tournaments') or []
+                rows=[{'name':i.get('name',i.get('title')),'id':i.get('legacyId',i.get('id')),
+                  'startsAt':i.get('startsAt'),'status':i.get('status'),'clubs':len(i.get('clubs') or [])}
+                  for i in matches if isinstance(i,dict)] if isinstance(matches,list) else []
+                obj={'url':url,'http':code,'mime':mime,'bytes':len(body),'keys':list(result.keys())[:15],'tournaments':len(matches) if isinstance(matches,list) else None,
+                  'sample':rows[:35] if rows else str(result)[:350]}
+              else:obj={'url':url,'http':code,'mime':mime,'bytes':len(body),'body':str(result)[:350]}
+            except Exception:
+              obj={'url':url,'http':code,'mime':mime,'bytes':len(body),'body':body[:400].decode('utf-8','replace')}
+            print('RPC_RESULT',json.dumps(obj,ensure_ascii=False))
+          PY
