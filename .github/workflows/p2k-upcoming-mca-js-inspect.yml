@@ -38,7 +38,12 @@ jobs:
             if len(tag)<250:print('STRING',tag[:220])
           paths=[
             '/callback/clubs/count/upcomingevents/594513',
-            '/callback/clubs/count/upcomingevents/594513?type=multi-club-arena'
+            '/callback/clubs/count/upcomingevents/594513?type=multi-club-arena',
+            '/callback/clubs/upcoming/594513/multi-club-arena',
+            '/callback/clubs/upcoming/594513/multi-club-arena?page=1',
+            '/callback/clubs/upcoming/594513/club-arena?page=1',
+            '/callback/clubs/upcoming/594513/daily?page=1',
+            '/callback/clubs/live/upcoming/594513?page=1'
           ]
           for path in paths:
             st,b,uri,ct=get(path,'application/json')
