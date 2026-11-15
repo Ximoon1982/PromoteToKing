@@ -1,10 +1,10 @@
 # Promote to King — Project-level backlog
 
-**Last reviewed:** 2026-11-12  
+**Last reviewed:** 2026-11-15  
 **Scope:** P2K core and explicitly identified adjacent club-widget integrations.  
 **Canonical location:** `docs/PROJECT_BACKLOG.md` in `Ximoon1982/PromoteToKing`.  
 **Initial register authored from historic ChatGPT project conversations and repository/issue review.**  
-**Release boundary:** The active development increment is **v2.15.9** on `release/v2.15.9`. Backlog inclusion alone **does not authorize implementation**, version changes, branch changes, deployment, or promotion.
+**Release boundary:** The latest active development increment is **v2.15.10** on `release/v2.15.10`. Backlog inclusion alone **does not authorize implementation**, version changes, branch changes, deployment, or promotion.
 
 ## Maintenance rules
 
@@ -32,6 +32,16 @@
 | P2K-BL-011 | Six selected widgets and Team → Widgets administration | **DONE** | v2.15.3 | 2026-11-11 |
 | P2K-BL-012 | MCA/MIAC admin rename review and row-correlation feature | **DONE** (verify via 008) | v2.15.7–v2.15.8 | 2026-11-10 |
 | P2K-BL-013 | MCA source inventory: successes versus warnings, no overlap | **DONE** (historical) | v2.15.4–v2.15.5 | 2026-11-11 |
+| P2K-BL-014 | Operations Pulse (admin PoC) | **APPROVED-DEFERRED** | v2.15.10 design-only prototype; future increment TBD | 2026-11-15 |
+| P2K-BL-015 | Attention Required (admin PoC) | **APPROVED-DEFERRED** | v2.15.10 design-only prototype; future increment TBD | 2026-11-15 |
+| P2K-BL-016 | Match Readiness (admin PoC) | **APPROVED-DEFERRED** | v2.15.10 design-only prototype; future increment TBD | 2026-11-15 |
+| P2K-BL-017 | Data Integrity Monitor (admin PoC) | **APPROVED-DEFERRED** | v2.15.10 design-only prototype; future increment TBD | 2026-11-15 |
+| P2K-BL-018 | MCA Acquisition Watch (admin PoC) | **APPROVED-DEFERRED** | v2.15.10 design-only prototype; future increment TBD | 2026-11-15 |
+| P2K-BL-019 | Club Momentum (admin PoC) | **APPROVED-DEFERRED** | v2.15.10 design-only prototype; future increment TBD | 2026-11-15 |
+| P2K-BL-020 | Visitor & Widget Analytics (admin PoC) | **APPROVED-DEFERRED** | v2.15.10 design-only prototype; future increment TBD | 2026-11-15 |
+| P2K-BL-021 | Competition Calendar & Discovery (admin PoC) | **APPROVED-DEFERRED** | v2.15.10 design-only prototype; future increment TBD | 2026-11-15 |
+| P2K-BL-022 | Release & Maintenance Watch (admin PoC) | **APPROVED-DEFERRED** | v2.15.10 design-only prototype; future increment TBD | 2026-11-15 |
+| P2K-BL-023 | Admin Control Tower (admin PoC) | **APPROVED-DEFERRED** | v2.15.10 design-only prototype; future increment TBD | 2026-11-15 |
 
 ## Individual entries and retrieval references
 
@@ -138,10 +148,101 @@
 **Original acceptance:** Paginated separate mutually exclusive success and error/warning sets, recovered CSV arenas removed from erroneous list, index reconciliation and non-destructive Results prioritization. Prior status cited 677/688 Results coverage and 11 Results gaps; these are historical counts, **not current live metrics**.  
 **Last action:** Retained as closed context 2026-11-12.
 
+### P2K-BL-014 — Operations Pulse
+**Status:** APPROVED-DEFERRED; user requested backlog inclusion on 2026-11-15. **No implementation or deployment authorization.**  
+**Source conversation:** 2026-11-15 P2K admin-widget ideation, user request **"Mke a page with proof of concepts, with the same constraints on size and style"**, followed by **"Put those on the backlog."**  
+**Artifact:** `P2K_Admin_Widgets_PoC_v21510.html` (self-contained 10-widget design prototype supplied in conversation); archival design specification at [`docs/poc/ADMIN_WIDGET_LAB_v21510.md`](poc/ADMIN_WIDGET_LAB_v21510.md). All displayed metrics are mock data.  
+**Issue:** [GitHub #6 — Ten P2K admin widget concepts](https://github.com/Ximoon1982/PromoteToKing/issues/6).  
+**Potential requirements:** Overview of Green maintenance, MCA sync, analytics and Insights freshness, last successful CRON execution, bounded worker health and age of stale queues. Show grounded healthy/degraded/unknown status; never infer health solely from HTTP 200.  
+**Shared acceptance:** 260×430 px compact card, charcoal/gold and light themes, narrow-screen response, server-side admin-only authorization, bounded read-only cache-backed endpoints, clear freshness/unavailable status, no scraping/maintenance on page load, existing tools linked where appropriate. Test with authenticated/unauthenticated users, preview isolation and shared-host process limits.  
+**Last action:** Added as deferred admin-widget concept 2026-11-15. Not started.
+
+### P2K-BL-015 — Attention Required
+**Status:** APPROVED-DEFERRED; user requested backlog inclusion on 2026-11-15. **No implementation or deployment authorization.**  
+**Source conversation:** 2026-11-15 P2K admin-widget ideation, user request **"Mke a page with proof of concepts, with the same constraints on size and style"**, followed by **"Put those on the backlog."**  
+**Artifact:** `P2K_Admin_Widgets_PoC_v21510.html` (self-contained 10-widget design prototype supplied in conversation); archival design specification at [`docs/poc/ADMIN_WIDGET_LAB_v21510.md`](poc/ADMIN_WIDGET_LAB_v21510.md). All displayed metrics are mock data.  
+**Issue:** [GitHub #6 — Ten P2K admin widget concepts](https://github.com/Ximoon1982/PromoteToKing/issues/6).  
+**Potential requirements:** Prioritized, de-duplicated exceptions requiring administrator attention: missing parsed Results, failed archives, alias/identity reviews, failed maintenance, metadata gaps and reconciliation mismatches. Include observed time, seriousness, direct admin navigation, and no destructive one-click action.  
+**Shared acceptance:** 260×430 px compact card, charcoal/gold and light themes, narrow-screen response, server-side admin-only authorization, bounded read-only cache-backed endpoints, clear freshness/unavailable status, no scraping/maintenance on page load, existing tools linked where appropriate. Test with authenticated/unauthenticated users, preview isolation and shared-host process limits.  
+**Last action:** Added as deferred admin-widget concept 2026-11-15. Not started.
+
+### P2K-BL-016 — Match Readiness
+**Status:** APPROVED-DEFERRED; user requested backlog inclusion on 2026-11-15. **No implementation or deployment authorization.**  
+**Source conversation:** 2026-11-15 P2K admin-widget ideation, user request **"Mke a page with proof of concepts, with the same constraints on size and style"**, followed by **"Put those on the backlog."**  
+**Artifact:** `P2K_Admin_Widgets_PoC_v21510.html` (self-contained 10-widget design prototype supplied in conversation); archival design specification at [`docs/poc/ADMIN_WIDGET_LAB_v21510.md`](poc/ADMIN_WIDGET_LAB_v21510.md). All displayed metrics are mock data.  
+**Issue:** [GitHub #6 — Ten P2K admin widget concepts](https://github.com/Ximoon1982/PromoteToKing/issues/6).  
+**Potential requirements:** Upcoming matches at risk of an inadequate lineup, with registration shortfall, time to start, existing recruitment Assistant targets, rating constraints and trajectory only when adequately sourced. Link to the existing Match Assistant without launching scans in the widget.  
+**Shared acceptance:** 260×430 px compact card, charcoal/gold and light themes, narrow-screen response, server-side admin-only authorization, bounded read-only cache-backed endpoints, clear freshness/unavailable status, no scraping/maintenance on page load, existing tools linked where appropriate. Test with authenticated/unauthenticated users, preview isolation and shared-host process limits.  
+**Last action:** Added as deferred admin-widget concept 2026-11-15. Not started.
+
+### P2K-BL-017 — Data Integrity Monitor
+**Status:** APPROVED-DEFERRED; user requested backlog inclusion on 2026-11-15. **No implementation or deployment authorization.**  
+**Source conversation:** 2026-11-15 P2K admin-widget ideation, user request **"Mke a page with proof of concepts, with the same constraints on size and style"**, followed by **"Put those on the backlog."**  
+**Artifact:** `P2K_Admin_Widgets_PoC_v21510.html` (self-contained 10-widget design prototype supplied in conversation); archival design specification at [`docs/poc/ADMIN_WIDGET_LAB_v21510.md`](poc/ADMIN_WIDGET_LAB_v21510.md). All displayed metrics are mock data.  
+**Issue:** [GitHub #6 — Ten P2K admin widget concepts](https://github.com/Ximoon1982/PromoteToKing/issues/6).  
+**Potential requirements:** Compare authoritative Green Club Points to analytics, freshness/watermarks, active match counts, player snapshots and time-series refresh lag. Explicitly distinguish known sanctioned corrections and actual discrepancies; record age/magnitude and source generation.  
+**Shared acceptance:** 260×430 px compact card, charcoal/gold and light themes, narrow-screen response, server-side admin-only authorization, bounded read-only cache-backed endpoints, clear freshness/unavailable status, no scraping/maintenance on page load, existing tools linked where appropriate. Test with authenticated/unauthenticated users, preview isolation and shared-host process limits.  
+**Last action:** Added as deferred admin-widget concept 2026-11-15. Not started.
+
+### P2K-BL-018 — MCA Acquisition Watch
+**Status:** APPROVED-DEFERRED; user requested backlog inclusion on 2026-11-15. **No implementation or deployment authorization.**  
+**Source conversation:** 2026-11-15 P2K admin-widget ideation, user request **"Mke a page with proof of concepts, with the same constraints on size and style"**, followed by **"Put those on the backlog."**  
+**Artifact:** `P2K_Admin_Widgets_PoC_v21510.html` (self-contained 10-widget design prototype supplied in conversation); archival design specification at [`docs/poc/ADMIN_WIDGET_LAB_v21510.md`](poc/ADMIN_WIDGET_LAB_v21510.md). All displayed metrics are mock data.  
+**Issue:** [GitHub #6 — Ten P2K admin widget concepts](https://github.com/Ximoon1982/PromoteToKing/issues/6).  
+**Potential requirements:** Show newly discovered arenas and Results completion, failed/awaiting sources, acquisition stage, retry age, parse coverage, and MIAC alias review exceptions. Do not count optional Club/Player/Pairings enrichment gaps as absent authoritative Results.  
+**Shared acceptance:** 260×430 px compact card, charcoal/gold and light themes, narrow-screen response, server-side admin-only authorization, bounded read-only cache-backed endpoints, clear freshness/unavailable status, no scraping/maintenance on page load, existing tools linked where appropriate. Test with authenticated/unauthenticated users, preview isolation and shared-host process limits.  
+**Last action:** Added as deferred admin-widget concept 2026-11-15. Not started.
+
+### P2K-BL-019 — Club Momentum
+**Status:** APPROVED-DEFERRED; user requested backlog inclusion on 2026-11-15. **No implementation or deployment authorization.**  
+**Source conversation:** 2026-11-15 P2K admin-widget ideation, user request **"Mke a page with proof of concepts, with the same constraints on size and style"**, followed by **"Put those on the backlog."**  
+**Artifact:** `P2K_Admin_Widgets_PoC_v21510.html` (self-contained 10-widget design prototype supplied in conversation); archival design specification at [`docs/poc/ADMIN_WIDGET_LAB_v21510.md`](poc/ADMIN_WIDGET_LAB_v21510.md). All displayed metrics are mock data.  
+**Issue:** [GitHub #6 — Ten P2K admin widget concepts](https://github.com/Ximoon1982/PromoteToKing/issues/6).  
+**Potential requirements:** Short-window trends in member joins/departures, engagement, inactivity, matches, new boards and recruitment effectiveness using canonical stored history. Avoid heavy ad-hoc aggregation at widget load.  
+**Shared acceptance:** 260×430 px compact card, charcoal/gold and light themes, narrow-screen response, server-side admin-only authorization, bounded read-only cache-backed endpoints, clear freshness/unavailable status, no scraping/maintenance on page load, existing tools linked where appropriate. Test with authenticated/unauthenticated users, preview isolation and shared-host process limits.  
+**Last action:** Added as deferred admin-widget concept 2026-11-15. Not started.
+
+### P2K-BL-020 — Visitor & Widget Analytics
+**Status:** APPROVED-DEFERRED; user requested backlog inclusion on 2026-11-15. **No implementation or deployment authorization.**  
+**Source conversation:** 2026-11-15 P2K admin-widget ideation, user request **"Mke a page with proof of concepts, with the same constraints on size and style"**, followed by **"Put those on the backlog."**  
+**Artifact:** `P2K_Admin_Widgets_PoC_v21510.html` (self-contained 10-widget design prototype supplied in conversation); archival design specification at [`docs/poc/ADMIN_WIDGET_LAB_v21510.md`](poc/ADMIN_WIDGET_LAB_v21510.md). All displayed metrics are mock data.  
+**Issue:** [GitHub #6 — Ten P2K admin widget concepts](https://github.com/Ximoon1982/PromoteToKing/issues/6).  
+**Potential requirements:** Use existing Traffic/Visitors and valid-name-search audit sources for visitors, widget activity, verified search events and trend comparisons. Respect personal-data minimization and server-side admin access; do not invent per-widget impressions when uninstrumented.  
+**Shared acceptance:** 260×430 px compact card, charcoal/gold and light themes, narrow-screen response, server-side admin-only authorization, bounded read-only cache-backed endpoints, clear freshness/unavailable status, no scraping/maintenance on page load, existing tools linked where appropriate. Test with authenticated/unauthenticated users, preview isolation and shared-host process limits.  
+**Last action:** Added as deferred admin-widget concept 2026-11-15. Not started.
+
+### P2K-BL-021 — Competition Calendar & Discovery
+**Status:** APPROVED-DEFERRED; user requested backlog inclusion on 2026-11-15. **No implementation or deployment authorization.**  
+**Source conversation:** 2026-11-15 P2K admin-widget ideation, user request **"Mke a page with proof of concepts, with the same constraints on size and style"**, followed by **"Put those on the backlog."**  
+**Artifact:** `P2K_Admin_Widgets_PoC_v21510.html` (self-contained 10-widget design prototype supplied in conversation); archival design specification at [`docs/poc/ADMIN_WIDGET_LAB_v21510.md`](poc/ADMIN_WIDGET_LAB_v21510.md). All displayed metrics are mock data.  
+**Issue:** [GitHub #6 — Ten P2K admin widget concepts](https://github.com/Ximoon1982/PromoteToKing/issues/6).  
+**Potential requirements:** Upcoming events, expected monthly/quarterly entries, discovery gaps, registration/start deadlines, Results qualification and review actions. Distinguish expected-but-unconfirmed entries from officially discovered tournaments.  
+**Shared acceptance:** 260×430 px compact card, charcoal/gold and light themes, narrow-screen response, server-side admin-only authorization, bounded read-only cache-backed endpoints, clear freshness/unavailable status, no scraping/maintenance on page load, existing tools linked where appropriate. Test with authenticated/unauthenticated users, preview isolation and shared-host process limits.  
+**Last action:** Added as deferred admin-widget concept 2026-11-15. Not started.
+
+### P2K-BL-022 — Release & Maintenance Watch
+**Status:** APPROVED-DEFERRED; user requested backlog inclusion on 2026-11-15. **No implementation or deployment authorization.**  
+**Source conversation:** 2026-11-15 P2K admin-widget ideation, user request **"Mke a page with proof of concepts, with the same constraints on size and style"**, followed by **"Put those on the backlog."**  
+**Artifact:** `P2K_Admin_Widgets_PoC_v21510.html` (self-contained 10-widget design prototype supplied in conversation); archival design specification at [`docs/poc/ADMIN_WIDGET_LAB_v21510.md`](poc/ADMIN_WIDGET_LAB_v21510.md). All displayed metrics are mock data.  
+**Issue:** [GitHub #6 — Ten P2K admin widget concepts](https://github.com/Ximoon1982/PromoteToKing/issues/6).  
+**Potential requirements:** Show current public release, pending candidate, last promotion, preview status, CRON target-versus-public runtime identity, recent maintenance errors and version mismatch warnings. Use read-only runtime-state inspection; no promotion from the widget.  
+**Shared acceptance:** 260×430 px compact card, charcoal/gold and light themes, narrow-screen response, server-side admin-only authorization, bounded read-only cache-backed endpoints, clear freshness/unavailable status, no scraping/maintenance on page load, existing tools linked where appropriate. Test with authenticated/unauthenticated users, preview isolation and shared-host process limits.  
+**Last action:** Added as deferred admin-widget concept 2026-11-15. Not started.
+
+### P2K-BL-023 — Admin Control Tower
+**Status:** APPROVED-DEFERRED; user requested backlog inclusion on 2026-11-15. **No implementation or deployment authorization.**  
+**Source conversation:** 2026-11-15 P2K admin-widget ideation, user request **"Mke a page with proof of concepts, with the same constraints on size and style"**, followed by **"Put those on the backlog."**  
+**Artifact:** `P2K_Admin_Widgets_PoC_v21510.html` (self-contained 10-widget design prototype supplied in conversation); archival design specification at [`docs/poc/ADMIN_WIDGET_LAB_v21510.md`](poc/ADMIN_WIDGET_LAB_v21510.md). All displayed metrics are mock data.  
+**Issue:** [GitHub #6 — Ten P2K admin widget concepts](https://github.com/Ximoon1982/PromoteToKing/issues/6).  
+**Potential requirements:** Compact Health / Actions / Growth selector composing summaries of the preceding nine widgets, preserving each independent configuration and reusing the same cached read models rather than nesting many iframes or multiplying API requests. Accessible tab/keyboard interactions.  
+**Shared acceptance:** 260×430 px compact card, charcoal/gold and light themes, narrow-screen response, server-side admin-only authorization, bounded read-only cache-backed endpoints, clear freshness/unavailable status, no scraping/maintenance on page load, existing tools linked where appropriate. Test with authenticated/unauthenticated users, preview isolation and shared-host process limits.  
+**Last action:** Added as deferred admin-widget concept 2026-11-15. Not started.
+
 ## References / source index
 
-- [P2K GitHub project](https://github.com/Ximoon1982/PromoteToKing), current work branch `release/v2.15.9`.
+- [P2K GitHub project](https://github.com/Ximoon1982/PromoteToKing), current backlog update branch `release/v2.15.10`; no release or implementation authorized by this document.
 - [GitHub issue #5 — monthly calendar accepted backlog](https://github.com/Ximoon1982/PromoteToKing/issues/5).
+- [GitHub issue #6 — ten admin widget POCs](https://github.com/Ximoon1982/PromoteToKing/issues/6); 2026-11-15 Admin Widget Lab design discussion.
 - 2026-11-11 P2K widget concepts, standalone calendar POC, Team → Widgets, MCA inventory and success/warning separation.
 - 2026-11-10 **Recover Work Scope**, MCA rename/aliases, recruitment archive failure; Golden Phoenix / Team France widget discussion.
 - 2026-08-28 v2.10.8 P2K audit / project backlog: arena pairings/games, throughput, queue/work-class diagnostics and widget idea pool.
