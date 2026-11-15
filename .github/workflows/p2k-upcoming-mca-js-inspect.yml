@@ -1,0 +1,51 @@
+name: Diagnostic - upcoming MCA client bundle and API routes
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/p2k-upcoming-mca-js-inspect.yml
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Inspect upcoming-events bundle and exact read-only data requests
+        shell: bash
+        run: |
+          mkdir -p dist
+          python3 - <<'PY'
+          import urllib.request,urllib.error,re,json,hashlib
+          ua="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+          base="https://www.chess.com"
+          bundle="/bundles/app/vite/clubs-upcoming-events.nkSYh5lkZ5.js"
+          def get(path,accept='text/javascript,application/json,*/*'):
+            r=urllib.request.Request(base+path,headers={'User-Agent':ua,'Accept':accept,'Accept-Language':'en-US,en;q=0.8','Referer':base+'/clubs/upcomingevents/promote-to-king?type=multi-club-arena','X-Requested-With':'XMLHttpRequest'})
+            try:
+              with urllib.request.urlopen(r,timeout=20) as x:return x.status,x.read(),x.url,x.headers.get('content-type','')
+            except urllib.error.HTTPError as e:return e.code,e.read(),e.url,e.headers.get('content-type','')
+            except Exception as e:return 0,str(e).encode(),path,''
+          status,body,url,mime=get(bundle)
+          text=body.decode('utf-8','replace')
+          print('BUNDLE',json.dumps({'status':status,'bytes':len(body),'sha256':hashlib.sha256(body).hexdigest(),'mime':mime,'url':url,'start':text[:180]}))
+          open('dist/upcoming-bundle.js','wb').write(body)
+          patterns=['upcomingevents','upcoming-events','callback/clubs','callback','multi-club-arena','fetch','axios','/api/','/v1/','graphql','itemPerPage','itemsPerPage','/club','/events']
+          for pattern in patterns:
+            matches=list(re.finditer(re.escape(pattern),text,re.I))
+            print('BUNDLE_PATTERN',json.dumps({'pattern':pattern,'count':len(matches),'snippets':[text[max(0,m.start()-220):m.end()+350] for m in matches[:8]]},ensure_ascii=False)[:12500])
+          for tag in sorted(set(re.findall(r'["\x27]([^"\x27]{1,190}(?:callback|upcoming|event|arena|club)[^"\x27]{0,190})["\x27]',text,re.I))):
+            if len(tag)<250:print('STRING',tag[:220])
+          paths=[
+            '/callback/clubs/count/upcomingevents/594513',
+            '/callback/clubs/count/upcomingevents/594513?type=multi-club-arena'
+          ]
+          for path in paths:
+            st,b,uri,ct=get(path,'application/json')
+            print('CALLBACK_TEST',json.dumps({'url':uri,'status':st,'bytes':len(b),'content_type':ct,'body_sample':b[:500].decode('utf-8','replace')}))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-upcoming-mca-bundle-diagnostic
+          path: dist/upcoming-bundle.js
+          retention-days: 2
