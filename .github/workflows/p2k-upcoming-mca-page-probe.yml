@@ -60,62 +60,64 @@ jobs:
             return urllib.parse.urlunsplit((p.scheme,p.netloc,p.path,urllib.parse.urlencode(safe),''))
           def arena_urls(text):
             return sorted(set(re.findall(r'(?:https?://(?:www\.)?chess\.com)?/tournament/live/arena/[a-zA-Z0-9_-]+',text)))
-          async with async_playwright() as p:
-            browser=await p.chromium.launch(headless=True,args=['--no-sandbox'])
-            context=await browser.new_context(viewport={'width':1280,'height':900},locale='en-US',
-              user_agent='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36')
-            await context.route('**/*',lambda route: route.abort() if route.request.resource_type in ['image','font','media'] else route.continue_())
-            page=await context.new_page()
-            pending=[]
-            async def on_response(r):
+          async def main():
+            async with async_playwright() as p:
+              browser=await p.chromium.launch(headless=True,args=['--no-sandbox'])
+              context=await browser.new_context(viewport={'width':1280,'height':900},locale='en-US',
+                user_agent='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36')
+              await context.route('**/*',lambda route: route.abort() if route.request.resource_type in ['image','font','media'] else route.continue_())
+              page=await context.new_page()
+              pending=[]
+              async def on_response(r):
+                try:
+                  if r.request.resource_type not in ('xhr','fetch','document'):return
+                  u=r.url.lower()
+                  if not any(k in u for k in ['club','arena','tournament','graphql','event','api']):return
+                  body=await r.body()
+                  raw=body.decode('utf-8','replace')
+                  info={'url':safe_url(r.url),'status':r.status,'resource':r.request.resource_type,'content_type':r.headers.get('content-type',''),'bytes':len(body),
+                    'arena_links':arena_urls(raw)[:40], 'has_promote_to_king':'promote-to-king' in raw.lower()}
+                  if 'json' in info['content_type'] or 'graphql' in u:
+                    try:
+                      j=json.loads(raw)
+                      if isinstance(j,dict):info['top_keys']=list(j.keys())[:20]
+                      elif isinstance(j,list):info['array_length']=len(j)
+                      # Only store response bodies for requests in chess.com origin; they are anonymous.
+                      if len(raw)<1000000:open(f'dist/upcoming-mca/response-{len(responses):03d}.json','w').write(raw)
+                    except Exception:info['sample']=raw[:500]
+                  responses.append(info)
+                except Exception as e:responses.append({'url':safe_url(r.url),'read_error':str(e)[:140]})
+              def enqueue(r):
+                pending.append(asyncio.create_task(on_response(r)))
+              page.on('response',enqueue)
               try:
-                if r.request.resource_type not in ('xhr','fetch','document'):return
-                u=r.url.lower()
-                if not any(k in u for k in ['club','arena','tournament','graphql','event','api']):return
-                body=await r.body()
-                raw=body.decode('utf-8','replace')
-                info={'url':safe_url(r.url),'status':r.status,'resource':r.request.resource_type,'content_type':r.headers.get('content-type',''),'bytes':len(body),
-                  'arena_links':arena_urls(raw)[:40], 'has_promote_to_king':'promote-to-king' in raw.lower()}
-                if 'json' in info['content_type'] or 'graphql' in u:
-                  try:
-                    j=json.loads(raw)
-                    if isinstance(j,dict):info['top_keys']=list(j.keys())[:20]
-                    elif isinstance(j,list):info['array_length']=len(j)
-                    # Only store response bodies for requests in chess.com origin; they are anonymous.
-                    if len(raw)<1000000:open(f'dist/upcoming-mca/response-{len(responses):03d}.json','w').write(raw)
-                  except Exception:info['sample']=raw[:500]
-                responses.append(info)
-              except Exception as e:responses.append({'url':safe_url(r.url),'read_error':str(e)[:140]})
-            def enqueue(r):
-              pending.append(asyncio.create_task(on_response(r)))
-            page.on('response',enqueue)
-            try:
-              res=await page.goto(U,wait_until='domcontentloaded',timeout=60000)
-              print('BROWSER_NAV',json.dumps({'status':res.status if res else None,'url':safe_url(page.url)}))
-              await page.wait_for_timeout(11000)
-              await page.mouse.wheel(0,2500)
-              await page.wait_for_timeout(4000)
-              links=await page.locator('a[href]').evaluate_all('(els) => els.map(e=>({url:e.href,label:(e.innerText||"").slice(0,90)}))')
-              body=await page.locator('body').inner_text(timeout=15000)
-              html=await page.content()
-              await page.screenshot(path='dist/upcoming-mca/page.png',full_page=True,timeout=20000)
-              open('dist/upcoming-mca/rendered.html','w').write(html)
-              open('dist/upcoming-mca/visible-text.txt','w').write(body)
-              summary={'title':await page.title(),'url':safe_url(page.url),'visible_length':len(body),
-                       'arena_links_dom':[x for x in links if '/tournament/live/arena/' in x['url']][:100],
-                       'arena_links_html':arena_urls(html)[:100],
-                       'visible_sample':body[:3000],
-                       'events_labels':[x for x in links if any(w in x['url'].lower() for w in ['/tournament','/events/','/arena/'])][:50],
-                       'javascript_markers':{key:html.lower().count(key) for key in ['multi-club-arena','upcomingevents','graphql','arena_id']}}
-              print('BROWSER_RESULT',json.dumps(summary,ensure_ascii=False))
-            except Exception as e:print('BROWSER_ERROR',type(e).__name__,str(e)[:700])
-            if pending:
-              try:await asyncio.wait_for(asyncio.gather(*pending,return_exceptions=True),timeout=15)
-              except Exception:pass
-            print('NETWORK_RESPONSE_COUNT',len(responses))
-            for x in responses[:100]:print('NETWORK_RESPONSE',json.dumps(x,ensure_ascii=False)[:1700])
-            open('dist/upcoming-mca/responses-index.json','w').write(json.dumps(responses,indent=2,ensure_ascii=False))
-            await browser.close()
+                res=await page.goto(U,wait_until='domcontentloaded',timeout=60000)
+                print('BROWSER_NAV',json.dumps({'status':res.status if res else None,'url':safe_url(page.url)}))
+                await page.wait_for_timeout(11000)
+                await page.mouse.wheel(0,2500)
+                await page.wait_for_timeout(4000)
+                links=await page.locator('a[href]').evaluate_all('(els) => els.map(e=>({url:e.href,label:(e.innerText||"").slice(0,90)}))')
+                body=await page.locator('body').inner_text(timeout=15000)
+                html=await page.content()
+                await page.screenshot(path='dist/upcoming-mca/page.png',full_page=True,timeout=20000)
+                open('dist/upcoming-mca/rendered.html','w').write(html)
+                open('dist/upcoming-mca/visible-text.txt','w').write(body)
+                summary={'title':await page.title(),'url':safe_url(page.url),'visible_length':len(body),
+                         'arena_links_dom':[x for x in links if '/tournament/live/arena/' in x['url']][:100],
+                         'arena_links_html':arena_urls(html)[:100],
+                         'visible_sample':body[:3000],
+                         'events_labels':[x for x in links if any(w in x['url'].lower() for w in ['/tournament','/events/','/arena/'])][:50],
+                         'javascript_markers':{key:html.lower().count(key) for key in ['multi-club-arena','upcomingevents','graphql','arena_id']}}
+                print('BROWSER_RESULT',json.dumps(summary,ensure_ascii=False))
+              except Exception as e:print('BROWSER_ERROR',type(e).__name__,str(e)[:700])
+              if pending:
+                try:await asyncio.wait_for(asyncio.gather(*pending,return_exceptions=True),timeout=15)
+                except Exception:pass
+              print('NETWORK_RESPONSE_COUNT',len(responses))
+              for x in responses[:100]:print('NETWORK_RESPONSE',json.dumps(x,ensure_ascii=False)[:1700])
+              open('dist/upcoming-mca/responses-index.json','w').write(json.dumps(responses,indent=2,ensure_ascii=False))
+              await browser.close()
+          asyncio.run(main())
           PY
           python3 /tmp/trace-upcoming.py
       - uses: actions/upload-artifact@v4
