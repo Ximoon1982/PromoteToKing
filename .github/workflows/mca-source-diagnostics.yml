@@ -11,6 +11,81 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Diagnose upcoming MCA page (direct HTML and JavaScript browser)
+        shell: bash
+        run: |
+          python -m pip install -q requests beautifulsoup4 selenium
+          mkdir -p dist
+          cat > /tmp/mca_upcoming_probe.py <<'PY'
+          import json,re,time,traceback,requests
+          from pathlib import Path
+          from bs4 import BeautifulSoup
+          target='https://www.chess.com/clubs/upcomingevents/promote-to-king?type=multi-club-arena'
+          urls=[target,'https://www.chess.com/clubs/upcomingevents/promote-to-king',
+                'https://www.chess.com/clubs/events/promote-to-king']
+          result={'direct':[],'browser':{},'scope':'public unauthenticated no writes'}
+          def links(html):
+              soup=BeautifulSoup(html,'html.parser')
+              return [{'url':a.get('href','')[:300],'name':a.get_text(' ',strip=True)[:150]}
+                      for a in soup.select('a[href]')
+                      if re.search(r'(?:arena|/tournament/live/)',a.get('href',''),re.I)][:120]
+          for u in urls:
+              try:
+                  r=requests.get(u,timeout=20,headers={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/130 Safari/537.36'})
+                  soup=BeautifulSoup(r.text,'html.parser')
+                  result['direct'].append({'url':u,'http':r.status_code,'effective':r.url,'size':len(r.content),
+                    'text':soup.get_text(' ',strip=True)[:1200],'links':links(r.text),
+                    'scripts':[s.get('src','')[:200] for s in soup.select('script[src]')][:25],
+                    'embedded_state':bool(soup.select_one('#__NEXT_DATA__')),
+                    'arena_ids':list(dict.fromkeys(re.findall(r'/tournament/live/arena/[^" ]*?-(\d{7,9})',r.text)))[:70]})
+                  if u==target:Path('dist/mca-upcoming-html.html').write_text(r.text[:500000])
+              except Exception as e:result['direct'].append({'url':u,'error':str(e)})
+          try:
+              from selenium import webdriver
+              from selenium.webdriver.chrome.options import Options
+              opt=Options()
+              for a in ['--headless=new','--no-sandbox','--disable-dev-shm-usage','--window-size=1400,1100']:opt.add_argument(a)
+              opt.set_capability('goog:loggingPrefs',{'performance':'ALL'})
+              d=webdriver.Chrome(options=opt);d.set_page_load_timeout(40)
+              d.execute_cdp_cmd('Network.enable',{})
+              try:d.get(target)
+              except Exception as e:result['browser']['navigate_warning']=str(e)[:250]
+              for seconds in [4,8]:
+                  time.sleep(seconds)
+                  result['browser']['dom_'+str(seconds)]=d.execute_script("""
+                  return {title:document.title,url:location.href,text:(document.body?.innerText||'').slice(0,4500),
+                  links:[...document.querySelectorAll('a[href]')].map(a=>({url:a.href,name:(a.innerText||'').trim().slice(0,100)}))
+                  .filter(a=>/arena|tournament|multi.club/i.test(a.url)).slice(0,120)}
+                  """)
+              networks=[]
+              for x in d.get_log('performance'):
+                  try:
+                      e=json.loads(x['message'])['message']
+                      if e['method']!='Network.responseReceived':continue
+                      p=e['params'];r=p['response'];u=r.get('url','')
+                      if 'chess.com' not in u and 'graphql' not in u:continue
+                      item={'url':u[:350],'type':p.get('type'),'http':r.get('status'),'mime':r.get('mimeType')}
+                      if p.get('type') in ('XHR','Fetch') and re.search('club|arena|event|tourna|graphql',u,re.I):
+                          try:
+                              payload=d.execute_cdp_cmd('Network.getResponseBody',{'requestId':p['requestId']})
+                              body=payload.get('body','')
+                              item['body_length']=len(body);item['body_preview']=body[:2000]
+                              item['arena_links']=links(body)[:60]
+                          except Exception as err:item['body_error']=str(err)[:120]
+                      networks.append(item)
+                  except Exception:pass
+              result['browser']['network']=networks[:250]
+              d.quit()
+          except Exception as e:result['browser']['error']=repr(e);result['browser']['traceback']=traceback.format_exc()[-750:]
+          Path('dist/mca-upcoming-probe.json').write_text(json.dumps(result,indent=2,ensure_ascii=False))
+          print('UPCOMING_PROBE',json.dumps({
+            'direct':[{'url':r.get('url'),'http':r.get('http'),'size':r.get('size'),'links':r.get('links',[])[:8],'error':r.get('error')} for r in result['direct']],
+            'browser_error':result['browser'].get('error'),
+            'browser_dom':result['browser'].get('dom_8',{}),
+            'network':[{k:v for k,v in row.items() if k in ('url','type','http','mime','body_length','body_preview')} for row in result['browser'].get('network',[]) if row.get('type') in ('XHR','Fetch')][:24]
+          },ensure_ascii=False))
+          PY
+          python /tmp/mca_upcoming_probe.py
       - name: Compare current failed and successful arena fetches (read-only)
         shell: bash
         run: |
