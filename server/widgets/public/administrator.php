@@ -20,6 +20,8 @@ try {
 header('Cache-Control: private, no-store');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');
+header("Content-Security-Policy: frame-ancestors 'self'");
+header('X-Frame-Options: SAMEORIGIN');
 
 if (($_GET['action'] ?? '') === 'matches') {
     try {
