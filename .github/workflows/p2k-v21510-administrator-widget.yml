@@ -65,6 +65,7 @@ jobs:
           import json,subprocess,zipfile
           root=Path('.')
           head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          cache_key='p2k-2.15.10-'+head[:12]+'-'+sha256((head+'|administrator-widget').encode()).hexdigest()[:16]
           package=Path('dist/P2K_2.15.10_Administrator_Widget_ReleaseControl')
           payload=package/'payload'
           payload.mkdir(parents=True,exist_ok=True)
@@ -93,13 +94,13 @@ jobs:
           html=html.replace(old,new)
           html=html.replace('assets/js/admin/admin-shell.js?v=p2k-2.15.9-competition-1',
                             'assets/js/admin/admin-shell.js?v=p2k-2.15.10-administrator-'+head[:12])
-          html=html.replace('<head>','<head>\n<meta name="p2k-build" content="p2k-2.15.10-'+head[:12]+'">',1)
+          html=html.replace('<head>','<head>\n<meta name="p2k-build" content="'+cache_key+'">',1)
           (payload/'ui-v2.html').write_text(html)
           sha=lambda p:sha256(p.read_bytes()).hexdigest()
           (package/'CANDIDATE_PAYLOAD.sha256').write_text(''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(overlay)))
           (package/'RECOVERY_PLANE.sha256').write_text(''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(recovery)))
           meta={'schema_version':1,'version':'2.15.10','source_head':head,
-                'cache_key':'p2k-2.15.10-'+head[:12],
+                'cache_key':cache_key,
                 'build_id':'p2k-administrator-v21510-'+head[:12],
                 'qualification_workflow':'p2k-v21510-administrator-widget.yml',
                 'payload_manifest_sha256':sha(package/'CANDIDATE_PAYLOAD.sha256'),
