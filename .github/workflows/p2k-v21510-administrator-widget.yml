@@ -12,6 +12,7 @@ on:
       - 'assets/js/admin/widgets-v2153.js'
       - 'assets/js/admin/admin-shell.js'
       - 'assets/js/admin/admin-session-controller.js'
+      - 'tests/test_v21510_administrator_widget_actions.js'
       - 'assets/js/admin/tool-registry.js'
   workflow_dispatch:
 permissions:
