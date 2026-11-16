@@ -18,7 +18,14 @@ jobs:
         run: |
           mkdir -p /tmp/p2k-handoff
           git rev-parse HEAD > /tmp/p2k-handoff/HEAD
-          git ls-files -z | tar --null -czf /tmp/p2k-handoff/source.tar.gz --files-from -
+          tar -czf /tmp/p2k-handoff/source.tar.gz \
+            assets/js/admin/events-showcase-v2122.js \
+            assets/js/shared/events-showcase-core.js \
+            assets/js/widgets/p2k-recruitment-radar-v2159.js \
+            server/events-showcase \
+            server/widgets/src/RecruitmentRadarGreenReadService.php \
+            server/widgets/public/api.php \
+            api/_common.php
           sha256sum /tmp/p2k-handoff/source.tar.gz > /tmp/p2k-handoff/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
