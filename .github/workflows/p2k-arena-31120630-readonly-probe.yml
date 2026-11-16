@@ -1,0 +1,99 @@
+name: Diagnostic - arena 31120630 public extraction
+on:
+  push:
+    paths:
+      - '.github/workflows/p2k-arena-31120630-readonly-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Inspect exact arena and legacy HTML via HTTP
+        shell: bash
+        run: |
+          mkdir -p dist
+          python3 - <<'PY'
+          import urllib.request,urllib.error,re,json,html
+          paths=['https://www.chess.com/play/arena/31120630',
+                 'https://www.chess.com/tournament/live/arena/31120630',
+                 'https://www.chess.com/tournament/live/arena/31120630?clubs=1',
+                 'https://www.chess.com/tournament/upcoming/arena']
+          for index,url in enumerate(paths):
+            try:
+              request=urllib.request.Request(url,headers={
+                'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36',
+                'Accept':'text/html,application/xhtml+xml,*/*;q=0.8',
+                'Accept-Language':'en-US,en;q=0.8'})
+              with urllib.request.urlopen(request,timeout=20) as f:
+                body=f.read(2000000).decode('utf-8','replace')
+                status=f.status;final=f.url
+            except urllib.error.HTTPError as e:
+              body=e.read(300000).decode('utf-8','replace');status=e.code;final=e.url
+            except Exception as e:
+              print('HTML_ERROR',json.dumps({'url':url,'error':str(e)[:220]}));continue
+            open(f'dist/request-{index}.html','w').write(body)
+            title=re.findall(r'<title[^>]*>(.*?)</title>',body,re.I|re.S)
+            metas=re.findall(r'<meta[^>]*(?:property|name)=["\x27](?:og:|twitter:|description|title)[^>]*>',body,re.I)
+            print('HTML',json.dumps({'url':url,'http':status,'final':final,'bytes':len(body),'title':html.unescape(title[0])[:220] if title else '',
+            'meta':metas[:18],'id_mentions':body.count('31120630'),'other_arena_ids':list(dict.fromkeys(re.findall(r'\b31\d{6}\b',body)))[:35],
+            'json_candidates':list(dict.fromkeys(re.findall(r'(?:/service/|/callback/|/api/)[\w/-]+',body)))[:30],
+            'has_match_name':'arena' in body.lower()}))
+          PY
+      - name: Inspect JavaScript-rendered arena and Chess.com API responses
+        shell: bash
+        run: |
+          python3 -m pip install -q selenium
+          python3 - <<'PY'
+          import json,time,re,urllib.parse
+          from selenium import webdriver
+          from selenium.webdriver.chrome.options import Options
+          opt=Options()
+          for s in ('--headless=new','--no-sandbox','--disable-dev-shm-usage','--window-size=1440,1000'):opt.add_argument(s)
+          opt.set_capability('goog:loggingPrefs',{'performance':'ALL'})
+          driver=webdriver.Chrome(options=opt)
+          driver.set_page_load_timeout(40)
+          driver.execute_cdp_cmd('Network.enable',{})
+          url='https://www.chess.com/play/arena/31120630'
+          try:driver.get(url)
+          except Exception as e:print('NAV_ERROR',str(e)[:400])
+          time.sleep(10)
+          state=driver.execute_script("""
+            return {url:location.href,title:document.title,text:(document.body?.innerText||'').slice(0,6500),
+              canonical:document.querySelector('link[rel=canonical]')?.href||'',
+              desc:document.querySelector('meta[name=description]')?.content||'',
+              links:[...document.querySelectorAll('a[href]')].map(e=>({url:e.href,text:(e.innerText||'').trim().slice(0,120)}))
+                  .filter(x=>/arena|tournament|club/i.test(x.url)).slice(0,100)};
+          """)
+          print('BROWSER_STATE',json.dumps(state,ensure_ascii=False))
+          entries=[]
+          for item in driver.get_log('performance'):
+            try:
+              msg=json.loads(item['message'])['message']
+              if msg.get('method')!='Network.responseReceived':continue
+              p=msg['params'];r=p.get('response',{});u=r.get('url','')
+              hostname=urllib.parse.urlsplit(u).hostname or ''
+              if not(hostname=='chess.com' or hostname.endswith('.chess.com')):continue
+              if p.get('type') not in ('Fetch','XHR','Document'):continue
+              if p.get('type')=='Document' and '/play/arena/' not in u:continue
+              e={'url':u[:450],'status':r.get('status'),'type':p.get('type'),'mime':r.get('mimeType')}
+              if p.get('type') in ('Fetch','XHR') and any(k in u.lower() for k in ('arena','tournament','event','service','api','graphql','callback','club')):
+                try:
+                  body=driver.execute_cdp_cmd('Network.getResponseBody',{'requestId':p['requestId']}).get('body','')
+                  e['body_length']=len(body);e['sample']=body[:1400]
+                  e['id_mentions']=body.count('31120630')
+                except Exception as ex:e['capture_error']=str(ex)[:130]
+              entries.append(e)
+            except Exception:pass
+          print('BROWSER_NETWORK',json.dumps(entries[:90],ensure_ascii=False))
+          open('dist/browser-state.json','w').write(json.dumps(state,indent=2,ensure_ascii=False))
+          open('dist/network.json','w').write(json.dumps(entries,indent=2,ensure_ascii=False))
+          driver.quit()
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arena-31120630-public-evidence
+          path: dist/
+          retention-days: 3
