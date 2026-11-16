@@ -1,0 +1,152 @@
+name: P2K 2.15.10 Showcase admin Release Control package
+on:
+  push:
+    branches: [release/v2.15.10]
+    paths:
+      - '.github/workflows/p2k-v21510-showcase-admin-release.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Qualify admin changes and public-widget isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l server/events-showcase/public/admin-api.php
+          php -l server/events-showcase/src/ArenaDiscoveryAdminService.php
+          node --check assets/js/admin/events-showcase-v2122.js
+          node --check assets/js/admin/tool-registry.js
+          php tests/showcase-admin-discovery.php
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          changed=set(subprocess.check_output(['git','diff','--name-only','79d78f7b151ecbd4ae00b4177ac0f91742cf5335','HEAD'],text=True).splitlines())
+          public_paths=['server/events-showcase/public/api.php','server/events-showcase/public/embed.php',
+              'server/events-showcase/public/embed-card.php','assets/js/events-showcase-line-v2122.js',
+              'assets/js/shared/events-showcase-core.js','assets/js/widgets/p2k-competition-v2159.js',
+              'assets/js/widgets/p2k-recruitment-radar-v2159.js','server/widgets/public/embed.php']
+          assert not changed.intersection(public_paths), 'Public widget files were modified'
+          tool=Path('assets/js/admin/tool-registry.js').read_text()
+          assert tool.count('events-showcase-v2122.js?v=p2k-2.15.10-showcase-admin-20261116')==1
+          print('PASS: public Showcase/widget scripts unchanged since qualified 2.15.10 baseline')
+          PY
+      - name: Build minimal qualified Release Control ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess,zipfile
+          root=pathlib.Path('.')
+          dist=root/'dist';dist.mkdir(exist_ok=True)
+          pkg=dist/'P2K_2.15.10_Showcase_Admin_ReleaseControl'
+          payload=pkg/'payload';payload.mkdir(parents=True,exist_ok=True)
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert len(head)==40
+          version='2.15.10'
+          key='p2k-'+version+'-'+head[:12]+'-'+hashlib.sha256((head+'|showcase-admin-2.15.10').encode()).hexdigest()[:16]
+          overlay=[
+            'VERSION','ui-v2.html',
+            'assets/js/admin/tool-registry.js',
+            'assets/js/admin/events-showcase-v2122.js',
+            'server/events-showcase/public/admin-api.php',
+            'server/events-showcase/src/ArenaDiscoveryAdminService.php',
+          ]
+          recovery=[
+            'ReleaseControl.php',
+            'server/release-control/src/bootstrap.php',
+            'server/release-control/src/ReleasePackageUploadInstaller.php',
+            'server/release-control/src/FilesystemCleanupManager.php',
+          ]
+          assert len(set(overlay+recovery))==len(overlay+recovery)
+          for path in overlay+recovery:
+            if path in ('VERSION','ui-v2.html'):continue
+            dest=payload/path
+            dest.parent.mkdir(parents=True,exist_ok=True)
+            dest.write_bytes((root/path).read_bytes())
+          (payload/'VERSION').write_text(version+'\n')
+          ui=(root/'ui-v2.html').read_text()
+          old='assets/js/admin/tool-registry.js?v=p2k-2.15.9-competition-12'
+          new='assets/js/admin/tool-registry.js?v=p2k-2.15.10-showcase-admin-'+head[:12]
+          assert ui.count(old)==1 and ui.count('<head>')==1
+          ui=ui.replace(old,new)
+          ui=ui.replace('<head>','<head>\n<meta name="p2k-build" content="'+key+'">',1)
+          (payload/'ui-v2.html').write_text(ui)
+          def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
+          (pkg/'CANDIDATE_PAYLOAD.sha256').write_text(''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(overlay)))
+          (pkg/'RECOVERY_PLANE.sha256').write_text(''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(recovery)))
+          accepted=[
+            {'version':'2.15.10','source_head':'79d78f7b151ecbd4ae00b4177ac0f91742cf5335'},
+            {'version':'2.15.10','source_head':'ec896440fdfe75e331c7053fb103d4f451f55a59'},
+          ]
+          meta={'schema_version':1,'version':version,'source_head':head,'cache_key':key,
+                'build_id':'p2k-showcase-admin-v21510-'+head[:12],
+                'qualification_workflow':'p2k-v21510-showcase-admin-release.yml',
+                'payload_manifest_sha256':sha(pkg/'CANDIDATE_PAYLOAD.sha256'),
+                'accepted_public_builds':accepted}
+          (pkg/'CANDIDATE_RELEASE.json').write_text(json.dumps(meta,indent=2)+'\n')
+          (pkg/'README.txt').write_text('P2K 2.15.10 — Showcase administration only.\n'
+              'Upload this ZIP through Admin > Maintenance > Release Control, then Preview; promote only after checking.\n'
+              'Adds manual arena discovery and watchlist, 10/page ranked daily matches, and started-match admin cleanup.\n'
+              'The public widget scripts and public API are not part of the overlay and retain the exact active release-slot files.\n'
+              'Only exact qualified 2.15.10 public release builds are accepted; all live data/config is outside the payload.\n')
+          output=dist/('P2K_2.15.10_Showcase_Admin_ReleaseControl_'+head[:12]+'.zip')
+          with zipfile.ZipFile(output,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+            for f in sorted(pkg.rglob('*')):
+              if f.is_file():z.write(f,f.relative_to(pkg))
+          assert output.stat().st_size<8_000_000
+          (dist/'SHA256SUMS').write_text(sha(output)+'  '+output.name+'\n')
+          print('Generated',output,'bytes',output.stat().st_size,'sha256',sha(output))
+          print('source head',head, 'payload',len(overlay),'recovery',len(recovery))
+          PY
+      - name: Validate real package contract, manifest integrity and safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -r '
+            require "server/release-control/src/ReleaseSlotPolicy.php";
+            require "server/release-control/src/ReleaseCandidatePackage.php";
+            $p = new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
+            $m = $p->validate();
+            if ($m["overlay_file_count"] !== 6 || $m["version"] !== "2.15.10") exit(2);
+            echo "PASS ReleaseCandidatePackage::validate ".$m["release_id"]."\n";
+          ' dist/P2K_2.15.10_Showcase_Admin_ReleaseControl
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import hashlib,json
+          dist=Path('dist')
+          zip_path=next(dist.glob('P2K_2.15.10_Showcase_Admin_ReleaseControl_*.zip'))
+          with ZipFile(zip_path) as z:
+            assert z.testzip() is None
+            names=z.namelist()
+            assert len(names)==14 and len(names)==len(set(names)),names
+            assert all(not n.startswith('/') and '..' not in n.split('/') for n in names)
+            meta=json.loads(z.read('CANDIDATE_RELEASE.json'))
+            assert meta['source_head'][:12] in zip_path.name
+            assert hashlib.sha256(z.read('CANDIDATE_PAYLOAD.sha256')).hexdigest()==meta['payload_manifest_sha256']
+            for manifest in ('CANDIDATE_PAYLOAD.sha256','RECOVERY_PLANE.sha256'):
+              for row in z.read(manifest).decode().splitlines():
+                sha,p=row.split('  ./',1)
+                assert hashlib.sha256(z.read('payload/'+p)).hexdigest()==sha,p
+            assert not any('/widgets/' in n or n.endswith('/public/api.php') for n in names),names
+            assert z.read('payload/assets/js/admin/tool-registry.js').count(b'showcase-admin-20261116')==1
+            assert b'server/events-showcase/public/admin-api.php' in z.read('payload/assets/js/admin/events-showcase-v2122.js')
+            assert meta['accepted_public_builds'] == [
+               {'version':'2.15.10','source_head':'79d78f7b151ecbd4ae00b4177ac0f91742cf5335'},
+               {'version':'2.15.10','source_head':'ec896440fdfe75e331c7053fb103d4f451f55a59'}]
+          print('PASS ZIP path safety, package identity, 10 hashes, explicit public-build compatibility, public-widget isolation')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-v21510-showcase-admin-release-control
+          path: |
+            dist/P2K_2.15.10_Showcase_Admin_ReleaseControl_*.zip
+            dist/SHA256SUMS
+          retention-days: 14
