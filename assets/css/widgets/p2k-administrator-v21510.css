@@ -43,3 +43,33 @@ html,body{height:100%;overflow:hidden}
 .aw-link{color:var(--gold);font-size:10px;text-decoration:underline}
 .aw-detail-list{margin:6px 0;padding-left:14px;font-size:9px}
 .aw-tiny{font-size:9px;color:var(--muted)}
+
+/* Administrator v2.15.10 refinement: compact charts, Action groups, lifecycle. */
+.aw-bar-wrap{position:relative;cursor:pointer;gap:3px}
+.aw-bars{height:138px;gap:4px;overflow:visible}
+.aw-bar{border-radius:3px 3px 0 0;transition:background-color .15s;min-height:2px}
+.aw-bar-matches{background:#de8d2d}
+.aw-bar-boards{background:#5c9cbd}
+.aw-bar-matches:hover,.aw-bar-matches.aw-selected{background:#f6b73c;outline:1px solid #f6b73c;outline-offset:1px}
+.aw-bar-boards:hover,.aw-bar-boards.aw-selected{background:#80c1e4;outline:1px solid #80c1e4;outline-offset:1px}
+.aw-bar-count{display:block;text-align:center;color:var(--text);font:800 10px Arial;line-height:1.2}
+.aw-bar-wrap small{font:9px Arial;color:var(--muted)}
+.aw-action-fold{padding-bottom:2px;margin:5px 0}
+.aw-action-fold summary{padding:10px 2px;display:flex;justify-content:space-between;gap:8px;align-items:center;color:var(--text)}
+.aw-action-fold summary strong{color:var(--gold);font-size:12px}
+.aw-action-fold[open]{padding-bottom:8px}
+.aw-action-fold .aw-row{padding:7px 0}
+.aw-dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--muted)}
+.aw-dot.aw-good{background:#78b97f}
+.aw-dot.aw-warn{background:#dfaa4b}
+.aw-dot.aw-bad{background:#dc7768}
+.aw-dossier{border:1px solid var(--border);border-radius:7px;margin:9px 0;overflow:hidden}
+.aw-dossier-row{display:flex;justify-content:space-between;gap:7px;padding:6px 7px;border-bottom:1px solid var(--border);font-size:9px;line-height:1.4}
+.aw-dossier-row:last-child{border-bottom:0}
+.aw-dossier-row span{color:var(--muted);flex:0 0 42%}
+.aw-dossier-row strong{min-width:0;overflow-wrap:anywhere;text-align:right;font-size:9px;font-weight:700}
+.aw-error{color:#e4a0a0;font-size:10px}
+#awMemberResult>.aw-btn{margin:0 0 10px}
+#awDayMatches{margin-top:11px}
+#awDayMatches .aw-row{min-height:47px}
+.aw-action-fold a{max-width:65px}
