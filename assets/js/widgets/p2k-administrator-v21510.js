@@ -65,10 +65,12 @@ function greenQueue(catalog){
    const ours=Math.max(0,Number(d.oursCount||0)),opponents=Math.max(0,Number(d.opponentCount||0));
    const min=Math.max(0,Number(d.minimumPlayers||0)),max=Number(d.maximumPlayers||0);
    const ratingMin=Math.max(0,Number(d.minRating||0)),ratingMax=Number(d.maxRating||0);
-   const eligible=Array.isArray(d.oursRatings)?d.oursRatings.filter(v=>Number(v)>=ratingMin&&(!ratingMax||Number(v)<=ratingMax)).length:0;
+   const knownRatings=Array.isArray(d.oursRatings)?d.oursRatings:[];
+   const eligible=knownRatings.filter(v=>Number(v)>=ratingMin&&(!ratingMax||Number(v)<=ratingMax)).length;
+   const eligibleVerified=knownRatings.length===ours || ours<min;
    const verified=d.verified===true&&d.rosterComplete===true;
    // Missing rosters must never be interpreted as 0 registered players.
-   const underfilled=verified&&min>0&&eligible<min&&within7;
+   const underfilled=verified&&min>0&&eligibleVerified&&(ours<min||eligible<min)&&within7;
    const league=m.isLeague===true||m.category==='league';
    const recruits=verified?Math.max(0,Math.min(max>0?max:Infinity,Math.max(min,opponents))-ours):0;
    const needsRecruitment=verified&&d.locked!==true&&(underfilled||(league&&recruits>0));
@@ -126,13 +128,13 @@ async function loadActions(){
     get('server/team-points-green/public/api.php?action=runtime-health').catch(()=>null)
  ]);
  state.actionPayload=snapshot?.queue&&Array.isArray(snapshot.queue.rows)
-     ?{...snapshot.queue,source:'Dashboard Match Assistant'}:greenQueue(radar);
+     ?{...snapshot.queue,source:'Dashboard Match Assistant'}:radar?greenQueue(radar):null;
  state.actionHealth=Array.isArray(snapshot?.health)&&snapshot.health.length
      ?snapshot.health:fallbackHealth(fresh,runtime);
  state.recentMatches=Array.isArray(snapshot?.recent)?snapshot.recent:
      Array.isArray(recent?.matches)?recent.matches:null;
  state.actionFailures=Math.max(0,Number(snapshot?.failures||0));
- state.actions=state.actionPayload.queue||[];
+ state.actions=state.actionPayload?.queue||[];
  renderActions();
 }
 function actionItem(row,index){
@@ -155,12 +157,12 @@ function actionSections(){
    if(g.id==='exceptions')return g.items.map(h=>'<div class="aw-row"><div class="aw-info"><strong>'+esc(h.name)+'</strong><small>'+esc(h.detail)+'</small></div>'+ (safeLink(h.url)?'<a class="aw-btn" href="'+esc(safeLink(h.url))+'" target="_blank" rel="noopener">Open</a>':'')+'</div>').join('')||'<p class="aw-note">No current operational exceptions.</p>';
    return g.items.map(r=>'<div class="aw-row"><div class="aw-info"><strong>'+esc(r.title||r.name||'Match #'+(r.matchId||r.match_id))+'</strong><small>'+esc(r.detail||(r.first_discovered_at?'Discovered '+formatWhen(r.first_discovered_at):''))+'</small></div><a class="aw-btn" href="'+esc(actionHref(r))+'" target="_blank" rel="noopener">Open</a></div>').join('')||'<p class="aw-note">No matches.</p>';
  };
- return groups.map(g=>'<details class="aw-fold aw-action-fold" data-aw-group="'+g.id+'" '+(openedActionGroups.has(g.id)?'open':'')+'><summary>'+esc(g.title)+' <strong>'+g.items.length+'</strong></summary><div>'+expandedList(g)+'</div></details>').join('');
+ return groups.map(g=>'<details class="aw-fold aw-action-fold" data-aw-group="'+g.id+'" '+(openedActionGroups.has(g.id)?'open':'')+'><summary>'+esc(g.title)+' <strong>'+(g.id==='new24'&&!state.recentMatches?'—':!state.actionPayload&&g.id!=='exceptions'?'—':g.items.length)+'</strong></summary><div>'+((g.id==='new24'&&!state.recentMatches)||(!state.actionPayload&&g.id!=='exceptions'&&g.id!=='new24')?'<p class="aw-note">Source currently unavailable.</p>':expandedList(g))+'</div></details>').join('');
 }
 function renderActions(){
  const list=$('awActions');$('awActionDetail').hidden=true;list.hidden=false;
  const payload=state.actionPayload||{},health=state.actionHealth||[],queue=state.actions||[];
- const source=String(payload.source||'Green synchronized fallback');
+ const source=String(payload.source||'Action Queue currently unavailable');
  list.innerHTML='<p class="aw-muted">Source: '+esc(source)+'</p>'+actionSections()+
  '<div class="aw-heading"><strong>Highest-priority actions</strong><span class="aw-muted">'+queue.length+'</span></div>'+
  (queue.length?queue.map(actionItem).join(''):'<p class="aw-note">No immediate recruitment intervention.</p>')+
@@ -234,7 +236,9 @@ function readableReason(raw){
 function closureReason(event){
  if(!event)return '';
  const meta=event.metadata||{};
- const raw=meta.profile_closure_reason||meta.closure_reason||meta.closed_reason||meta.reason||'';
+ const profileStatus=String(meta.profile_account_status||'');
+ const raw=meta.profile_closure_reason||meta.closure_reason||meta.closed_reason||meta.reason||
+   (profileStatus.includes(':')?profileStatus.split(':').slice(1).join(':'):'');
  return readableReason(raw);
 }
 function eventLabel(e){
@@ -290,7 +294,8 @@ function memberDossier(x,name){
  const details=[
    ['Membership',m.current_member?'Current member':'Former member'],
    ['Account',status],
-   ['First joined',m.joined_epoch?formatWhen(m.joined_epoch):firstJoin?formatWhen(firstJoin.detected_at)+' (observed)':'—'],
+   ['First joined P2K',firstJoin?formatWhen(firstJoin.effective_at||firstJoin.detected_at)+' (observed)':'—'],
+   ['Chess.com account joined',m.joined_epoch?formatWhen(m.joined_epoch):'—'],
    ['Last rejoined',lastRejoin?formatWhen(lastRejoin.effective_at||lastRejoin.detected_at)+' (observed)':'—'],
    ['Last left / quit',m.left_at?formatWhen(m.left_at):lastLeft?formatWhen(lastLeft.effective_at||lastLeft.detected_at)+' (observed)':'—'],
    ['Closure reason',accountClosed?(closureReason(closure)||'Not provided by Chess.com'):'Not applicable'],
