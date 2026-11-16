@@ -43,7 +43,8 @@ const ADMIN_DETAIL_DEFS = {
       {key:"player-spotlight",label:"Player Spotlight",mode:"native",nativeKey:"p2k-widget-player-spotlight"},
       {key:"tournament-winners",label:"Tournament Winners",mode:"native",nativeKey:"p2k-widget-tournament-winners"},
       {key:"hall-of-fame",label:"Hall of Fame",mode:"native",nativeKey:"p2k-widget-hall-of-fame"},
-      {key:"competition",label:"Competition",mode:"native",nativeKey:"p2k-widget-competition"}
+      {key:"competition",label:"Competition",mode:"native",nativeKey:"p2k-widget-competition"},
+      {key:"administrator",label:"Administrator",mode:"native",nativeKey:"p2k-widget-administrator"}
     ]}
   },
   opponents: {
