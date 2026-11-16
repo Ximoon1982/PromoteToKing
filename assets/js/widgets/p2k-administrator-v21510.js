@@ -5,39 +5,216 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const root=new URL('../../../',document.currentScript.src);
 const url=p=>new URL(p,root).href;
 const paths={
- actions:'server/team-points/public/intelligence.php?scope=actions',
+ actions:'server/team-points/public/intelligence.php?scope=freshness',
  members:'server/team-points-green/public/api.php',
  showcase:'server/events-showcase/public/api.php',
  admin:'server/events-showcase/public/admin-api.php',
  matches:'server/widgets/public/administrator.php?action=matches'
 };
-const state={view:'actions',metric:'matches',days:[],actions:[],memberPage:1,memberPages:1,showcase:null,discovery:null,sub:'manage',editing:-1,scanBusy:false,scanCancel:false};
+const state={view:'actions',metric:'matches',days:[],selectedDay:null,actions:[],memberPage:1,memberPages:1,showcase:null,discovery:null,sub:'manage',editing:-1,scanBusy:false,scanCancel:false};
 async function get(target){const r=await fetch(url(target),{credentials:'same-origin',cache:'no-store'});const data=await r.json().catch(()=>null);if(!r.ok||!data||data.ok===false)throw new Error(data?.error?.message||data?.error||'HTTP '+r.status);return data;}
 function message(id,text,error=false){const el=$(id);if(el){el.textContent=text;el.classList.toggle('aw-error',error);}}
-function safeLink(raw){try{const u=new URL(String(raw),root);return ['https:','http:'].includes(u.protocol)&&['www.promotetoking.org','promotetoking.org'].includes(u.hostname)?u.href:'';}catch{return '';}}
+function safeLink(raw){try{const u=new URL(String(raw),root);return u.protocol==='https:'&&['www.promotetoking.org','promotetoking.org','www.chess.com','chess.com'].includes(u.hostname)?u.href:'';}catch{return '';}}
 function safeArenaLink(raw){try{const u=new URL(String(raw));return u.protocol==='https:'&&['www.chess.com','chess.com'].includes(u.hostname)&&/^\/(?:play\/arena|tournament\/live\/arena)\/\d+\/?$/.test(u.pathname)?u.href:'';}catch{return '';}}
 function selectTab(view){if(!['actions','matches','members','showcase'].includes(view))return;state.view=view;document.querySelectorAll('[data-aw-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.awTab===view)));document.querySelectorAll('[data-aw-view]').forEach(v=>v.hidden=v.dataset.awView!==view);$('awScroll').scrollTop=0;
- if(view==='actions'&&!state.actions.length)void loadActions();
+ if(view==='actions'&&!state.actionPayload)void loadActions();
  if(view==='matches'&&!state.days.length)void loadMatches();
  if(view==='members')void loadMembers();
  if(view==='showcase'&&!state.showcase)void loadShowcase();
 }
 document.querySelectorAll('[data-aw-tab]').forEach(b=>b.addEventListener('click',()=>selectTab(b.dataset.awTab)));
-async function loadActions(){message('awActions','Loading real administrator actions…');try{const d=await get(paths.actions);state.actions=Array.isArray(d.data?.rows)?d.data.rows:[];renderActions();}catch(e){message('awActions',e.message,true);}}
-function renderActions(){const list=$('awActions');$('awActionDetail').hidden=true;list.hidden=false;
- if(!state.actions.length){list.innerHTML='<p class="aw-note">Action queue clear.</p>';return;}
- list.innerHTML=state.actions.map((a,i)=>'<button type="button" class="aw-btn aw-full aw-row" data-action="'+i+'" style="text-align:left;justify-content:space-between"><span class="aw-info"><strong>'+esc(a.title)+'</strong><small>'+esc(a.detail)+'</small></span><span>›</span></button>').join('');
+// The dashboard's Match Assistant is the authoritative source for its five
+// recruitment metrics. The Green read below is a clearly marked DB-only fallback
+// for authenticated standalone widget embeds without a parent dashboard scan.
+const openedActionGroups=new Set();
+function actionHref(row){
+ const matchId=Number(row.matchId||row.match_id||0);
+ if(matchId>0){
+   const p=new URL('ui-v2.html',root);p.searchParams.set('ui','v2');
+   p.searchParams.set('page','administration');p.searchParams.set('adminTool','open');
+   p.searchParams.set('club','promote-to-king');p.searchParams.set('scope','promote-to-king');
+   p.searchParams.set('match',String(row.apiUrl||row.url||'https://www.chess.com/club/matches/'+matchId));
+   return p.href;
+ }
+ return safeLink(row.url);
+}
+function dashboardSnapshot(){
+ if(window.parent===window)return Promise.resolve(null);
+ return new Promise(resolve=>{
+   const nonce=String(Date.now())+'-'+Math.random().toString(36).slice(2);
+   let completed=false;
+   function finish(value){if(completed)return;completed=true;window.removeEventListener('message',handler);clearTimeout(timer);resolve(value);}
+   function handler(e){if(e.origin!==location.origin||e.source!==window.parent||
+       e.data?.type!=='p2k-administrator-widget-queue-response'||e.data.nonce!==nonce)return;
+       finish(e.data);}
+   window.addEventListener('message',handler);
+   const timer=setTimeout(()=>finish(null),900);
+   window.parent.postMessage({type:'p2k-administrator-widget-queue-request',nonce},location.origin);
+ });
+}
+function greenQueue(catalog){
+ const matches=Array.isArray(catalog?.matches)?catalog.matches:[];
+ const details=new Map((catalog?.details||[]).map(d=>[String(d.matchId),d]));
+ const now=Date.now()/1000;
+ const rows=matches.map(m=>{
+   const d=details.get(String(m.matchId))||{};
+   const start=Number(m.startTime||0);
+   const hours=start>0?Math.max(0,Math.round((start-now)/3600)):null;
+   const within48=start>=now&&start<=now+48*3600;
+   const within7=start>=now&&start<=now+7*86400;
+   const ours=Math.max(0,Number(d.oursCount||0)),opponents=Math.max(0,Number(d.opponentCount||0));
+   const min=Math.max(0,Number(d.minimumPlayers||0)),max=Number(d.maximumPlayers||0);
+   const ratingMin=Math.max(0,Number(d.minRating||0)),ratingMax=Number(d.maxRating||0);
+   const eligible=Array.isArray(d.oursRatings)?d.oursRatings.filter(v=>Number(v)>=ratingMin&&(!ratingMax||Number(v)<=ratingMax)).length:0;
+   const verified=d.verified===true&&d.rosterComplete===true;
+   // Missing rosters must never be interpreted as 0 registered players.
+   const underfilled=verified&&min>0&&eligible<min&&within7;
+   const league=m.isLeague===true||m.category==='league';
+   const recruits=verified?Math.max(0,Math.min(max>0?max:Infinity,Math.max(min,opponents))-ours):0;
+   const needsRecruitment=verified&&d.locked!==true&&(underfilled||(league&&recruits>0));
+   const lockable=verified&&d.locked!==true&&min>0&&ours>=min&&ours>opponents;
+   const tone=(underfilled&&within48)||(league&&recruits>0&&hours!==null&&hours<=24)?'bad':underfilled||needsRecruitment||within48?'warn':'info';
+   const desc=[];
+   if(underfilled)desc.push('Below minimum by '+(min-eligible));
+   if(recruits>0&&verified)desc.push(recruits+' recruit(s) advised');
+   if(hours!==null&&hours<=72)desc.push('Starts in '+hours+' h');
+   if(!verified)desc.push('Roster snapshot incomplete');
+   return {matchId:Number(m.matchId),title:m.name||'Team match',name:m.name||'Team match',
+      detail:desc.join(' · ')||'Registration review',url:m.url||'',startTime:start,
+      league,belowMinimumWarning:underfilled,startsWithin48:within48,
+      needsRecruitment,lockable,recruits,winProbability:null,
+      rosterComplete:verified,oursCount:verified?ours:null,opponentCount:verified?opponents:null,
+      minimumPlayers:min,tone,action:needsRecruitment?'Recruit':'Review'};
+ }).filter(m=>m.startTime>=now);
+ const metric={underfilled:rows.filter(r=>r.belowMinimumWarning).length,
+   starts48:rows.filter(r=>r.startsWithin48).length,
+   leagueRecruitment:rows.filter(r=>r.league&&r.needsRecruitment).length,
+   recruitsAdvised:rows.filter(r=>r.league&&r.needsRecruitment).reduce((n,r)=>n+r.recruits,0)};
+ const score=r=>(r.tone==='bad'?300:r.tone==='warn'?180:60)+(r.league?80:0)
+   +Math.min(80,r.recruits*8)+(r.belowMinimumWarning?100:0);
+ return {source:'Green synchronized fallback (dashboard scan unavailable)',generatedAt:catalog?.generatedAt,
+   rows,queue:rows.filter(r=>r.belowMinimumWarning||r.startsWithin48||r.needsRecruitment||r.lockable)
+     .sort((a,b)=>score(b)-score(a)||a.startTime-b.startTime).slice(0,6),metrics:metric};
+}
+function fallbackHealth(fresh,runtime){
+ const green=fresh?.data?.green||{},matches=green.matches||{},roster=green.roster||{};
+ const health=[];
+ const push=(name,age,target,path)=>{
+   if(age===null||age===undefined){health.push({name,detail:'No Green timestamp recorded',tone:'warn',url:path});return;}
+   const minutes=Math.round(Number(age)/60);
+   const tone=age>3600?'bad':age>900?'warn':'good';
+   health.push({name,detail:'Last verified '+minutes+' min ago · target '+Math.round(target/60)+' min',tone,url:path});
+ };
+ const maintenance='ui-v2.html?ui=v2&page=administration&adminTool=tasks';
+ push('Green club match index',matches.index_age_seconds,green.targets?.club_index_seconds||300,maintenance);
+ push('Green member roster',roster.age_seconds,green.targets?.roster_seconds||600,maintenance);
+ if(runtime){
+   const st=runtime.state||{},healthy=runtime.healthy===true;
+   health.push({name:'Green Team Points worker',tone:healthy?'good':'warn',
+      detail:'Cycle #'+(st.cycle_no??'—')+' · '+String(st.mode||'—')+' / '+String(st.stage||'—'),
+      url:maintenance});
+ }else health.push({name:'Green Team Points worker',detail:'Runtime health unavailable',tone:'warn',url:maintenance});
+ return health;
+}
+async function loadActions(){
+ message('awActions','Reading dashboard recruitment queue and Green health…');
+ const [snapshot,radar,recent,fresh,runtime]=await Promise.all([
+    dashboardSnapshot(),
+    get('server/widgets/public/api.php?action=radar-catalog').catch(()=>null),
+    get('server/team-points/public/recent-matches.php?hours=24').catch(()=>null),
+    get('server/team-points/public/intelligence.php?scope=freshness').catch(()=>null),
+    get('server/team-points-green/public/api.php?action=runtime-health').catch(()=>null)
+ ]);
+ state.actionPayload=snapshot?.queue&&Array.isArray(snapshot.queue.rows)
+     ?{...snapshot.queue,source:'Dashboard Match Assistant'}:greenQueue(radar);
+ state.actionHealth=Array.isArray(snapshot?.health)&&snapshot.health.length
+     ?snapshot.health:fallbackHealth(fresh,runtime);
+ state.recentMatches=Array.isArray(snapshot?.recent)?snapshot.recent:
+     Array.isArray(recent?.matches)?recent.matches:null;
+ state.actionFailures=Math.max(0,Number(snapshot?.failures||0));
+ state.actions=state.actionPayload.queue||[];
+ renderActions();
+}
+function actionItem(row,index){
+ const name=String(row.title||row.name||'Team match');
+ const desc=String(row.detail||row.status||'');
+ const players=row.oursCount===null||row.oursCount===undefined?'':' · '+row.oursCount+' P2K players';
+ return '<div class="aw-row"><div class="aw-info"><strong>'+esc(name)+'</strong>'+
+   '<small>'+esc(desc+players)+'</small></div><button type="button" class="aw-btn" data-action="'+index+'">Open</button></div>';
+}
+function actionSections(){
+ const data=state.actionPayload||{},rows=Array.isArray(data.rows)?data.rows:[],health=state.actionHealth||[];
+ const groups=[
+   {id:'underfilled',title:'Below minimum',items:rows.filter(r=>r.belowMinimumWarning)},
+   {id:'starts48',title:'Start within 48 h',items:rows.filter(r=>r.startsWithin48)},
+   {id:'league',title:'League recruitment',items:rows.filter(r=>r.league&&r.needsRecruitment)},
+   {id:'exceptions',title:'Operational exceptions',items:health.filter(h=>h.tone!=='good')},
+   {id:'new24',title:'New matches · 24 h',items:state.recentMatches||[]}
+ ];
+ const expandedList=(g)=>{
+   if(g.id==='exceptions')return g.items.map(h=>'<div class="aw-row"><div class="aw-info"><strong>'+esc(h.name)+'</strong><small>'+esc(h.detail)+'</small></div>'+ (safeLink(h.url)?'<a class="aw-btn" href="'+esc(safeLink(h.url))+'" target="_blank" rel="noopener">Open</a>':'')+'</div>').join('')||'<p class="aw-note">No current operational exceptions.</p>';
+   return g.items.map(r=>'<div class="aw-row"><div class="aw-info"><strong>'+esc(r.title||r.name||'Match #'+(r.matchId||r.match_id))+'</strong><small>'+esc(r.detail||(r.first_discovered_at?'Discovered '+formatWhen(r.first_discovered_at):''))+'</small></div><a class="aw-btn" href="'+esc(actionHref(r))+'" target="_blank" rel="noopener">Open</a></div>').join('')||'<p class="aw-note">No matches.</p>';
+ };
+ return groups.map(g=>'<details class="aw-fold aw-action-fold" data-aw-group="'+g.id+'" '+(openedActionGroups.has(g.id)?'open':'')+'><summary>'+esc(g.title)+' <strong>'+g.items.length+'</strong></summary><div>'+expandedList(g)+'</div></details>').join('');
+}
+function renderActions(){
+ const list=$('awActions');$('awActionDetail').hidden=true;list.hidden=false;
+ const payload=state.actionPayload||{},health=state.actionHealth||[],queue=state.actions||[];
+ const source=String(payload.source||'Green synchronized fallback');
+ list.innerHTML='<p class="aw-muted">Source: '+esc(source)+'</p>'+actionSections()+
+ '<div class="aw-heading"><strong>Highest-priority actions</strong><span class="aw-muted">'+queue.length+'</span></div>'+
+ (queue.length?queue.map(actionItem).join(''):'<p class="aw-note">No immediate recruitment intervention.</p>')+
+ '<div class="aw-heading"><strong>System health</strong><span class="aw-muted">'+health.filter(h=>h.tone!=='good').length+' exception(s)</span></div>'+
+ (health.length?health.map(h=>'<div class="aw-row"><span class="aw-dot aw-'+esc(h.tone||'warn')+'"></span><div class="aw-info"><strong>'+esc(h.name)+'</strong><small>'+esc(h.detail)+'</small></div></div>').join(''):'<p class="aw-note">Health data unavailable.</p>');
+ list.querySelectorAll('[data-aw-group]').forEach(d=>d.addEventListener('toggle',()=>{if(d.open)openedActionGroups.add(d.dataset.awGroup);else openedActionGroups.delete(d.dataset.awGroup);}));
  list.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>openAction(Number(b.dataset.action)));
 }
-function openAction(index){const a=state.actions[index];if(!a)return;const href=safeLink(a.url),host=$('awActionDetail');
- host.innerHTML='<div class="aw-detail"><button type="button" class="aw-btn" id="awBackAction">← Back to queue</button><div class="aw-heading"><strong>'+esc(a.title)+'</strong></div><p>'+esc(a.detail)+'</p><p class="aw-muted">Priority: '+esc(a.severity||'not specified')+'</p>'+(href?'<a class="aw-btn aw-primary" rel="noopener" target="_blank" href="'+esc(href)+'">Open corrective tool ↗</a>':'<p class="aw-muted">No verified corrective link.</p>')+'</div>';
- $('awActions').hidden=true;host.hidden=false;$('awBackAction').onclick=renderActions;$('awScroll').scrollTop=0;
+function openAction(index){
+ const a=state.actions[index];if(!a)return;
+ const href=safeLink(actionHref(a)),host=$('awActionDetail');
+ host.innerHTML='<div class="aw-detail"><button type="button" class="aw-btn" id="awBackAction">← Back to queue</button>'+
+ '<div class="aw-heading"><strong>'+esc(a.title||a.name||'Match')+'</strong></div><p>'+esc(a.detail||'Registration review')+'</p>'+
+ '<p class="aw-muted">Priority: '+esc(a.tone||'info')+'</p>'+
+ (a.winProbability===null||a.winProbability===undefined?'':'<p>Win probability: '+esc(a.winProbability)+'%</p>')+
+ (href?'<a class="aw-btn aw-primary" target="_blank" rel="noopener" href="'+esc(href)+'">Open match tool ↗</a>':'')+'</div>';
+ $('awActions').hidden=true;host.hidden=false;$('awBackAction').onclick=renderActions;
+ $('awScroll').scrollTop=0;
 }
-$('awRefreshActions').onclick=loadActions;
-async function loadMatches(){message('awChartCaption','Loading synchronized Green match schedule…');try{const d=await get(paths.matches);state.days=d.days||[];drawBars();}catch(e){message('awChartCaption',e.message,true);}}
-function drawBars(){const metric=state.metric,values=state.days.map(d=>Number(d[metric]||0)),max=Math.max(1,...values);$('awBars').innerHTML=state.days.map((d,i)=>'<div class="aw-bar-wrap"><button type="button" class="aw-bar" data-day="'+i+'" style="height:'+Math.max(2,Math.round(values[i]/max*80))+'px" title="'+esc(d.date)+': '+values[i]+' '+metric+'"></button><small>'+esc(d.date.slice(5))+'</small></div>').join('');message('awChartCaption','Future registered matches · '+values.reduce((a,b)=>a+b,0)+' '+metric+' · 7 local calendar days');$('awBars').querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{const d=state.days[Number(b.dataset.day)];message('awChartCaption',d.date+': '+d.matches+' matches / '+d.boards+' boards');});}
-document.querySelectorAll('[data-aw-metric]').forEach(b=>b.onclick=()=>{state.metric=b.dataset.awMetric;document.querySelectorAll('[data-aw-metric]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));drawBars();});
-$('awRefreshMatches').onclick=loadMatches;
+$('awRefreshActions').onclick=()=>void loadActions();
+async function loadMatches(){
+ message('awChartCaption','Loading synchronized Green match schedule…');
+ try{const d=await get(paths.matches);state.days=Array.isArray(d.days)?d.days:[];drawBars();}
+ catch(e){message('awChartCaption',e.message,true);}
+}
+function renderDayMatches(){
+ const day=state.days[state.selectedDay];
+ if(!day){$('awDayMatches').innerHTML='';return;}
+ const rows=Array.isArray(day.items)?day.items:[];
+ $('awDayMatches').innerHTML='<div class="aw-heading"><strong>'+esc(day.date)+'</strong><span class="aw-muted">'+day.matches+' matches · '+day.boards+' boards</span></div>'+
+ (rows.length?rows.map(r=>'<div class="aw-row"><div class="aw-info"><strong>'+esc(r.name)+'</strong><small>'+esc(r.opponent)+' · '+new Date(r.startTime*1000).toLocaleTimeString('en-GB',{timeZone:'Europe/Luxembourg',hour:'2-digit',minute:'2-digit'})+'</small><small>'+
+ (r.rosterComplete?esc(r.oursCount+' P2K / '+r.opponentCount+' opponent players'):'Roster not yet verified')+
+ '</small></div><a class="aw-btn" target="_blank" rel="noopener" href="'+esc(r.url)+'">Open</a></div>').join(''):'<p class="aw-note">No upcoming starts on this day.</p>');
+}
+function drawBars(){
+ const metric=state.metric,values=state.days.map(d=>Number(d[metric]||0)),max=Math.max(1,...values);
+ $('awBars').innerHTML=state.days.map((d,i)=>{
+   const height=values[i]===0?2:Math.max(3,Math.round(values[i]/max*78));
+   return '<div class="aw-bar-wrap"><span class="aw-bar-count">'+values[i]+'</span>'+
+   '<button type="button" class="aw-bar aw-bar-'+metric+(state.selectedDay===i?' aw-selected':'')+'" data-day="'+i+'" aria-label="'+esc(d.date)+': '+values[i]+' '+metric+'" style="height:'+height+'px"></button>'+
+   '<small>'+esc(d.date.slice(5))+'</small></div>';
+ }).join('');
+ message('awChartCaption','Future registered starts · '+values.reduce((a,b)=>a+b,0)+' '+metric+' · local dates');
+ $('awBars').querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{
+   state.selectedDay=Number(b.dataset.day);drawBars();renderDayMatches();
+ });
+ renderDayMatches();
+}
+document.querySelectorAll('[data-aw-metric]').forEach(b=>b.onclick=()=>{
+ state.metric=b.dataset.awMetric;
+ document.querySelectorAll('[data-aw-metric]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+ drawBars();
+});
+$('awRefreshMatches').onclick=()=>void loadMatches();
 function formatWhen(raw){const d=new Date(String(raw||'').replace(' ','T')+(/[zZ]|[+-]\d\d:?\d\d$/.test(String(raw))?'':'Z'));return Number.isFinite(d.getTime())?d.toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Luxembourg'}):String(raw||'');}
 async function loadMembers(){message('awEvents','Loading membership chronology…');try{const d=await get(paths.members+'?action=member-events&page='+state.memberPage+'&per_page=10');state.memberPages=Math.max(1,Number(d.pagination?.pages||1));$('awEvents').innerHTML=(d.events||[]).map(e=>'<div class="aw-row"><div class="aw-info"><strong>'+esc(e.username||e.new_username||'Unknown member')+'</strong><small>'+esc(e.event_type||'Event')+' · '+esc(formatWhen(e.detected_at))+'</small></div><button class="aw-btn" data-member="'+esc(e.new_username||e.username||'')+'">View</button></div>').join('')||'<p class="aw-note">No events found.</p>';$('awEvents').querySelectorAll('[data-member]').forEach(b=>b.onclick=()=>{$('awMemberName').value=b.dataset.member;void lookupMember(b.dataset.member);});$('awEventPage').textContent=state.memberPage+' / '+state.memberPages;$('awEventPrev').disabled=state.memberPage<=1;$('awEventNext').disabled=state.memberPage>=state.memberPages;}catch(e){message('awEvents',e.message,true);}}
 $('awEventPrev').onclick=()=>{if(state.memberPage>1){state.memberPage--;void loadMembers();}};$('awEventNext').onclick=()=>{if(state.memberPage<state.memberPages){state.memberPage++;void loadMembers();}};
