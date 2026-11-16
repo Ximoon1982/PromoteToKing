@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   if(window.P2K_WIDGETS_ADMIN)return;
-  const ids=['club-pulse','recruitment-radar','trophy-spotlight','rivalry-spotlight','club-progress','around-the-world','player-spotlight','tournament-winners','hall-of-fame','competition'];
+  const ids=['club-pulse','recruitment-radar','trophy-spotlight','rivalry-spotlight','club-progress','around-the-world','player-spotlight','tournament-winners','hall-of-fame','competition','administrator'];
   const defaults={
     'club-pulse':{period:['7d','30d'],showMembers:[true,false]},
     'recruitment-radar':{window:['24h','48h','72h','7d'],limit:[3,4,6,8]},
@@ -13,10 +13,11 @@
     'player-spotlight':{limit:[3,5],showArena:[true,false],showMedals:[true,false]},
     'tournament-winners':{medalPageSize:[3,6,9]},
     'hall-of-fame':{medalPageSize:[3,6,9]},
-    'competition':{}
+    'competition':{},
+    'administrator':{}
   };
   const labels={period:'Time period',showMembers:'Show member count',window:'Recruitment window',limit:'Items to display',mode:'Trophy order',opponent:'Opponent slug (blank = most frequent)',metric:'Primary metric',showArena:'Include MCA arena scoring',showMedals:'Show tournament medals',medalPageSize:'Medalists per page',lowerReferencePoints:'Lower reference · Club Points',lowerReferenceLabel:'Lower reference label',upperReferencePoints:'Upper reference · Club Points',upperReferenceLabel:'Upper reference label'};
-  const names={'club-pulse':'Club Points · Pulse','recruitment-radar':'Recruitment Radar','trophy-spotlight':'Trophy Spotlight','rivalry-spotlight':'Rivalry Spotlight','club-progress':'Club Progress','around-the-world':'P2K Around the World','player-spotlight':'Player Spotlight','tournament-winners':'Tournament Winners','hall-of-fame':'Hall of Fame','competition':'Competition'};
+  const names={'club-pulse':'Club Points · Pulse','recruitment-radar':'Recruitment Radar','trophy-spotlight':'Trophy Spotlight','rivalry-spotlight':'Rivalry Spotlight','club-progress':'Club Progress','around-the-world':'P2K Around the World','player-spotlight':'Player Spotlight','tournament-winners':'Tournament Winners','hall-of-fame':'Hall of Fame','competition':'Competition','administrator':'Administrator'};
   const root=new URL('../../../',document.currentScript?.src||location.href);
   const api=new URL('server/widgets/public/api.php',root).href;
   const embed=new URL('server/widgets/public/embed.php',root).href;
@@ -44,7 +45,7 @@
   function iframeUrl(id,theme,preview=false){const u=new URL(embed);u.searchParams.set('widget',id);u.searchParams.set('theme',theme||'auto');if(preview)u.searchParams.set('preview','1');return u.href;}
   // All embed snippets are standalone iframe-only HTML. The host must not need
   // inline scripts or postMessage resizing; previews use the same fixed heights.
-  const heights={'club-pulse':350,'recruitment-radar':650,'trophy-spotlight':490,'rivalry-spotlight':540,'club-progress':430,'around-the-world':780,'player-spotlight':760,'tournament-winners':1050,'hall-of-fame':680,'competition':565};
+  const heights={'club-pulse':350,'recruitment-radar':650,'trophy-spotlight':490,'rivalry-spotlight':540,'club-progress':430,'around-the-world':780,'player-spotlight':760,'tournament-winners':1050,'hall-of-fame':680,'competition':565,'administrator':750};
   function code(){
     const settings=drafts[active]||state?.widgets?.[active]||{};
     const url=iframeUrl(active,settings.theme,false),height=heights[active]||600;
@@ -60,7 +61,7 @@
     if(!state){el.innerHTML='<div class="p2kw-admin-empty">Loading widget configuration…</div>';return;}
     if(!drafts[active])drafts[active]={...(state.widgets?.[active]||{})};
     const changed=dirty.has(active);
-    el.innerHTML=`<section class="p2kw-admin" data-widgets-admin="${esc(active)}"><header><div><h3>${esc(names[active]||active)}</h3><p>Read-only embedded widget · 260 px · configurable independently from the Match Showcase</p></div><span class="p2kw-admin-live">Native widgets</span></header><div data-widgets-message class="p2kw-admin-status">${changed?'Unsaved changes':'Configuration loaded'}</div><div class="p2kw-admin-grid"><div><section class="p2kw-admin-panel"><h4>Appearance & content</h4><form data-widgets-form>${fields()}<div class="p2kw-admin-actions"><button class="primary" type="submit" ${!changed?'disabled':''}>Save settings</button><button type="button" data-revert ${!changed?'disabled':''}>Revert</button></div></form></section><section class="p2kw-admin-panel p2kw-admin-code"><h4>Embed HTML</h4><p>Paste the iframe snippet into a page that permits iframes. The embed uses one fixed-height iframe only. No script or host JavaScript is required. Longer content scrolls within the iframe.</p><textarea data-widgets-code readonly aria-label="Iframe HTML">${esc(code())}</textarea><div class="p2kw-admin-actions"><button type="button" data-copy-embed>Copy iframe HTML</button></div></section></div><div><section class="p2kw-admin-panel"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h4>Public preview</h4><button type="button" data-preview>Load preview</button></div><p>Preview is loaded only on demand; it uses live public data and the current saved configuration.</p><div class="p2kw-admin-preview-wrap" data-preview-wrap hidden><iframe class="p2kw-admin-preview" title="${esc(active)} preview" loading="lazy"></iframe></div></section></div></div></section>`;
+    el.innerHTML=`<section class="p2kw-admin" data-widgets-admin="${esc(active)}"><header><div><h3>${esc(names[active]||active)}</h3><p>Embedded P2K widget · 260 px · administrator login required for protected tools</p></div><span class="p2kw-admin-live">Native widgets</span></header><div data-widgets-message class="p2kw-admin-status">${changed?'Unsaved changes':'Configuration loaded'}</div><div class="p2kw-admin-grid"><div><section class="p2kw-admin-panel"><h4>Appearance & content</h4><form data-widgets-form>${fields()}<div class="p2kw-admin-actions"><button class="primary" type="submit" ${!changed?'disabled':''}>Save settings</button><button type="button" data-revert ${!changed?'disabled':''}>Revert</button></div></form></section><section class="p2kw-admin-panel p2kw-admin-code"><h4>Embed HTML</h4><p>Paste the iframe snippet into a page that permits iframes. The embed uses one fixed-height iframe only. No script or host JavaScript is required. Longer content scrolls within the iframe.</p><textarea data-widgets-code readonly aria-label="Iframe HTML">${esc(code())}</textarea><div class="p2kw-admin-actions"><button type="button" data-copy-embed>Copy iframe HTML</button></div></section></div><div><section class="p2kw-admin-panel"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h4>Public preview</h4><button type="button" data-preview>Load preview</button></div><p>Preview is loaded only on demand; it uses live public data and the current saved configuration.</p><div class="p2kw-admin-preview-wrap" data-preview-wrap hidden><iframe class="p2kw-admin-preview" title="${esc(active)} preview" loading="lazy"></iframe></div></section></div></div></section>`;
     const form=el.querySelector('[data-widgets-form]');
     form.oninput=onChange;form.onchange=onChange;form.onsubmit=save;
     el.querySelector('[data-revert]').onclick=()=>{delete drafts[active];dirty.delete(active);layout();};
