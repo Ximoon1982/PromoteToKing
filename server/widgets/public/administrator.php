@@ -34,7 +34,9 @@ if (($_GET['action'] ?? '') === 'matches') {
             $d=$start->modify('+' . $i . ' days');
             $days[$d->format('Y-m-d')]=['date'=>$d->format('Y-m-d'),'matches'=>0,'boards'=>0];
         }
-        $sql="SELECT start_epoch,board_count FROM p2k_g_matches WHERE club_slug=?
+        $sql="SELECT start_epoch,board_count FROM p2k_g_matches WHERE club_verified=1
+            AND verified_club_slug=? AND is_void=0
+            AND COALESCE(NULLIF(time_class,''),NULLIF(index_time_class,''))='daily'
             AND start_epoch>=? AND start_epoch<? AND
             (CASE WHEN status='unknown' THEN COALESCE(index_bucket,'unknown') ELSE status END)='registered'";
         $q=PublicReadDatabase::core()->prepare($sql);
