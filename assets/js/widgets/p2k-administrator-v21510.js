@@ -215,10 +215,130 @@ document.querySelectorAll('[data-aw-metric]').forEach(b=>b.onclick=()=>{
  drawBars();
 });
 $('awRefreshMatches').onclick=()=>void loadMatches();
-function formatWhen(raw){const d=new Date(String(raw||'').replace(' ','T')+(/[zZ]|[+-]\d\d:?\d\d$/.test(String(raw))?'':'Z'));return Number.isFinite(d.getTime())?d.toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Luxembourg'}):String(raw||'');}
-async function loadMembers(){message('awEvents','Loading membership chronology…');try{const d=await get(paths.members+'?action=member-events&page='+state.memberPage+'&per_page=10');state.memberPages=Math.max(1,Number(d.pagination?.pages||1));$('awEvents').innerHTML=(d.events||[]).map(e=>'<div class="aw-row"><div class="aw-info"><strong>'+esc(e.username||e.new_username||'Unknown member')+'</strong><small>'+esc(e.event_type||'Event')+' · '+esc(formatWhen(e.detected_at))+'</small></div><button class="aw-btn" data-member="'+esc(e.new_username||e.username||'')+'">View</button></div>').join('')||'<p class="aw-note">No events found.</p>';$('awEvents').querySelectorAll('[data-member]').forEach(b=>b.onclick=()=>{$('awMemberName').value=b.dataset.member;void lookupMember(b.dataset.member);});$('awEventPage').textContent=state.memberPage+' / '+state.memberPages;$('awEventPrev').disabled=state.memberPage<=1;$('awEventNext').disabled=state.memberPage>=state.memberPages;}catch(e){message('awEvents',e.message,true);}}
-$('awEventPrev').onclick=()=>{if(state.memberPage>1){state.memberPage--;void loadMembers();}};$('awEventNext').onclick=()=>{if(state.memberPage<state.memberPages){state.memberPage++;void loadMembers();}};
-async function lookupMember(name){if(!/^[a-z0-9_-]{2,25}$/i.test(name)){message('awMemberResult','Enter a valid username.',true);return;}message('awMemberResult','Looking up member…');try{const d=await get(paths.members+'?action=member-lookup&username='+encodeURIComponent(name)),x=d.lookup||{};if(!x.found){message('awMemberResult','No member identity found.');return;}const m=x.member||{},a=x.activity||{},lc=x.lifecycle||{};const aliases=(x.aliases||[]).slice(0,8).map(t=>t.username||t.username_key).filter(Boolean);$('awMemberResult').innerHTML='<div class="aw-detail"><strong>'+esc(m.username||name)+'</strong><p>'+esc(m.current_member?'Current member':'Former member')+' · '+esc(m.account_status||'account status unknown')+'</p><p>Daily games: '+esc(a.games??'—')+' · Wins: '+esc(a.wins??'—')+'</p>'+(aliases.length?'<p>Known names: '+aliases.map(esc).join(', ')+'</p>':'')+'<p>Recorded lifecycle events: '+esc((lc.events||[]).length)+'</p></div>';}catch(e){message('awMemberResult',e.message,true);}}
+function formatWhen(raw){
+ if(raw===null||raw===undefined||raw==='')return '—';
+ const input=String(raw).trim();
+ const d=/^\d+$/.test(input)?new Date(Number(input)*1000):
+   new Date(input.replace(' ','T')+(/[zZ]|[+-]\d\d:?\d\d$/.test(input)?'':'Z'));
+ return Number.isFinite(d.getTime())?d.toLocaleString('en-GB',
+   {dateStyle:'medium',timeStyle:'short',timeZone:'Europe/Luxembourg'}):input;
+}
+function readableReason(raw){
+ const reason=String(raw||'').trim().toLowerCase();
+ if(!reason)return '';
+ if(/^http_40[4]$|^http_410$/.test(reason))return 'Account unavailable ('+reason.replace('_',' ').toUpperCase()+') — closure reason not confirmed';
+ if(/fair.?play|cheat/.test(reason))return 'Fair play violation';
+ if(/abuse/.test(reason))return 'Abuse';
+ return reason.replace(/[_-]+/g,' ').replace(/^./,c=>c.toUpperCase());
+}
+function closureReason(event){
+ if(!event)return '';
+ const meta=event.metadata||{};
+ const raw=meta.profile_closure_reason||meta.closure_reason||meta.closed_reason||meta.reason||'';
+ return readableReason(raw);
+}
+function eventLabel(e){
+ const type=String(e.event_type||'');
+ if(type==='name_changed')return 'Name changed: '+String(e.previous_username||e.username||'Unknown')+
+   ' → '+String(e.new_username||'Unknown')+(e.inferred||e.metadata?.inferred_from_alias?' (inferred from aliases)':'');
+ if(type==='left'){
+   const status=String(e.profile_status||'').toLowerCase();
+   const profile=String(e.metadata?.profile_account_status||'').toLowerCase();
+   return 'Left club'+(status==='closed'?' · account closed':status==='active'?' · account active':'')+
+      (closureReason(e)?' · '+closureReason(e):'')+
+      (profile&&profile!=='closed'&&profile!=='active'?' · '+profile:'');
+ }
+ return ({joined:'Joined club',rejoined:'Rejoined club',discovered:'First observed'})[type]||
+   type.replace(/_/g,' ');
+}
+function closeMember(){
+ $('awMemberResult').hidden=true;$('awMembersIndex').hidden=false;
+ $('awScroll').scrollTop=state.memberScroll||0;
+}
+async function loadMembers(){
+ message('awEvents','Loading membership chronology…');
+ try{
+   const d=await get(paths.members+'?action=member-events&page='+state.memberPage+'&per_page=10');
+   state.memberPage=Number(d.pagination?.page||state.memberPage);
+   state.memberPages=Math.max(1,Number(d.pagination?.pages||1));
+   $('awEvents').innerHTML=(d.events||[]).map(e=>
+     '<div class="aw-row"><div class="aw-info"><strong>'+esc(eventLabel(e))+'</strong>'+
+     '<small>'+esc(e.new_username||e.username||'Unknown member')+' · '+esc(formatWhen(e.detected_at))+
+     '</small></div><button class="aw-btn" data-member="'+esc(e.new_username||e.username||'')+'">View</button></div>'
+   ).join('')||'<p class="aw-note">No events found.</p>';
+   $('awEvents').querySelectorAll('[data-member]').forEach(b=>b.onclick=()=>{
+     $('awMemberName').value=b.dataset.member;void lookupMember(b.dataset.member);
+   });
+   $('awEventPage').textContent=state.memberPage+' / '+state.memberPages;
+   $('awEventPrev').disabled=state.memberPage<=1;
+   $('awEventNext').disabled=state.memberPage>=state.memberPages;
+ }catch(e){message('awEvents',e.message,true);}
+}
+$('awEventPrev').onclick=()=>{if(state.memberPage>1){state.memberPage--;void loadMembers();}};
+$('awEventNext').onclick=()=>{if(state.memberPage<state.memberPages){state.memberPage++;void loadMembers();}};
+function memberDossier(x,name){
+ if(!x.found)return '<p class="aw-note">No Green member identity found for '+esc(name)+'.</p>';
+ const m=x.member||{},a=x.activity||{},lc=x.lifecycle||{},events=Array.isArray(lc.events)?lc.events:[],
+    aliases=Array.isArray(x.aliases)?x.aliases:[],lastLeft=lc.last_left||events.find(e=>e.event_type==='left'),
+    closure=lc.last_closure||events.find(e=>e.event_type==='left'&&e.profile_status==='closed');
+ const eventsOf=type=>events.filter(e=>e.event_type===type);
+ const firstJoin=eventsOf('joined').at(-1)||eventsOf('rejoined').at(-1);
+ const lastRejoin=eventsOf('rejoined')[0];
+ const mostRecentChange=eventsOf('name_changed')[0];
+ const accountClosed=String(m.account_status||'').toLowerCase().includes('closed')||Boolean(closure);
+ const status=accountClosed?'Account closed':String(m.account_status||'').trim()||'Account status unavailable';
+ const details=[
+   ['Membership',m.current_member?'Current member':'Former member'],
+   ['Account',status],
+   ['First joined',m.joined_epoch?formatWhen(m.joined_epoch):firstJoin?formatWhen(firstJoin.detected_at)+' (observed)':'—'],
+   ['Last rejoined',lastRejoin?formatWhen(lastRejoin.effective_at||lastRejoin.detected_at)+' (observed)':'—'],
+   ['Last left / quit',m.left_at?formatWhen(m.left_at):lastLeft?formatWhen(lastLeft.effective_at||lastLeft.detected_at)+' (observed)':'—'],
+   ['Closure reason',accountClosed?(closureReason(closure)||'Not provided by Chess.com'):'Not applicable'],
+   ['Daily rating',m.daily_rating??'—'],
+   ['Chess960 rating',m.chess960_rating??'—'],
+   ['Daily games',a.games??'—'],
+   ['W / D / L',String(a.wins??0)+' / '+String(a.draws??0)+' / '+String(a.losses??0)],
+   ['Daily points',a.points??'—'],
+   ['Registered / ongoing matches',String(a.registered_matches??0)+' / '+String(a.in_progress_matches??0)],
+   ['Achievements',x.achievements??'—']
+ ];
+ const row=(label,value)=>'<div class="aw-dossier-row"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>';
+ const aliasesHtml=aliases.length?aliases.map(alias=>
+    '<div class="aw-row"><div class="aw-info"><strong>'+esc(alias.username||alias.username_key||'—')+
+    (alias.current?' · current':'')+'</strong><small>'+
+    (alias.first_seen_at?'First seen '+esc(formatWhen(alias.first_seen_at))+' · ':'')+
+    (alias.last_seen_at?'Last seen '+esc(formatWhen(alias.last_seen_at)):'')+
+    '</small></div></div>').join(''):'<p class="aw-note">No additional known names.</p>';
+ const recent=events.slice(0,30),older=events.slice(30);
+ const timeline=rows=>rows.map(e=>'<div class="aw-row"><div class="aw-info"><strong>'+
+    esc(eventLabel(e))+'</strong><small>'+esc(formatWhen(e.effective_at||e.detected_at))+
+    (e.effective_at?'':' · observed')+'</small></div></div>').join('');
+ return '<div class="aw-detail"><strong>'+esc(m.username||name)+'</strong>'+
+   (mostRecentChange?'<p class="aw-note">Latest name change: '+esc(eventLabel(mostRecentChange))+'</p>':'')+
+   '<div class="aw-dossier">'+details.map(([label,value])=>row(label,value)).join('')+'</div>'+
+   '<div class="aw-heading"><strong>Known names ('+aliases.length+')</strong></div>'+aliasesHtml+
+   '<div class="aw-heading"><strong>Membership chronology ('+events.length+')</strong></div>'+
+   (events.length?timeline(recent)+(older.length?'<details class="aw-fold"><summary>Show '+older.length+' older events</summary>'+timeline(older)+'</details>':''):'<p class="aw-note">No recorded lifecycle events.</p>')+
+   '</div>';
+}
+async function lookupMember(name){
+ state.memberScroll=$('awScroll').scrollTop;
+ $('awMembersIndex').hidden=true;$('awMemberResult').hidden=false;
+ $('awMemberResult').innerHTML='<button type="button" class="aw-btn" id="awBackMember">← Back to Members</button><p class="aw-note">Loading member dossier…</p>';
+ $('awBackMember').onclick=closeMember;$('awScroll').scrollTop=0;
+ if(!/^[a-z0-9_-]{2,25}$/i.test(name)){
+   $('awMemberResult').insertAdjacentHTML('beforeend','<p class="aw-error">Enter a valid Chess.com username.</p>');return;
+ }
+ try{
+   const d=await get(paths.members+'?action=member-lookup&username='+encodeURIComponent(name));
+   // The username and result are escaped before entering HTML.
+   $('awMemberResult').innerHTML='<button type="button" class="aw-btn" id="awBackMember">← Back to Members</button>'+memberDossier(d.lookup||{},name);
+   $('awBackMember').onclick=closeMember;
+ }catch(e){
+   $('awMemberResult').innerHTML='<button type="button" class="aw-btn" id="awBackMember">← Back to Members</button><p class="aw-error">'+esc(e.message)+'</p>';
+   $('awBackMember').onclick=closeMember;
+ }
+}
 $('awMemberForm').onsubmit=e=>{e.preventDefault();void lookupMember($('awMemberName').value.trim());};
 function getWriteClient(){let c=window.P2K_TEAM_POINTS_CLIENT;try{if(!c&&window.parent!==window)c=window.parent.P2K_TEAM_POINTS_CLIENT;}catch{}if(!c?.endpointRequest)throw new Error('Admin write client unavailable in this embed. Open the widget from P2K administration.');return c;}
 async function post(endpoint,action,body){const c=getWriteClient();if(c.connect)await c.connect();return c.endpointRequest(url(endpoint+'?action='+action),{method:'POST',body,requestKind:'events-showcase',timeoutMs:30000});}
