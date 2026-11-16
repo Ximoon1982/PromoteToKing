@@ -11,6 +11,7 @@ on:
       - 'server/widgets/public/embed.php'
       - 'assets/js/admin/widgets-v2153.js'
       - 'assets/js/admin/admin-shell.js'
+      - 'assets/js/admin/admin-session-controller.js'
       - 'assets/js/admin/tool-registry.js'
   workflow_dispatch:
 permissions:
@@ -33,6 +34,8 @@ jobs:
           node --check assets/js/widgets/p2k-administrator-v21510.js
           node --check assets/js/admin/widgets-v2153.js
           node --check assets/js/admin/admin-shell.js
+          node --check assets/js/admin/admin-session-controller.js
+          node tests/test_v21510_administrator_widget_actions.js
           node --check assets/js/admin/tool-registry.js
           php tests/showcase-admin-discovery.php
           python3 - <<'PY'
@@ -44,9 +47,12 @@ jobs:
           assert s.index("if ($widget==='administrator')")<s.index("header('Content-Type: text/html")
           assert "Auth::requireAdmin()" in s and "Auth::requireAdmin()" in p
           assert "PublicReadDatabase::core()" in p and "verified_club_slug" in p
-          assert 'scope=actions' in j and 'member-events' in j and 'member-lookup' in j
+          assert 'scope=actions' not in j and 'scope=freshness' in j and 'member-events' in j and 'member-lookup' in j
           assert 'arena-scan-page' in j and 'requestKind:' in j
           assert 'resolve-club' in p and 'resolve-club' in j and 'api.chess.com/pub/club/' in p
+          assert 'p2k_g_match_players' in p and 'awDayMatches' in p and 'awMembersIndex' in p
+          assert 'p2k-administrator-widget-queue-request' in j
+          assert 'p2k-administrator-widget-queue-response' in Path('assets/js/admin/admin-session-controller.js').read_text()
           base='031a12ecc8334e8c0ab3d2303effb11dc7f3a303'
           changed=set(check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
           forbidden={'server/events-showcase/public/api.php','server/events-showcase/public/embed.php',
@@ -77,7 +83,8 @@ jobs:
             'server/widgets/public/embed.php',
             'assets/js/admin/widgets-v2153.js',
             'assets/js/admin/admin-shell.js',
-            'assets/js/admin/tool-registry.js']
+            'assets/js/admin/tool-registry.js',
+            'assets/js/admin/admin-session-controller.js']
           recovery=['ReleaseControl.php','server/release-control/src/bootstrap.php',
             'server/release-control/src/ReleasePackageUploadInstaller.php',
             'server/release-control/src/FilesystemCleanupManager.php']
@@ -94,6 +101,9 @@ jobs:
           html=html.replace(old,new)
           html=html.replace('assets/js/admin/admin-shell.js?v=p2k-2.15.9-competition-1',
                             'assets/js/admin/admin-shell.js?v=p2k-2.15.10-administrator-'+head[:12])
+          session_old='assets/js/admin/admin-session-controller.js?v=2.11.5-bf6a828490f57'
+          assert html.count(session_old)==1
+          html=html.replace(session_old,'assets/js/admin/admin-session-controller.js?v=p2k-2.15.10-administrator-'+head[:12])
           html=html.replace('<head>','<head>\n<meta name="p2k-build" content="'+cache_key+'">',1)
           (payload/'ui-v2.html').write_text(html)
           sha=lambda p:sha256(p.read_bytes()).hexdigest()
@@ -104,7 +114,8 @@ jobs:
                 'build_id':'p2k-administrator-v21510-'+head[:12],
                 'qualification_workflow':'p2k-v21510-administrator-widget.yml',
                 'payload_manifest_sha256':sha(package/'CANDIDATE_PAYLOAD.sha256'),
-                'accepted_public_builds':[{'version':'2.15.10','source_head':'031a12ecc8334e8c0ab3d2303effb11dc7f3a303'}]}
+                'accepted_public_builds':[{'version':'2.15.10','source_head':'e6c543c086188458f00a6d0080c9726f171b650e'},
+                     {'version':'2.15.10','source_head':'031a12ecc8334e8c0ab3d2303effb11dc7f3a303'}]}
           (package/'CANDIDATE_RELEASE.json').write_text(json.dumps(meta,indent=2)+'\n')
           (package/'README.txt').write_text('P2K 2.15.10 Administrator widget. Upload through Release Control, preview, then promote manually.\n'
             'Admin-only Actions, 7-day Matches/Boards, Members and Showcase views. No live DB, cron or configuration changes.\n')
@@ -123,7 +134,7 @@ jobs:
             require "server/release-control/src/ReleaseCandidatePackage.php";
             $p = new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
             $m = $p->validate();
-            if ($m["overlay_file_count"] !== 10 || $m["version"] !== "2.15.10") exit(2);
+            if ($m["overlay_file_count"] !== 11 || $m["version"] !== "2.15.10") exit(2);
             echo "PASS candidate ".$m["release_id"]."\n";
           ' dist/P2K_2.15.10_Administrator_Widget_ReleaseControl
           python3 - <<'PY'
@@ -133,10 +144,11 @@ jobs:
           with zipfile.ZipFile(zpath) as z:
             assert z.testzip() is None
             names=z.namelist()
-            assert len(names)==18 and len(set(names))==18
+            assert len(names)==19 and len(set(names))==19
             assert all('..' not in p.split('/') and not p.startswith('/') for p in names)
             meta=json.loads(z.read('CANDIDATE_RELEASE.json'))
-            assert meta['accepted_public_builds']==[{'version':'2.15.10','source_head':'031a12ecc8334e8c0ab3d2303effb11dc7f3a303'}]
+            assert meta['accepted_public_builds']==[{'version':'2.15.10','source_head':'e6c543c086188458f00a6d0080c9726f171b650e'},
+              {'version':'2.15.10','source_head':'031a12ecc8334e8c0ab3d2303effb11dc7f3a303'}]
             for manifest in ('CANDIDATE_PAYLOAD.sha256','RECOVERY_PLANE.sha256'):
               for entry in z.read(manifest).decode().splitlines():
                 h,p=entry.split('  ./',1)
