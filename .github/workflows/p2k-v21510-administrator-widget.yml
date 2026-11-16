@@ -46,6 +46,7 @@ jobs:
           assert "PublicReadDatabase::core()" in p and "verified_club_slug" in p
           assert 'scope=actions' in j and 'member-events' in j and 'member-lookup' in j
           assert 'arena-scan-page' in j and 'requestKind:' in j
+          assert 'resolve-club' in p and 'resolve-club' in j and 'api.chess.com/pub/club/' in p
           base='031a12ecc8334e8c0ab3d2303effb11dc7f3a303'
           changed=set(check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
           forbidden={'server/events-showcase/public/api.php','server/events-showcase/public/embed.php',
