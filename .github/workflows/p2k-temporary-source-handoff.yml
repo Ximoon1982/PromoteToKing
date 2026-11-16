@@ -1,0 +1,27 @@
+name: Temporary P2K source handoff
+on:
+  push:
+    paths:
+      - '.github/workflows/p2k-temporary-source-handoff.yml'
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Export checked out exact branch source
+        shell: bash
+        run: |
+          mkdir -p /tmp/p2k-handoff
+          git rev-parse HEAD > /tmp/p2k-handoff/HEAD
+          git ls-files -z | tar --null -czf /tmp/p2k-handoff/source.tar.gz --files-from -
+          sha256sum /tmp/p2k-handoff/source.tar.gz > /tmp/p2k-handoff/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-temporary-source-handoff
+          path: /tmp/p2k-handoff/
+          retention-days: 1
