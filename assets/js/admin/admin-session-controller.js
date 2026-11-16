@@ -171,6 +171,30 @@ else { title="Operational exceptions"; const bad=health.filter(r=>r.tone!=="good
 showInsightsModal({eyebrow:"Administrator dashboard",title,subtitle,html});
 byId("insightsDetailBody")?.querySelectorAll("[data-admin-match-detail]").forEach(button=>button.addEventListener("click",()=>kind==="new24"?openAdminFreshMatchDetail(Number(button.dataset.adminMatchDetail)):openMatchDetail(Number(button.dataset.adminMatchDetail))));
 }
+// Same-origin read-only bridge: expose exactly the dashboard's current operational
+// Action Queue to the protected 260px Administrator widget. No additional scan.
+window.addEventListener("message", event => {
+    if (!state.admin || event.origin !== location.origin ||
+        event.data?.type !== "p2k-administrator-widget-queue-request") return;
+    // Only return to the authenticated, same-origin embedded Administrator widget.
+    const sourceFrame = Array.from(document.querySelectorAll("iframe")).find(frame => {
+        try { return frame.contentWindow === event.source &&
+            new URL(frame.src,location.href).origin === location.origin &&
+            /\/server\/widgets\/public\/embed\.php$|\/server\/widgets\/public\/administrator\.php$/.test(new URL(frame.src,location.href).pathname) &&
+            (new URL(frame.src,location.href).searchParams.get("widget") === "administrator" ||
+                new URL(frame.src,location.href).pathname.endsWith("/administrator.php")); }
+        catch { return false; }
+    });
+    if (!sourceFrame) return;
+    event.source?.postMessage({
+        type:"p2k-administrator-widget-queue-response",
+        nonce:String(event.data.nonce||"").slice(0,80),
+        queue:state.adminPriorityData || null,
+        health:Array.isArray(state.adminPriorityHealth)?state.adminPriorityHealth:null,
+        failures:Number(state.adminPriorityFailures||0),
+        recent:Array.isArray(state.adminRecentMatches)?state.adminRecentMatches:null
+    },location.origin);
+});
 function renderAdminPriorityCard() {
 const card = byId("dashboardAdminPriorityCard");
 if (!card || !state.admin) return;
