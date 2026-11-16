@@ -81,35 +81,83 @@ if (($_GET['action'] ?? '') === 'matches') {
         $config=p2k_tp_config();
         $club=strtolower(trim((string)($config['app']['club_slug']??'promote-to-king')));
         $tz=new DateTimeZone('Europe/Luxembourg');
-        $start=(new DateTimeImmutable('today',$tz));
+        $start=new DateTimeImmutable('today',$tz);
         $end=$start->modify('+7 days');
-        $now=time();
         $days=[];
-        for($i=0;$i<7;$i++) {
-            $d=$start->modify('+' . $i . ' days');
-            $days[$d->format('Y-m-d')]=['date'=>$d->format('Y-m-d'),'matches'=>0,'boards'=>0];
+        for($i=0;$i<7;$i++){
+            $date=$start->modify('+'.$i.' days')->format('Y-m-d');
+            $days[$date]=['date'=>$date,'matches'=>0,'boards'=>0,'items'=>[]];
         }
-        $sql="SELECT start_epoch,board_count FROM p2k_g_matches WHERE club_verified=1
-            AND verified_club_slug=? AND is_void=0
+        // Same verified Green daily registration eligibility as the Showcase catalog.
+        // Keep histogram totals independent of whether a roster has been fetched.
+        $sql="SELECT match_id,start_epoch,board_count,name,opponent_name,web_url,
+                min_team_players,max_team_players,min_rating,max_rating,registration_locked,last_verified_at
+            FROM p2k_g_matches WHERE club_verified=1 AND verified_club_slug=? AND is_void=0
             AND COALESCE(NULLIF(time_class,''),NULLIF(index_time_class,''))='daily'
-            AND start_epoch>=? AND start_epoch<? AND
-            (CASE WHEN status='unknown' THEN COALESCE(index_bucket,'unknown') ELSE status END)='registered'";
+            AND start_epoch>=? AND start_epoch<?
+            AND (CASE WHEN status='unknown' THEN COALESCE(index_bucket,'unknown') ELSE status END)='registered'
+            ORDER BY start_epoch ASC,match_id ASC";
         $q=PublicReadDatabase::core()->prepare($sql);
-        $q->execute([$club,max($now,$start->getTimestamp()),$end->getTimestamp()]);
-        while($row=$q->fetch(PDO::FETCH_ASSOC)) {
+        $q->execute([$club,max(time(),$start->getTimestamp()),$end->getTimestamp()]);
+        $byId=[];$ids=[];
+        while($row=$q->fetch(PDO::FETCH_ASSOC)){
+            $id=(int)($row['match_id']??0);
+            if($id<=0)continue;
             $date=(new DateTimeImmutable('@'.(int)$row['start_epoch']))->setTimezone($tz)->format('Y-m-d');
-            if(isset($days[$date])) {
-                $days[$date]['matches']++;
-                $days[$date]['boards']+=max(0,(int)($row['board_count']??0));
+            if(!isset($days[$date]))continue;
+            $count=max(0,(int)($row['board_count']??0));
+            $days[$date]['matches']++;
+            $days[$date]['boards']+=$count;
+            $url=trim((string)($row['web_url']??''));
+            if(!preg_match('~^https://www\.chess\.com/club/matches/~i',$url))$url='https://www.chess.com/club/matches/'.$id;
+            $item=[
+                'matchId'=>$id,'name'=>(string)($row['name']?:'Match #'.$id),
+                'opponent'=>(string)($row['opponent_name']?:'Opponent'),
+                'startTime'=>(int)$row['start_epoch'],'url'=>$url,'boardCount'=>$count,
+                'oursCount'=>0,'opponentCount'=>0,'oursEligible'=>0,'opponentEligible'=>0,
+                'rosterComplete'=>false,'minimumPlayers'=>is_numeric($row['min_team_players'])?(int)$row['min_team_players']:null,
+                'maximumPlayers'=>is_numeric($row['max_team_players'])?(int)$row['max_team_players']:null,
+                'minRating'=>is_numeric($row['min_rating'])?(int)$row['min_rating']:0,
+                'maxRating'=>is_numeric($row['max_rating'])?(int)$row['max_rating']:null,
+                'locked'=>($row['registration_locked']??null)===null?null:(bool)$row['registration_locked'],
+                'verified'=>($row['last_verified_at']??null)!==null,
+            ];
+            $byId[$id]=[$date,count($days[$date]['items'])];
+            $days[$date]['items'][]=$item;
+            $ids[]=$id;
+        }
+        foreach(array_chunk($ids,200) as $chunk){
+            $roster=PublicReadDatabase::core()->prepare('SELECT match_id,is_p2k,start_rating FROM p2k_g_match_players WHERE match_id IN ('.implode(',',array_fill(0,count($chunk),'?')).')');
+            $roster->execute($chunk);
+            while($p=$roster->fetch(PDO::FETCH_ASSOC)){
+                $id=(int)$p['match_id'];
+                if(!isset($byId[$id]))continue;
+                [$date,$index]=$byId[$id];
+                $item=&$days[$date]['items'][$index];
+                $ours=(int)$p['is_p2k']===1;
+                if($ours)$item['oursCount']++;
+                else $item['opponentCount']++;
+                $rating=$p['start_rating']??null;
+                if(is_numeric($rating) && (float)$rating>0 && (float)$rating>=$item['minRating']
+                    && ($item['maxRating']===null || (float)$rating<=$item['maxRating'])){
+                    if($ours)$item['oursEligible']++;
+                    else $item['opponentEligible']++;
+                }
+                unset($item);
             }
         }
-        json_response(200,['ok'=>true,'source'=>'Green registered matches','timezone'=>'Europe/Luxembourg',
+        foreach($days as &$day)foreach($day['items'] as &$item){
+            $item['rosterComplete']=$item['oursCount']+$item['opponentCount']>0 || $item['boardCount']===0;
+        }
+        unset($day,$item);
+        json_response(200,['ok'=>true,'source'=>'Green verified daily registration','timezone'=>'Europe/Luxembourg',
             'asOf'=>gmdate(DATE_ATOM),'days'=>array_values($days)]);
-    } catch(Throwable $e) {
-        error_log('P2K administrator widget match histogram: '.$e->getMessage());
-        json_response(503,['ok'=>false,'error'=>'Histogram temporarily unavailable']);
+    }catch(Throwable $e){
+        error_log('P2K Administrator histogram: '.$e->getMessage());
+        json_response(503,['ok'=>false,'error'=>'Match schedule temporarily unavailable']);
     }
 }
+
 if(isset($_GET['action'])) {
     http_response_code(404);
     exit('Unknown action');
@@ -123,7 +171,7 @@ if(!in_array($theme,['auto','dark','light'],true))$theme='auto';
 <meta name="color-scheme" content="dark light">
 <title>P2K Administrator widget</title>
 <link rel="stylesheet" href="../../../assets/css/widgets/p2k-embed-v2153.css?v=p2k-21510">
-<link rel="stylesheet" href="../../../assets/css/widgets/p2k-administrator-v21510.css?v=1">
+<link rel="stylesheet" href="../../../assets/css/widgets/p2k-administrator-v21510.css?v=2">
 </head>
 <body data-widget="administrator">
 <main class="p2kw-root"><section class="p2kw-panel">
@@ -136,9 +184,9 @@ if(!in_array($theme,['auto','dark','light'],true))$theme='auto';
 </nav>
 <div class="p2kw-content" id="awScroll" aria-live="polite">
 <section data-aw-view="actions"><div class="aw-heading"><strong>Administrator Action Queue</strong><button type="button" class="aw-btn" id="awRefreshActions">Refresh</button></div><div id="awActions">Loading…</div><div id="awActionDetail" hidden></div></section>
-<section data-aw-view="matches" hidden><div class="aw-heading"><strong>Next seven days</strong><span class="aw-muted">Europe/Luxembourg</span></div><div class="aw-seg" role="group"><button type="button" data-aw-metric="matches" aria-pressed="true">Matches</button><button type="button" data-aw-metric="boards" aria-pressed="false">Boards</button></div><div id="awBars" class="aw-bars"></div><div id="awChartCaption" class="aw-muted"></div><button type="button" id="awRefreshMatches" class="aw-btn">Refresh</button></section>
-<section data-aw-view="members" hidden><div class="aw-heading"><strong>Member chronology</strong><span class="aw-muted">10 / page</span></div><div id="awEvents">Loading…</div><div class="aw-pager"><button type="button" class="aw-btn" id="awEventPrev">Back</button><span id="awEventPage">1 / 1</span><button type="button" class="aw-btn" id="awEventNext">Next</button></div>
-<div class="aw-heading"><strong>Member lookup</strong></div><form id="awMemberForm" class="aw-inline"><input id="awMemberName" maxlength="25" placeholder="Chess.com username" aria-label="Chess.com username" required><button type="submit" class="aw-btn aw-primary">Find</button></form><div id="awMemberResult"></div></section>
+<section data-aw-view="matches" hidden><div class="aw-heading"><strong>Next seven days</strong><span class="aw-muted">Europe/Luxembourg</span></div><div class="aw-seg" role="group"><button type="button" data-aw-metric="matches" aria-pressed="true">Matches</button><button type="button" data-aw-metric="boards" aria-pressed="false">Boards</button></div><div id="awBars" class="aw-bars"></div><div id="awChartCaption" class="aw-muted"></div><div id="awDayMatches"></div><button type="button" id="awRefreshMatches" class="aw-btn">Refresh</button></section>
+<section data-aw-view="members" hidden><div id="awMembersIndex"><div class="aw-heading"><strong>Member chronology</strong><span class="aw-muted">10 / page</span></div><div id="awEvents">Loading…</div><div class="aw-pager"><button type="button" class="aw-btn" id="awEventPrev">Back</button><span id="awEventPage">1 / 1</span><button type="button" class="aw-btn" id="awEventNext">Next</button></div>
+<div class="aw-heading"><strong>Member lookup</strong></div><form id="awMemberForm" class="aw-inline"><input id="awMemberName" maxlength="25" placeholder="Chess.com username" aria-label="Chess.com username" required><button type="submit" class="aw-btn aw-primary">Find</button></form></div><div id="awMemberResult" hidden></div></section>
 <section data-aw-view="showcase" hidden><div class="aw-heading"><strong>Upcoming arena discovery</strong></div><div class="aw-scan"><p class="aw-muted">Manual Chess.com scan · seven-day horizon · existing deduplication</p><button class="aw-btn aw-primary aw-full" type="button" id="awScan">Scan upcoming arenas</button><button class="aw-btn" type="button" id="awCancelScan" hidden>Cancel scan</button><div id="awScanStatus" class="aw-muted">Loading scan state…</div></div><div id="awScanResults"></div>
 <details id="awOrganizers" class="aw-fold"><summary>Organizing clubs <span id="awClubCount"></span></summary><div id="awClubList"></div><form id="awClubForm" class="aw-stack"><input id="awClubId" placeholder="Club URL, slug or numeric ID" required><button type="submit" class="aw-btn">Add organizer</button></form></details>
 <div class="aw-seg" role="group"><button data-aw-sub="manage" aria-pressed="true">Manage</button><button data-aw-sub="add" aria-pressed="false">Add arena</button><button data-aw-sub="matches" aria-pressed="false">Match list</button></div>
@@ -148,5 +196,5 @@ if(!in_array($theme,['auto','dark','light'],true))$theme='auto';
 <div id="awShowcaseFeedback" class="aw-muted" role="status"></div></section>
 </div><footer class="p2kw-foot">Promote to King · 2.15.10</footer>
 </section></main>
-<script defer src="../../../assets/js/widgets/p2k-administrator-v21510.js?v=1"></script>
+<script defer src="../../../assets/js/widgets/p2k-administrator-v21510.js?v=2"></script>
 </body></html>
