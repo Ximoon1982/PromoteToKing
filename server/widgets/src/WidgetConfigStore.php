@@ -11,7 +11,7 @@ final class RevisionConflict extends RuntimeException {
 
 /** Small, versioned, independent widget settings registry. No legacy data is changed. */
 final class WidgetConfigStore {
-    public const IDS = ['club-pulse','recruitment-radar','trophy-spotlight','rivalry-spotlight','club-progress','around-the-world','player-spotlight','tournament-winners','hall-of-fame','competition'];
+    public const IDS = ['club-pulse','recruitment-radar','trophy-spotlight','rivalry-spotlight','club-progress','around-the-world','player-spotlight','tournament-winners','hall-of-fame','competition','administrator'];
     public const SCHEMA = 1;
     private string $path;
     private string $lock;
@@ -28,7 +28,7 @@ final class WidgetConfigStore {
             'club-pulse'=>'Club Pulse', 'recruitment-radar'=>'Recruitment Radar',
             'trophy-spotlight'=>'Trophy Spotlight', 'rivalry-spotlight'=>'Rivalry Spotlight',
             'club-progress'=>'Grinding the leaderboard', 'around-the-world'=>'P2K Around the World',
-            'player-spotlight'=>'Player Spotlight', 'tournament-winners'=>'Tournament Winners', 'hall-of-fame'=>'Hall of Fame', 'competition'=>'Competition'
+            'player-spotlight'=>'Player Spotlight', 'tournament-winners'=>'Tournament Winners', 'hall-of-fame'=>'Hall of Fame', 'competition'=>'Competition', 'administrator'=>'Administrator'
         ][$id], 'theme'=>'auto'];
         return $common + match ($id) {
             'club-pulse'=>['period'=>'7d','showMembers'=>true],
@@ -41,6 +41,7 @@ final class WidgetConfigStore {
             'tournament-winners'=>['medalPageSize'=>3],
             'hall-of-fame'=>['medalPageSize'=>3],
             'competition'=>[],
+            'administrator'=>[],
         };
     }
 
