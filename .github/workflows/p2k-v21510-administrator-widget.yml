@@ -11,6 +11,7 @@ on:
       - 'server/widgets/public/embed.php'
       - 'assets/js/admin/widgets-v2153.js'
       - 'assets/js/admin/admin-shell.js'
+      - 'assets/js/admin/tool-registry.js'
   workflow_dispatch:
 permissions:
   contents: read
@@ -32,6 +33,7 @@ jobs:
           node --check assets/js/widgets/p2k-administrator-v21510.js
           node --check assets/js/admin/widgets-v2153.js
           node --check assets/js/admin/admin-shell.js
+          node --check assets/js/admin/tool-registry.js
           php tests/showcase-admin-discovery.php
           python3 - <<'PY'
           from pathlib import Path
@@ -72,7 +74,8 @@ jobs:
             'server/widgets/src/WidgetConfigStore.php',
             'server/widgets/public/embed.php',
             'assets/js/admin/widgets-v2153.js',
-            'assets/js/admin/admin-shell.js']
+            'assets/js/admin/admin-shell.js',
+            'assets/js/admin/tool-registry.js']
           recovery=['ReleaseControl.php','server/release-control/src/bootstrap.php',
             'server/release-control/src/ReleasePackageUploadInstaller.php',
             'server/release-control/src/FilesystemCleanupManager.php']
@@ -86,7 +89,10 @@ jobs:
           old='assets/js/admin/tool-registry.js?v=p2k-2.15.9-competition-12'
           new='assets/js/admin/tool-registry.js?v=p2k-2.15.10-administrator-'+head[:12]
           assert html.count(old)==1
-          html=html.replace(old,new).replace('<head>','<head>\n<meta name="p2k-build" content="p2k-2.15.10-'+head[:12]+'">',1)
+          html=html.replace(old,new)
+          html=html.replace('assets/js/admin/admin-shell.js?v=p2k-2.15.9-competition-1',
+                            'assets/js/admin/admin-shell.js?v=p2k-2.15.10-administrator-'+head[:12])
+          html=html.replace('<head>','<head>\n<meta name="p2k-build" content="p2k-2.15.10-'+head[:12]+'">',1)
           (payload/'ui-v2.html').write_text(html)
           sha=lambda p:sha256(p.read_bytes()).hexdigest()
           (package/'CANDIDATE_PAYLOAD.sha256').write_text(''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(overlay)))
@@ -115,7 +121,7 @@ jobs:
             require "server/release-control/src/ReleaseCandidatePackage.php";
             $p = new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
             $m = $p->validate();
-            if ($m["overlay_file_count"] !== 9 || $m["version"] !== "2.15.10") exit(2);
+            if ($m["overlay_file_count"] !== 10 || $m["version"] !== "2.15.10") exit(2);
             echo "PASS candidate ".$m["release_id"]."\n";
           ' dist/P2K_2.15.10_Administrator_Widget_ReleaseControl
           python3 - <<'PY'
@@ -125,7 +131,7 @@ jobs:
           with zipfile.ZipFile(zpath) as z:
             assert z.testzip() is None
             names=z.namelist()
-            assert len(names)==17 and len(set(names))==17
+            assert len(names)==18 and len(set(names))==18
             assert all('..' not in p.split('/') and not p.startswith('/') for p in names)
             meta=json.loads(z.read('CANDIDATE_RELEASE.json'))
             assert meta['accepted_public_builds']==[{'version':'2.15.10','source_head':'031a12ecc8334e8c0ab3d2303effb11dc7f3a303'}]
