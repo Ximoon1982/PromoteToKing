@@ -14,6 +14,7 @@ on:
       - 'ui-v2.html'
       - 'tests/php_v21511_mca_derived_preservation.php'
       - 'tests/mca_derived_ui_v21511.cjs'
+      - 'tests/admin_mca_direct_access_v21511.cjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -119,6 +120,7 @@ jobs:
           non_payload={
             'tests/php_v21511_mca_derived_preservation.php',
             'tests/mca_derived_ui_v21511.cjs',
+            'tests/admin_mca_direct_access_v21511.cjs',
             '.github/workflows/p2k-v21511-mca-derived-preserve.yml'
           }
           assert changed==overlay_sources|non_payload,{'actual':sorted(changed),'expected':sorted(overlay_sources|non_payload)}
