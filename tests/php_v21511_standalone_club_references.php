@@ -24,7 +24,7 @@ foreach ([
     '816742'=>['kind'=>'id','value'=>'816742'],
     'https://www.chess.com/club/816742'=>['kind'=>'id','value'=>'816742']
 ] as $input=>$wanted) {
-    verifyClubRef(Resolver::parseClubReference($input)===$wanted, 'Parsing rejected valid club reference: '.$input);
+    verifyClubRef(Resolver::parseClubReference((string)$input)===$wanted, 'Parsing rejected valid club reference: '.$input);
 }
 foreach ([
     '', '0','-88','../../etc/passwd','https://evil.example/club/my-club',
