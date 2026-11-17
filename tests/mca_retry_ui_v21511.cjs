@@ -9,6 +9,7 @@ const src=s.slice(a,b);
 assert(!src.includes("runMcaSourceSync("),"Retry must not launch competing manual sync.");
 assert(!src.includes("sync_discovery"),"Retry must not force discovery.");
 assert(!src.includes("sync_hydrate"),"Retry must not force hydration.");
+assert(s.includes("MCA shared worker lock") && s.includes("worker_lock_held"),"MCA admin should expose read-only worker lock diagnostics.");
 const status=[];
 const state={mcaSyncRunning:false,mcaSync:{}};
 const endpoint=async (path,args)=>{
