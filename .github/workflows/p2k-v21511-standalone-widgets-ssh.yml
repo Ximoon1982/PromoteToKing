@@ -1,0 +1,193 @@
+name: P2K 2.15.11 TGP + Team France standalone widget SSH installer
+on:
+  push:
+    branches: [release/v2.15.11]
+    paths:
+      - '.github/workflows/p2k-v21511-standalone-widgets-ssh.yml'
+      - 'tools/install-tgp-teamfrance-widgets-v034.sh'
+      - 'TGP/Widget/**'
+      - 'TeamFrance/Widget/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate standalone code and offline installer
+        run: |
+          set -euo pipefail
+          BASE=083e0380bd2303c063458c3291424af998bf37c4
+          test "$(git merge-base "$BASE" HEAD)" = "$BASE"
+          bash -n tools/install-tgp-teamfrance-widgets-v034.sh
+          for club in TGP TeamFrance; do
+            for src in Widget/api.php Widget/admin/index.php Widget/config.php Widget/src/Store.php \
+                       Widget/src/ArenaDiscoveryAdminService.php Widget/src/StandaloneArenaDiscoveryService.php
+            do php -l "$club/$src"; done
+            for src in Widget/assets/admin.js Widget/assets/arena-discovery.js; do node --check "$club/$src"; done
+            grep -Fq "require_once __DIR__ . '/src/StandaloneArenaDiscoveryService.php'" "$club/Widget/api.php"
+            grep -Fq '../assets/arena-discovery.js?v=0.3.4' "$club/Widget/admin/index.php"
+            grep -Fq '../assets/arena-discovery.css?v=0.3.4' "$club/Widget/admin/index.php"
+            ! grep -Fq '/server/events-showcase/public/standalone-' "$club/Widget/admin/index.php"
+            cmp "TGP/Widget/assets/arena-discovery.js" "TeamFrance/Widget/assets/arena-discovery.js"
+            cmp "TGP/Widget/src/StandaloneArenaDiscoveryService.php" "TeamFrance/Widget/src/StandaloneArenaDiscoveryService.php"
+          done
+          php tests/php_v21511_standalone_widget_discovery.php
+          php tests/showcase-admin-discovery.php
+          php tests/widget_arenas_v2153_test.php
+          node tests/standalone_widget_mca_discovery_v21511.cjs
+          node tests/widget_arena_card_layout_v2153.test.cjs
+          node tests/team_france_admin_hub.test.cjs
+          node tests/tgp_admin_hub.test.cjs
+      - name: Build one standalone SSH ZIP with only widget code and rollback-safe installer
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import json,subprocess,zipfile,shutil
+          baseline='083e0380bd2303c063458c3291424af998bf37c4'
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert subprocess.check_output(['git','merge-base',baseline,head],text=True).strip()==baseline
+          subs=[
+            'Widget/README.txt',
+            'Widget/admin/index.php',
+            'Widget/api.php',
+            'Widget/assets/admin.js',
+            'Widget/assets/arena-discovery.js',
+            'Widget/assets/arena-discovery.css',
+            'Widget/config.php',
+            'Widget/src/Store.php',
+            'Widget/src/StandaloneArenaDiscoveryService.php',
+            'Widget/src/ArenaDiscoveryAdminService.php',
+          ]
+          paths=sorted(club+'/'+p for club in ['TGP','TeamFrance'] for p in subs)
+          assert len(paths)==20
+          for path in paths:
+            assert Path(path).is_file(),path
+            assert 'Widget/data/' not in path
+          package_name='P2K_TGP_TeamFrance_Widget_v0.3.4_SSH_Installer'
+          root=Path('dist')/package_name
+          (root/'payload').mkdir(parents=True,exist_ok=True)
+          for path in paths:
+            target=root/'payload'/path
+            target.parent.mkdir(parents=True,exist_ok=True)
+            shutil.copyfile(path,target)
+          shutil.copyfile('tools/install-tgp-teamfrance-widgets-v034.sh',root/'install.sh')
+          (root/'install.sh').chmod(0o755)
+          (root/'FILE_SHA256SUMS').write_text(''.join(
+            sha256((root/'payload'/p).read_bytes()).hexdigest()+'  payload/'+p+'\n'
+            for p in paths))
+          manifest={
+            'delivery':'standalone-ssh-only',
+            'widgets':{'TGP':'0.3.4','TeamFrance':'0.3.4'},
+            'source_head':head,
+            'source_branch':'release/v2.15.11',
+            'file_count':len(paths),
+            'includes_runtime_state':False,
+            'no_p2k_release_control':True,
+            'installer_sha256':sha256((root/'install.sh').read_bytes()).hexdigest()
+          }
+          (root/'INSTALLER_INFO.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          (root/'README_INSTALL.txt').write_text(
+            'Standalone TGP + Team France Match Showcase 0.3.4 - SSH installer\n'
+            'This is NOT a P2K Release Control candidate. Never upload it there.\n'
+            '\n'
+            '1) Upload this ZIP into your SSH home directory (OUTSIDE PromoteToKing).\n'
+            '2) From SSH home, unzip -o P2K_TGP_TeamFrance_Widget_v0.3.4_SSH_Installer_*.zip\n'
+            '3) Preflight:\n'
+            '   bash '+package_name+'/install.sh /kunden/homepages/43/d141198007/htdocs/PromoteToKing --check\n'
+            '4) Install:\n'
+            '   bash '+package_name+'/install.sh /kunden/homepages/43/d141198007/htdocs/PromoteToKing\n'
+            '\n'
+            'All 20 code files and SHA256 hashes are verified before copying anything.\n'
+            'Both widgets must currently be version 0.3.3 or 0.3.4.\n'
+            'Existing code is backed up under storage/standalone-widget-backups/.\n'
+            'On installation errors, existing source files are automatically restored.\n'
+            'Each Widget/data/showcase.json, lock and Chess.com API cache is preserved.\n'
+            'No P2K Release Control, public slot, Apache routing, OAuth or CRON changes.\n'
+            '\n'
+            'Public/admin links:\n'
+            '  https://www.promotetoking.org/TGP/Widget/admin/\n'
+            '  https://www.promotetoking.org/TeamFrance/Widget/admin/\n'
+            'Automatic Daily-match removal occurs when a public widget checks the club index\n'
+            'and finds a configured match explicitly in progress or finished.\n'
+          )
+          out=Path('dist')/(package_name+'_'+head[:12]+'.zip')
+          with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+            for item in sorted(root.rglob('*')):
+              if item.is_file(): z.write(item,item.relative_to(root.parent))
+          (Path('dist')/'SHA256SUMS').write_text(
+            sha256(out.read_bytes()).hexdigest()+'  '+out.name+'\n')
+          print('ZIP',out,out.stat().st_size,'bytes SHA256',sha256(out.read_bytes()).hexdigest())
+          print('INFO',json.dumps(manifest))
+          PY
+      - name: Execute installer preflight, real install, and idempotence in isolated tree
+        run: |
+          set -euo pipefail
+          package=dist/P2K_TGP_TeamFrance_Widget_v0.3.4_SSH_Installer
+          site="$(mktemp -d)"
+          trap 'rm -rf "$site"' EXIT
+          for club in TGP TeamFrance; do
+            mkdir -p "$site/$club/Widget/src" "$site/$club/Widget/data"
+            sed "s/'version' => '0.3.4'/'version' => '0.3.3'/" "$club/Widget/config.php" > "$site/$club/Widget/config.php"
+            cp "$club/Widget/api.php" "$site/$club/Widget/api.php"
+            cp "$club/Widget/src/Store.php" "$site/$club/Widget/src/Store.php"
+            printf '%s\n' '{"revision":7,"items":[{"matchId":"1234567","enabled":true}]}' > "$site/$club/Widget/data/showcase.json"
+          done
+          before_tgp="$(sha256sum "$site/TGP/Widget/data/showcase.json")"
+          before_tf="$(sha256sum "$site/TeamFrance/Widget/data/showcase.json")"
+          PHP_CLI=php bash "$package/install.sh" "$site" --check
+          PHP_CLI=php bash "$package/install.sh" "$site"
+          for club in TGP TeamFrance; do
+            cmp "$package/payload/$club/Widget/api.php" "$site/$club/Widget/api.php"
+            cmp "$package/payload/$club/Widget/assets/arena-discovery.js" "$site/$club/Widget/assets/arena-discovery.js"
+            cmp "$package/payload/$club/Widget/src/ArenaDiscoveryAdminService.php" "$site/$club/Widget/src/ArenaDiscoveryAdminService.php"
+            php -r '$v=require $argv[1];if($v["version"]!=="0.3.4")exit(1);' "$site/$club/Widget/config.php"
+          done
+          test "$before_tgp" = "$(sha256sum "$site/TGP/Widget/data/showcase.json")"
+          test "$before_tf" = "$(sha256sum "$site/TeamFrance/Widget/data/showcase.json")"
+          PHP_CLI=php bash "$package/install.sh" "$site" --check
+          PHP_CLI=php bash "$package/install.sh" "$site"
+          test "$before_tgp" = "$(sha256sum "$site/TGP/Widget/data/showcase.json")"
+          test "$before_tf" = "$(sha256sum "$site/TeamFrance/Widget/data/showcase.json")"
+          test "$(find "$site/storage/standalone-widget-backups" -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 2
+          echo "PASS preflight, installed standalone code, preserved both live configurations, backups and idempotent rerun"
+      - name: Verify ZIP integrity and offline content contract
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile,hashlib,json
+          p=next(Path('dist').glob('P2K_TGP_TeamFrance_Widget_v0.3.4_SSH_Installer_*.zip'))
+          root='P2K_TGP_TeamFrance_Widget_v0.3.4_SSH_Installer/'
+          with zipfile.ZipFile(p) as z:
+            assert z.testzip() is None
+            names=z.namelist()
+            assert len(names)==len(set(names))
+            assert len(names)==24,(len(names),names)
+            info=json.loads(z.read(root+'INSTALLER_INFO.json'))
+            assert info['delivery']=='standalone-ssh-only'
+            assert info['file_count']==20
+            assert info['no_p2k_release_control']
+            entries=z.read(root+'FILE_SHA256SUMS').decode().splitlines()
+            assert len(entries)==20
+            for row in entries:
+              checksum,path=row.split('  ',1)
+              assert path.startswith('payload/TGP/Widget/') or path.startswith('payload/TeamFrance/Widget/'),path
+              assert hashlib.sha256(z.read(root+path)).hexdigest()==checksum,path
+              assert not path.endswith('showcase.json'),path
+            assert hashlib.sha256(z.read(root+'install.sh')).hexdigest()==info['installer_sha256']
+          print('PASS checksum manifest, installer, no runtime-state files, and complete self-contained SSH ZIP')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-tgp-teamfrance-v034-standalone-ssh-installer
+          path: |
+            dist/P2K_TGP_TeamFrance_Widget_v0.3.4_SSH_Installer_*.zip
+            dist/SHA256SUMS
+          retention-days: 14
