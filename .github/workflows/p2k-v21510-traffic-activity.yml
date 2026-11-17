@@ -1,0 +1,148 @@
+name: P2K 2.15.10 Traffic & Visitors unification and Release Control ZIP
+on:
+  push:
+    branches: [release/v2.15.10]
+    paths:
+      - '.github/workflows/p2k-v21510-traffic-activity.yml'
+      - 'server/shared/TrafficAnalytics.php'
+      - 'assets/js/shared/traffic-analytics.js'
+      - 'assets/js/pages/club-intelligence.js'
+      - 'ClubIntelligence.html'
+      - 'server/widgets/public/embed.php'
+      - 'server/events-showcase/public/embed-card.php'
+      - 'assets/js/widgets/p2k-competition-v2159.js'
+      - 'tests/traffic_widget_consistency_v21510.php'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate code, privacy semantics and regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l server/shared/TrafficAnalytics.php
+          php -l server/widgets/public/embed.php
+          php -l server/events-showcase/public/embed-card.php
+          node --check assets/js/shared/traffic-analytics.js
+          node --check assets/js/pages/club-intelligence.js
+          node --check assets/js/widgets/p2k-competition-v2159.js
+          php tests/traffic_widget_consistency_v21510.php
+          node tests/test_v21510_administrator_widget_actions.js
+          python3 - <<'PY'
+          from pathlib import Path
+          collector=Path('assets/js/shared/traffic-analytics.js').read_text()
+          report=Path('assets/js/pages/club-intelligence.js').read_text()
+          widget=Path('server/widgets/public/embed.php').read_text()
+          competition=Path('assets/js/widgets/p2k-competition-v2159.js').read_text()
+          assert 'visit_key' in collector and 'view_id' in collector
+          assert 'data-p2k-widget-collector' in widget
+          assert 'widgetTab' in competition and 'widgetAction' in competition
+          assert all(x in report for x in ['Daily activity','Activity by surface','Searched usernames and completed analyses'])
+          assert 'Exit pages' not in report[report.index('function renderTraffic(d)'):report.index('function renderSnapshots(d)')]
+          assert 'NameSearchUsage::record' not in Path('server/shared/TrafficAnalytics.php').read_text()
+          # Retain the existing secured widget actions and admin read contracts.
+          assert 'Auth::requireAdmin()' in Path('server/widgets/public/administrator.php').read_text()
+          assert "require_admin_write('events-showcase')" in Path('server/events-showcase/public/api.php').read_text()
+          print('PASS combined privacy-friendly traffic, original admin protection and named search isolation')
+          PY
+      - name: Build cumulative 2.15.10 Release Control candidate from promoted baseline
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import json,subprocess,zipfile
+          root=Path('.')
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          base='b40a954cd66f7c8f72f8085b00e183a2d8d7f23e'
+          assert subprocess.check_output(['git','merge-base',base,head],text=True).strip()==base, 'Promoted baseline must be ancestor'
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,head],text=True).splitlines())
+          overlay=['VERSION',
+            'server/shared/TrafficAnalytics.php',
+            'assets/js/shared/traffic-analytics.js',
+            'assets/js/pages/club-intelligence.js',
+            'ClubIntelligence.html',
+            'server/widgets/public/embed.php',
+            'server/events-showcase/public/embed-card.php',
+            'assets/js/widgets/p2k-competition-v2159.js']
+          assert changed.issubset(set(overlay)|{'tests/traffic_widget_consistency_v21510.php','.github/workflows/p2k-v21510-traffic-activity.yml'}),changed
+          recovery=['ReleaseControl.php',
+            'server/release-control/src/bootstrap.php',
+            'server/release-control/src/ReleasePackageUploadInstaller.php',
+            'server/release-control/src/FilesystemCleanupManager.php']
+          package=Path('dist/P2K_2.15.10_Traffic_Visitors_ReleaseControl')
+          payload=package/'payload'
+          payload.mkdir(parents=True,exist_ok=True)
+          for name in overlay+recovery:
+            if name=='VERSION':continue
+            target=payload/name
+            target.parent.mkdir(parents=True,exist_ok=True)
+            target.write_bytes((root/name).read_bytes())
+          (payload/'VERSION').write_text('2.15.10\n')
+          sha=lambda p:sha256(p.read_bytes()).hexdigest()
+          (package/'CANDIDATE_PAYLOAD.sha256').write_text(''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(overlay)))
+          (package/'RECOVERY_PLANE.sha256').write_text(''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(recovery)))
+          meta={
+            'schema_version':1,'version':'2.15.10','source_head':head,
+            'cache_key':'p2k-2.15.10-traffic-'+head[:12],
+            'build_id':'p2k-traffic-v21510-'+head[:12],
+            'qualification_workflow':'p2k-v21510-traffic-activity.yml',
+            'payload_manifest_sha256':sha(package/'CANDIDATE_PAYLOAD.sha256'),
+            'accepted_public_builds':[{'version':'2.15.10','source_head':base}]
+          }
+          (package/'CANDIDATE_RELEASE.json').write_text(json.dumps(meta,indent=2)+'\n')
+          (package/'README.txt').write_text(
+            'P2K 2.15.10 Traffic & Visitors. Upload via Release Control, preview and manually promote.\n'
+            'Consolidated anonymous widget and website activity; separate username search targets.\n'
+            'No OAuth, CRON, DB schema, administrator authorization, or Showcase write changes.\n'
+            'Accepted public build: 2.15.10-b40a954cd66f.\n'
+          )
+          output=package.parent/('P2K_2.15.10_Traffic_Visitors_ReleaseControl_'+head[:12]+'.zip')
+          with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+            for p in sorted(package.rglob('*')):
+              if p.is_file():z.write(p,p.relative_to(package))
+          (package.parent/'SHA256SUMS').write_text(sha(output)+'  '+output.name+'\n')
+          print('ZIP:',output,'size:',output.stat().st_size,'sha256:',sha(output))
+          PY
+      - name: Verify Release Control package manifests
+        run: |
+          set -euo pipefail
+          php -r '
+            require "server/release-control/src/ReleaseSlotPolicy.php";
+            require "server/release-control/src/ReleaseCandidatePackage.php";
+            $p = new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
+            $m = $p->validate();
+            if ($m["overlay_file_count"] !== 8 || $m["version"] !== "2.15.10") exit(2);
+            echo "PASS candidate ".$m["release_id"]."\n";
+          ' dist/P2K_2.15.10_Traffic_Visitors_ReleaseControl
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,zipfile
+          zpath=next(Path('dist').glob('P2K_2.15.10_Traffic_Visitors_ReleaseControl_*.zip'))
+          with zipfile.ZipFile(zpath) as z:
+            assert z.testzip() is None
+            names=z.namelist()
+            assert len(names)==16 and len(names)==len(set(names)),names
+            assert all('..' not in p.split('/') and not p.startswith('/') for p in names)
+            meta=json.loads(z.read('CANDIDATE_RELEASE.json'))
+            assert meta['accepted_public_builds']==[{'version':'2.15.10','source_head':'b40a954cd66f7c8f72f8085b00e183a2d8d7f23e'}]
+            for manifest in ('CANDIDATE_PAYLOAD.sha256','RECOVERY_PLANE.sha256'):
+              for entry in z.read(manifest).decode().splitlines():
+                h,p=entry.split('  ./',1)
+                assert hashlib.sha256(z.read('payload/'+p)).hexdigest()==h,p
+          print('PASS Release Control package integrity and production-baseline compatibility')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-v21510-traffic-visitors-release-control
+          path: |
+            dist/P2K_2.15.10_Traffic_Visitors_ReleaseControl_*.zip
+            dist/SHA256SUMS
+          retention-days: 14
