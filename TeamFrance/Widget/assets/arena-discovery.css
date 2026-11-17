@@ -8,7 +8,7 @@
 .arena-discovery-organizer strong{font-size:13px;min-width:0;overflow-wrap:anywhere}
 .arena-discovery-checkbox{display:flex;gap:5px;align-items:center;font-size:12px;color:var(--muted)}
 .arena-discovery-organizer button,.arena-discovery-result button{padding:6px 10px;font-size:12px}
-.arena-discovery-fields{display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:8px;margin-top:12px}
+.arena-discovery-fields{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:12px}
 .arena-discovery-fields input{min-width:0;padding:9px;border:1px solid var(--border);border-radius:8px;color:var(--text);background:#171512}
 .arena-discovery-tools{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:13px}
 .arena-discovery-status{margin:10px 0;min-height:19px;color:var(--muted);font-size:12px}
@@ -19,8 +19,8 @@
 .arena-discovery-result small{color:var(--muted);font-size:11px;overflow-wrap:anywhere}
 .arena-discovery-empty{padding:10px;color:var(--muted);font-size:12px}
 @media(max-width:620px){
-  .arena-discovery-fields{grid-template-columns:1fr 1fr}
-  .arena-discovery-fields button{grid-column:1/-1}
+  .arena-discovery-fields{grid-template-columns:minmax(0,1fr) auto}
+  .arena-discovery-fields button{grid-column:auto}
   .arena-discovery-organizer{grid-template-columns:minmax(0,1fr) auto}
   .arena-discovery-organizer button{grid-column:2}
 }
