@@ -48,3 +48,11 @@ Update v0.3.2: MCA compact list with add/edit modal, independent immediate arena
 Public cards and headings localized to French (Matchs en différé; En cours; jours abbreviated j). Admin stays in English.
 
 Widget rows (v0.3.3): choose 1–2 MCA rows (up to 4 arenas) and 1–3 Daily rows (up to 6 matches). Defaults remain 1 and 2 rows. Arena priority badges are configured independently in the admin arena list. Updated iframe HTML reflects displayed rows; re-copy after changing settings on an external host.
+
+Version 0.3.4 (TGP + Team France):
+- Admin-only upcoming MCA preselector shared with P2K's validated Chess.com upcoming-arena index parser.
+- Each club keeps a separate organizer watchlist and resumable seven-day scan (up to 20 pages).
+- Arena suggestions prefill the existing Add arena modal (name, Chess.com link, Luxembourg start date/time); duration/time control require admin verification. The suggestion is NOT saved or enabled automatically.
+- Scans are admin-triggered and share the P2K Chess.com index rate limiter (minimum one second between request starts). Public widget reads do not scan arenas.
+- Configured Daily matches explicitly in progress or finished according to the club match index are removed automatically on public widget reads (also reconciled on admin refresh). Missing or unavailable upstream data never triggers deletion; current arena configuration and layout remain unchanged.
+- All existing club administrator permissions, CSRF protection, revision conflicts and live-card layout controls remain active.
