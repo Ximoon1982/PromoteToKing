@@ -1,0 +1,148 @@
+name: P2K 2.15.11 Showcase administrator load repair
+on:
+  push:
+    branches: [release/v2.15.11]
+    paths:
+      - '.github/workflows/p2k-v21511-showcase-admin-load.yml'
+      - 'tests/showcase_datetime_v21511.cjs'
+      - 'assets/js/admin/events-showcase-v2122.js'
+      - 'assets/js/admin/tool-registry.js'
+      - 'ui-v2.html'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check ancestry and syntax, execute real Showcase formatters across DST regions
+        run: |
+          set -euo pipefail
+          BASE=42457dcf6d2c79a4b901d4606d4a765e5202efa6
+          test "$(git merge-base "$BASE" HEAD)" = "$BASE"
+          git diff --name-only "$BASE" HEAD
+          node --check assets/js/admin/events-showcase-v2122.js
+          node --check assets/js/admin/tool-registry.js
+          node --check tests/showcase_datetime_v21511.cjs
+          for tz in Europe/Luxembourg America/New_York America/Los_Angeles Asia/Tokyo Pacific/Auckland; do
+            TZ="$tz" node tests/showcase_datetime_v21511.cjs
+            TZ="$tz" node tests/timezone_consistency_v21510.cjs
+          done
+          php tests/php_v21510_showcase_local_times.php
+          node tests/test_v21510_public_operations.cjs
+          php tests/php_v2147_release_management_harness.php
+          php tests/php_v2148_filesystem_cleanup_harness.php
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path("assets/js/admin/events-showcase-v2122.js").read_text()
+          assert 'dateStyle:"medium",timeStyle:"short",timeZoneName:' not in s
+          assert 'timeZoneName:"short"' in s and 'arenaUtcOffset(ms)' in s
+          assert Path('server/events-showcase/src/EventsShowcaseStore.php').exists()
+          assert Path('server/release-control/src/ReleasePackageUploadInstaller.php').exists()
+          assert 'tool-registry.js?v=p2k-2.15.11-showcase-intl-1' in Path('ui-v2.html').read_text()
+          print('PASS Showcase formatter safety, admin cache refresh and Release Control unchanged')
+          PY
+      - name: Build cumulative 2.15.11 Release Control candidate for promoted 2.15.10
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import subprocess,json,zipfile
+          base='42457dcf6d2c79a4b901d4606d4a765e5202efa6'
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert subprocess.check_output(['git','merge-base',base,head],text=True).strip()==base
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,head],text=True).splitlines())
+          expected={
+              'assets/js/admin/events-showcase-v2122.js',
+              'assets/js/admin/tool-registry.js',
+              'ui-v2.html'}
+          excluded={'tests/showcase_datetime_v21511.cjs',
+              '.github/workflows/p2k-v21511-showcase-admin-load.yml'}
+          assert changed-excluded==expected,(changed-excluded,expected)
+          recovery=['ReleaseControl.php','server/release-control/src/bootstrap.php',
+              'server/release-control/src/ReleasePackageUploadInstaller.php',
+              'server/release-control/src/FilesystemCleanupManager.php',
+              'server/release-control/src/ReleaseVersionManager.php']
+          overlay=['VERSION']+sorted(expected)
+          root=Path('dist/P2K_2.15.11_Showcase_Admin_Load_ReleaseControl')
+          payload=root/'payload';payload.mkdir(parents=True,exist_ok=True)
+          for name in sorted((expected-{'ui-v2.html'})|set(recovery)):
+              target=payload/name;target.parent.mkdir(parents=True,exist_ok=True)
+              target.write_bytes(Path(name).read_bytes())
+          (payload/'VERSION').write_text('2.15.11\n')
+          cache_key='p2k-2.15.11-'+head[:12]+'-'+sha256((head+'|showcase-intl-v21511').encode()).hexdigest()[:16]
+          html=Path('ui-v2.html').read_text()
+          assert html.count('<head>')==1
+          (payload/'ui-v2.html').write_text(
+              html.replace('<head>','<head>\n<meta name="p2k-build" content="'+cache_key+'">',1))
+          sha=lambda path:sha256(path.read_bytes()).hexdigest()
+          (root/'CANDIDATE_PAYLOAD.sha256').write_text(
+              ''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(overlay)))
+          (root/'RECOVERY_PLANE.sha256').write_text(
+              ''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(recovery)))
+          metadata={
+              'schema_version':1,'version':'2.15.11','source_head':head,
+              'cache_key':cache_key,'build_id':'p2k-v21511-showcase-intl-'+head[:12],
+              'qualification_workflow':'p2k-v21511-showcase-admin-load.yml',
+              'payload_manifest_sha256':sha(root/'CANDIDATE_PAYLOAD.sha256'),
+              'accepted_public_builds':[{'version':'2.15.10','source_head':base}]
+          }
+          (root/'CANDIDATE_RELEASE.json').write_text(json.dumps(metadata,indent=2)+'\n')
+          (root/'README.txt').write_text(
+              'P2K 2.15.11 Showcase administrator loading repair.\n'
+              'Compatible with public 2.15.10-42457dcf6d2c only.\n'
+              'Fixes invalid Intl.DateTimeFormat option combinations in the arena list and DST selector.\n'
+              'Preserves browser-local time, event-date DST rules, existing arena start instants and server storage.\n'
+              'Refreshes Showcase script and administrator registry cache keys.\n'
+              'No database, CRON, session, public widget or arena schedule changes.\n'
+              'Upload this ZIP in Admin > Maintenance > Release Control, preview, then manually promote.\n')
+          output=root.parent/('P2K_2.15.11_Showcase_Admin_Load_ReleaseControl_'+head[:12]+'.zip')
+          with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+              for f in sorted(root.rglob('*')):
+                  if f.is_file():z.write(f,f.relative_to(root))
+          (root.parent/'SHA256SUMS').write_text(sha(output)+'  '+output.name+'\n')
+          print('ZIP',output,output.stat().st_size,'bytes SHA256',sha(output))
+          print('Release',metadata)
+          PY
+      - name: Verify Release Control package metadata, checksums and ZIP structure
+        run: |
+          set -euo pipefail
+          php -r '
+            require "server/release-control/src/ReleaseSlotPolicy.php";
+            require "server/release-control/src/ReleaseCandidatePackage.php";
+            $candidate=new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
+            $m=$candidate->validate();
+            if ($m["version"]!=="2.15.11") exit(2);
+            if ($m["accepted_public_builds"]!==[["version"=>"2.15.10","source_head"=>"42457dcf6d2c79a4b901d4606d4a765e5202efa6"]]) exit(3);
+            echo "PASS Release Control candidate ".$m["release_id"].", overlay=".$m["overlay_file_count"]."\n";
+          ' dist/P2K_2.15.11_Showcase_Admin_Load_ReleaseControl
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,zipfile
+          path=next(Path('dist').glob('P2K_2.15.11_Showcase_Admin_Load_ReleaseControl_*.zip'))
+          with zipfile.ZipFile(path) as z:
+              assert z.testzip() is None
+              assert len(z.namelist())==len(set(z.namelist()))
+              m=json.loads(z.read('CANDIDATE_RELEASE.json'))
+              assert m['version']=='2.15.11'
+              assert m['accepted_public_builds']==[{
+                  'version':'2.15.10','source_head':'42457dcf6d2c79a4b901d4606d4a765e5202efa6'}]
+              for manifest in ('CANDIDATE_PAYLOAD.sha256','RECOVERY_PLANE.sha256'):
+                  for line in z.read(manifest).decode().splitlines():
+                      hash_value,p=line.split('  ./',1)
+                      assert hashlib.sha256(z.read('payload/'+p)).hexdigest()==hash_value,p
+              assert hashlib.sha256(z.read('CANDIDATE_PAYLOAD.sha256')).hexdigest()==m['payload_manifest_sha256']
+          print("PASS ZIP, manifests, exact source and production compatibility")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-v21511-showcase-admin-load-release-control
+          path: |
+            dist/P2K_2.15.11_Showcase_Admin_Load_ReleaseControl_*.zip
+            dist/SHA256SUMS
+          retention-days: 14
