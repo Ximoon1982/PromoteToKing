@@ -87,12 +87,16 @@ jobs:
             target.parent.mkdir(parents=True,exist_ok=True)
             target.write_bytes((root/name).read_bytes())
           (payload/'VERSION').write_text('2.15.10\n')
+          cache_key='p2k-2.15.10-'+head[:12]+'-'+sha256((head+'|traffic-visitors').encode()).hexdigest()[:16]
+          ui=(root/'ui-v2.html').read_text()
+          assert ui.count('<head>')==1
+          (payload/'ui-v2.html').write_text(ui.replace('<head>','<head>\n<meta name="p2k-build" content="'+cache_key+'">',1))
           sha=lambda p:sha256(p.read_bytes()).hexdigest()
           (package/'CANDIDATE_PAYLOAD.sha256').write_text(''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(overlay)))
           (package/'RECOVERY_PLANE.sha256').write_text(''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(recovery)))
           meta={
             'schema_version':1,'version':'2.15.10','source_head':head,
-            'cache_key':'p2k-2.15.10-traffic-'+head[:12],
+            'cache_key':cache_key,
             'build_id':'p2k-traffic-v21510-'+head[:12],
             'qualification_workflow':'p2k-v21510-traffic-activity.yml',
             'payload_manifest_sha256':sha(package/'CANDIDATE_PAYLOAD.sha256'),
