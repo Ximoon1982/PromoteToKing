@@ -5,6 +5,16 @@ window.P2K_DASHBOARD_MODULES = window.P2K_DASHBOARD_MODULES || {};
 window.P2K_DASHBOARD_MODULES.matchAssistant = Object.freeze({
 create(context) {
 const { state, byId, viewed, preservedURL, config, escapeHTML, number, setText, writeNavigationState, adminDetailDefinition, renderAdminPriorityCard, renderTeamIndicators, formatDateOnly } = context;
+  // Absolute match timestamps use browser-local time, unlike UTC reporting days.
+  const matchStartLocal=value=>{
+    if(!value)return "—";
+    let raw=String(value).trim();
+    if(/^\d{4}-\d\d-\d\d[ T]\d\d:\d\d(?::\d\d(?:\.\d+)?)?$/.test(raw))raw=raw.replace(" ","T")+"Z";
+    const d=new Date(typeof value==="number"?value*(value<1e11?1000:1):raw);
+    return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("en-GB",{
+      day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",timeZoneName:"short"
+    }).format(d):"—";
+  };
   let recommendationInfoSequence = 0;
   function stopRecommendationTimer() {
     window.clearTimeout(state.recommendationTimer);
@@ -163,7 +173,7 @@ const { state, byId, viewed, preservedURL, config, escapeHTML, number, setText, 
     if (item.url) { title.target = "_blank"; title.rel = "noopener noreferrer"; }
     const date = document.createElement("span");
     date.className = "dashboard-recommendation-date";
-    date.textContent = formatDateOnly(item.startTime);
+    date.textContent = matchStartLocal(item.startTime);
     const info = document.createElement("span");
     info.className = "dashboard-recommendation-info-wrap";
     const infoId = `dashboardRecommendationInfo${++recommendationInfoSequence}`;
