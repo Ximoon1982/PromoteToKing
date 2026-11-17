@@ -65,7 +65,9 @@
       send("widgettab", {widget, action:name});
   };
   const widgetAction = name => {
-    if (embedded && widget === "competition" && name === "open-match-assistant")
+    if (!embedded) return;
+    if ((widget === "competition" && name === "open-match-assistant")
+        || (widget === "administrator" && ["match-search","match-analysis-view","match-full-analysis-open"].includes(name)))
       send("widgetaction", {widget, action:name});
   };
   const diagnostics = () => Object.freeze({
