@@ -90,6 +90,62 @@ final class ReleaseVersionManager
         });
     }
 
+
+    /**
+     * Delete several obsolete releases under ONE release state lock.
+     * Every target is preflighted using the current protected roles before any
+     * deletion. A new candidate/public/rollback role aborts the whole batch.
+     * No new deletion eligibility is introduced by batch mode.
+     */
+    public function deleteReleases(array $releaseIds, string $actor): array
+    {
+        if (count($releaseIds)<1 || count($releaseIds)>20) {
+            throw new \InvalidArgumentException('Select between 1 and 20 managed releases.');
+        }
+        $ids=[];
+        foreach ($releaseIds as $raw) {
+            if (!is_string($raw)) throw new \InvalidArgumentException('Invalid selected release.');
+            $id=$this->normalizeReleaseId($raw);
+            if (isset($ids[$id])) throw new \InvalidArgumentException('Duplicate release selection.');
+            $ids[$id]=true;
+        }
+        $actor=strtolower(trim($actor));
+        if ($actor==='') $actor='cli';
+        if (!preg_match('/^[a-z0-9_.@-]{1,100}$/D',$actor)) {
+            throw new \InvalidArgumentException('Release cleanup actor is invalid.');
+        }
+        return $this->state->withExclusiveLock(function () use ($ids,$actor):array {
+            $state=$this->state->read();
+            $targets=[];
+            foreach (array_keys($ids) as $id) {
+                $row=$this->describeFromState($id,$state);
+                if (empty($row['exists'])) throw new \RuntimeException('Release no longer exists: '.$id);
+                if (!empty($row['protected'])) {
+                    throw new \RuntimeException('Batch cleanup refused: '.$id.' is protected as '.implode(', ',(array)$row['roles']).'.');
+                }
+                if (empty($row['cleanup_ready'])) {
+                    throw new \RuntimeException('Batch cleanup refused: '.$id.' is not safe to remove.');
+                }
+                $targets[$id]=$row;
+            }
+            $done=[];
+            foreach ($targets as $id=>$row) {
+                $paths=$this->artifactPaths($id);
+                foreach (['preview','runtime','slot'] as $kind) {
+                    $path=$paths[$kind];
+                    if (!file_exists($path) && !is_link($path)) continue;
+                    $this->removeManagedTree($path,$this->managedRoots()[$kind]);
+                }
+                foreach ($paths as $path) if (file_exists($path)||is_link($path)) {
+                    throw new \RuntimeException('Batch stopped after '.count($done).' deletions: '.$id.' was not completely removed.');
+                }
+                $done[]=['release_id'=>$id,'stats'=>$row['stats'],'artifacts'=>$row['artifacts']];
+            }
+            return ['ok'=>true,'action'=>'delete-releases','actor'=>$actor,'deleted_at'=>gmdate('c'),
+                'deleted_count'=>count($done),'deleted'=>$done];
+        });
+    }
+
     private function inventoryFromState(array $state): array
     {
         $ids = [];
