@@ -1,0 +1,35 @@
+/* Public Club Operations / compact Match Analysis, 260px iframe safe. */
+html,body{width:100%;height:100%;overflow:hidden}
+.p2kw-panel{display:flex;flex-direction:column;min-height:0;height:100%}
+.p2kw-content{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden}
+.aw-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
+.aw-tabs button{padding:9px 0;font-size:9px}
+.aw-inline{display:flex;gap:4px;align-items:stretch;width:100%;max-width:100%}
+.aw-inline input{flex:1 1 0;min-width:0;width:0;border:1px solid var(--border);background:var(--low);color:var(--text);font:10px Arial;padding:7px 5px;border-radius:6px}
+.aw-inline .aw-btn{flex:0 0 auto;padding:7px 6px}
+.aw-suggest{max-height:190px;overflow-y:auto;display:grid;gap:2px;margin:5px 0}
+.aw-suggest:empty{display:none}
+.aw-suggestion{display:flex;flex-direction:column;gap:2px;min-width:0;text-align:left;border:1px solid var(--border);border-radius:7px;background:var(--low);color:var(--text);padding:7px;font-size:10px;cursor:pointer}
+.aw-suggestion strong{font-size:10px;white-space:normal;overflow-wrap:anywhere}
+.aw-suggestion small{font-size:9px;color:var(--muted);line-height:1.3}
+.aw-suggestion:hover,.aw-suggestion:focus-visible{border-color:var(--accent,#f6b73c)}
+.aw-statgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:10px 0}
+.aw-statgrid>div{min-width:0;display:flex;flex-direction:column;gap:4px;border:1px solid var(--border);padding:7px 4px;border-radius:6px}
+.aw-statgrid small{font-size:9px;color:var(--muted)}
+.aw-statgrid strong{font-size:13px;overflow-wrap:anywhere}
+.aw-op-prediction{border:1px solid var(--border);border-radius:7px;padding:7px;display:grid;gap:7px}
+.aw-op-prediction>div{display:grid;gap:2px;grid-template-columns:minmax(0,1fr) auto;align-items:start;font-size:10px}
+.aw-op-prediction strong{font-size:11px;max-width:110px;text-align:right;overflow-wrap:anywhere}
+.aw-op-prediction>div+div{border-top:1px solid var(--border);padding-top:7px}
+.aw-op-chart{width:100%;min-width:0;overflow:hidden;margin:3px 0 5px}
+.aw-op-chart svg{display:block;width:100%;height:auto;max-width:100%;color:var(--muted);font-family:Arial,sans-serif}
+.aw-op-chart .aw-op-scroll{overflow-x:auto;overflow-y:hidden;max-width:100%;scrollbar-width:thin}
+.aw-op-chart .aw-op-scroll svg{max-width:none;width:auto}
+.aw-op-legend{display:flex;justify-content:space-around;flex-wrap:wrap;gap:4px;font-size:9px;margin-top:4px}
+.aw-op-chart p{margin:5px 0}
+#awAnalysisFeedback{margin:6px 0;min-height:10px}
+#awFullAnalysis{display:block;text-align:center;margin:10px 0}
+#awAnalysisTitle{font-size:11px;overflow-wrap:anywhere}
+#awMemberForm{margin:6px 0 14px}
+.aw-row .aw-btn{flex-shrink:0}
+@media(max-width:260px){.aw-tabs button{font-size:8.5px}}
