@@ -85,8 +85,14 @@ function renderTraffic(d) {
   surfaces.push({name:"Competition",kind:"Chess.com iframe",views:widgets.get("competition")||0,
     activity:(tabs.get("competition:showcase")||0)+" Showcase · "+(tabs.get("competition:match-calls")||0)+" Radar · "+(tabs.get("competition:rivals")||0)+" Rivals",
     note:(actions.get("competition:open-match-assistant")||0)+" Assistant-link clicks"});
-  for(const [name,views] of widgets)if(name!=="competition")
-    surfaces.push({name:name.replace(/-/g," "),kind:"Standalone widget",views,activity:"—",note:""});
+  for(const [name,views] of widgets)if(name!=="competition") {
+    if(name==="administrator") surfaces.push({
+      name:"Club Operations",kind:"Public widget",views,
+      activity:(actions.get("administrator:match-search")||0)+" match searches · "+(actions.get("administrator:match-analysis-view")||0)+" analysis displays",
+      note:(actions.get("administrator:match-full-analysis-open")||0)+" full Analyzer opens"
+    });
+    else surfaces.push({name:name.replace(/-/g," "),kind:"Standalone widget",views,activity:"—",note:""});
+  }
   (d.top_pages||[]).forEach(r=>surfaces.push({
     name:r.name,kind:"P2K website",views:Number(r.count||0),
     activity:r.name==="/FindMatch.htm"?num(mas.analyses||0)+" analyses":"—",
@@ -119,7 +125,7 @@ function renderTraffic(d) {
       table(["UTC date","P2K pages","Widget views","Visits (est.)","Visitor-days (est.)","Radar tab","Radar searches","Assistant searches","Analyses"],daily)+
     '</article>'+
     '<article class="ci-card"><h3>Activity by surface</h3>'+
-      '<p>Competition records anonymous views, tab selection and clicks on the Assistant link. Widget views and website page views are separate; they are not individually attributed to searched names.</p>'+
+      '<p>Competition records anonymous views and tab selections; Club Operations records analysis searches, displays and full-Analyzer clicks. These are activity counts, not verified visitor identities.</p>'+
       table(["Surface","Type","Views","Engagement","Additional activity"],surfaceRows)+
     '</article>'+
     '<article class="ci-card"><h3>Searched usernames and completed analyses</h3>'+
