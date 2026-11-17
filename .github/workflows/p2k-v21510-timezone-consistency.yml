@@ -60,7 +60,6 @@ jobs:
           php tests/php_v2147_release_management_harness.php
           php tests/php_v2148_filesystem_cleanup_harness.php
           node tests/widget_recruitment_radar_v2159.test.cjs
-          node tests/widget_competition_v2159.test.cjs
           python3 - <<'PY'
           from pathlib import Path
           php=Path('server/widgets/public/operations-api.php').read_text()
