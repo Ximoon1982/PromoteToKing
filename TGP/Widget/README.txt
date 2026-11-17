@@ -63,3 +63,11 @@ Upload the ZIP via SSH/SFTP to the IONOS account home directory (outside Promote
   bash P2K_TGP_TeamFrance_Widget_v0.3.4_SSH_Installer/install.sh /kunden/homepages/43/d141198007/htdocs/PromoteToKing
 The installer validates SHA-256 checksums and PHP syntax, checks the live widget baseline, saves source backups under storage/standalone-widget-backups, and copies code atomically.
 It never overwrites either widget's data/showcase.json, locks or API cache; does not touch P2K Release Control, public routing, OAuth or CRON.
+
+Organizer lookup correction (v0.3.4 SSH hotfix, P2K 2.15.11 branch)
+----------------------------------------------------------------
+The upcoming MCA organizer editor now uses one Chess.com club URL, numeric ID or slug input.
+The verified Chess.com profile supplies the numeric club ID and display name automatically.
+Numeric IDs are accepted when Chess.com resolves them to an exact matching club identity; an unresolved ID is rejected with an instruction to enter the club URL or slug instead.
+Pre-existing organizer IDs/names/enabled flags, candidate scans and arena showcase configuration are preserved.
+This is a standalone SSH widget hotfix. Do not upload it through P2K Release Control.
