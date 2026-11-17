@@ -189,19 +189,15 @@
         }
       }
 
-      function utcToday() {
-        const now = new Date();
-        return new Date(Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth(),
-          now.getUTCDate()
-        ));
-      }
+      function localToday() {
+    const now=new Date();
+    return new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  }
 
-      function dateKeyFromDate(date) {
-        const year = date.getUTCFullYear();
-        const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-        const day = String(date.getUTCDate()).padStart(2, "0");
+  function dateKeyFromDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
       }
 
@@ -224,12 +220,12 @@
       }
 
       function dateRangeKeys(numberOfDays) {
-        const today = utcToday();
+        const today = localToday();
         const keys = [];
 
         for (let offset = numberOfDays - 1; offset >= 0; offset -= 1) {
           const date = new Date(today);
-          date.setUTCDate(today.getUTCDate() - offset);
+          date.setDate(today.getDate() - offset);
           keys.push(dateKeyFromDate(date));
         }
 
@@ -237,13 +233,13 @@
       }
 
       function dateFromKey(key) {
-        return new Date(`${key}T00:00:00Z`);
+        const [y,m,d]=key.split("-").map(Number);
+    return new Date(y,m-1,d);
       }
 
       function formatDate(key) {
         return new Intl.DateTimeFormat("en-GB", {
-      timeZone: "UTC",
-          day: "2-digit",
+                day: "2-digit",
           month: "short",
           year: "numeric"
         }).format(dateFromKey(key));
@@ -251,8 +247,7 @@
 
       function formatShortDate(key) {
         return new Intl.DateTimeFormat("en-GB", {
-      timeZone: "UTC",
-          day: "2-digit",
+                day: "2-digit",
           month: "short"
         }).format(dateFromKey(key));
       }
