@@ -44,8 +44,35 @@ assert(!analyzed.includes('timeZone: "UTC"'),"full Analyzer match start local");
 const upcoming=get("assets/js/shared/upcoming-analysis-core.js");
 assert(upcoming.includes('resolvedOptions().timeZone'),"recruitment messages explicitly label local timezone");
 const admin=get("assets/js/admin/events-showcase-v2122.js");
-assert(admin.includes("Start time (Luxembourg)")&&admin.includes("Date (Luxembourg)"),
-    "scheduled arena editor explains fixed input timezone");
+assert(admin.includes("Start time (your local time)")&&admin.includes("Date (your local time)"),
+    "scheduled arena editor uses visitor-local time");
+assert(!admin.includes("Start time (Luxembourg)")&&!admin.includes("Date (Luxembourg)"),
+    "Showcase arena editor must not force a Luxembourg timezone");
+assert(admin.includes("timeZoneName:\"short\""),"admin arena listings include applicable DST abbreviation");
+assert(admin.includes("setArenaEditorInstant(a.startUtc"),"scan suggestions use the absolute UTC start");
+const arenaStart=admin.indexOf("const ARENA_STORAGE_TIMEZONE=");
+const arenaEnd=admin.indexOf("const EMPTY_ARENA=",arenaStart);
+assert(arenaStart>=0&&arenaEnd>arenaStart,"Showcase arena local conversion helpers");
+const {arenaLocalCandidates,arenaStorageFields,arenaLocalFields}=new Function(
+    admin.slice(arenaStart,arenaEnd)+
+    "\nreturn {arenaLocalCandidates,arenaStorageFields,arenaLocalFields};")();
+assert.deepEqual(arenaStorageFields("2026-07-15T18:00:00Z"),
+    {date:"2026-07-15",time:"20:00"},"Luxembourg legacy wall fields remain canonical");
+for(const instant of ["2027-01-15T18:00:00Z","2027-07-15T18:00:00Z","2027-10-31T01:30:00Z"]){
+    const fields=arenaLocalFields(instant);
+    const choices=arenaLocalCandidates(fields.date,fields.time);
+    assert(choices.includes(Date.parse(instant)),tz+": Showcase round-trip "+instant);
+}
+if(tz==="Europe/Luxembourg"){
+    assert.equal(arenaLocalCandidates("2027-03-28","02:30").length,0,"EU DST gap rejected");
+    assert.deepEqual(arenaLocalCandidates("2027-10-31","02:30").map(x=>new Date(x).toISOString()),
+        ["2027-10-31T00:30:00.000Z","2027-10-31T01:30:00.000Z"],"EU DST fold offers both instants");
+}
+if(tz==="America/New_York"){
+    assert.equal(arenaLocalCandidates("2027-03-14","02:30").length,0,"US DST gap rejected");
+    assert.deepEqual(arenaLocalCandidates("2027-11-07","01:30").map(x=>new Date(x).toISOString()),
+        ["2027-11-07T05:30:00.000Z","2027-11-07T06:30:00.000Z"],"US DST fold offers both instants");
+}
 assert(get("assets/js/pages/admin-features.js").includes('timeZone: "UTC"'),"admin logs stay UTC");
 assert(get("server/widgets/src/HallOfFameLeaderboardService.php").includes("UTC"),
     "monthly and quarterly periods retain UTC");
