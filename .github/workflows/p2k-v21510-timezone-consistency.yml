@@ -64,7 +64,7 @@ jobs:
           from pathlib import Path
           php=Path('server/widgets/public/operations-api.php').read_text()
           assert "day_grouping'=>'client_local_from_utc_buffer'" in php
-          assert "AND (".$where.")" in php
+          assert 'AND (".$where.")' in php
           html=Path('ui-v2.html').read_text()
           for s in ('admin-shell.js?v=p2k-2.15.10-administrator-b40a954cd66f',
                     'admin-session-controller.js?v=p2k-2.15.10-administrator-b40a954cd66f',
