@@ -74,6 +74,186 @@ final class StandaloneArenaDiscoveryService
         return $this->locked(fn(): array => $this->readUnlocked());
     }
 
+    /**
+     * Accept Chess.com club URL / public slug / positive numeric club ID.
+     * Network URLs are constructed from validated references, never supplied
+     * directly by the caller (SSRF and redirect protections).
+     */
+    public static function parseClubReference(string $reference): array
+    {
+        $reference = trim($reference);
+        if ($reference === '' || strlen($reference) > 600)
+            throw new InvalidArgumentException('Enter a Chess.com club URL, slug or numeric ID.');
+        if (preg_match('/^[1-9][0-9]{0,14}$/D', $reference))
+            return ['kind'=>'id','value'=>$reference];
+        if (preg_match('/^[a-z0-9][a-z0-9-]{0,99}$/iD', $reference))
+            return ['kind'=>'slug','value'=>strtolower($reference)];
+        if (preg_match('~^(?:www\.|api\.)?chess\.com/~i', $reference))
+            $reference = 'https://' . $reference;
+        $parts = parse_url($reference);
+        if (!is_array($parts) ||
+            !in_array(strtolower((string)($parts['scheme'] ?? '')), ['https','http'],true) ||
+            !in_array(strtolower((string)($parts['host'] ?? '')),
+                ['chess.com','www.chess.com','api.chess.com'],true) ||
+            isset($parts['user']) || isset($parts['pass']) || isset($parts['port']))
+            throw new InvalidArgumentException('Use a Chess.com club URL, slug or numeric ID.');
+        $path = trim((string)($parts['path'] ?? ''), '/');
+        $pattern = strtolower((string)$parts['host']) === 'api.chess.com'
+            ? '~^pub/club/([a-z0-9-]{1,100})$~iD'
+            : '~^club/([a-z0-9-]{1,100})$~iD';
+        if (!preg_match($pattern, $path, $m))
+            throw new InvalidArgumentException('The URL must point to a Chess.com club profile.');
+        $value = strtolower($m[1]);
+        if (preg_match('/^[1-9][0-9]{0,14}$/D', $value))
+            return ['kind'=>'id','value'=>$value];
+        return ['kind'=>'slug','value'=>$value];
+    }
+
+    /** Verify the PubAPI's actual numeric identity and published club name. */
+    public static function normalizeClubProfile(array $profile, string $fallbackSlug, ?string $expectedId = null): array
+    {
+        $id = trim((string)($profile['club_id'] ?? ''));
+        $name = trim((string)($profile['name'] ?? ''));
+        if (!preg_match('/^[1-9][0-9]{0,14}$/D', $id) ||
+            $name === '' || (function_exists('mb_strlen') ? mb_strlen($name) : strlen($name)) > 80)
+            throw new RuntimeException('Chess.com returned incomplete club identity information.', 502);
+        if ($expectedId !== null && $id !== $expectedId)
+            throw new RuntimeException('Chess.com returned a club with a different numeric ID.', 422);
+        $uri = trim((string)($profile['@id'] ?? $profile['url'] ?? ''));
+        $parts = parse_url($uri);
+        $slug = '';
+        if (is_array($parts) &&
+            in_array(strtolower((string)($parts['host'] ?? '')),['api.chess.com','www.chess.com','chess.com'],true) &&
+            preg_match('~/(?:pub/)?club/([a-z0-9-]{1,100})/?$~iD',(string)($parts['path'] ?? ''),$m))
+            $slug = strtolower($m[1]);
+        if ($slug === '' && preg_match('/^[a-z0-9][a-z0-9-]{0,99}$/iD',$fallbackSlug))
+            $slug = strtolower($fallbackSlug);
+        if ($slug === '' || ctype_digit($slug))
+            throw new RuntimeException('Chess.com did not provide a verifiable club URL slug.', 502);
+        return ['clubId'=>$id,'name'=>$name,'slug'=>$slug,
+            'url'=>'https://www.chess.com/club/'.$slug,'enabled'=>true];
+    }
+
+    /** Extract only canonical URL or official redirect, never arbitrary links. */
+    public static function canonicalClubSlug(string $headers, string $html): string
+    {
+        $candidates = [];
+        if (preg_match('/^location:\s*(\S+)/im',$headers,$m))
+            $candidates[] = trim($m[1]);
+        if (preg_match_all('~<(?:link|meta)\b[^>]+>~i',$html,$tags)) {
+            foreach ($tags[0] as $tag) {
+                if (!preg_match('~(?:canonical|og:url)~i',$tag)) continue;
+                if (preg_match('~(?:href|content)\s*=\s*["\x27]([^"\x27]+)~i',$tag,$m))
+                    $candidates[] = html_entity_decode($m[1],ENT_QUOTES|ENT_HTML5,'UTF-8');
+            }
+        }
+        foreach ($candidates as $uri) {
+            if (preg_match('~^/club/([a-z0-9-]{1,100})/?(?:[?#].*)?$~iD',$uri,$m) &&
+                !ctype_digit($m[1])) return strtolower($m[1]);
+            $parts=parse_url($uri);
+            if (is_array($parts) &&
+                in_array(strtolower((string)($parts['host'] ?? '')),['chess.com','www.chess.com'],true) &&
+                preg_match('~^/club/([a-z0-9-]{1,100})/?$~iD',(string)($parts['path'] ?? ''),$m) &&
+                !ctype_digit($m[1])) return strtolower($m[1]);
+        }
+        return '';
+    }
+
+    public function resolveOrganizer(string $reference): array
+    {
+        $input=self::parseClubReference($reference);
+        $value=$input['value'];
+        if ($input['kind']==='slug')
+            return self::normalizeClubProfile($this->getClubProfile($value),$value);
+
+        // Chess.com's published API normally uses URL slugs. Some numeric
+        // references resolve directly; only accept an EXACT matching club_id.
+        $numericId=$value;
+        try {
+            $profile=$this->getClubProfile($numericId);
+            return self::normalizeClubProfile($profile,'',$numericId);
+        } catch (RuntimeException $e) {
+            if ($e->getCode()===429) throw $e;
+        }
+        // Club page canonical URL/redirect can reveal the slug. Never follow
+        // redirects automatically or trust unrelated clubs linked on the page.
+        foreach ([
+            'https://www.chess.com/club/'.$numericId,
+            'https://www.chess.com/club/live-tournaments/'.$numericId
+        ] as $url) {
+            $page=$this->getChessContent($url,'text/html');
+            if ($page['status']===429)
+                throw new RuntimeException('Chess.com is rate limiting club lookups; retry later.',429);
+            if ($page['status']!==200 && !in_array($page['status'],[301,302,307,308],true)) continue;
+            $slug=self::canonicalClubSlug($page['headers'],$page['body']);
+            if ($slug==='') continue;
+            $profile=$this->getClubProfile($slug);
+            return self::normalizeClubProfile($profile,$slug,$numericId);
+        }
+        throw new RuntimeException(
+            'Club #'.$numericId.' could not be resolved to a verified Chess.com name. ' .
+            'Try the club URL or slug instead.',422);
+    }
+
+    private function getClubProfile(string $slug): array
+    {
+        if (!preg_match('/^[a-z0-9][a-z0-9-]{0,99}$/iD',$slug))
+            throw new InvalidArgumentException('Invalid Chess.com club reference.');
+        $response=$this->getChessContent('https://api.chess.com/pub/club/'.rawurlencode($slug),'application/json');
+        if ($response['status']===429)
+            throw new RuntimeException('Chess.com is rate limiting club lookups; retry later.',429);
+        if ($response['status']!==200)
+            throw new RuntimeException('Chess.com club profile unavailable (HTTP '.$response['status'].').',502);
+        $json=json_decode($response['body'],true);
+        if (!is_array($json))
+            throw new RuntimeException('Chess.com club profile returned invalid JSON.',502);
+        return $json;
+    }
+
+    /** Use the P2K-discovery throttle for ALL club and arena requests. */
+    private function getChessContent(string $url,string $accept): array
+    {
+        $rateDir=dirname($this->ratePath);
+        if (!is_dir($rateDir) && !@mkdir($rateDir,0775,true) && !is_dir($rateDir))
+            throw new RuntimeException('Unable to prepare Chess.com shared request throttle.');
+        $lock=fopen($this->ratePath,'c+');
+        if ($lock===false) throw new RuntimeException('Unable to open Chess.com request throttle.');
+        try {
+            if (!flock($lock,LOCK_EX)) throw new RuntimeException('Unable to lock Chess.com request throttle.');
+            $last=(float)trim((string)stream_get_contents($lock));
+            $wait=1.0-(microtime(true)-$last);
+            if ($wait>0) usleep((int)ceil($wait*1000000));
+            rewind($lock);
+            ftruncate($lock,0);
+            fwrite($lock,sprintf('%.6f',microtime(true)));
+            fflush($lock);
+        } finally {
+            flock($lock,LOCK_UN);
+            fclose($lock);
+        }
+        if (!function_exists('curl_init')) throw new RuntimeException('PHP cURL is required for Chess.com lookups.');
+        $ch=curl_init($url);
+        $headers='';
+        curl_setopt_array($ch,[
+            CURLOPT_RETURNTRANSFER=>true,
+            CURLOPT_FOLLOWLOCATION=>false,
+            CURLOPT_TIMEOUT=>18, CURLOPT_CONNECTTIMEOUT=>6,
+            CURLOPT_USERAGENT=>'Mozilla/5.0 (compatible; P2K-Widget-MCA-Organizer/0.3.4)',
+            CURLOPT_HTTPHEADER=>['Accept: '.$accept],
+            CURLOPT_ENCODING=>'', CURLOPT_MAXREDIRS=>0,
+            CURLOPT_HEADERFUNCTION=>static function($ch,string $header) use (&$headers): int {
+                $headers.=$header;
+                return strlen($header);
+            }
+        ]);
+        $body=curl_exec($ch);
+        $status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if (!is_string($body) || strlen($body)>2000000)
+            throw new RuntimeException('Chess.com club lookup failed or exceeded size limit.',502);
+        return ['status'=>$status,'headers'=>$headers,'body'=>$body];
+    }
+
     public function saveOrganizers(array $organizers, int $revision): array
     {
         if (count($organizers) > 100) throw new InvalidArgumentException('Maximum 100 organizing clubs.');
