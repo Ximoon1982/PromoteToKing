@@ -29,7 +29,9 @@ if (!in_array($action,['matches','member-events','member-lookup','match-search',
 try {
     $subject=(string)($_SERVER['REMOTE_ADDR']??'unknown');
     $subject=hash_hmac('sha256',$subject,(string)(p2k_tp_config()['app']['admin_token']??'p2k-operations'));
-    $limiter=new BoundedRateLimiter(dirname(__DIR__,3).'/data/runtime/p2k-operations-rate.json');
+    $limiter=new BoundedRateLimiter(\P2K\Shared\FilesystemCache::runtimeRoot(
+        (array)(p2k_tp_config()['storage']??[])
+    ).'/public-operations-rate.json');
     $quota=in_array($action,['member-lookup','match-history','match-data'],true)?45:120;
     $limit=$limiter->consume($action.'|'.$subject,$quota,60);
     if (!$limit['allowed']) {
