@@ -24,7 +24,11 @@
     setProgress(0,'Uploading release ZIP…');
 
     const xhr=new XMLHttpRequest();
-    xhr.open('POST',form.action,true);
+    // The form has a hidden input named 'action': form.action resolves to that
+    // HTMLInputElement in browsers, not the form's action URL (HTTP 404).
+    // Read the literal HTML attribute instead; preserve the native POST target.
+    const uploadUrl=new URL(form.getAttribute('action') || '/ReleaseControl.php',document.baseURI);
+    xhr.open('POST',uploadUrl.href,true);
     xhr.upload.addEventListener('progress',(e)=>{
       if(e.lengthComputable){
         const pct=(e.loaded/e.total)*100;
