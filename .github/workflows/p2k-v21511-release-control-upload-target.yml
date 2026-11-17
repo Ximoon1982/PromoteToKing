@@ -1,0 +1,191 @@
+name: P2K 2.15.11 Release Control upload 404 repair and compact card
+on:
+  push:
+    branches: [release/v2.15.11]
+    paths:
+      - '.github/workflows/p2k-v21511-release-control-upload-target.yml'
+      - 'ReleaseControl.php'
+      - 'server/release-control/public/release-control-upload.js'
+      - 'tests/release_control_upload_action_shadow_v21511.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify the native POST target, progress behavior and unchanged recovery security
+        run: |
+          set -euo pipefail
+          BASE=c3b3d3924e842a00ba4781c8db62a4594d7386b6
+          PUBLIC=083e0380bd2303c063458c3291424af998bf37c4
+          test "$(git merge-base "$BASE" HEAD)" = "$BASE"
+          test "$(git merge-base "$PUBLIC" HEAD)" = "$PUBLIC"
+          php -l ReleaseControl.php
+          php -l server/events-showcase/public/embed-card.php
+          node --check server/release-control/public/release-control-upload.js
+          node --check tests/release_control_upload_action_shadow_v21511.cjs
+          node tests/release_control_upload_action_shadow_v21511.cjs
+          node tests/release_control_batch_csp_layout_v21511.cjs
+          node tests/showcase_card_compact_timezone_v21511.cjs
+          node tests/showcase_datetime_v21511.cjs
+          php tests/php_v2147_release_management_harness.php
+          php tests/php_v2148_filesystem_cleanup_harness.php
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          base='c3b3d3924e842a00ba4781c8db62a4594d7386b6'
+          expected={
+            'ReleaseControl.php',
+            'server/release-control/public/release-control-upload.js',
+            'tests/release_control_upload_action_shadow_v21511.cjs',
+            '.github/workflows/p2k-v21511-release-control-upload-target.yml'
+          }
+          changed=set(subprocess.check_output(
+            ['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          assert changed==expected,{'changed':sorted(changed),'expected':sorted(expected)}
+          original=subprocess.check_output(['git','show',base+':ReleaseControl.php'],text=True)
+          current=Path('ReleaseControl.php').read_text()
+          assert current.replace('release-control-upload.js?v=2.15.11-upload-target-1',
+             'release-control-upload.js')==original,'Only upload script cache stamp must change in Recovery UI'
+          assert "script-src 'self'" in current and "connect-src 'self'" in current
+          assert 'name="action" value="upload-release-package"' in current
+          js=Path('server/release-control/public/release-control-upload.js').read_text()
+          assert "form.getAttribute('action')" in js
+          assert "xhr.open('POST',uploadUrl.href,true)" in js
+          assert "xhr.open('POST',form.action,true)" not in js
+          assert Path('server/events-showcase/public/embed-card.php').read_text().count(
+              'function formatCardDailyDate(')==1
+          print('PASS exact recovery-plane diff, unchanged CSRF/backend and current card-only format retained')
+          PY
+      - name: Create Release Control ZIP accepted by promoted P2K 2.15.11-083e
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import json,subprocess,zipfile
+          base='c3b3d3924e842a00ba4781c8db62a4594d7386b6'
+          public='083e0380bd2303c063458c3291424af998bf37c4'
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert subprocess.check_output(['git','merge-base',base,head],text=True).strip()==base
+          assert subprocess.check_output(['git','merge-base',public,head],text=True).strip()==public
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,head],text=True).splitlines())
+          assert changed=={
+            'ReleaseControl.php','server/release-control/public/release-control-upload.js',
+            'tests/release_control_upload_action_shadow_v21511.cjs',
+            '.github/workflows/p2k-v21511-release-control-upload-target.yml'
+          },sorted(changed)
+          code=['server/events-showcase/public/embed-card.php']
+          recovery=[
+            'ReleaseControl.php',
+            'server/release-control/src/bootstrap.php',
+            'server/release-control/src/ReleasePackageUploadInstaller.php',
+            'server/release-control/src/FilesystemCleanupManager.php',
+            'server/release-control/src/ReleaseVersionManager.php',
+            'server/release-control/public/release-control-upload.js'
+          ]
+          overlays=code+['VERSION','ui-v2.html']
+          root=Path('dist/P2K_2.15.11_Showcase_Compact_Upload_404_Fix')
+          payload=root/'payload'
+          payload.mkdir(parents=True,exist_ok=True)
+          for path in code+recovery:
+            target=payload/path
+            target.parent.mkdir(parents=True,exist_ok=True)
+            target.write_bytes(Path(path).read_bytes())
+          (payload/'VERSION').write_text('2.15.11\n')
+          cache='p2k-2.15.11-'+head[:12]+'-'+sha256(
+              (head+'|showcase-compact-and-release-control-upload-404-fix').encode()).hexdigest()[:16]
+          ui=Path('ui-v2.html').read_text()
+          assert ui.count('<head>')==1
+          (payload/'ui-v2.html').write_text(
+              ui.replace('<head>','<head>\n<meta name="p2k-build" content="'+cache+'">',1))
+          sha=lambda f:sha256(f.read_bytes()).hexdigest()
+          (root/'CANDIDATE_PAYLOAD.sha256').write_text(''.join(
+              sha(payload/p)+'  ./'+p+'\n' for p in sorted(overlays)))
+          (root/'RECOVERY_PLANE.sha256').write_text(''.join(
+              sha(payload/p)+'  ./'+p+'\n' for p in sorted(recovery)))
+          metadata={
+              'schema_version':1,'version':'2.15.11','source_head':head,
+              'cache_key':cache,
+              'build_id':'p2k-v21511-showcase-compact-upload-target-fix-'+head[:12],
+              'qualification_workflow':'p2k-v21511-release-control-upload-target.yml',
+              'payload_manifest_sha256':sha(root/'CANDIDATE_PAYLOAD.sha256'),
+              'accepted_public_builds':[{'version':'2.15.11','source_head':public}]
+          }
+          (root/'CANDIDATE_RELEASE.json').write_text(json.dumps(metadata,indent=2)+'\n')
+          (root/'README.txt').write_text(
+              'P2K 2.15.11 combined Release Control upload 404 repair + compact Showcase cards\n'
+              'Accepted public build: 2.15.11-083e0380bd23 ONLY.\n'
+              '\n'
+              'Release Control upload fix:\n'
+              '- Use the HTML form action attribute when building XHR POST target.\n'
+              '- The hidden name=action input previously shadowed form.action and caused HTTP 404.\n'
+              '- Use cache-busted upload JS URL after recovery-plane activation.\n'
+              '- Existing form CSRF, confirmation, progress bar, redirects and protected recovery\n'
+              '  installation are unchanged.\n'
+              'Compact card fix:\n'
+              '- Daily matches show compact visitor-local day and short month.\n'
+              '- Arenas show compact visitor-local date and 24-hour time, without zone suffix.\n'
+              '- Hover retains full local timezone and year; DST correctness retained.\n'
+              'No changes to admin scheduling, database, scoring, CRON or standalone widgets.\n'
+              '\n'
+              'FIRST INSTALL BY NATIVE HTML FORM: disable JavaScript for the P2K website\n'
+              'temporarily and reload /ReleaseControl.php, then select/upload this ZIP.\n'
+              'The browser will submit the standard PHP form without broken JavaScript.\n'
+              'Re-enable JavaScript after successful install, reload Release Control, then\n'
+              'preview and manually promote. Only promotion changes public cards.\n')
+          out=root.parent/('P2K_2.15.11_Showcase_Compact_Upload_404_Fix_'+head[:12]+'.zip')
+          with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+            for f in sorted(root.rglob('*')):
+              if f.is_file(): z.write(f,f.relative_to(root))
+          (root.parent/'SHA256SUMS').write_text(sha(out)+'  '+out.name+'\n')
+          print('ZIP',out,out.stat().st_size,'bytes SHA256',sha(out))
+          print('META',json.dumps(metadata))
+          PY
+      - name: Validate manifest and recovery-plane repair ZIP contents
+        run: |
+          set -euo pipefail
+          php -r '
+            require "server/release-control/src/ReleaseSlotPolicy.php";
+            require "server/release-control/src/ReleaseCandidatePackage.php";
+            $package=new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
+            $m=$package->validate();
+            if($m["version"]!=="2.15.11" || $m["accepted_public_builds"]!==[
+              ["version"=>"2.15.11","source_head"=>"083e0380bd2303c063458c3291424af998bf37c4"]
+            ])exit(3);
+            echo "PASS Release Control package ".$m["release_id"]." overlay=".$m["overlay_file_count"]."\n";
+          ' dist/P2K_2.15.11_Showcase_Compact_Upload_404_Fix
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile,hashlib,json
+          zpath=next(Path('dist').glob('P2K_2.15.11_Showcase_Compact_Upload_404_Fix_*.zip'))
+          with zipfile.ZipFile(zpath) as z:
+            assert z.testzip() is None
+            assert len(z.namelist())==len(set(z.namelist()))
+            m=json.loads(z.read('CANDIDATE_RELEASE.json'))
+            assert m['accepted_public_builds']==[{
+              'version':'2.15.11',
+              'source_head':'083e0380bd2303c063458c3291424af998bf37c4'}]
+            for manifest in ['CANDIDATE_PAYLOAD.sha256','RECOVERY_PLANE.sha256']:
+              for row in z.read(manifest).decode().splitlines():
+                sha,file=row.split('  ./',1)
+                assert hashlib.sha256(z.read('payload/'+file)).hexdigest()==sha,file
+            assert hashlib.sha256(z.read('CANDIDATE_PAYLOAD.sha256')).hexdigest()==m['payload_manifest_sha256']
+            assert 'payload/ReleaseControl.php' in z.namelist()
+            assert 'payload/server/release-control/public/release-control-upload.js' in z.namelist()
+            assert 'payload/server/events-showcase/public/embed-card.php' in z.namelist()
+            assert 'payload/assets/js/shared/events-showcase-core.js' not in z.namelist()
+          print('PASS both fixes packaged, exact compatibility and all recovery hashes verified')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-v21511-showcase-compact-upload-404-repair
+          path: |
+            dist/P2K_2.15.11_Showcase_Compact_Upload_404_Fix_*.zip
+            dist/SHA256SUMS
+          retention-days: 14
