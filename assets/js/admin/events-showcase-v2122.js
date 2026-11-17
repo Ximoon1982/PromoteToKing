@@ -8,7 +8,7 @@ const API=new URL("server/events-showcase/public/api.php",ROOT).href;
 const ADMIN_API=new URL("server/events-showcase/public/admin-api.php",ROOT).href;
 const EMBED=new URL("server/events-showcase/public/embed.php",ROOT).href;
 const CARD_EMBED=new URL("server/events-showcase/public/embed-card.php",ROOT).href;
-const CORE_SCRIPTS=["assets/js/shared/recruitment-lineup-core.js","assets/js/shared/events-showcase-core.js?v=p2k-2.12.2-466b9201fc6a-esopt-9bb9a7732ae0cb75"];
+const CORE_SCRIPTS=["assets/js/shared/recruitment-lineup-core.js","assets/js/shared/events-showcase-core.js?v=p2k-2.15.10-timezones-1"];
 const SEARCH_PAGE_SIZE=10;
 const EMPTY_ARENA=()=>({active:false,name:"",link:"",date:"",time:"",timeControl:"",duration:"",durationMinutes:null,startAt:""});
 let priorityDetails=new Map(),sortMode="priority",discovery={revision:0,organizers:[],scan:null},scanBusy=false,scanCancelRequested=false;
