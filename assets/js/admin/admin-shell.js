@@ -188,7 +188,7 @@ return `<section aria-label="Administrator dashboard" class="dashboard-panel das
   ${Object.entries(cards).map(([key,list])=>`<section class="dashboard-admin-shell-panel" data-admin-shell-panel="${key}" ${key==="competitions"?"":"hidden"}><div class="dashboard-admin-shell-grid">${list.join("")}</div></section>`).join("")}
   <section class="dashboard-admin-shell-panel" data-admin-shell-panel="misc" hidden><div class="dashboard-admin-lost-found-head"><div><span class="dashboard-admin-shell-eyebrow">Misc</span><h3>Lost &amp; found tools</h3><p>Complete catalogue of existing administrator tools. Nothing was removed by the new shell.</p></div><strong>${tools.length} tools</strong></div><div class="dashboard-tool-grid dashboard-admin-lost-found-grid" id="adminToolGrid"></div></section>
   <section class="dashboard-admin-shell-detail" id="adminShellDetail" hidden>
-    <div class="dashboard-admin-detail-heading"><div><button class="dashboard-button is-secondary" id="adminShellDetailBack" type="button">← Back</button><p class="dashboard-eyebrow" id="adminShellDetailBreadcrumb">Administration</p><h3 id="adminShellDetailTitle">Detail</h3></div></div>
+    <div class="dashboard-admin-detail-heading"><div><button class="dashboard-button is-secondary" id="adminShellDetailBack" type="button">← Back</button><p class="dashboard-eyebrow" id="adminShellDetailBreadcrumb">Administration</p><h3 id="adminShellDetailTitle">Detail</h3></div><a class="dashboard-button is-secondary" id="adminShellDetailStandalone" href="#" target="_blank" rel="noopener noreferrer" hidden>Open administration directly</a></div>
     <nav class="dashboard-admin-detail-tabs" id="adminShellDetailTabs" aria-label="Administration detail sections"></nav>
     <div class="dashboard-admin-detail-frame-wrap" id="adminShellDetailFrameWrap"><iframe class="dashboard-integrated-frame dashboard-admin-detail-frame" id="adminShellDetailFrame" title="Administration detail"></iframe></div>
     <div class="dashboard-admin-detail-native" id="adminShellNativeDetailHost" hidden></div>
@@ -217,12 +217,24 @@ function renderAdminShellDetail(){
   const frame=byId("adminShellDetailFrame");
   const frameWrap=byId("adminShellDetailFrameWrap")||frame?.parentElement;
   const nativeHost=byId("adminShellNativeDetailHost");
+  const standalone=byId("adminShellDetailStandalone");
   if(!def){detailHost.hidden=true;setIntegratedFrameActivity("");if(frameWrap)frameWrap.hidden=false;if(frame)frame.hidden=false;if(nativeHost){nativeHost.hidden=true;nativeHost.replaceChildren();nativeHost.removeAttribute("data-native-detail");}return;}
   const validTab=def.tabs.find(item=>item.key===state.adminDetailTab)||def.tabs[0];state.adminDetailTab=validTab.key;
   detailHost.hidden=false;setText("adminShellDetailTitle",def.title);setText("adminShellDetailBreadcrumb",`Administration · ${state.category.replace("maintenance","Maintenance")}`);
+  // A deep-linked tool does not request overview metrics; do not display a permanent loading status.
+  if(!state.adminShellLoadedAt){setText("adminShellOverallStatus",`Viewing ${def.title}`);setText("adminShellUpdated","Overview freshness and source metrics load when returning to the cards.");}
   const tabs=byId("adminShellDetailTabs");if(tabs){tabs.hidden=def.tabs.length<=1;tabs.innerHTML=def.tabs.map(item=>`<a class="dashboard-admin-detail-tab${item.key===validTab.key?" is-active":""}" data-admin-detail-tab="${escapeHTML(item.key)}" href="${escapeHTML(adminShellHref(state.category,state.adminDetail,item.key,item.key===validTab.key?state.adminToolTab:""))}" aria-current="${item.key===validTab.key?"page":"false"}">${escapeHTML(item.label)}</a>`).join("");}
   const nativeKey=String(validTab.nativeKey||"");
   const nativeMode=validTab.mode==="native"||nativeKey!=="";
+  if(standalone){
+    standalone.hidden=nativeMode;
+    if(!nativeMode){
+      const direct=new URL(validTab.src,location.href);
+      direct.searchParams.delete("embedded");direct.searchParams.delete("active");
+      standalone.href=direct.href;
+      standalone.textContent=state.adminDetail==="mca"?"Open MCA administration directly":`Open ${validTab.label} directly`;
+    }
+  }
   if(nativeMode){
     setIntegratedFrameActivity("");
     if(frameWrap)frameWrap.hidden=true;
