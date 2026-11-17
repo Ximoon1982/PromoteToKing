@@ -809,7 +809,6 @@
           hour: "2-digit",
           minute: "2-digit",
           hour12: false,
-          timeZone: "UTC",
           timeZoneName: "short"
         }).format(new Date(timestamp * 1000));
       }
