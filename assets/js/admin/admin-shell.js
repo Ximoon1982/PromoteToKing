@@ -14,7 +14,7 @@ const ADMIN_DETAIL_DEFS = {
       {key:"analyzer",label:"Open analyzer",src:"AnalyzeMatch.html?embedded=1&release=2.10.6.14"}
     ]},
     mca: { title:"Multi Club Arenas", tabs:[
-      {key:"source",label:"MCA source data",src:"TeamPointsAdmin.html?embedded=1&tab=live-ranks&release=2.10.6.14"}
+      {key:"source",label:"MCA source data",src:"TeamPointsAdmin.html?embedded=1&tab=live-ranks&release=2.15.11-mca-derived-safe"}
     ]},
     tournaments: { title:"Tournaments", tabs:[{key:"management",label:"Tournament management",src:"TournamentManagement.html?embedded=1&release=2.10.6.23"}]}
   },
