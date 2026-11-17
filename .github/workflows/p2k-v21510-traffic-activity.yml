@@ -64,15 +64,16 @@ jobs:
           base='b40a954cd66f7c8f72f8085b00e183a2d8d7f23e'
           assert subprocess.check_output(['git','merge-base',base,head],text=True).strip()==base, 'Promoted baseline must be ancestor'
           changed=set(subprocess.check_output(['git','diff','--name-only',base,head],text=True).splitlines())
-          overlay=['VERSION',
-            'server/shared/TrafficAnalytics.php',
-            'assets/js/shared/traffic-analytics.js',
-            'assets/js/pages/club-intelligence.js',
-            'ClubIntelligence.html',
-            'server/widgets/public/embed.php',
-            'server/events-showcase/public/embed-card.php',
-            'assets/js/widgets/p2k-competition-v2159.js']
-          assert changed.issubset(set(overlay)|{'tests/traffic_widget_consistency_v21510.php','.github/workflows/p2k-v21510-traffic-activity.yml'}),changed
+          nonpayload={'tests/traffic_widget_consistency_v21510.php','.github/workflows/p2k-v21510-traffic-activity.yml'}
+          payload_changed=changed-nonpayload
+          required={'server/shared/TrafficAnalytics.php','assets/js/shared/traffic-analytics.js',
+                    'assets/js/pages/club-intelligence.js','server/widgets/public/embed.php',
+                    'server/events-showcase/public/embed-card.php','assets/js/widgets/p2k-competition-v2159.js',
+                    'assets/js/site-config.js','ClubIntelligence.html'}
+          assert required.issubset(payload_changed),required-payload_changed
+          assert not any(p.startswith('tests/') or p.startswith('.github/') for p in payload_changed),payload_changed
+          overlay=['VERSION']+sorted(payload_changed)
+          print('Overlay files:',len(overlay),'; changed sources:',sorted(payload_changed))
           recovery=['ReleaseControl.php',
             'server/release-control/src/bootstrap.php',
             'server/release-control/src/ReleasePackageUploadInstaller.php',
@@ -119,7 +120,8 @@ jobs:
             require "server/release-control/src/ReleaseCandidatePackage.php";
             $p = new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
             $m = $p->validate();
-            if ($m["overlay_file_count"] !== 8 || $m["version"] !== "2.15.10") exit(2);
+            $expected = count(file($argv[1]."/CANDIDATE_PAYLOAD.sha256", FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES));
+            if ($m["overlay_file_count"] !== $expected || $m["version"] !== "2.15.10") exit(2);
             echo "PASS candidate ".$m["release_id"]."\n";
           ' dist/P2K_2.15.10_Traffic_Visitors_ReleaseControl
           python3 - <<'PY'
@@ -129,7 +131,8 @@ jobs:
           with zipfile.ZipFile(zpath) as z:
             assert z.testzip() is None
             names=z.namelist()
-            assert len(names)==16 and len(names)==len(set(names)),names
+            expected=4+len(z.read('CANDIDATE_PAYLOAD.sha256').splitlines())+len(z.read('RECOVERY_PLANE.sha256').splitlines())
+            assert len(names)==expected and len(names)==len(set(names)),(len(names),expected)
             assert all('..' not in p.split('/') and not p.startswith('/') for p in names)
             meta=json.loads(z.read('CANDIDATE_RELEASE.json'))
             assert meta['accepted_public_builds']==[{'version':'2.15.10','source_head':'b40a954cd66f7c8f72f8085b00e183a2d8d7f23e'}]
