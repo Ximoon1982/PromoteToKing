@@ -88,6 +88,47 @@ final class FilesystemCleanupManager
         return ['ok'=>true,'relative_path'=>$relativePath,'category'=>$row['category'] ?? '','stats'=>$before];
     }
 
+
+    /**
+     * Conservative multi-selection: preflight every entry against fresh inventory,
+     * then reuse delete() so age, newest-backup, baseline and symlink guards are
+     * checked again immediately before removing each artifact.
+     */
+    public function deleteMany(array $relativePaths, string $actor): array
+    {
+        if (count($relativePaths)<1 || count($relativePaths)>20) {
+            throw new \InvalidArgumentException('Select between 1 and 20 maintenance artifacts.');
+        }
+        $items=[];
+        foreach($relativePaths as $raw) {
+            if(!is_string($raw))throw new \InvalidArgumentException('Invalid cleanup selection.');
+            $path=$this->normalizeRelative($raw);
+            if ($path==='')throw new \InvalidArgumentException('Invalid cleanup path.');
+            if(isset($items[$path]))throw new \InvalidArgumentException('Duplicate cleanup selection.');
+            $items[$path]=true;
+        }
+        // Never let a single eligible row mask a newer protected or unsafe row.
+        $inventory=$this->inventory();
+        $ready=[];
+        foreach($inventory['candidates'] as $row) {
+            $path=(string)($row['relative_path']??'');
+            if(!isset($items[$path]))continue;
+            if(empty($row['cleanup_ready']))throw new \RuntimeException('Selected artifact is protected or no longer eligible: '.$path);
+            $ready[$path]=true;
+        }
+        foreach(array_keys($items) as $path)if(!isset($ready[$path])) {
+            throw new \RuntimeException('Selected artifact is not on the safe cleanup list: '.$path);
+        }
+        $done=[];
+        foreach(array_keys($items) as $path){
+            try{$done[]=$this->delete($path,$actor);}
+            catch(\Throwable $e){
+                throw new \RuntimeException('Batch stopped after '.count($done).' deletions. '.$e->getMessage(),0,$e);
+            }
+        }
+        return ['ok'=>true,'action'=>'delete-filesystem-artifacts','deleted_count'=>count($done),'deleted'=>$done];
+    }
+
     /** @return list<array<string,mixed>> */
     private function topLevelCandidates(array $protected): array
     {
