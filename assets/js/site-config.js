@@ -155,7 +155,7 @@
 (() => {
   if (window.P2K_SITE_CONFIG?.features?.trafficAnalytics === false) return;
   if (document.querySelector('script[data-p2k-traffic-analytics]')) return;
-  const script=document.createElement('script');script.src='assets/js/shared/traffic-analytics.js?v=2.11.5-bf6a828490f57';script.defer=true;script.dataset.p2kTrafficAnalytics='1';const mount=()=>document.head.appendChild(script);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+  const script=document.createElement('script');script.src='assets/js/shared/traffic-analytics.js?v=2.15.10-traffic-activity-1';script.defer=true;script.dataset.p2kTrafficAnalytics='1';const mount=()=>document.head.appendChild(script);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
 
 // Shared live-chart maximize/restore controller.
