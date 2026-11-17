@@ -166,6 +166,29 @@
     arenaModalSave.disabled = false;
     if (typeof arenaModal.showModal === "function") arenaModal.showModal();
   }
+  function preselectUpcomingArena(candidate) {
+    if (arenaSaving || dailySaving) return;
+    if (arenas.length >= 100) {setMessage("Maximum 100 configured arenas.", "error");return;}
+    // Selection is a draft only: never auto-enable or save a suggested arena.
+    openArenaModal(null);
+    if (!arenaModal.open) return;
+    const value = {
+      name:String(candidate.name || ""),
+      link:String(candidate.url || ""),
+      date:String(candidate.localDate || ""),
+      time:String(candidate.localTime || "")
+    };
+    for (const [field,entry] of Object.entries(value)) {
+      const input=arenaForm.elements.namedItem(field);
+      if (input) input.value=entry;
+    }
+    const duration=arenaForm.elements.namedItem("duration");
+    const control=arenaForm.elements.namedItem("timeControl");
+    if(duration)duration.value="";
+    if(control)control.value="";
+    arenaModalTitle.textContent="Add discovered arena";
+    arenaModalError.textContent="Check duration and time control before saving. Start time is converted to Luxembourg time.";
+  }
   function readArenaDraft() {
     const value = {active: editingArenaIndex === null ? false : arenas[editingArenaIndex].active};
     arenaFields.forEach(field => {value[field] = String(arenaForm.elements.namedItem(field)?.value || "").trim();});
@@ -200,6 +223,7 @@
       if (!Number.isInteger(revision) || revision < 0) throw new Error("Invalid revision returned by server.");
       arenas = (payload.arenas || []).map(toArena);
       persistedItems = compactItems(payload.items || persistedItems);
+      window.P2K_STANDALONE_ARENA_DISCOVERY?.render?.();
       updateEmbedFields();
       preview.src = `../?_=${Date.now()}`;
       setMessage(successText, "success");
@@ -315,6 +339,7 @@
     arenaRowsControl.value = String(layout.arenaRows);
     dailyRowsControl.value = String(layout.dailyRows);
     renderArenas();
+    window.P2K_STANDALONE_ARENA_DISCOVERY?.render?.();
     updateEmbedFields();
     items = (payload.items || []).map(row => ({
       matchId: String(row.matchId),
@@ -554,6 +579,7 @@
       });
     } catch (_) {}
     csrf = "";
+    window.P2K_STANDALONE_ARENA_DISCOVERY?.stop?.();
     editor.hidden = true;
     embedPanel.hidden = true;
     logoutButton.hidden = true;
@@ -567,6 +593,14 @@
     updateEmbedFields();
     await loadAdminState();
     await loadRegistration(false);
+    await window.P2K_STANDALONE_ARENA_DISCOVERY?.start?.({
+      api:API,
+      clubSlug:String(CFG.teamSlug || ""),
+      getCsrf:()=>csrf,
+      getArenas:()=>arenas,
+      isSaving:()=>arenaSaving || dailySaving,
+      preselect:preselectUpcomingArena
+    });
   }
 
   async function init() {
