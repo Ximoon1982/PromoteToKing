@@ -315,8 +315,10 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
   <?php if ($previewResult === 'enabled'): ?><section class="notice"><strong>Candidate preview enabled for this browser session.</strong> Open the site from the control below to browse the candidate.</section><?php elseif ($previewResult === 'disabled'): ?><section class="notice"><strong>Candidate preview disabled.</strong> This browser is back on the public release.</section><?php endif; ?>
   <?php if ($deploymentResult === 'promoted'): ?><section class="notice"><strong>Candidate promoted atomically.</strong> Public traffic now resolves from the promoted release; the former public release is retained as the rollback target.</section><?php elseif ($deploymentResult === 'rolled-back'): ?><section class="notice"><strong>Rollback completed atomically.</strong> The previous public release is serving again, and the rolled-back release is registered as the candidate for verification or re-promotion.</section><?php endif; ?>
   <?php if ($cleanupResult === 'deleted'): ?><section class="notice"><strong>Obsolete release removed.</strong> <?= rc_h($cleanupResultRelease) ?> and its release-control-owned preview/runtime artifacts were deleted.</section><?php endif; ?>
+  <?php if ($cleanupResult === 'batch'): ?><section class="notice"><strong>Batch release cleanup completed.</strong> <?= rc_h($cleanupDeletedCount) ?> old release(s) deleted after protected-role revalidation.</section><?php endif; ?>
   <?php if ($packageResult === 'installed'): ?><section class="notice"><strong>Release ZIP installed as candidate.</strong> <?= rc_h($packageRelease) ?> is registered and its preview tree is prepared. Public traffic was not changed.</section><?php endif; ?>
   <?php if ($filesystemResult === 'deleted'): ?><section class="notice"><strong>Filesystem cleanup completed.</strong> <?= rc_h($filesystemResultPath) ?> was removed after revalidation.</section><?php endif; ?>
+  <?php if ($filesystemResult === 'batch'): ?><section class="notice"><strong>Batch filesystem cleanup completed.</strong> <?= rc_h($cleanupDeletedCount) ?> maintenance artifact(s) deleted after revalidation.</section><?php endif; ?>
 
   <div class="grid">
     <section class="card">
@@ -426,10 +428,19 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
       <?php if ($managedReleasesAll === []): ?>
         <p class="small">No release-control-managed release artifacts were found.</p>
       <?php else: ?>
+        <form method="post" action="/ReleaseControl.php" id="rcReleaseBatchForm" data-batch-form>
+          <input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>">
+          <input type="hidden" name="action" value="delete-releases">
+          <input type="hidden" name="release_page" value="<?= rc_h($releasePage) ?>">
+          <div class="actions"><label class="small"><input type="checkbox" data-batch-all="release"> Select removable releases on this page</label></div>
         <div class="checks">
           <?php foreach ($managedReleasesPage as $release): $stats = $release['stats'] ?? []; $roles = $release['roles'] ?? []; $integrityValid = ($release['integrity_status'] ?? '') === 'valid'; ?>
             <div class="check <?= !empty($release['protected']) ? 'ok' : (!empty($release['cleanup_ready']) ? 'warning' : 'error') ?>">
-              <i class="dot" aria-hidden="true"></i>
+              <?php if (empty($release['protected']) && !empty($release['cleanup_ready'])): ?>
+                <input type="checkbox" name="release_ids[]" data-batch-item="release"
+                  value="<?= rc_h($release['release_id'] ?? '') ?>"
+                  aria-label="Select obsolete release <?= rc_h($release['release_id'] ?? '') ?>">
+              <?php else: ?><i class="dot" aria-hidden="true"></i><?php endif; ?>
               <strong><?= rc_h($release['release_id'] ?? 'unknown') ?></strong>
               <span>
                 <?= $roles !== [] ? 'PROTECTED · ' . rc_h(implode(' + ', $roles)) : 'obsolete / unreferenced' ?> ·
@@ -448,6 +459,12 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
             </div>
           <?php endforeach; ?>
         </div>
+        <div class="actions" data-batch-toolbar="release">
+          <label class="small"><input type="checkbox" name="confirm" value="yes" required> Confirm permanent removal of selected obsolete releases</label>
+          <button class="button" type="submit">Delete selected (<span data-batch-count="release">0</span>)</button>
+        </div>
+        <p class="small">Selection is limited to this page. Current public, rollback, candidate, recovery-baseline and unsafe releases cannot be selected and are rechecked under lock before deletion.</p>
+        </form>
         <div class="pagination" aria-label="Release list pagination">
           <span class="small">Showing <?= rc_h($releasePageFrom) ?>–<?= rc_h($releasePageTo) ?> of <?= rc_h(count($managedReleasesAll)) ?> releases</span>
           <nav class="pagination-nav" aria-label="Release pages">
@@ -563,10 +580,19 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
       <?php if ($filesystemCandidatesAll === []): ?>
         <p class="small">No conservative filesystem cleanup candidates were found.</p>
       <?php else: ?>
+        <form method="post" action="/ReleaseControl.php" id="rcFilesystemBatchForm" data-batch-form>
+          <input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>">
+          <input type="hidden" name="action" value="delete-filesystem-artifacts">
+          <input type="hidden" name="filesystem_page" value="<?= rc_h($filesystemPage) ?>">
+          <div class="actions"><label class="small"><input type="checkbox" data-batch-all="filesystem"> Select removable items on this page</label></div>
         <div class="checks">
           <?php foreach ($filesystemCandidatesPage as $artifact): $artifactStats = (array)($artifact['stats'] ?? []); ?>
             <div class="check <?= !empty($artifact['cleanup_ready']) ? 'warning' : 'error' ?>">
-              <i class="dot" aria-hidden="true"></i>
+              <?php if (!empty($artifact['cleanup_ready'])): ?>
+                <input type="checkbox" name="filesystem_paths[]" data-batch-item="filesystem"
+                  value="<?= rc_h($artifact['relative_path'] ?? '') ?>"
+                  aria-label="Select maintenance artifact <?= rc_h($artifact['relative_path'] ?? '') ?>">
+              <?php else: ?><i class="dot" aria-hidden="true"></i><?php endif; ?>
               <strong><?= rc_h($artifact['category'] ?? 'artifact') ?></strong>
               <span>
                 <code><?= rc_h($artifact['relative_path'] ?? '') ?></code> ·
@@ -581,6 +607,12 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
             </div>
           <?php endforeach; ?>
         </div>
+        <div class="actions" data-batch-toolbar="filesystem">
+          <label class="small"><input type="checkbox" name="confirm" value="yes" required> Confirm permanent removal of selected maintenance artifacts</label>
+          <button class="button" type="submit">Delete selected (<span data-batch-count="filesystem">0</span>)</button>
+        </div>
+        <p class="small">Only presently eligible maintenance entries can be selected; newest backups, recent staging, symlinks, recovery-baseline paths, and unrelated projects remain protected.</p>
+        </form>
         <div class="pagination" aria-label="Filesystem cleanup pagination">
           <span class="small">Showing <?= rc_h($filesystemPageFrom) ?>–<?= rc_h($filesystemPageTo) ?> of <?= rc_h(count($filesystemCandidatesAll)) ?> candidates</span>
           <nav class="pagination-nav" aria-label="Filesystem cleanup pages">
@@ -693,5 +725,33 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
 </main>
 <script src="/server/release-control/public/release-control-upload.js"></script>
 
+
+<script>
+(() => {
+  'use strict';
+  for(const kind of ['release','filesystem']){
+    const form=document.getElementById(kind==='release'?'rcReleaseBatchForm':'rcFilesystemBatchForm');
+    if(!form)continue;
+    const items=[...form.querySelectorAll('[data-batch-item="'+kind+'"]')];
+    const all=form.querySelector('[data-batch-all="'+kind+'"]');
+    const count=form.querySelector('[data-batch-count="'+kind+'"]');
+    const button=form.querySelector('button[type=submit]');
+    const update=()=>{
+      const n=items.filter(el=>el.checked).length;
+      if(count)count.textContent=String(n);
+      if(button)button.disabled=n===0;
+      if(all){all.checked=n>0&&n===items.length;all.indeterminate=n>0&&n<items.length;}
+    };
+    items.forEach(input=>input.addEventListener('change',update));
+    if(all)all.addEventListener('change',()=>{for(const input of items)input.checked=all.checked;update();});
+    form.addEventListener('submit',event=>{
+      const n=items.filter(input=>input.checked).length;
+      if(n===0){event.preventDefault();return;}
+      if(!window.confirm('Permanently delete '+n+' selected '+(kind==='release'?'obsolete release(s)':'maintenance artifact(s)')+'? Protection rules will be checked again.'))event.preventDefault();
+    });
+    update();
+  }
+})();
+</script>
 </body>
 </html>
