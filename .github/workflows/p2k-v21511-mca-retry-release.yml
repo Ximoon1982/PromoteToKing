@@ -1,0 +1,231 @@
+name: P2K 2.15.11 MCA retry contention and release
+on:
+  push:
+    branches: [release/v2.15.11]
+    paths:
+      - '.github/workflows/p2k-v21511-mca-retry-release.yml'
+      - 'server/team-points/src/McaResultsCronService.php'
+      - 'assets/js/pages/team-points-features.js'
+      - 'TeamPointsAdmin.html'
+      - 'tests/php_v21511_mca_retry_concurrency.php'
+      - 'tests/mca_retry_ui_v21511.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: p2k_retry_test
+          MARIADB_USER: p2k
+          MARIADB_PASSWORD: p2k-test-only
+          MARIADB_ROOT_PASSWORD: root-test-only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=4s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate PHP/JavaScript source and saved MCA parser fixes
+        run: |
+          set -euo pipefail
+          BASE=3024e0520083934a52d41addb655d061a3c71b2a
+          test "$(git merge-base "$BASE" HEAD)" = "$BASE"
+          php -l server/team-points/src/McaResultsCronService.php
+          php -l tests/php_v21511_mca_retry_concurrency.php
+          node --check assets/js/pages/team-points-features.js
+          node --check tests/mca_retry_ui_v21511.cjs
+          node --check assets/js/admin/admin-shell.js
+          node tests/mca_retry_ui_v21511.cjs
+          node tests/admin_mca_direct_access_v21511.cjs
+          php tests/php_v21511_mca_removed_pages.php
+          node tests/showcase_datetime_v21511.cjs
+          php tests/php_v21510_showcase_local_times.php
+          python3 tests/test_v2155_mca_results_priority.py
+          python3 tests/test_v21063_mca_pagination.py
+          php tests/php_v2147_release_management_harness.php
+          php tests/php_v2148_filesystem_cleanup_harness.php
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          base='3024e0520083934a52d41addb655d061a3c71b2a'
+          unchanged=['server/team-points/src/LiveRanksService.php',
+              'server/team-points/src/McaArenaParser.php',
+              'server/team-points/src/McaBlueGreenSync.php',
+              'server/team-points/src/McaSourceCatalogue.php',
+              'server/team-points/src/McaRenameRecheckService.php',
+              'server/events-showcase/src/EventsShowcaseStore.php']
+          for p in unchanged:
+              assert not subprocess.check_output(['git','diff','--name-only',base,'HEAD','--',p]).strip(),p
+          assert 'team-points-features.js?v=2.15.11-mca-retry-queue-1' in Path('TeamPointsAdmin.html').read_text()
+          print('PASS prior scraper, stored data, CSV player scoring and MCA positions unchanged')
+          PY
+      - name: Execute the exact retry SQL against MariaDB while MCA worker owns GET_LOCK
+        env:
+          P2K_TEST_MARIADB_DSN: mysql:host=127.0.0.1;port=3306;dbname=p2k_retry_test;charset=utf8mb4
+          P2K_TEST_MARIADB_USER: p2k
+          P2K_TEST_MARIADB_PASS: p2k-test-only
+        run: |
+          set -euo pipefail
+          php -m | grep -qi pdo_mysql
+          php tests/php_v21511_mca_retry_concurrency.php
+      - name: Probe both exact formerly blocked Chess.com pages if anonymous access permits
+        run: |
+          python3 - <<'PY'
+          import subprocess,urllib.request,urllib.error,ssl
+          targets=[
+            (31168164,'los-amigos-of-highway-to-glory-3-2-24h-31168164',23),
+            (31120600,'one-world-league-8th-autumn-24-hours-multi-club-31120600',17),
+          ]
+          for arena,slug,page in targets:
+            url=f'https://www.chess.com/tournament/live/arena/{slug}?clubs=1&players={page}&pairings=1'
+            req=urllib.request.Request(url,headers={
+                'User-Agent':'PromoteToKing/2.10.9.4 MCA Arena Acquisition (+https://www.promotetoking.org)',
+                'Accept':'text/html,text/csv;q=0.9,*/*;q=0.5','Accept-Language':'en-US,en;q=0.8'})
+            try:
+              with urllib.request.urlopen(req,timeout=12) as res:
+                status=res.status
+                body=res.read(2_000_000)
+                final_url=res.geturl()
+            except Exception as e:
+              print(f'LIVE_PAGE_UNVERIFIED arena={arena} page={page}: {type(e).__name__} {str(e)[:170]}')
+              continue
+            if status!=200 or b'Player Results' not in body or b'tournaments-live-view-results-row' not in body:
+              print(f'LIVE_PAGE_UNVERIFIED arena={arena} page={page}: status={status} bytes={len(body)} table_absent=true')
+              continue
+            path=f'/tmp/p2k_mca_live_{arena}_page{page}.html'
+            with open(path,'wb') as fp:fp.write(body)
+            php=r'''
+              require 'server/team-points/src/McaArenaParser.php';
+              $html=file_get_contents($argv[1]);$page=(int)$argv[2];
+              $rows=\P2K\TeamPoints\McaArenaParser::playerRows($html);
+              $removed=\P2K\TeamPoints\McaArenaParser::removedOnlyPlayerPage($html,$page);
+              echo 'ranked='.count($rows).' removed_icons='.substr_count($html,'tournaments-live-view-removed-icon')
+                  .' removed_only_valid='.($removed?'true':'false').PHP_EOL;
+              if($rows===[]&&!$removed)exit(17);
+            '''
+            p=subprocess.run(['php','-r',php,path,str(page)],capture_output=True,text=True)
+            print(f'LIVE_PAGE arena={arena} page={page} bytes={len(body)}: {p.stdout.strip()} status={"ACCEPTED" if p.returncode==0 else "REJECTED"}')
+            if p.returncode!=0:
+              print('LIVE_PAGE_REQUIRES_FURTHER_FIX arena='+str(arena)+' page='+str(page))
+              raise SystemExit(1)
+          PY
+      - name: Build cumulative Release Control ZIP, compatible with installed 3024
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import subprocess,json,zipfile
+          base='3024e0520083934a52d41addb655d061a3c71b2a'
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert subprocess.check_output(['git','merge-base',base,head],text=True).strip()==base
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,head],text=True).splitlines())
+          overlay_sources={
+            'assets/js/admin/admin-shell.js',
+            'ui-v2.html',
+            'server/team-points/src/McaResultsCronService.php',
+            'assets/js/pages/team-points-features.js',
+            'TeamPointsAdmin.html'
+          }
+          non_payload={
+            'tests/admin_mca_direct_access_v21511.cjs',
+            '.github/workflows/p2k-v21511-mca-admin-access.yml',
+            'tests/php_v21511_mca_retry_concurrency.php',
+            'tests/mca_retry_ui_v21511.cjs',
+            '.github/workflows/p2k-v21511-mca-retry-release.yml'
+          }
+          assert changed==overlay_sources|non_payload,{'actual':sorted(changed),'expected':sorted(overlay_sources|non_payload)}
+          recovery=['ReleaseControl.php','server/release-control/src/bootstrap.php',
+            'server/release-control/src/ReleasePackageUploadInstaller.php',
+            'server/release-control/src/FilesystemCleanupManager.php',
+            'server/release-control/src/ReleaseVersionManager.php']
+          overlay=sorted(overlay_sources|{'VERSION'})
+          root=Path('dist/P2K_2.15.11_MCA_Retry_Queue_ReleaseControl')
+          payload=root/'payload';payload.mkdir(parents=True,exist_ok=True)
+          for p in sorted((overlay_sources-{'ui-v2.html'})|set(recovery)):
+            target=payload/p;target.parent.mkdir(parents=True,exist_ok=True)
+            target.write_bytes(Path(p).read_bytes())
+          (payload/'VERSION').write_text('2.15.11\n')
+          cache_key='p2k-2.15.11-'+head[:12]+'-'+sha256((head+'|mca-retry-queue-v21511').encode()).hexdigest()[:16]
+          html=Path('ui-v2.html').read_text()
+          assert html.count('<head>')==1
+          (payload/'ui-v2.html').write_text(
+            html.replace('<head>','<head>\n<meta name="p2k-build" content="'+cache_key+'">',1))
+          sha=lambda path:sha256(path.read_bytes()).hexdigest()
+          (root/'CANDIDATE_PAYLOAD.sha256').write_text(
+            ''.join(sha(payload/p)+'  ./'+p+'\n' for p in overlay))
+          (root/'RECOVERY_PLANE.sha256').write_text(
+            ''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(recovery)))
+          meta={
+            'schema_version':1,'version':'2.15.11','source_head':head,
+            'cache_key':cache_key,'build_id':'p2k-v21511-mca-retry-queue-'+head[:12],
+            'qualification_workflow':'p2k-v21511-mca-retry-release.yml',
+            'payload_manifest_sha256':sha(root/'CANDIDATE_PAYLOAD.sha256'),
+            'accepted_public_builds':[{'version':'2.15.11','source_head':base}]
+          }
+          (root/'CANDIDATE_RELEASE.json').write_text(json.dumps(meta,indent=2)+'\n')
+          (root/'README.txt').write_text(
+            'P2K 2.15.11 MCA retry queue repair — compatible with installed 2.15.11-3024e0520083.\n'
+            'MCA admin retry atomically requeues failed arenas while the automatic worker owns the scrape lock.\n'
+            'Keeps currently running arenas untouched and preserves exact per-arena page checkpoints.\n'
+            'Missing Results arenas receive first priority over optional enrichment.\n'
+            'Retry does not launch competing manual discovery/hydration. Displays clear requeue acknowledgement.\n'
+            'Adds direct MCA admin link and corrects stale admin detail loading message (previously uninstalled fix).\n'
+            'No player points, club positions, source CSV, removed-player parser, database schema or CRON changes.\n'
+            'In Admin > Maintenance > Release Control: upload ZIP, preview, validate, then manually promote.\n'
+            'After promotion click Retry failed acquisition once and let the every-minute CRON process pending pages.\n')
+          out=root.parent/('P2K_2.15.11_MCA_Retry_Queue_ReleaseControl_'+head[:12]+'.zip')
+          with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+            for f in sorted(root.rglob('*')):
+              if f.is_file():z.write(f,f.relative_to(root))
+          (root.parent/'SHA256SUMS').write_text(sha(out)+'  '+out.name+'\n')
+          print('ZIP',out,out.stat().st_size,'bytes SHA256',sha(out))
+          print('RELEASE',json.dumps(meta))
+          PY
+      - name: Validate Release Control candidate and ZIP SHA256 manifests
+        run: |
+          set -euo pipefail
+          php -r '
+            require "server/release-control/src/ReleaseSlotPolicy.php";
+            require "server/release-control/src/ReleaseCandidatePackage.php";
+            $candidate=new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
+            $m=$candidate->validate();
+            if($m["version"]!=="2.15.11")exit(2);
+            if($m["accepted_public_builds"]!==[["version"=>"2.15.11","source_head"=>"3024e0520083934a52d41addb655d061a3c71b2a"]])exit(3);
+            echo "PASS release candidate ".$m["release_id"]." overlay=".$m["overlay_file_count"]."\n";
+          ' dist/P2K_2.15.11_MCA_Retry_Queue_ReleaseControl
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,zipfile,hashlib
+          f=next(Path('dist').glob('P2K_2.15.11_MCA_Retry_Queue_ReleaseControl_*.zip'))
+          with zipfile.ZipFile(f) as z:
+            assert z.testzip() is None
+            assert len(set(z.namelist()))==len(z.namelist())
+            metadata=json.loads(z.read('CANDIDATE_RELEASE.json'))
+            assert metadata['version']=='2.15.11'
+            assert metadata['accepted_public_builds']==[{'version':'2.15.11',
+              'source_head':'3024e0520083934a52d41addb655d061a3c71b2a'}]
+            for name in ['CANDIDATE_PAYLOAD.sha256','RECOVERY_PLANE.sha256']:
+              for line in z.read(name).decode().splitlines():
+                h,p=line.split('  ./',1)
+                assert hashlib.sha256(z.read('payload/'+p)).hexdigest()==h,p
+            assert hashlib.sha256(z.read('CANDIDATE_PAYLOAD.sha256')).hexdigest()==metadata['payload_manifest_sha256']
+          print('PASS checksum manifest, exact deployed compatibility and ZIP integrity')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-v21511-mca-retry-queue-release-control
+          path: |
+            dist/P2K_2.15.11_MCA_Retry_Queue_ReleaseControl_*.zip
+            dist/SHA256SUMS
+          retention-days: 14
