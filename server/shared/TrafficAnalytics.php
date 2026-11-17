@@ -47,7 +47,21 @@ final class TrafficAnalytics
         $path = self::normalizePath((string)($payload['path'] ?? '/'));
         $ref = self::normalizeReferrer((string)($payload['referrer'] ?? ''), (string)($server['HTTP_HOST'] ?? ''));
         $kind = strtolower(trim((string)($payload['event'] ?? 'pageview')));
-        if (!in_array($kind, ['pageview','pagehide','visibility'], true)) $kind = 'pageview';
+        if (!in_array($kind, ['pageview','pagehide','visibility','resume','widgetview','widgettab','widgetaction'], true)) $kind = 'pageview';
+        $visitKey = strtolower(trim((string)($payload['visit_key'] ?? '')));
+        $visitKey = preg_match('/^[a-f0-9]{32}$/D', $visitKey) ? $visitKey : '';
+        $viewId = strtolower(trim((string)($payload['view_id'] ?? '')));
+        $viewId = preg_match('/^[a-f0-9]{32}$/D', $viewId) ? $viewId : '';
+        $widget = strtolower(trim((string)($payload['widget'] ?? '')));
+        if (!in_array($widget, ['competition','recruitment-radar','rivalry-spotlight','showcase','club-pulse','trophy-spotlight','club-progress','around-the-world','player-spotlight','tournament-winners','hall-of-fame'], true)) $widget = '';
+        $action = strtolower(trim((string)($payload['action'] ?? '')));
+        if ($kind === 'widgettab' && ($widget !== 'competition' || !in_array($action, ['showcase','match-calls','rivals'], true))) $kind = 'invalid';
+        if ($kind === 'widgetaction' && ($widget !== 'competition' || $action !== 'open-match-assistant')) $kind = 'invalid';
+        if ($kind === 'widgetview' && $widget === '') $kind = 'invalid';
+        if ($kind === 'invalid') return ['ok'=>true,'recorded'=>false,'reason'=>'invalid_widget_event'];
+        // Only a short-lived server HMAC of the tab key is retained; raw client
+        // identifiers are never persisted. Older clients still use IP-only estimates.
+        $sessionKey = $visitKey === '' ? $visitor : hash_hmac('sha256', $visitor.'|'.$visitKey, $secret);
 
         $dir = $root.'/data/traffic';
         $runtimeDir = $dir.'/runtime';
@@ -69,17 +83,20 @@ final class TrafficAnalytics
 
             $aggregatePath = $aggregateDir.'/'.$day.'.json';
             $agg = self::readJson($aggregatePath, self::newAggregate($day));
-            $session = is_array($sessions['sessions'][$visitor] ?? null) ? $sessions['sessions'][$visitor] : null;
+            $session = is_array($sessions['sessions'][$sessionKey] ?? null) ? $sessions['sessions'][$sessionKey] : null;
             $newSession = !$session || (int)($session['last']??0) < $now-self::SESSION_IDLE_SECONDS;
+            if ($newSession && !in_array($kind, ['pageview','widgetview'], true)) {
+                return ['ok'=>true,'recorded'=>false,'reason'=>'no_open_visit'];
+            }
             if ($newSession) {
-                $session = ['started'=>$now,'last'=>$now,'last_path'=>$path,'active_seconds'=>0,'bucket'=>'0','day'=>$day,'country'=>$country];
+                $session = ['started'=>$now,'last'=>$now,'last_path'=>$path,'active_seconds'=>0,'bucket'=>'0','day'=>$day,'country'=>$country,'active'=>true,'open_views'=>[]];
                 $agg['sessions']=(int)($agg['sessions']??0)+1;
                 $agg['entries'][$path]=(int)($agg['entries'][$path]??0)+1;
-                $agg['_session_ids'][$visitor]=1;
+                $agg['_session_ids'][$sessionKey]=1;
                 self::moveDurationBucket($agg, null, '0');
             } else {
                 $delta=max(0,min(self::SESSION_IDLE_SECONDS,$now-(int)($session['last']??$now)));
-                if ($delta>0) {
+                if ($delta>0 && !empty($session['active'])) {
                     $oldBucket=(string)($session['bucket']??'0');
                     $session['active_seconds']=(int)($session['active_seconds']??0)+$delta;
                     $newBucket=self::durationBucket((int)$session['active_seconds']);
@@ -91,6 +108,16 @@ final class TrafficAnalytics
 
             $agg['_visitor_ids'][$visitor]=1;
             $agg['estimated_unique_visitors']=count($agg['_visitor_ids']);
+            // Only the latest 80 open page identities are retained per ephemeral tab.
+            // This prevents repeated visibility/pagehide signals inflating exits.
+            if (!is_array($session['open_views']??null)) $session['open_views']=[];
+            if ($kind === 'pageview' || $kind === 'widgetview') {
+                $session['active']=true;
+                if ($viewId !== '') {
+                    $session['open_views'][$viewId]=$path;
+                    if (count($session['open_views'])>80) $session['open_views']=array_slice($session['open_views'],-80,null,true);
+                }
+            }
             if ($kind === 'pageview') {
                 $agg['pageviews']=(int)($agg['pageviews']??0)+1;
                 $agg['pages'][$path]=(int)($agg['pages'][$path]??0)+1;
@@ -103,13 +130,33 @@ final class TrafficAnalytics
                     $agg['transitions'][$transition]=(int)($agg['transitions'][$transition]??0)+1;
                 }
                 $session['last_path']=$path;
-            } elseif ($kind === 'pagehide' || $kind === 'visibility') {
-                $exit=(string)($session['last_path']??$path);
-                if ($exit!=='') $agg['exits'][$exit]=(int)($agg['exits'][$exit]??0)+1;
+            } elseif ($kind === 'widgetview') {
+                $agg['widget_views']=(int)($agg['widget_views']??0)+1;
+                $agg['widgets'][$widget]=(int)($agg['widgets'][$widget]??0)+1;
+                $session['last_path']=$path;
+            } elseif ($kind === 'widgettab') {
+                $tag=$widget.':'.$action;
+                $agg['widget_tabs'][$tag]=(int)($agg['widget_tabs'][$tag]??0)+1;
+            } elseif ($kind === 'widgetaction') {
+                $tag=$widget.':'.$action;
+                $agg['widget_actions'][$tag]=(int)($agg['widget_actions'][$tag]??0)+1;
+            } elseif ($kind === 'pagehide') {
+                // A page departure must correspond to a recorded page view
+                // and can be counted only once. Legacy exit signals remain untouched.
+                if ($viewId !== '' && isset($session['open_views'][$viewId])) {
+                    $departed=(string)$session['open_views'][$viewId];
+                    unset($session['open_views'][$viewId]);
+                    $agg['page_leaves'][$departed]=(int)($agg['page_leaves'][$departed]??0)+1;
+                }
+                $session['active']=false;
+            } elseif ($kind === 'visibility') {
+                $session['active']=false;
+            } elseif ($kind === 'resume') {
+                $session['active']=true;
             }
 
             $session['last']=$now;$session['day']=$day;$session['country']=$country;
-            $sessions['sessions'][$visitor]=$session;$sessions['updated_at']=gmdate(DATE_ATOM,$now);
+            $sessions['sessions'][$sessionKey]=$session;$sessions['updated_at']=gmdate(DATE_ATOM,$now);
             $agg['updated_at']=gmdate(DATE_ATOM,$now);
             $diagPath=$runtimeDir.'/diagnostics.json';
             $diag=self::readJson($diagPath,['event_times'=>[]]);
@@ -129,11 +176,16 @@ final class TrafficAnalytics
     public static function report(string $root, int $days=90): array
     {
         $root=rtrim($root,'/\\');$days=max(1,min(366,$days));$dir=$root.'/data/traffic/aggregates';
-        $rows=[];$totals=['pageviews'=>0,'sessions'=>0,'estimated_unique_visitors'=>0,'duration_total_seconds'=>0];
+        $rows=[];$totals=['pageviews'=>0,'sessions'=>0,'estimated_unique_visitors'=>0,'duration_total_seconds'=>0,'widget_views'=>0];
         $pages=[];$entries=[];$exits=[];$countries=[];$referrers=[];$transitions=[];$hist=[];
+        $widgets=[];$widgetTabs=[];$widgetActions=[];$pageLeaves=[];
         if (is_dir($dir)) {
             $files=glob($dir.'/*.json')?:[];sort($files,SORT_STRING);$files=array_slice($files,-$days);
-            foreach($files as $file){$a=self::readJson($file,[]);if(!$a)continue;$row=['date'=>(string)($a['date']??basename($file,'.json')),'pageviews'=>(int)($a['pageviews']??0),'sessions'=>(int)($a['sessions']??0),'estimated_unique_visitors'=>(int)($a['estimated_unique_visitors']??0),'duration_total_seconds'=>(int)($a['duration_total_seconds']??0)];$row['pages_per_session']=$row['sessions']?round($row['pageviews']/$row['sessions'],2):0;$row['average_duration_seconds']=$row['sessions']?round($row['duration_total_seconds']/$row['sessions']):0;$rows[]=$row;foreach($totals as $k=>$_)$totals[$k]+=$row[$k];foreach(['pages'=>&$pages,'entries'=>&$entries,'exits'=>&$exits,'countries'=>&$countries,'referrers'=>&$referrers,'transitions'=>&$transitions,'duration_histogram'=>&$hist] as $key=>&$target)foreach(is_array($a[$key]??null)?$a[$key]:[] as $name=>$count)$target[(string)$name]=($target[(string)$name]??0)+(int)$count;unset($target);}
+            foreach($files as $file){$a=self::readJson($file,[]);if(!$a)continue;$row=['date'=>(string)($a['date']??basename($file,'.json')),'pageviews'=>(int)($a['pageviews']??0),'sessions'=>(int)($a['sessions']??0),'estimated_unique_visitors'=>(int)($a['estimated_unique_visitors']??0),'duration_total_seconds'=>(int)($a['duration_total_seconds']??0),
+                'widget_views'=>(int)($a['widget_views']??0),
+                'radar_tab_views'=>(int)($a['widget_tabs']['competition:match-calls']??0),
+                'assistant_link_clicks'=>(int)($a['widget_actions']['competition:open-match-assistant']??0)];$row['pages_per_session']=$row['sessions']?round($row['pageviews']/$row['sessions'],2):0;$row['average_duration_seconds']=$row['sessions']?round($row['duration_total_seconds']/$row['sessions']):0;$rows[]=$row;foreach($totals as $k=>$_)$totals[$k]+=$row[$k];foreach(['pages'=>&$pages,'entries'=>&$entries,'exits'=>&$exits,'countries'=>&$countries,'referrers'=>&$referrers,'transitions'=>&$transitions,'duration_histogram'=>&$hist,'widgets'=>&$widgets,'widget_tabs'=>&$widgetTabs,
+                'widget_actions'=>&$widgetActions,'page_leaves'=>&$pageLeaves] as $key=>&$target)foreach(is_array($a[$key]??null)?$a[$key]:[] as $name=>$count)$target[(string)$name]=($target[(string)$name]??0)+(int)$count;unset($target);}
         }
         // Daily pseudonyms rotate deliberately, so cross-day de-duplication is not
         // possible after privacy compaction. Never mislabel the sum of daily uniques
@@ -143,10 +195,16 @@ final class TrafficAnalytics
         $totals['latest_daily_unique_visitors']=$rows ? (int)($rows[count($rows)-1]['estimated_unique_visitors']??0) : 0;
         $totals['average_daily_unique_visitors']=$rows ? round($totals['estimated_unique_visitor_days']/count($rows),1) : 0;
         unset($totals['estimated_unique_visitors']);
-        $totals['pages_per_session']=$totals['sessions']?round($totals['pageviews']/$totals['sessions'],2):0;
+        $totals['radar_tab_views']=(int)($widgetTabs['competition:match-calls']??0);
+        $totals['assistant_link_clicks']=(int)($widgetActions['competition:open-match-assistant']??0);
+        $totals['pages_per_session']=$totals['sessions']?round(($totals['pageviews']+$totals['widget_views'])/$totals['sessions'],2):0;
         $totals['average_duration_seconds']=$totals['sessions']?round($totals['duration_total_seconds']/$totals['sessions']):0;
         $totals['median_duration_seconds']=self::approxMedian($hist);
-        return ['days'=>$days,'summary'=>$totals,'trend'=>$rows,'top_pages'=>self::top($pages,50),'entry_pages'=>self::top($entries,30),'exit_pages'=>self::top($exits,30),'countries'=>self::top($countries,50),'referrers'=>self::top($referrers,50),'transitions'=>self::top($transitions,50),'duration_histogram'=>$hist,'privacy'=>['mode'=>'first-party cookieless','persistent_client_identifier'=>false,'raw_ip_persisted'=>false,'query_strings_persisted'=>false,'full_external_referrers_persisted'=>false,'pseudonym_retention_hours'=>24,'session_idle_minutes'=>30,'geography'=>'country when local GeoIP/trusted server country signal is available']];
+        return ['days'=>$days,'summary'=>$totals,'trend'=>$rows,'top_pages'=>self::top($pages,50),'entry_pages'=>self::top($entries,30),'exit_pages'=>self::top($exits,30),'countries'=>self::top($countries,50),'referrers'=>self::top($referrers,50),'transitions'=>self::top($transitions,50),'duration_histogram'=>$hist,'widgets'=>self::top($widgets,50),
+            'widget_tabs'=>self::top($widgetTabs,50),'widget_actions'=>self::top($widgetActions,50),
+            'page_leaves'=>self::top($pageLeaves,50),'privacy'=>['mode'=>'first-party cookieless','persistent_client_identifier'=>false,'raw_ip_persisted'=>false,'query_strings_persisted'=>false,'full_external_referrers_persisted'=>false,'pseudonym_retention_hours'=>24,'session_idle_minutes'=>30,
+            'visit_stitching'=>'ephemeral per-tab sessionStorage token where supported; legacy IP-only fallback',
+            'widget_activity_since'=>'collector rollout','geography'=>'country when local GeoIP/trusted server country signal is available']];
     }
 
     public static function diagnostics(string $root): array
@@ -209,7 +267,8 @@ final class TrafficAnalytics
         if($ua==='')return true;return (bool)preg_match('/bot|crawl|spider|slurp|bingpreview|headless|lighthouse|uptime|monitor|curl|wget|python-requests|httpclient/i',$ua);
     }
     private static function newAggregate(string $day): array
-    { return ['schema_version'=>1,'date'=>$day,'updated_at'=>null,'pageviews'=>0,'sessions'=>0,'estimated_unique_visitors'=>0,'duration_total_seconds'=>0,'pages'=>[],'entries'=>[],'exits'=>[],'countries'=>[],'referrers'=>[],'transitions'=>[],'duration_histogram'=>[],'_visitor_ids'=>[],'_session_ids'=>[]]; }
+    { return ['schema_version'=>1,'date'=>$day,'updated_at'=>null,'pageviews'=>0,'sessions'=>0,'estimated_unique_visitors'=>0,'duration_total_seconds'=>0,'pages'=>[],'entries'=>[],'exits'=>[],'countries'=>[],'referrers'=>[],'transitions'=>[],'duration_histogram'=>[],'widget_views'=>0,'widgets'=>[],'widget_tabs'=>[],
+        'widget_actions'=>[],'page_leaves'=>[],'_visitor_ids'=>[],'_session_ids'=>[]]; }
     private static function durationBucket(int $seconds): string
     { if($seconds<30)return '0–29s';if($seconds<60)return '30–59s';if($seconds<120)return '1–2m';if($seconds<300)return '2–5m';if($seconds<600)return '5–10m';if($seconds<1800)return '10–30m';return '30m+'; }
     private static function moveDurationBucket(array &$agg,?string $old,string $new): void
