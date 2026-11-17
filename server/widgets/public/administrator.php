@@ -48,7 +48,7 @@ header("Content-Security-Policy: frame-ancestors 'self' https://www.chess.com ht
 </nav>
 <div class="p2kw-content" id="awScroll" aria-live="polite">
 <section data-aw-view="actions"><div class="aw-heading"><strong>Club Action Queue</strong><button type="button" class="aw-btn" id="awRefreshActions">Refresh</button></div><div id="awActions">Loading…</div></section>
-<section data-aw-view="matches" hidden><div class="aw-heading"><strong>Next seven days</strong><span class="aw-muted">Luxembourg time</span></div><div class="aw-seg" role="group"><button type="button" data-aw-metric="matches" aria-pressed="true">Matches</button><button type="button" data-aw-metric="boards" aria-pressed="false">Boards</button></div><div id="awBars" class="aw-bars"></div><div id="awChartCaption" class="aw-muted"></div><div id="awDayMatches"></div><button type="button" id="awRefreshMatches" class="aw-btn">Refresh</button></section>
+<section data-aw-view="matches" hidden><div class="aw-heading"><strong>Next seven days</strong><span class="aw-muted" data-aw-timezone>Your local time</span></div><div class="aw-seg" role="group"><button type="button" data-aw-metric="matches" aria-pressed="true">Matches</button><button type="button" data-aw-metric="boards" aria-pressed="false">Boards</button></div><div id="awBars" class="aw-bars"></div><div id="awChartCaption" class="aw-muted"></div><div id="awDayMatches"></div><button type="button" id="awRefreshMatches" class="aw-btn">Refresh</button></section>
 <section data-aw-view="members" hidden>
 <div id="awMembersIndex">
 <div class="aw-heading"><strong>Member lookup</strong></div>
@@ -85,5 +85,5 @@ header("Content-Security-Policy: frame-ancestors 'self' https://www.chess.com ht
 </section></main>
 <script defer src="../../../assets/js/shared/recruitment-lineup-core.js?v=2.15.10-operations-1"></script>
 <script defer src="../../../assets/js/shared/traffic-analytics.js?v=2.15.10-operations-1" data-p2k-traffic-analytics data-p2k-widget-collector></script>
-<script defer src="../../../assets/js/widgets/p2k-operations-v21510.js?v=2.15.10-operations-1"></script>
+<script defer src="../../../assets/js/widgets/p2k-operations-v21510.js?v=2.15.10-timezone-correction-1"></script>
 </body></html>
