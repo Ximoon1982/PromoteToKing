@@ -60,7 +60,90 @@ function renderNameSearchActivity(ns){
     (ns.invalidLines?'<p><small>'+num(ns.invalidLines)+' malformed audit entries ignored.</small></p>':'')+
     '</article></div>';
 }
-function renderTraffic(d){const s=d.summary||{},dg=d.diagnostics||{},st=d.self_test||{},ma=d.match_assistant||{},mas=ma.summary||{},browser=window.P2K_TRAFFIC_ANALYTICS?.diagnostics?.()||{},duration=x=>{const n=Number(x||0);if(n<60)return`${Math.round(n)} s`;if(n<3600)return`${(n/60).toFixed(1)} min`;return`${(n/3600).toFixed(1)} h`},rows=(d.trend||[]).slice().reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${num(r.pageviews)}</td><td>${num(r.estimated_unique_visitors)}</td><td>${num(r.sessions)}</td><td>${Number(r.pages_per_session||0).toFixed(2)}</td><td>${duration(r.average_duration_seconds)}</td></tr>`),simple=(title,headers,list)=>`<article class="ci-card"><h3>${esc(title)}</h3>${table(headers,(list||[]).map(r=>`<tr><td>${esc(r.name)}</td><td>${num(r.count)}</td></tr>`))}</article>`,maDaily=(ma.daily||[]).map(r=>`<tr><td>${esc(r.date)}</td><td>${num(r.analyses)}</td><td>${num(r.distinctUsers)}</td><td>${num(r.matchesFound)}</td></tr>`),maUsers=(ma.users||[]).map(r=>`<tr><td><a href="https://www.chess.com/member/${encodeURIComponent(r.username||'')}" target="_blank" rel="noopener noreferrer">${esc(r.username||'')}</a></td><td>${num(r.analyses)}</td><td>${num(r.matchesFound)}</td><td>${esc(r.lastSearchAt||'—')}</td></tr>`),maEntries=(ma.entries||[]).map(r=>`<tr><td>${esc(r.timestamp||'')}</td><td><a href="https://www.chess.com/member/${encodeURIComponent(r.username||'')}" target="_blank" rel="noopener noreferrer">${esc(r.username||'')}</a></td><td>${num(r.matchesFound)}</td></tr>`),browserLabel=browser.suppressedBy==='dnt'?'Suppressed by Do Not Track':browser.suppressedBy==='gpc'?'Suppressed by Global Privacy Control':browser.suppressedBy==='feature_disabled'?'Collector disabled':'Collector active';content.innerHTML=`<div class="ci-grid">${card("Page views",num(s.pageviews))}${card("Est. uniques · latest day",num(s.latest_daily_unique_visitors),"daily cookieless estimate")}${card("Avg daily uniques",num(s.average_daily_unique_visitors),"daily estimate; no cross-day tracking")}${card("Unique visitor-days",num(s.estimated_unique_visitor_days),"sum of daily unique estimates")}${card("Visits / sessions",num(s.sessions))}${card("Pages / session",Number(s.pages_per_session||0).toFixed(2))}${card("Average duration",duration(s.average_duration_seconds),"approximate")}${card("Median duration",duration(s.median_duration_seconds),"histogram estimate")}</div><article class="ci-card"><h3>Match Assistant usage · ${num(ma.range?.days||0)} days</h3><div class="ci-grid">${card("Analyses",num(mas.analyses))}${card("Searched usernames",num(mas.distinctUsers),"distinct names")}${card("Matches found",num(mas.matchesFound))}${card("Avg matches / analysis",Number(mas.averageMatchesFound||0).toFixed(1))}</div><p>${esc(ma.coverage_note||"Shared Match Assistant usage log.")}</p>${ma.invalidLines?`<p><small>${num(ma.invalidLines)} malformed log line(s) were ignored.</small></p>`:""}</article><article class="ci-card"><h3>Match Assistant trend</h3>${table(["Date","Analyses","Distinct usernames","Matches found"],maDaily)}</article><div class="ci-two-col"><article class="ci-card"><h3>Match Assistant searched usernames</h3>${table(["Username","Analyses","Matches found","Last search"],maUsers)}</article><article class="ci-card"><h3>Recent Match Assistant searches</h3>${table(["Timestamp","Username","Matches found"],maEntries)}${ma.truncated?'<p><small>Recent-entry display is truncated; aggregates remain complete.</small></p>':''}</article></div>${renderNameSearchActivity(d.name_search||{})}<article class="ci-card"><h3>Collector diagnostics</h3><div class="ci-grid">${card("This browser",browserLabel,browser.suppressedBy?"This session is intentionally not counted":"Eligible for first-party traffic counting")}${card("Server collector",dg.configured?(dg.storage_writable?"Configured":"Storage error"):"Secret missing",dg.storage_exists?"storage initialized":"storage not created yet")}${card("Last traffic event",dg.last_event_received_at||"None",dg.last_event_type||"no recorded event")}${card("Events · last hour",num(dg.events_last_hour),`latest day ${esc(dg.latest_day||'—')}`)}${card("Collector self-test",st.ok?"PASS":"FAIL",st.error||"isolated synthetic record → aggregate")}</div><p>The self-test uses isolated temporary storage and does not add a visitor, page view or session to real traffic statistics. DNT/GPC remain respected.</p></article><article class="ci-card"><h3>Traffic trend</h3><p>First-party cookieless analytics. No raw IP, full external referrer URL, browser fingerprint or persistent client identifier is stored.</p>${table(["Date","Page views","Est. uniques","Sessions","Pages/session","Avg duration"],rows)}</article><div class="ci-two-col">${simple("Top pages",["Page","Views"],d.top_pages)}${simple("Entry pages",["Entry","Sessions"],d.entry_pages)}${simple("Exit pages",["Exit","Signals"],d.exit_pages)}${simple("Countries",["Country","Page views"],d.countries)}${simple("External referrers",["Source","Visits"],d.referrers)}${simple("Internal navigation flows",["From → to","Transitions"],d.transitions)}</div><article class="ci-card"><h3>Privacy mode</h3><p>${esc(d.privacy?.mode||"first-party cookieless")} · pseudonyms retained up to ${num(d.privacy?.pseudonym_retention_hours||24)}h · geography: ${esc(d.privacy?.geography||"country when available")}.</p></article>`}
+function renderTraffic(d) {
+  const s=d.summary||{}, dg=d.diagnostics||{}, st=d.self_test||{};
+  const ma=d.match_assistant||{}, mas=ma.summary||{}, ns=d.name_search||{}, nsum=ns.summary||{};
+  const browser=window.P2K_TRAFFIC_ANALYTICS?.diagnostics?.()||{};
+  const duration=x=>{const n=Number(x||0);return n<60?Math.round(n)+" s":n<3600?(n/60).toFixed(1)+" min":(n/3600).toFixed(1)+" h";};
+  const profile=name=>'<a href="https://www.chess.com/member/'+encodeURIComponent(name)+
+    '" target="_blank" rel="noopener noreferrer">'+esc(name)+'</a>';
+  const byDate=new Map();
+  const day=date=>{const key=String(date||"");if(!byDate.has(key))byDate.set(key,{date:key});return byDate.get(key);};
+  (d.trend||[]).forEach(r=>{const x=day(r.date);Object.assign(x,{
+    pageviews:Number(r.pageviews||0),widget_views:Number(r.widget_views||0),
+    sessions:Number(r.sessions||0),unique:Number(r.estimated_unique_visitors||0),
+    radar_open:Number(r.radar_tab_views||0),assistant_clicks:Number(r.assistant_link_clicks||0)
+  });});
+  (ns.daily||[]).forEach(r=>{const x=day(r.date);x.radar_searches=Number(r.recruitment_radar||0);x.assistant_searches=Number(r.match_assistant||0);});
+  (ma.daily||[]).forEach(r=>{const x=day(r.date);x.analyses=Number(r.analyses||0);});
+  const rowData=[...byDate.values()].filter(x=>/^\d{4}-\d\d-\d\d$/.test(x.date)).sort((a,b)=>b.date.localeCompare(a.date));
+  const daily=rowData.map(r=>`<tr><td>${esc(r.date)}</td><td>${num(r.pageviews||0)}</td><td>${num(r.widget_views||0)}</td><td>${num(r.sessions||0)}</td><td>${num(r.unique||0)}</td><td>${num(r.radar_open||0)}</td><td>${num(r.radar_searches||0)}</td><td>${num(r.assistant_searches||0)}</td><td>${num(r.analyses||0)}</td></tr>`);
+  const tabs=new Map((d.widget_tabs||[]).map(r=>[r.name,Number(r.count||0)]));
+  const widgets=new Map((d.widgets||[]).map(r=>[r.name,Number(r.count||0)]));
+  const actions=new Map((d.widget_actions||[]).map(r=>[r.name,Number(r.count||0)]));
+  const surfaces=[];
+  surfaces.push({name:"Competition",kind:"Chess.com iframe",views:widgets.get("competition")||0,
+    activity:(tabs.get("competition:showcase")||0)+" Showcase · "+(tabs.get("competition:match-calls")||0)+" Radar · "+(tabs.get("competition:rivals")||0)+" Rivals",
+    note:(actions.get("competition:open-match-assistant")||0)+" Assistant-link clicks"});
+  for(const [name,views] of widgets)if(name!=="competition")
+    surfaces.push({name:name.replace(/-/g," "),kind:"Standalone widget",views,activity:"—",note:""});
+  (d.top_pages||[]).forEach(r=>surfaces.push({
+    name:r.name,kind:"P2K website",views:Number(r.count||0),
+    activity:r.name==="/FindMatch.htm"?num(mas.analyses||0)+" analyses":"—",
+    note:r.name==="/FindMatch.htm"?"Search activity may originate on another page.":""
+  }));
+  surfaces.sort((a,b)=>b.views-a.views||a.name.localeCompare(b.name));
+  const surfaceRows=surfaces.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.kind)}</td><td>${num(r.views)}</td><td>${esc(r.activity)}</td><td>${esc(r.note||"—")}</td></tr>`);
+  // These are SEARCHED usernames, not authenticated visitor identities. 
+  // Never merge anonymous visits into a purported named person-level journey.
+  const byName=new Map();
+  const named=name=>{const key=String(name||"").toLowerCase();if(!byName.has(key))byName.set(key,{username:key,radar:0,assistant:0,analyses:0,found:0,last:""});return byName.get(key);};
+  (ns.users||[]).forEach(r=>{const x=named(r.username);x.radar=Number(r.recruitment_radar||0);x.assistant=Number(r.match_assistant||0);x.last=String(r.lastSearchAt||"");});
+  (ma.users||[]).forEach(r=>{const x=named(r.username);x.analyses=Number(r.analyses||0);x.found=Number(r.matchesFound||0);if(String(r.lastSearchAt||"")>x.last)x.last=String(r.lastSearchAt||"");});
+  const users=[...byName.values()].filter(r=>r.username).sort((a,b)=>b.last.localeCompare(a.last)||b.analyses-a.analyses||a.username.localeCompare(b.username));
+  const names=users.map(r=>`<tr><td>${profile(r.username)}</td><td>${num(r.radar)}</td><td>${num(r.assistant)}</td><td>${num(r.analyses)}</td><td>${num(r.found)}</td><td>${esc(r.last||"—")}</td></tr>`);
+  const browserLabel=browser.suppressedBy==="dnt"?"DNT suppressed":browser.suppressedBy==="gpc"?"GPC suppressed":browser.suppressedBy==="feature_disabled"?"Collector disabled":"Collector active";
+  content.innerHTML=
+    '<div class="ci-grid">'+
+      card("Website page views",num(s.pageviews),"First-party P2K pages")+
+      card("Widget views",num(s.widget_views||0),"Tracked since this release")+
+      card("Estimated visits",num(s.sessions),"New sessions begin on page/widget views")+
+      card("Visitor-days",num(s.estimated_unique_visitor_days),"IP-only daily estimate; not distinct persons")+
+      card("Competition → Radar",num(s.radar_tab_views||0),"Tab selections, not unique people")+
+      card("Radar username searches",num(nsum.recruitment_radar||0),"Named search targets")+
+      card("Assistant searches",num(nsum.match_assistant||0),"Since username-search logging started")+
+      card("Assistant analyses",num(mas.analyses||0),num(mas.matchesFound||0)+" matches found")+
+    '</div>'+
+    '<article class="ci-card"><h3>Daily activity · anonymous and named events</h3>'+
+      '<p>Counts describe different activities, not unique people. Searches name the Chess.com username being checked, not the visitor. Widget telemetry starts with this release; earlier dates remain unfilled.</p>'+
+      table(["UTC date","P2K pages","Widget views","Visits (est.)","Visitor-days (est.)","Radar tab","Radar searches","Assistant searches","Analyses"],daily)+
+    '</article>'+
+    '<article class="ci-card"><h3>Activity by surface</h3>'+
+      '<p>Competition records anonymous views, tab selection and clicks on the Assistant link. Widget views and website page views are separate; they are not individually attributed to searched names.</p>'+
+      table(["Surface","Type","Views","Engagement","Additional activity"],surfaceRows)+
+    '</article>'+
+    '<article class="ci-card"><h3>Searched usernames and completed analyses</h3>'+
+      '<p>These are search TARGETS, not authenticated visitor identities. Assistant analyses span '+num(ma.range?.days||0)+
+      ' days; the per-search log started later. Zero recent searches alongside historic analyses is expected.</p>'+
+      table(["Chess.com username","Radar searches","Assistant searches","Analyses","Matches found","Last activity (UTC)"],names)+
+    '</article>'+
+    '<article class="ci-card"><h3>How to read this report</h3><p>'+
+      'Page views and widget views count loads. Visits are short-lived per-tab estimates where supported; visitor-days use cookieless daily IP estimates and cannot identify a person across days. '+
+      'A Radar tab selection does not imply a username search. Assistant completed analyses are distinct from submitted searches. '+
+      'The old exit-signal totals were misleading and are intentionally no longer presented as visit exits.</p>'+
+      '<p>Competition → Assistant link clicks: <strong>'+num(s.assistant_link_clicks||0)+'</strong> (available only after instrumentation). '+
+      'Previous visitor and session aggregates are retained unchanged rather than recalculated with a new identity model.</p></article>'+
+    '<details class="ci-card"><summary>Collector and privacy diagnostics</summary><div class="ci-grid">'+
+      card("This browser",browserLabel,"DNT/GPC remain respected")+
+      card("Server collector",dg.configured?(dg.storage_writable?"Configured":"Storage error"):"Secret missing",dg.storage_exists?"Storage initialized":"No storage yet")+
+      card("Last traffic event",dg.last_event_received_at||"None",dg.last_event_type||"—")+
+      card("Self-test",st.ok?"PASS":"FAIL",st.error||"Isolated synthetic page view")+
+      card("Average duration",duration(s.average_duration_seconds),"Approximate; not active reading time")+
+      card("Latest daily uniques",num(s.latest_daily_unique_visitors||0),"No cross-day identification")+
+      '</div><p>'+esc(d.privacy?.visit_stitching||"Legacy cookieless IP estimate")+
+      '. Server retention of ephemeral keys is limited; no raw IP or full referrer URL is stored. '+
+      'Country and external referrer detection remain incomplete, particularly across iframe boundaries.</p></details>';
+}
 function renderSnapshots(d){const rows=(d.rows||[]).slice().reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${num(r.metrics?.current_members)}</td><td>${num(r.metrics?.club_points)}</td><td>${num(r.metrics?.finished_matches)}</td><td>${num(r.metrics?.won_matches)} / ${num(r.metrics?.drawn_matches)} / ${num(r.metrics?.lost_matches)}</td><td>${num(r.metrics?.finished_boards)}</td><td>${num(r.metrics?.active_30)}</td><td>${num(r.metrics?.standard_active_30)} / ${num(r.metrics?.chess960_active_30)}</td><td>${Number(r.metrics?.rating_coverage||0).toFixed(1)}%</td><td>${Number(r.metrics?.finished_board_coverage||0).toFixed(1)}%</td></tr>`),cmp=d.comparison?.comparisons||{},delta=(label,x)=>x?card(label,`${Number(x.delta?.club_points||0)>=0?"+":""}${num(x.delta?.club_points||0)} pts`,`${x.from_date} → ${x.to_date} · members ${Number(x.delta?.current_members||0)>=0?"+":""}${num(x.delta?.current_members||0)}`):"";content.innerHTML=`<div class="ci-grid">${delta("Previous snapshot",cmp.previous)}${delta("~7 days",cmp.week)}${delta("~30 days",cmp.month)}</div><article class="ci-card"><h3>Historical snapshots / time travel</h3><p>Daily aggregate snapshots support side-by-side deltas without rebuilding event history. Detailed historical member lineups are not inferred when they were never captured.</p>${table(["Date","Members","Club Points","Finished matches","W / D / L","Boards","Active 30d","Std / 960 active","Rating coverage","Finished-board coverage"],rows)}</article>`}
 async function load(){status.textContent=`Loading ${tab}…`;content.innerHTML="";try{let d=await get(tab==="members"?"activity":tab);if(tab==="overview")renderOverview(d);else if(tab==="depth")content.innerHTML=depth(d.rows||[],d.summary||{});else if(tab==="acamr")renderAcamr(d);else if(tab==="freshness")renderFresh(d);else if(tab==="anomalies")renderAnom(d);else if(tab==="members")renderMembers(d);else if(tab==="aliases")renderAliases(d);else if(tab==="opponents")renderOpp(d);else if(tab==="snapshots")renderSnapshots(d);else if(tab==="forecast")renderForecast(d);else if(tab==="performance")renderPerf(d);else if(tab==="traffic")renderTraffic(d);installTableSorting();installTablePagination();status.textContent=`${tab} · refreshed ${new Date().toLocaleTimeString("en-GB",{timeZone:"UTC",hour12:false})}`;}catch(e){status.textContent=`Unable to load: ${e.message||e}`;content.innerHTML=`<article class="ci-card"><h3>Unavailable</h3><p>${esc(e.message||e)}</p></article>`}window.P2K_EMBEDDED_PAGE?.notifyHeight?.()}
 function activate(){document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("is-active",b.dataset.tab===tab));}$("ciTabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(!b)return;tab=b.dataset.tab;const u=new URL(location.href);u.searchParams.set("tab",tab);if(window.parent!==window){history.replaceState(null,"",u);window.parent.postMessage({type:"p2k-embedded-tab-change",tool:"club-intelligence",tab},window.location.origin)}else history.pushState(null,"",u);activate();load()});window.addEventListener("popstate",()=>{tab=new URLSearchParams(location.search).get("tab")||"overview";activate();load()});$("ciRefresh").onclick=load;activate();load();})();
