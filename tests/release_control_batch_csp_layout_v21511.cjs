@@ -16,8 +16,8 @@ for(const m of php.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)){
 }
 assert(php.includes('src="/server/release-control/public/release-control-batch.js?v=2.15.11-batch-csp-1"'),
   "Batch script must load after HTML and have a versioned cache identity.");
-assert(php.includes('src="/server/release-control/public/release-control-upload.js"'),
-  "Release ZIP upload progress must remain available.");
+assert(/src="\/server\/release-control\/public\/release-control-upload\.js(?:\?[^"]*)?"/.test(php),
+  "Release ZIP upload progress must remain available, including a cache-busting query.");
 assert(original.includes("new XMLHttpRequest()"),"Existing XHR package uploader must remain intact.");
 const headings=[
   "Recovery health","Install release ZIP","Candidate installation","Deployment controls",
