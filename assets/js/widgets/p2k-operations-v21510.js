@@ -7,7 +7,7 @@
   const url=path=>new URL(path,root).href;
   const api='server/widgets/public/operations-api.php';
   const state={view:'actions',days:[],metric:'matches',selectedDay:null,memberPage:1,memberPages:1,
-    previousSuggestions:'',queryRevision:0,analyzedId:0,analysisRevision:0,history:[],current:null};
+    previousSuggestions:'',queryRevision:0,analyzedId:0,analysisRevision:0,history:[],current:null,recent:null};
   const core=()=>window.P2K_RECRUITMENT_LINEUP_CORE;
   const fmt=n=>Number(n||0).toLocaleString('en-GB');
   const when=value=>{if(!value)return '—';const d=new Date(typeof value==='number'?(value<1e11?value*1000:value):String(value));return Number.isFinite(d.getTime())?d.toLocaleString('en-GB',{timeZone:'Europe/Luxembourg',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';};
@@ -55,24 +55,40 @@
     const rows=actionRows(),low=rows.filter(m=>m.under),starts=rows.filter(m=>m.hours<=48),
       league=rows.filter(m=>m.league&&m.recruit>0),priority=rows.filter(m=>m.recruit>0).sort((a,b)=>a.hours-b.hours);
     const exceptions=rows.filter(m=>!m.rosterComplete||!m.verified);
+    const recent=Array.isArray(state.recent)?state.recent:[];
     $('awActions').innerHTML=
       '<p class="aw-muted">Public Green match registrations · club-wide, not personalized</p>'+
       [
         ['Below minimum',low],['Start within 48 h',starts],
-        ['League recruitment',league],['Operational exceptions (incomplete roster)',exceptions]
+        ['League recruitment',league],['Operational exceptions (incomplete roster)',exceptions],
+        ['New matches · 24 h',recent]
       ].map(([label,items],i)=>'<details class="aw-fold" '+(i===0?'open':'')+'><summary>'+esc(label)+' <strong>'+fmt(items.length)+'</strong></summary>'+
         actionList(items)+'</details>').join('')+
       '<div class="aw-heading"><strong>Highest priority</strong><span class="aw-muted">'+fmt(priority.length)+'</span></div>'+
       actionList(priority,'No immediate recruitment needs.')+
-      '<p class="aw-muted">System health: public data only. Last server refresh: '+esc(state.lastFetch||'—')+
-      '. Private worker diagnostics remain in P2K administration.</p>';
+      '<div class="aw-heading"><strong>System health indicators</strong></div>'+
+      '<div class="aw-row"><div class="aw-info"><strong>Verified registration index</strong>'+
+      '<small>'+esc('Snapshot: '+(state.lastFetch||'—')+' · '+rows.length+' upcoming matches')+'</small></div></div>'+
+      '<div class="aw-row"><div class="aw-info"><strong>Roster coverage</strong>'+
+      '<small>'+esc(exceptions.length+' upcoming matches pending full verification')+'</small></div></div>'+
+      '<p class="aw-muted">Public indicators only. Detailed worker diagnostics remain protected in P2K administration.</p>';
   }
   async function loadActions(){
     text('awActions','Loading public Green match data…');
-    try{if(!state.days.length)await loadMatches();renderActions();}
-    catch(e){text('awActions',e.message);}
+    try{
+      if(!state.days.length)await loadMatches();
+      if(!state.recent){
+        const d=await request('server/team-points/public/recent-matches.php?hours=24').catch(()=>({matches:[]}));
+        state.recent=(d.matches||[]).slice(0,30).filter(x=>Number.isInteger(Number(x.match_id))&&Number(x.match_id)>0).map(x=>({
+          name:String(x.name||'Match #'+x.match_id),opponent:String(x.opponent_name||'Opponent'),
+          url:'https://www.chess.com/club/matches/'+Number(x.match_id),
+          detail:'Discovered '+when(x.first_discovered_at),startTime:0
+        }));
+      }
+      renderActions();
+    }catch(e){text('awActions',e.message);}
   }
-  $('awRefreshActions').onclick=()=>{state.days=[];void loadActions();};
+  $('awRefreshActions').onclick=()=>{state.days=[];state.recent=null;void loadActions();};
 
   async function loadMatches(){
     text('awChartCaption','Loading verified seven-day match schedule…');
