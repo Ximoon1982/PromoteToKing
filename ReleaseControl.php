@@ -25,7 +25,7 @@ header('Pragma: no-cache');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: no-referrer');
-header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+header("Content-Security-Policy: default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
 
 function rc_h(mixed $value): string
 {
@@ -360,29 +360,6 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
       </div>
     </section>
 
-    <section class="card">
-      <h2>Protected runtime</h2>
-      <dl class="meta">
-        <dt>Path</dt><dd><?= rc_h($snapshot['runtime_status']['display_path']) ?></dd>
-        <dt>Exists</dt><dd><?= !empty($snapshot['runtime_status']['exists']) ? 'yes' : 'no' ?></dd>
-        <dt>Readable</dt><dd><?= !empty($snapshot['runtime_status']['readable']) ? 'yes' : 'no' ?></dd>
-        <dt>Writable</dt><dd><?= !empty($snapshot['runtime_status']['writable']) ? 'yes' : 'no' ?></dd>
-      </dl>
-    </section>
-
-    <section class="card">
-      <h2>Release-slot filesystem</h2>
-      <?php $fs = $snapshot['slot_storage']['filesystem_capabilities'] ?? null; ?>
-      <dl class="meta">
-        <dt>Slot storage</dt><dd><?= rc_h($snapshot['slot_storage']['display_path']) ?></dd>
-        <dt>Selected strategy</dt><dd><?= rc_h(is_array($fs) ? ($fs['selected_strategy'] ?? 'unknown') : 'not probed') ?></dd>
-        <dt>Hard links</dt><dd><?= is_array($fs) ? (!empty($fs['hardlink_supported']) ? 'supported' : 'not available') : 'not probed' ?></dd>
-        <dt>Symlinks</dt><dd><?= is_array($fs) ? (!empty($fs['symlink_supported']) ? 'supported; not used for snapshots' : 'not available') : 'not probed' ?></dd>
-        <dt>Atomic rename</dt><dd><?= is_array($fs) ? (!empty($fs['atomic_rename_supported']) ? 'supported' : 'not available') : 'not probed' ?></dd>
-      </dl>
-    </section>
-
-
     <section class="card full" id="package-upload">
       <h2>Install release ZIP</h2>
       <?php if ($packageResult === 'error' && $packageError !== ''): ?><section class="notice" style="border-color:#a94b4b;background:#2a1515"><strong>Release ZIP installation failed.</strong> <?= rc_h($packageError) ?></section><?php endif; ?>
@@ -412,6 +389,79 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
         <p class="small">Browser ZIP installation is disabled on this host because <code>ZipArchive</code> is unavailable. Existing CLI candidate installation remains available as recovery fallback.</p>
       <?php endif; ?>
     </section>
+
+    <section class="card">
+      <h2>Candidate installation</h2>
+      <?php $candidate = $snapshot['candidate_slot'] ?? null; ?>
+      <?php if (is_array($candidate)): ?>
+        <dl class="meta">
+          <dt>Release</dt><dd><?= rc_h($candidate['release_id'] ?? 'unknown') ?></dd>
+          <dt>Integrity</dt><dd><?= rc_h($candidate['integrity_status'] ?? 'unknown') ?></dd>
+          <dt>Build ID</dt><dd><?= rc_h($candidate['build_id'] ?? 'unknown') ?></dd>
+          <dt>Base release</dt><dd><?= rc_h($candidate['base_release_id'] ?? 'unknown') ?></dd>
+          <dt>Routing</dt><dd><?= !empty($candidate['routing_enabled']) ? 'UNEXPECTEDLY ENABLED' : 'disabled' ?></dd>
+        </dl>
+      <?php else: ?>
+        <p class="small">No candidate is registered. Install and register a qualified candidate package before enabling personal preview.</p>
+      <?php endif; ?>
+    </section>
+
+    <section class="card">
+      <h2>Deployment controls</h2>
+      <p class="small">Preview remains personal and side-effect-isolated. Promotion and rollback verify immutable slots and runtime trees first, then change the public release with one atomic state-file replacement. No application tree is copied over the live root during the switch.</p>
+      <div class="actions">
+        <?php if (is_array($candidate) && $csrfToken !== '' && $previewTreeReady): ?>
+          <?php if (!empty($previewStatus['enabled'])): ?>
+            <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="disable-preview"><button class="button" type="submit">Stop preview</button></form>
+            <a class="button primary" href="/index.html">Open candidate site</a>
+          <?php else: ?>
+            <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="preview_user" value="<?= rc_h($username) ?>"><input type="hidden" name="action" value="enable-preview"><button class="button" type="submit">Preview candidate for me</button></form>
+          <?php endif; ?>
+        <?php else: ?>
+          <span class="button disabled">Preview candidate</span>
+          <?php if (is_array($candidate) && !$previewTreeReady): ?><span class="small">Preview tree is not prepared. Re-run the current candidate-preview bootstrap.</span><?php endif; ?>
+        <?php endif; ?>
+
+        <?php if (!empty($snapshot['capabilities']['promotion']) && is_array($candidate) && $csrfToken !== ''): ?>
+          <form method="post" action="/ReleaseControl.php">
+            <input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="promote-candidate">
+            <label class="small"><input type="checkbox" name="confirm" value="yes" required> Confirm public switch to <?= rc_h($candidate['release_id'] ?? 'candidate') ?></label>
+            <button class="button primary" type="submit">Promote candidate</button>
+          </form>
+        <?php else: ?><span class="button disabled">Promote candidate</span><?php endif; ?>
+
+        <?php if (!empty($snapshot['capabilities']['rollback']) && $csrfToken !== ''): ?>
+          <form method="post" action="/ReleaseControl.php">
+            <input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="rollback">
+            <label class="small"><input type="checkbox" name="confirm" value="yes" required> Confirm rollback to <?= rc_h($snapshot['previous_public_release'] ?? 'previous release') ?></label>
+            <button class="button" type="submit">Rollback</button>
+          </form>
+        <?php else: ?><span class="button disabled">Rollback</span><?php endif; ?>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Protected runtime</h2>
+      <dl class="meta">
+        <dt>Path</dt><dd><?= rc_h($snapshot['runtime_status']['display_path']) ?></dd>
+        <dt>Exists</dt><dd><?= !empty($snapshot['runtime_status']['exists']) ? 'yes' : 'no' ?></dd>
+        <dt>Readable</dt><dd><?= !empty($snapshot['runtime_status']['readable']) ? 'yes' : 'no' ?></dd>
+        <dt>Writable</dt><dd><?= !empty($snapshot['runtime_status']['writable']) ? 'yes' : 'no' ?></dd>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2>Release-slot filesystem</h2>
+      <?php $fs = $snapshot['slot_storage']['filesystem_capabilities'] ?? null; ?>
+      <dl class="meta">
+        <dt>Slot storage</dt><dd><?= rc_h($snapshot['slot_storage']['display_path']) ?></dd>
+        <dt>Selected strategy</dt><dd><?= rc_h(is_array($fs) ? ($fs['selected_strategy'] ?? 'unknown') : 'not probed') ?></dd>
+        <dt>Hard links</dt><dd><?= is_array($fs) ? (!empty($fs['hardlink_supported']) ? 'supported' : 'not available') : 'not probed' ?></dd>
+        <dt>Symlinks</dt><dd><?= is_array($fs) ? (!empty($fs['symlink_supported']) ? 'supported; not used for snapshots' : 'not available') : 'not probed' ?></dd>
+        <dt>Atomic rename</dt><dd><?= is_array($fs) ? (!empty($fs['atomic_rename_supported']) ? 'supported' : 'not available') : 'not probed' ?></dd>
+      </dl>
+    </section>
+
 
     <section class="card full" id="release-management">
       <h2>Release/version management</h2>
@@ -654,56 +704,6 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
       </ul>
     </section>
 
-    <section class="card">
-      <h2>Candidate installation</h2>
-      <?php $candidate = $snapshot['candidate_slot'] ?? null; ?>
-      <?php if (is_array($candidate)): ?>
-        <dl class="meta">
-          <dt>Release</dt><dd><?= rc_h($candidate['release_id'] ?? 'unknown') ?></dd>
-          <dt>Integrity</dt><dd><?= rc_h($candidate['integrity_status'] ?? 'unknown') ?></dd>
-          <dt>Build ID</dt><dd><?= rc_h($candidate['build_id'] ?? 'unknown') ?></dd>
-          <dt>Base release</dt><dd><?= rc_h($candidate['base_release_id'] ?? 'unknown') ?></dd>
-          <dt>Routing</dt><dd><?= !empty($candidate['routing_enabled']) ? 'UNEXPECTEDLY ENABLED' : 'disabled' ?></dd>
-        </dl>
-      <?php else: ?>
-        <p class="small">No candidate is registered. Install and register a qualified candidate package before enabling personal preview.</p>
-      <?php endif; ?>
-    </section>
-
-    <section class="card">
-      <h2>Deployment controls</h2>
-      <p class="small">Preview remains personal and side-effect-isolated. Promotion and rollback verify immutable slots and runtime trees first, then change the public release with one atomic state-file replacement. No application tree is copied over the live root during the switch.</p>
-      <div class="actions">
-        <?php if (is_array($candidate) && $csrfToken !== '' && $previewTreeReady): ?>
-          <?php if (!empty($previewStatus['enabled'])): ?>
-            <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="disable-preview"><button class="button" type="submit">Stop preview</button></form>
-            <a class="button primary" href="/index.html">Open candidate site</a>
-          <?php else: ?>
-            <form method="post" action="/ReleaseControl.php"><input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="preview_user" value="<?= rc_h($username) ?>"><input type="hidden" name="action" value="enable-preview"><button class="button" type="submit">Preview candidate for me</button></form>
-          <?php endif; ?>
-        <?php else: ?>
-          <span class="button disabled">Preview candidate</span>
-          <?php if (is_array($candidate) && !$previewTreeReady): ?><span class="small">Preview tree is not prepared. Re-run the current candidate-preview bootstrap.</span><?php endif; ?>
-        <?php endif; ?>
-
-        <?php if (!empty($snapshot['capabilities']['promotion']) && is_array($candidate) && $csrfToken !== ''): ?>
-          <form method="post" action="/ReleaseControl.php">
-            <input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="promote-candidate">
-            <label class="small"><input type="checkbox" name="confirm" value="yes" required> Confirm public switch to <?= rc_h($candidate['release_id'] ?? 'candidate') ?></label>
-            <button class="button primary" type="submit">Promote candidate</button>
-          </form>
-        <?php else: ?><span class="button disabled">Promote candidate</span><?php endif; ?>
-
-        <?php if (!empty($snapshot['capabilities']['rollback']) && $csrfToken !== ''): ?>
-          <form method="post" action="/ReleaseControl.php">
-            <input type="hidden" name="csrf" value="<?= rc_h($csrfToken) ?>"><input type="hidden" name="action" value="rollback">
-            <label class="small"><input type="checkbox" name="confirm" value="yes" required> Confirm rollback to <?= rc_h($snapshot['previous_public_release'] ?? 'previous release') ?></label>
-            <button class="button" type="submit">Rollback</button>
-          </form>
-        <?php else: ?><span class="button disabled">Rollback</span><?php endif; ?>
-      </div>
-    </section>
-
     <section class="card full">
       <h2>Recovery identity</h2>
       <dl class="meta">
@@ -726,32 +726,6 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
 <script src="/server/release-control/public/release-control-upload.js"></script>
 
 
-<script>
-(() => {
-  'use strict';
-  for(const kind of ['release','filesystem']){
-    const form=document.getElementById(kind==='release'?'rcReleaseBatchForm':'rcFilesystemBatchForm');
-    if(!form)continue;
-    const items=[...form.querySelectorAll('[data-batch-item="'+kind+'"]')];
-    const all=form.querySelector('[data-batch-all="'+kind+'"]');
-    const count=form.querySelector('[data-batch-count="'+kind+'"]');
-    const button=form.querySelector('button[type=submit]');
-    const update=()=>{
-      const n=items.filter(el=>el.checked).length;
-      if(count)count.textContent=String(n);
-      if(button)button.disabled=n===0;
-      if(all){all.checked=n>0&&n===items.length;all.indeterminate=n>0&&n<items.length;}
-    };
-    items.forEach(input=>input.addEventListener('change',update));
-    if(all)all.addEventListener('change',()=>{for(const input of items)input.checked=all.checked;update();});
-    form.addEventListener('submit',event=>{
-      const n=items.filter(input=>input.checked).length;
-      if(n===0){event.preventDefault();return;}
-      if(!window.confirm('Permanently delete '+n+' selected '+(kind==='release'?'obsolete release(s)':'maintenance artifact(s)')+'? Protection rules will be checked again.'))event.preventDefault();
-    });
-    update();
-  }
-})();
-</script>
+<script src="/server/release-control/public/release-control-batch.js?v=2.15.11-batch-csp-1"></script>
 </body>
 </html>
