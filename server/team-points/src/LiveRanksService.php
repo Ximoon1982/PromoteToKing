@@ -260,11 +260,33 @@ final class LiveRanksService
             }
         }
 
+        // A partial/broken CSV import must never replace a previously
+        // published player snapshot.
+        $failedFiles=array_values(array_filter($fileStats,static fn(array $row):bool=>$row['error']!==null));
+        if($failedFiles!==[]){
+            $first=$failedFiles[0];
+            throw new ApiException('MCA rebuild not published: '.count($failedFiles).' canonical source file(s) could not be parsed; first: '.$first['name'].' — '.$first['error'],503,'MCA_REBUILD_SOURCE_ERROR');
+        }
+        if($aggregates===[])throw new ApiException('MCA rebuild produced no P2K player scores; keeping last published results.',503,'MCA_REBUILD_EMPTY');
         $checkDeadline(1.0);
         $roster = $this->currentMemberMap();
         $checkDeadline(0.75);
+        $sourceFingerprint=static function(array $rows):string{
+            $parts=[];
+            foreach($rows as $file)$parts[]=(int)$file['id'].':'.(string)$file['sha256'];
+            sort($parts,SORT_STRING);
+            return hash('sha256',implode('|',$parts));
+        };
+        $baselineSourceFingerprint=$sourceFingerprint($files);
         $this->pdo->beginTransaction();
         try {
+            // Lock the source identities only during publication. A concurrent
+            // upload/change invalidates this generation; roll back and retry.
+            $snapshot=$this->pdo->prepare('SELECT * FROM p2k_lr_files WHERE club_slug=? FOR UPDATE');
+            $snapshot->execute([$this->clubSlug]);
+            $currentCatalogue=McaSourceCatalogue::analyze($snapshot->fetchAll(PDO::FETCH_ASSOC)?:[]);
+            if($sourceFingerprint($currentCatalogue['canonical_rows'])!==$baselineSourceFingerprint)
+                throw new ApiException('MCA sources changed while rebuilding. Published scores were retained; retry with the new sources.',409,'MCA_REBUILD_SOURCE_CHANGED');
             $this->pdo->prepare('DELETE FROM p2k_lr_players WHERE club_slug=?')->execute([$this->clubSlug]);
             $this->pdo->prepare('DELETE FROM p2k_lr_arena_stats WHERE club_slug=?')->execute([$this->clubSlug]);
             $this->pdo->prepare('DELETE FROM p2k_lr_source_rows WHERE club_slug=?')->execute([$this->clubSlug]);
@@ -354,6 +376,10 @@ final class LiveRanksService
                 $identityGeneration,
                 $pending > 0 ? null : gmdate('Y-m-d H:i:s'),
             ]);
+            // The source generation and derived tables become current in
+            // one transaction. Uploads after commit will flag another rebuild.
+            $this->pdo->prepare('UPDATE p2k_lr_sync_state SET rebuild_required=0,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')
+                ->execute([$this->clubSlug]);
             $this->pdo->commit();
         } catch (\Throwable $exception) {
             if ($this->pdo->inTransaction()) $this->pdo->rollBack();
@@ -661,10 +687,17 @@ final class LiveRanksService
         $stateQuery->execute([$this->clubSlug]);
         $state = $stateQuery->fetch() ?: [];
         $players = $this->adminPlayerRows();
+        $sync=(new McaResultsCronService($this->pdo, $this->repository))->status();
+        $pending=(int)($sync['rebuild_required']??0)>0
+            || in_array((string)($state['phase']??''),['files_changed','rebuild_retry'],true);
         return [
             'files' => $this->fileRows(),
             'processing' => $state,
-            'sync' => (new McaResultsCronService($this->pdo, $this->repository))->status(),
+            'derived_rebuild' => [
+                'pending'=>$pending,'published_players'=>count($players),
+                'last_error'=>(string)($state['last_error']??''),
+            ],
+            'sync' => $sync,
             'date_sync' => $this->autoSyncStatus(),
             'players' => $players,
             'summary' => $this->summary($players),
@@ -1497,20 +1530,16 @@ final class LiveRanksService
     {
         $this->pdo->beginTransaction();
         try {
-            // Any changed arena file invalidates the aggregate computed from the
-            // complete pack. Clear published rows rather than serving stale points.
-            $this->pdo->prepare('DELETE FROM p2k_lr_players WHERE club_slug=?')->execute([$this->clubSlug]);
-            $this->pdo->prepare('DELETE FROM p2k_lr_arena_stats WHERE club_slug=?')->execute([$this->clubSlug]);
-            $state = $this->pdo->prepare(
-                "INSERT INTO p2k_lr_processing_state(
-                    club_slug,status,phase,total_files,processed_files,total_players,checked_players,
-                    possible_renamed,closed_accounts,started_at,updated_at,finished_at,last_error
-                 ) VALUES(?,'idle','files_changed',0,0,0,0,0,0,NULL,UTC_TIMESTAMP(),NULL,NULL)
-                 ON DUPLICATE KEY UPDATE status='idle',phase='files_changed',total_files=0,processed_files=0,
-                    total_players=0,checked_players=0,possible_renamed=0,closed_accounts=0,started_at=NULL,
-                    updated_at=UTC_TIMESTAMP(),finished_at=NULL,last_error=NULL"
-            );
-            $state->execute([$this->clubSlug]);
+            // Changed CSVs invalidate freshness, not published scores.
+            // Both changes occur in one transaction.
+            $this->pdo->prepare("INSERT INTO p2k_lr_sync_state(club_slug,status,phase,rebuild_required,updated_at)
+                VALUES(?,'idle','idle',1,UTC_TIMESTAMP())
+                ON DUPLICATE KEY UPDATE rebuild_required=1,updated_at=UTC_TIMESTAMP()")
+                ->execute([$this->clubSlug]);
+            $this->pdo->prepare("INSERT INTO p2k_lr_processing_state(club_slug,status,phase,updated_at,last_error)
+                VALUES(?,'pending','files_changed',UTC_TIMESTAMP(),NULL)
+                ON DUPLICATE KEY UPDATE status='pending',phase='files_changed',updated_at=UTC_TIMESTAMP(),last_error=NULL")
+                ->execute([$this->clubSlug]);
             $this->pdo->commit();
         } catch (\Throwable $exception) {
             if ($this->pdo->inTransaction()) {
