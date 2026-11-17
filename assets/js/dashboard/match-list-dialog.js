@@ -4,6 +4,15 @@
 window.P2K_DASHBOARD_MODULES = window.P2K_DASHBOARD_MODULES || {};
 window.P2K_DASHBOARD_MODULES.matchListDialog = Object.freeze({create(context) {
 const { state, byId, matchBoardCount, matchListTotals, number, setText, formatDateOnly } = context;
+function matchEventLocal(value){
+  if(!value)return "—";
+  let raw=String(value).trim();
+  if(/^\d{4}-\d\d-\d\d[ T]\d\d:\d\d(?::\d\d(?:\.\d+)?)?$/.test(raw))raw=raw.replace(" ","T")+"Z";
+  const d=new Date(typeof value==="number"?value*(value<1e11?1000:1):raw);
+  return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("en-GB",{
+    day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",timeZoneName:"short"
+  }).format(d):"—";
+}
 function matchListLabel(status) {
     return ({ registered: "Registered matches", ongoing: "Ongoing matches", finished: "Finished matches" })[status] || "Matches";
   }
@@ -28,7 +37,7 @@ const title = document.createElement("strong");
 title.textContent = match?.name || match?.title || "Team match";
 const meta = document.createElement("small");
 const boards = matchBoardCount(match);
-meta.textContent = `${formatDateOnly(match?.end_time || match?.start_time)} · ${number(boards)} boards · ${number(boards * 2)} games`;
+meta.textContent = `${matchEventLocal(match?.end_time || match?.start_time)} · ${number(boards)} boards · ${number(boards * 2)} games`;
 copy.append(title, meta);
 const url = matchURL(match);
 if (url) {
