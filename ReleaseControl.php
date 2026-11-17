@@ -127,6 +127,18 @@ if ($method === 'POST' && $authorized) {
                 header('Location: /ReleaseControl.php?deployment_result=rolled-back', true, 303);
                 exit;
             }
+            if ($action === 'delete-releases') {
+                if ((string)($_POST['confirm'] ?? '') !== 'yes') {
+                    throw new RuntimeException('Batch release deletion confirmation is required.');
+                }
+                $ids=$_POST['release_ids']??[];
+                if (!is_array($ids)) throw new InvalidArgumentException('Release selection is invalid.');
+                $result=$releaseManager->deleteReleases($ids,$username);
+                header('Location: /ReleaseControl.php?cleanup_result=batch&deleted_count=' .
+                    (int)$result['deleted_count'].'&release_page='.max(1,(int)($_POST['release_page']??1)).
+                    '#release-management',true,303);
+                exit;
+            }
             if ($action === 'delete-release') {
                 if ((string)($_POST['confirm'] ?? '') !== 'yes') {
                     throw new RuntimeException('Release deletion confirmation is required.');
@@ -149,6 +161,18 @@ if ($method === 'POST' && $authorized) {
                     header('Location: /ReleaseControl.php?package_result=error&package_error=' . rawurlencode($e->getMessage()) . '#package-upload', true, 303);
                     exit;
                 }
+            }
+            if ($action === 'delete-filesystem-artifacts') {
+                if ((string)($_POST['confirm'] ?? '') !== 'yes') {
+                    throw new RuntimeException('Batch filesystem cleanup confirmation is required.');
+                }
+                $items=$_POST['filesystem_paths']??[];
+                if(!is_array($items))throw new InvalidArgumentException('Filesystem cleanup selection is invalid.');
+                $result=$filesystemCleanup->deleteMany($items,$username);
+                header('Location: /ReleaseControl.php?filesystem_result=batch&deleted_count=' .
+                    (int)$result['deleted_count'].'&filesystem_page='.max(1,(int)($_POST['filesystem_page']??1)).
+                    '#filesystem-cleanup',true,303);
+                exit;
             }
             if ($action === 'delete-filesystem-artifact') {
                 if ((string)($_POST['confirm'] ?? '') !== 'yes') {
@@ -202,6 +226,7 @@ $previewResult = strtolower(trim((string)($_GET['preview_result'] ?? '')));
 $deploymentResult = strtolower(trim((string)($_GET['deployment_result'] ?? '')));
 $cleanupResult = strtolower(trim((string)($_GET['cleanup_result'] ?? '')));
 $cleanupResultRelease = trim((string)($_GET['release_id'] ?? ''));
+$cleanupDeletedCount=max(0,(int)($_GET['deleted_count']??0));
 $packageResult = strtolower(trim((string)($_GET['package_result'] ?? '')));
 $packageRelease = trim((string)($_GET['package_release'] ?? ''));
 $packageError = trim((string)($_GET['package_error'] ?? ''));
