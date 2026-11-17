@@ -19,7 +19,7 @@
       const d=new Date(n);return Number.isFinite(d.getTime())?d:null;
     }
     let raw=String(value).trim();
-    if(/^\\d{4}-\\d\\d-\\d\\d[ T]\\d\\d:\\d\\d(?::\\d\\d(?:\\.\\d+)?)?$/.test(raw))raw=raw.replace(' ','T')+'Z';
+    if(/^\d{4}-\d\d-\d\d[ T]\d\d:\d\d(?::\d\d(?:\.\d+)?)?$/.test(raw))raw=raw.replace(' ','T')+'Z';
     const d=new Date(raw);return Number.isFinite(d.getTime())?d:null;
   };
   const timeZone=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
@@ -39,7 +39,7 @@
     const seen=new Set();
     for(const bucket of Array.isArray(utcBuckets)?utcBuckets:[]){
       for(const m of Array.isArray(bucket?.items)?bucket.items:[]){
-        if(!Number.isFinite(Number(m.startTime))||Number(m.startTime)*1000<Date.now())continue;
+        if(!Number.isFinite(Number(m.startTime))||Number(m.startTime)*1000<now.getTime())continue;
         const id=Number(m.matchId);if(!Number.isSafeInteger(id)||seen.has(id))continue;
         const date=new Date(Number(m.startTime)*1000);
         const day=byDate.get(dateKey(date));if(!day)continue;
