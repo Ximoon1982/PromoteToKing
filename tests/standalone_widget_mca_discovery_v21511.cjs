@@ -38,8 +38,8 @@ for(const club of ["TGP","TeamFrance"]){
     page.indexOf('id="arenaDiscoveryPanel"')<page.indexOf('class="arena-editor"'),
     club+" preselector must appear before the configured MCA arena list");
   for(const id of [
-    "arenaDiscoveryPanel","arenaDiscoveryOrganizers","arenaDiscoveryClubId",
-    "arenaDiscoveryClubName","arenaDiscoveryAddOrganizer","arenaDiscoveryScan",
+    "arenaDiscoveryPanel","arenaDiscoveryOrganizers","arenaDiscoveryClubReference",
+    "arenaDiscoveryAddOrganizer","arenaDiscoveryScan",
     "arenaDiscoveryCancel","arenaDiscoveryStatus","arenaDiscoveryResults"
   ]) assert(page.includes('id="'+id+'"'),club+" UI missing "+id);
   assert(page.includes("../assets/arena-discovery.js?v=0.3.4-club-reference-1"),
