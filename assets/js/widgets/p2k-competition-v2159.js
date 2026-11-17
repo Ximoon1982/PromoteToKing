@@ -54,6 +54,7 @@
     link.rel='noopener noreferrer';
     link.textContent='Open P2K match selection assistant';
     foot.append(link);
+    link.addEventListener('click',()=>window.P2K_TRAFFIC_ANALYTICS?.widgetAction?.('open-match-assistant'));
   }
   function setStatus(id,value){
     const normalized=value==='LIVE'?'LIVE':value==='PARTIAL'?'PARTIAL':
@@ -133,7 +134,9 @@
   function select(id,{focus=false}={}){
     const mode=modes.find(m=>m.id===id);
     if(!mode)return;
+    const changed=active!==mode.id;
     active=mode.id;
+    if(changed) window.P2K_TRAFFIC_ANALYTICS?.widgetTab?.(mode.id);
     const pane=mount(mode);
     modes.forEach(item=>{
       const selected=item.id===mode.id;
