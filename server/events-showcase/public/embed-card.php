@@ -17,6 +17,7 @@ if (!in_array($section, ['all', 'daily', 'arenas'], true)) $section = 'all';
 <meta name="color-scheme" content="light dark">
 <title>Promote to King · Events showcase cards</title>
 <script src="../../../config/site-branding.js"></script>
+<script src="../../../assets/js/shared/traffic-analytics.js?v=2.15.10-widgets-activity-1" data-p2k-traffic-analytics data-p2k-widget-collector defer></script>
 <script src="../../../assets/js/site-config.js"></script>
 <script src="../../../assets/js/shared/api-cache.js"></script>
 <script src="../../../assets/js/shared/match-priority.js"></script>
