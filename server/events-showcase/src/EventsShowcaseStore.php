@@ -166,7 +166,7 @@ final class EventsShowcaseStore {
                 if ($candidate->setTimezone(new DateTimeZone(self::TIMEZONE))->format('Y-m-d H:i')===$date.' '.$time) {
                     $start=$candidate;
                 }
-            } catch (\\Exception) { /* legacy invalid instant: fall back to the wall fields */ }
+            } catch (\Exception) { /* legacy invalid instant: fall back to the wall fields */ }
         }
         $durationMinutes=$this->durationMinutes($duration);
         return ['active'=>($raw['active']??false)===true,'name'=>trim((string)($raw['name']??'')),'link'=>trim((string)($raw['link']??'')),'date'=>$date,'time'=>$time,'timeControl'=>trim((string)($raw['timeControl']??'')),'duration'=>$duration,'durationMinutes'=>$durationMinutes,'startAt'=>$start?->format(DATE_ATOM)??''];
