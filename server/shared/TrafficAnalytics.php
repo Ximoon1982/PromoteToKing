@@ -200,7 +200,8 @@ final class TrafficAnalytics
         unset($totals['estimated_unique_visitors']);
         $totals['radar_tab_views']=(int)($widgetTabs['competition:match-calls']??0);
         $totals['assistant_link_clicks']=(int)($widgetActions['competition:open-match-assistant']??0);
-        $totals['pages_per_session']=$totals['sessions']?round(($totals['pageviews']+$totals['widget_views'])/$totals['sessions'],2):0;
+        $totals['pages_per_session']=$totals['sessions']?round($totals['pageviews']/$totals['sessions'],2):0;
+        $totals['views_per_session']=$totals['sessions']?round(($totals['pageviews']+$totals['widget_views'])/$totals['sessions'],2):0;
         $totals['average_duration_seconds']=$totals['sessions']?round($totals['duration_total_seconds']/$totals['sessions']):0;
         $totals['median_duration_seconds']=self::approxMedian($hist);
         return ['days'=>$days,'summary'=>$totals,'trend'=>$rows,'top_pages'=>self::top($pages,50),'entry_pages'=>self::top($entries,30),'exit_pages'=>self::top($exits,30),'countries'=>self::top($countries,50),'referrers'=>self::top($referrers,50),'transitions'=>self::top($transitions,50),'duration_histogram'=>$hist,'widgets'=>self::top($widgets,50),
