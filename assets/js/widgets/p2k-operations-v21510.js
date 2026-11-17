@@ -237,7 +237,7 @@
     const bounds=C.ratingBounds(template),max=C.maximumTeamPlayers(template);
     const p=C.teamRatings(pTeam,bounds),o=C.teamRatings(oTeam,bounds);
     const n=Math.min(p.length,o.length,Number.isFinite(max)?max:Infinity);
-    if(n===0)return null;
+    if(n===0 || (historyOnly && n>512))return null;
     const compare=C.compareRecruitmentLineups(p,o,max);
     const minimum=C.minimumTeamPlayers(template);
     const forfeited=minimum>0&&p.length<minimum;
