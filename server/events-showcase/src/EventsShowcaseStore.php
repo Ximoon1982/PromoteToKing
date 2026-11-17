@@ -155,7 +155,20 @@ final class EventsShowcaseStore {
 
     private function normalizeArena(array $raw): array {
         $date=trim((string)($raw['date']??'')); $time=trim((string)($raw['time']??'')); $duration=trim((string)($raw['duration']??''));
-        $start=$this->arenaStart($date,$time); $durationMinutes=$this->durationMinutes($duration);
+        $start=$this->arenaStart($date,$time);
+        // The legacy date/time fields remain Luxembourg-local for compatibility with older clients.
+        // Preserve an explicit instant when it represents that same wall time: on the DST fall-back
+        // hour both instants have identical wall fields but different offsets, so recalculating loses data.
+        $absolute=trim((string)($raw['startAt']??''));
+        if ($absolute!=='' && preg_match('/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$/i',$absolute)) {
+            try {
+                $candidate=new DateTimeImmutable($absolute);
+                if ($candidate->setTimezone(new DateTimeZone(self::TIMEZONE))->format('Y-m-d H:i')===$date.' '.$time) {
+                    $start=$candidate;
+                }
+            } catch (\\Exception) { /* legacy invalid instant: fall back to the wall fields */ }
+        }
+        $durationMinutes=$this->durationMinutes($duration);
         return ['active'=>($raw['active']??false)===true,'name'=>trim((string)($raw['name']??'')),'link'=>trim((string)($raw['link']??'')),'date'=>$date,'time'=>$time,'timeControl'=>trim((string)($raw['timeControl']??'')),'duration'=>$duration,'durationMinutes'=>$durationMinutes,'startAt'=>$start?->format(DATE_ATOM)??''];
     }
 
@@ -173,7 +186,7 @@ final class EventsShowcaseStore {
         if($date===''||$time==='')return null; $tz=new DateTimeZone(self::TIMEZONE); $dt=DateTimeImmutable::createFromFormat('!Y-m-d H:i',$date.' '.$time,$tz); $errors=DateTimeImmutable::getLastErrors();
         if(!$dt||(is_array($errors)&&(($errors['warning_count']??0)>0||($errors['error_count']??0)>0))||$dt->format('Y-m-d H:i')!==$date.' '.$time)return null; return $dt;
     }
-    private function arenaExpired(array $arena,int $now): bool { $start=$this->arenaStart((string)$arena['date'],(string)$arena['time']);$duration=$this->durationMinutes((string)$arena['duration']);return $start&&$duration?$now>=($start->getTimestamp()+$duration*60):false; }
+    private function arenaExpired(array $arena,int $now): bool { $start=($arena['startAt']??'')!==''?new DateTimeImmutable((string)$arena['startAt']):$this->arenaStart((string)$arena['date'],(string)$arena['time']);$duration=$this->durationMinutes((string)$arena['duration']);return $start&&$duration?$now>=($start->getTimestamp()+$duration*60):false; }
     private function arenaEmpty(array $a): bool { return !($a['active']??false)&&trim((string)$a['name'])===''&&trim((string)$a['link'])===''&&trim((string)$a['date'])===''&&trim((string)$a['time'])===''&&trim((string)$a['timeControl'])===''&&trim((string)$a['duration'])===''; }
     private function arenaUrlKey(string $url): string { $url=trim($url);if($url==='')return'';$p=parse_url($url);if(!is_array($p))return$url;$scheme=strtolower((string)($p['scheme']??''));$host=strtolower((string)($p['host']??''));if($host==='www.chess.com')$host='chess.com';$port=isset($p['port'])?':'.(int)$p['port']:'';$path=(string)($p['path']??'');if($path!=='/')$path=rtrim($path,'/');$query=isset($p['query'])&&$p['query']!==''?'?'.$p['query']:'';return$scheme.'://'.$host.$port.$path.$query; }
 
