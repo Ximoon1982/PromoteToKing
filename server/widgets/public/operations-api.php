@@ -68,7 +68,7 @@ function ops_event(array $e): array {
         'event_type'=>(string)($e['event_type']??''),
         'username'=>(string)($e['username']??''),
         'new_username'=>(string)($e['new_username']??''),
-        'old_username'=>(string)($e['old_username']??''),
+        'old_username'=>(string)($e['old_username']??$e['previous_username']??''),
         'detected_at'=>(string)($e['detected_at']??''),
         'effective_at'=>(string)($e['effective_at']??'')
     ];
