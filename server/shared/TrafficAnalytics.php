@@ -133,6 +133,9 @@ final class TrafficAnalytics
             } elseif ($kind === 'widgetview') {
                 $agg['widget_views']=(int)($agg['widget_views']??0)+1;
                 $agg['widgets'][$widget]=(int)($agg['widgets'][$widget]??0)+1;
+                if ($widget === 'competition') {
+                    $agg['widget_tabs']['competition:showcase']=(int)($agg['widget_tabs']['competition:showcase']??0)+1;
+                }
                 $session['last_path']=$path;
             } elseif ($kind === 'widgettab') {
                 $tag=$widget.':'.$action;
