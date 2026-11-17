@@ -28,7 +28,7 @@
     document.querySelectorAll('[data-aw-view]').forEach(v=>v.hidden=v.dataset.awView!==view);
     $('awScroll').scrollTop=0;
     if(view==='actions'&&!state.days.length)void loadActions();
-    if(view==='matches'&&!state.days.length)void loadMatches();
+    if(view==='matches'&&!state.days.length)void loadMatches().catch(e=>text('awChartCaption',e.message));
     if(view==='members')void loadMembers();
   }
   document.querySelectorAll('[data-aw-tab]').forEach(b=>b.onclick=()=>selectTab(b.dataset.awTab));
@@ -211,7 +211,7 @@
   };
 
   const eligible=(ratings,minimum,maximum)=>ratings.filter(r=>Number.isFinite(r)&&r>=minimum&&(!maximum||r<=maximum)).sort((a,b)=>b-a);
-  const modelFor=(match,p2k,opponents)=>{
+  const modelFor=(match,p2k,opponents,includeRecruitment=false)=>{
     const C=core();if(!C)return null;
     const settings={min_rating:match.minRating,max_rating:match.maxRating,
       min_team_players:match.minimumPlayers,max_team_players:match.maximumPlayers};
@@ -237,7 +237,7 @@
       }dist=next;
     }
     const modal=dist.reduce((best,x,i)=>x>dist[best]?i:best,0);
-    const recruitment=C.recruitmentMetrics({match:template,p2kTeam:pTeam,opponentTeam:oTeam,isLeague:isLeague(match.name)});
+    const recruitment=includeRecruitment?C.recruitmentMetrics({match:template,p2kTeam:pTeam,opponentTeam:oTeam,isLeague:isLeague(match.name)}):null;
     return {win:forfeited?0:compare.p2kWinProbability,predicted:[modal/2,n*2-modal/2],
       boards:n,recruitment,forfeited};
   };
@@ -272,9 +272,9 @@
       const h1=60*pc/maxH,h2=60*oc/maxH;
       const unavailable=r<match.minRating||(match.maxRating&&r>match.maxRating);
       return '<rect x="'+(18+i*24)+'" y="'+(77-h1)+'" width="10" height="'+h1+
-        '" fill="'+palette.ours+'" opacity="'+(unavailable?.35:1)+'"><title>'+r+'–'+(r+99)+' P2K: '+pc+'</title></rect>'+
+        '" fill="'+palette.ours+'" opacity="'+(unavailable?0.35:1)+'"><title>'+r+'–'+(r+99)+' P2K: '+pc+'</title></rect>'+
         '<rect x="'+(29+i*24)+'" y="'+(77-h2)+'" width="10" height="'+h2+
-        '" fill="'+palette.other+'" opacity="'+(unavailable?.35:1)+'"><title>'+r+'–'+(r+99)+' opponent: '+oc+'</title></rect>';
+        '" fill="'+palette.other+'" opacity="'+(unavailable?0.35:1)+'"><title>'+r+'–'+(r+99)+' opponent: '+oc+'</title></rect>';
     }).join('');
     const labels=bins.filter((_,i)=>i%Math.max(1,Math.ceil(bins.length/6))===0).map(r=>{
       const i=bins.indexOf(r);return '<text x="'+(20+i*24)+'" y="92" fill="currentColor" font-size="8">'+r+'</text>';
@@ -330,7 +330,7 @@
       const m=d.match,r=d.roster,p=r.p2kRatings||[],o=r.opponentRatings||[];
       text('awAnalysisTitle',m.name||'Match #'+id);
       text('awAnalysisMeta','#'+id+' · '+m.opponent+' · '+when(m.startTime));
-      const model=r.complete?modelFor(m,p,o):null;
+      const model=r.complete?modelFor(m,p,o,true):null;
       $('awAnalysisMetrics').innerHTML=[
         ['P2K players',fmt(r.p2k)],['Opponent',fmt(r.opponent)],
         ['P2K win',model?(model.win*100).toFixed(1)+'%':'—']
