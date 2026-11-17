@@ -34,7 +34,14 @@ final class McaRenameReviewService
         $sourcesQ = $this->analytics->prepare('SELECT COUNT(*) FROM p2k_lr_source_rows WHERE club_slug=?');
         $sourcesQ->execute([$this->clubSlug]);
         $hasSources = (int)$sourcesQ->fetchColumn() > 0;
-        $stale = $hasSources && $derived !== $generation;
+        $syncQ=$this->analytics->prepare('SELECT rebuild_required FROM p2k_lr_sync_state WHERE club_slug=? LIMIT 1');
+        $syncQ->execute([$this->clubSlug]);
+        $rebuildFlag=(int)$syncQ->fetchColumn()===1;
+        $pendingRebuild=$rebuildFlag||in_array((string)($state['phase']??''),['files_changed','rebuild_retry'],true);
+        $publishedQ=$this->analytics->prepare('SELECT COUNT(*) FROM p2k_lr_players WHERE club_slug=?');
+        $publishedQ->execute([$this->clubSlug]);
+        $publishedPlayers=(int)$publishedQ->fetchColumn();
+        $stale = ($hasSources && $derived !== $generation)||$pendingRebuild;
 
         $query = $this->analytics->prepare(
             "SELECT username_key,username,total_points,arena_count,source_files_json,last_error,profile_checked_at
@@ -134,6 +141,8 @@ final class McaRenameReviewService
                 'stale' => $stale,
                 'source_rows_available' => $hasSources,
                 'processing_status' => (string)($state['status'] ?? 'unknown'),
+                'rebuild_pending' => $pendingRebuild,
+                'published_players' => $publishedPlayers,
             ],
         ];
     }
