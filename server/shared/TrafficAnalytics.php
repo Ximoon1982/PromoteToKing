@@ -53,10 +53,13 @@ final class TrafficAnalytics
         $viewId = strtolower(trim((string)($payload['view_id'] ?? '')));
         $viewId = preg_match('/^[a-f0-9]{32}$/D', $viewId) ? $viewId : '';
         $widget = strtolower(trim((string)($payload['widget'] ?? '')));
-        if (!in_array($widget, ['competition','recruitment-radar','rivalry-spotlight','showcase','club-pulse','trophy-spotlight','club-progress','around-the-world','player-spotlight','tournament-winners','hall-of-fame'], true)) $widget = '';
+        if (!in_array($widget, ['competition','recruitment-radar','rivalry-spotlight','showcase','club-pulse','trophy-spotlight','club-progress','around-the-world','player-spotlight','tournament-winners','hall-of-fame','administrator'], true)) $widget = '';
         $action = strtolower(trim((string)($payload['action'] ?? '')));
         if ($kind === 'widgettab' && ($widget !== 'competition' || !in_array($action, ['showcase','match-calls','rivals'], true))) $kind = 'invalid';
-        if ($kind === 'widgetaction' && ($widget !== 'competition' || $action !== 'open-match-assistant')) $kind = 'invalid';
+        if ($kind === 'widgetaction' && !(
+            ($widget === 'competition' && $action === 'open-match-assistant')
+            || ($widget === 'administrator' && in_array($action,['match-search','match-analysis-view','match-full-analysis-open'],true))
+        )) $kind = 'invalid';
         if ($kind === 'widgetview' && $widget === '') $kind = 'invalid';
         if ($kind === 'invalid') return ['ok'=>true,'recorded'=>false,'reason'=>'invalid_widget_event'];
         // Only a short-lived server HMAC of the tab key is retained; raw client
