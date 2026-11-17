@@ -1,0 +1,190 @@
+name: P2K 2.15.11 standalone widget URL slug ID organizer hotfix
+on:
+  push:
+    branches: [release/v2.15.11]
+    paths:
+      - '.github/workflows/p2k-v21511-standalone-club-reference-ssh.yml'
+      - 'tools/install-tgp-teamfrance-widgets-v034-clubref.sh'
+      - 'TGP/Widget/**'
+      - 'TeamFrance/Widget/**'
+      - 'tests/php_v21511_standalone_club_references.php'
+      - 'tests/standalone_widget_mca_discovery_v21511.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Lint and regression checks against current 2.15.11 branch
+        run: |
+          set -euo pipefail
+          BASE=f1c4fcbea1b7f12603f977a2a4ff943b543eeae1
+          test "$(git merge-base "$BASE" HEAD)" = "$BASE"
+          bash -n tools/install-tgp-teamfrance-widgets-v034-clubref.sh
+          for club in TGP TeamFrance; do
+            php -l "$club/Widget/api.php"
+            php -l "$club/Widget/admin/index.php"
+            php -l "$club/Widget/src/StandaloneArenaDiscoveryService.php"
+            node --check "$club/Widget/assets/arena-discovery.js"
+            cmp TGP/Widget/assets/arena-discovery.js TeamFrance/Widget/assets/arena-discovery.js
+            cmp TGP/Widget/src/StandaloneArenaDiscoveryService.php TeamFrance/Widget/src/StandaloneArenaDiscoveryService.php
+          done
+          php -l tests/php_v21511_standalone_club_references.php
+          php tests/php_v21511_standalone_club_references.php
+          php tests/php_v21511_standalone_widget_discovery.php
+          php tests/widget_arenas_v2153_test.php
+          php tests/showcase-admin-discovery.php
+          node tests/standalone_widget_mca_discovery_v21511.cjs
+          node tests/team_france_admin_hub.test.cjs
+          node tests/tgp_admin_hub.test.cjs
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          base='f1c4fcbea1b7f12603f977a2a4ff943b543eeae1'
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          suffixes={'Widget/README.txt','Widget/admin/index.php','Widget/api.php',
+                    'Widget/assets/arena-discovery.js','Widget/assets/arena-discovery.css',
+                    'Widget/src/StandaloneArenaDiscoveryService.php'}
+          widget={club+'/'+p for club in ['TGP','TeamFrance'] for p in suffixes}
+          other={
+            'tools/install-tgp-teamfrance-widgets-v034-clubref.sh',
+            'tests/php_v21511_standalone_club_references.php',
+            'tests/standalone_widget_mca_discovery_v21511.cjs',
+            '.github/workflows/p2k-v21511-standalone-club-reference-ssh.yml'
+          }
+          assert changed==widget|other,{'actual':sorted(changed),'expected':sorted(widget|other)}
+          for p in ['TGP/Widget/config.php','TeamFrance/Widget/config.php',
+                    'TGP/Widget/src/Store.php','TeamFrance/Widget/src/Store.php',
+                    'server/events-showcase/src/ArenaDiscoveryAdminService.php',
+                    'server/team-points/src/LiveRanksService.php']:
+            assert p not in changed,p
+          print('PASS exact TGP + TeamFrance organizer hotfix scope, persistence untouched')
+          PY
+      - name: Package minimal offline SSH hotfix
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,zipfile,subprocess,shutil
+          base='f1c4fcbea1b7f12603f977a2a4ff943b543eeae1'
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert subprocess.check_output(['git','merge-base',base,head],text=True).strip()==base
+          files=['Widget/README.txt','Widget/admin/index.php','Widget/api.php',
+                 'Widget/assets/arena-discovery.js','Widget/assets/arena-discovery.css',
+                 'Widget/src/StandaloneArenaDiscoveryService.php']
+          paths=sorted(club+'/'+p for club in ['TGP','TeamFrance'] for p in files)
+          assert len(paths)==12
+          name='P2K_TGP_TeamFrance_v034_Club_Reference_SSH_Hotfix'
+          root=Path('dist')/name
+          payload=root/'payload'
+          payload.mkdir(parents=True,exist_ok=True)
+          for path in paths:
+            dst=payload/path
+            dst.parent.mkdir(parents=True,exist_ok=True)
+            shutil.copyfile(path,dst)
+          shutil.copyfile('tools/install-tgp-teamfrance-widgets-v034-clubref.sh',root/'install.sh')
+          (root/'install.sh').chmod(0o755)
+          sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+          (root/'FILE_SHA256SUMS').write_text(''.join(
+            sha(payload/p)+'  payload/'+p+'\n' for p in paths))
+          meta={'delivery':'standalone-ssh-only',
+            'version':'0.3.4-club-reference-hotfix',
+            'source_head':head,'branch':'release/v2.15.11',
+            'baseline_head':base,'file_count':12,
+            'installer_sha256':sha(root/'install.sh'),
+            'runtime_state_included':False}
+          (root/'INSTALLER_INFO.json').write_text(json.dumps(meta,indent=2)+'\n')
+          (root/'README_INSTALL.txt').write_text(
+            'TGP + Team France standalone MCA organizer URL / ID / slug hotfix.\n'
+            'NOT a P2K Release Control package. Transfer to IONOS over SFTP/SSH.\n'
+            'Extract into SSH home (outside the live PromoteToKing directory):\n'
+            'unzip -o '+name+'_'+head[:12]+'.zip\n'
+            'Run preflight:\n'
+            'bash '+name+'/install.sh /kunden/homepages/43/d141198007/htdocs/PromoteToKing --check\n'
+            'Install:\n'
+            'bash '+name+'/install.sh /kunden/homepages/43/d141198007/htdocs/PromoteToKing\n'
+            'A single club reference field now accepts a Chess.com URL, slug or number.\n'
+            'Official numeric ID and display name are verified and filled automatically.\n'
+            'Existing TGP and Team France watchlists and both data/showcase.json preserved.\n'
+            'Backups under storage/standalone-widget-backups; code automatically restored\n'
+            'if any installation step fails. Requires deployed widget version 0.3.4.\n')
+          out=root.parent/(name+'_'+head[:12]+'.zip')
+          with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+            for item in sorted(root.rglob('*')):
+              if item.is_file(): z.write(item,item.relative_to(root.parent))
+          (root.parent/'SHA256SUMS').write_text(sha(out)+'  '+out.name+'\n')
+          print('ZIP',out,out.stat().st_size,'bytes SHA256',sha(out))
+          print('META',json.dumps(meta))
+          PY
+      - name: Simulate SSH update from exact previously installed standalone widget release
+        run: |
+          set -euo pipefail
+          name=P2K_TGP_TeamFrance_v034_Club_Reference_SSH_Hotfix
+          root=dist/$name
+          site="$(mktemp -d)"
+          trap 'rm -rf "$site"' EXIT
+          BASE=f1c4fcbea1b7f12603f977a2a4ff943b543eeae1
+          for club in TGP TeamFrance; do
+            mkdir -p "$site/$club/Widget/data" "$site/$club/Widget/assets" "$site/$club/Widget/src" "$site/$club/Widget/admin"
+            for sub in Widget/config.php Widget/api.php Widget/src/Store.php; do
+              git show "$BASE:$club/$sub" > "$site/$club/$sub"
+            done
+            for sub in Widget/README.txt Widget/admin/index.php Widget/assets/arena-discovery.js \
+                       Widget/assets/arena-discovery.css Widget/src/StandaloneArenaDiscoveryService.php; do
+              git show "$BASE:$club/$sub" > "$site/$club/$sub"
+            done
+            printf '%s\n' '{"revision":42,"items":[{"matchId":"12345","enabled":true}]}' > "$site/$club/Widget/data/showcase.json"
+            printf '%s\n' '{"revision":6,"organizers":[{"clubId":"816742","name":"Existing club","enabled":false}]}' > "$site/$club/Widget/data/upcoming-arena-discovery.json"
+          done
+          sha_tgp="$(sha256sum "$site/TGP/Widget/data/showcase.json" "$site/TGP/Widget/data/upcoming-arena-discovery.json")"
+          sha_tf="$(sha256sum "$site/TeamFrance/Widget/data/showcase.json" "$site/TeamFrance/Widget/data/upcoming-arena-discovery.json")"
+          PHP_CLI=php bash "$root/install.sh" "$site" --check
+          PHP_CLI=php bash "$root/install.sh" "$site"
+          for club in TGP TeamFrance; do
+            for f in Widget/README.txt Widget/admin/index.php Widget/api.php \
+                     Widget/assets/arena-discovery.js Widget/assets/arena-discovery.css \
+                     Widget/src/StandaloneArenaDiscoveryService.php; do
+              cmp "$root/payload/$club/$f" "$site/$club/$f"
+            done
+            cmp <(git show "$BASE:$club/Widget/config.php") "$site/$club/Widget/config.php"
+            cmp <(git show "$BASE:$club/Widget/src/Store.php") "$site/$club/Widget/src/Store.php"
+          done
+          test "$sha_tgp" = "$(sha256sum "$site/TGP/Widget/data/showcase.json" "$site/TGP/Widget/data/upcoming-arena-discovery.json")"
+          test "$sha_tf" = "$(sha256sum "$site/TeamFrance/Widget/data/showcase.json" "$site/TeamFrance/Widget/data/upcoming-arena-discovery.json")"
+          PHP_CLI=php bash "$root/install.sh" "$site" --check
+          echo "PASS incremental SSH install, hash checks, backups, exact config and organizer state preservation"
+      - name: Validate ZIP content and file checksums
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,zipfile
+          p=next(Path('dist').glob('P2K_TGP_TeamFrance_v034_Club_Reference_SSH_Hotfix_*.zip'))
+          base='P2K_TGP_TeamFrance_v034_Club_Reference_SSH_Hotfix/'
+          with zipfile.ZipFile(p) as z:
+            assert z.testzip() is None
+            assert len(z.namelist())==len(set(z.namelist()))
+            info=json.loads(z.read(base+'INSTALLER_INFO.json'))
+            assert info['file_count']==12
+            assert info['delivery']=='standalone-ssh-only'
+            manifest=z.read(base+'FILE_SHA256SUMS').decode().splitlines()
+            assert len(manifest)==12
+            for line in manifest:
+              digest,path=line.split('  ',1)
+              assert 'Widget/data/' not in path
+              assert hashlib.sha256(z.read(base+path)).hexdigest()==digest,path
+            assert hashlib.sha256(z.read(base+'install.sh')).hexdigest()==info['installer_sha256']
+          print('PASS self-contained SSH installer ZIP, sha256 manifests, no persistent widget data')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-tgp-teamfrance-v034-club-reference-ssh-hotfix
+          path: |
+            dist/P2K_TGP_TeamFrance_v034_Club_Reference_SSH_Hotfix_*.zip
+            dist/SHA256SUMS
+          retention-days: 14
