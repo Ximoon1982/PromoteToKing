@@ -55,7 +55,7 @@ header('Cache-Control: private, no-cache, max-age=30');
 <?php endif; ?>
 </main>
 <?php if($published||$preview): ?>
-<script src="../../../assets/js/shared/traffic-analytics.js?v=2.15.10-widgets-activity-1" data-p2k-traffic-analytics data-p2k-widget-collector defer></script>
+<?php if(!$competitionChild): ?><script src="../../../assets/js/shared/traffic-analytics.js?v=2.15.10-widgets-activity-1" data-p2k-traffic-analytics data-p2k-widget-collector defer></script><?php endif; ?>
 <?php if($widget==='competition'): ?>
 <script src="../../../assets/js/widgets/p2k-competition-v2159.js?v=p2k-2159-competition-3" defer></script>
 <?php elseif($widget==='recruitment-radar'): ?>
