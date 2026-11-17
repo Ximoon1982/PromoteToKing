@@ -10,6 +10,8 @@ on:
       - 'assets/js/widgets/p2k-operations-v21510.js'
       - 'assets/css/widgets/p2k-operations-v21510.css'
       - 'assets/js/shared/traffic-analytics.js'
+      - 'assets/js/pages/club-intelligence.js'
+      - 'ClubIntelligence.html'
       - 'server/shared/TrafficAnalytics.php'
       - 'ReleaseControl.php'
       - 'server/release-control/src/ReleaseVersionManager.php'
@@ -91,7 +93,8 @@ jobs:
               'server/release-control/src/FilesystemCleanupManager.php'}
           assert required.issubset(changed),required-changed
           unknown=changed-set(recovery)-nonpayload-required-{
-              'assets/js/shared/traffic-analytics.js','server/shared/TrafficAnalytics.php'}
+              'assets/js/shared/traffic-analytics.js','server/shared/TrafficAnalytics.php',
+              'assets/js/pages/club-intelligence.js','ClubIntelligence.html'}
           assert not unknown,unknown
           overlay=['VERSION','ui-v2.html']+sorted(changed-set(recovery)-nonpayload)
           package=Path('dist/P2K_2.15.10_Public_Operations_Batch_Cleanup_ReleaseControl')
