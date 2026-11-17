@@ -269,7 +269,7 @@
     $('liveRanksPlayerRows').innerHTML = players.length ? players.map(player => `<tr>
       <td><strong>${esc(player.username)}</strong></td><td>${fmt(player.points,2)}</td><td>${fmt(player.arenas,0)}</td>
       <td>${stateBadge(player.account_state)}</td><td><small>${esc((player.source_files || []).join(' · '))}</small></td>
-      <td>${esc(player.profile_checked_at || 'Pending')}${player.error ? `<br><small>${esc(player.error)}</small>` : ''}</td></tr>`).join('') : '<tr><td colspan="6">No computed players.</td></tr>';
+      <td>${esc(player.profile_checked_at || 'Pending')}${player.error ? `<br><small>${esc(player.error)}</small>` : ''}</td></tr>`).join('') : '<tr><td colspan="6">No computed players are published. Check the rebuild status above; source CSVs are retained.</td></tr>';
     const metrics = [
       ['Parsed MCA Results sources', files.length], ['Canonical sources stored', integrity.canonical_sources ?? canonicalFiles.length],
       ['Stored CSV records', integrity.stored_records ?? allFiles.length], ['P2K players', summary.players || 0], ['Arena points', fmt(summary.total_points,2)],
@@ -277,24 +277,21 @@
       ['Closed accounts', summary.closed_accounts || 0], ['Pending checks', summary.pending_checks || 0]
     ];
     $('liveRanksMetrics').innerHTML = metrics.map(([label,value]) => `<div class="p2k-tp-metric"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join('');
-    const integrityMetrics = [
-      ['Recognized arena IDs', integrity.recognized_arena_sources || 0], ['Legacy duplicate records', integrity.duplicate_records || 0],
-      ['Duplicate arena groups', integrity.duplicate_groups || 0], ['Raw hash differences', integrity.raw_hash_conflicting_duplicate_groups || 0], ['P2K metric conflicts', integrity.conflicting_duplicate_groups || 0],
-      ['Unidentified legacy sources', integrity.unidentified_records || 0], ['Noncanonical derived sources', integrity.noncanonical_derived_sources || 0]
-    ];
-    if ($('liveRanksIntegrityMetrics')) $('liveRanksIntegrityMetrics').innerHTML = integrityMetrics.map(([label,value]) => `<div class="p2k-tp-metric"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join('');
-    const duplicateGroups = Array.isArray(integrity.groups) ? integrity.groups : [];
-    if ($('liveRanksDuplicateWrap')) $('liveRanksDuplicateWrap').hidden = duplicateGroups.length === 0;
-    if ($('liveRanksDuplicateRows')) $('liveRanksDuplicateRows').innerHTML = duplicateGroups.map(group => `<tr>
-      <td><strong>#${fmt(group.arena_id || 0,0)}</strong><br><small>${esc(group.arena_slug || '')}</small></td>
-      <td><strong>${esc(group.canonical_name || '')}</strong><br><small>file #${fmt(group.canonical_file_id || 0,0)}</small></td>
-      <td>${(group.duplicates || []).map(row => `<div>${esc(row.name || '')} <small>#${fmt(row.id || 0,0)}</small></div>`).join('')}</td>
-      <td>${group.content_conflict ? '<strong>P2K-relevant Results rows differ — review retained copies</strong>' : group.raw_hash_conflict ? 'Raw files differ, but P2K-relevant Results rows are equivalent' : 'Equivalent content'}</td>
-    </tr>`).join('');
-    const integrityText = Number(integrity.duplicate_records || 0) === 0
-      ? 'Stored MCA sources are one-to-one with their recognized arena IDs.'
-      : `${fmt(integrity.duplicate_records || 0,0)} legacy duplicate CSV record(s) are retained but excluded from calculations across ${fmt(integrity.duplicate_groups || 0,0)} arena(s).${Number(integrity.raw_hash_conflicting_duplicate_groups || 0) ? ` ${fmt(integrity.raw_hash_conflicting_duplicate_groups || 0,0)} group(s) have different raw hashes.` : ''}${Number(integrity.conflicting_duplicate_groups || 0) ? ` ${fmt(integrity.conflicting_duplicate_groups || 0,0)} group(s) differ in P2K-relevant Results rows and remain visible for review.` : ''}${integrity.rebuild_required ? ' Existing derived MCA statistics contain excluded sources and are queued for a canonical rebuild.' : ''}`;
-    message('liveRanksIntegrityStatus', integrityText, integrity.rebuild_required ? 'error' : Number(integrity.duplicate_records || 0) ? '' : 'success');
+    // Canonical-source selection and duplicate checks remain in the backend.
+    // Their audit detail is intentionally not displayed in routine MCA admin.
+    const derived = payload.derived_rebuild || {};
+    const pending = derived.pending === true || Number(payload.sync?.rebuild_required || 0) > 0
+      || ['files_changed','rebuild_retry'].includes(String(processing.phase || ''));
+    const error = String(derived.last_error || processing.last_error || '').trim();
+    const statusText = pending
+      ? (players.length
+        ? `Updated MCA CSVs are awaiting a complete rebuild. Showing the last successfully published ${fmt(players.length,0)} players; points and rename review may be stale.`
+        : 'MCA CSVs are retained, but computed players have not yet been republished. Automatic rebuild is pending; Process complete MCA dataset is available.')
+      : (players.length
+        ? `${fmt(players.length,0)} computed MCA players published from the latest processed source generation.`
+        : 'No computed MCA players have been published. Check source processing before treating empty results or rename lists as authoritative.');
+    message('liveRanksDerivedStatus',statusText+(pending&&error?` Last rebuild error: ${error}`:''),pending||!players.length?'error':'success');
+
     $('liveRanksExportCorrections').disabled = Number(summary.possible_renames || 0) === 0;
     if (processing.status === 'running') message('liveRanksStatus', `Processing ${processing.phase || ''}: ${processing.checked_players || 0} profile check(s) completed.`, '');
   }
