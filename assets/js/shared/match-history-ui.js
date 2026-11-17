@@ -40,12 +40,14 @@
   }
 
   function formatTimestamp(value, compact = false) {
-    const date = new Date(String(value || ""));
-    if (!Number.isFinite(date.getTime())) return String(value || "");
-    return new Intl.DateTimeFormat("en-GB", compact
-      ? { timeZone: "UTC", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }
-      : { timeZone: "UTC", year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }
-    ).format(date) + " UTC";
+    let raw=String(value||"").trim();
+    if(/^\d{4}-\d\d-\d\d[ T]\d\d:\d\d(?::\d\d(?:\.\d+)?)?$/.test(raw))raw=raw.replace(" ","T")+"Z";
+    const date=new Date(raw);
+    if(!Number.isFinite(date.getTime()))return String(value||"");
+    return new Intl.DateTimeFormat("en-GB",compact
+      ? {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit",hour12:false,timeZoneName:"short"}
+      : {year:"numeric",month:"short",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false,timeZoneName:"short"}
+    ).format(date);
   }
 
   function clamp(value, minimum, maximum) {
@@ -133,7 +135,7 @@
     const options = span > 7 * 86400000
       ? { day: "2-digit", month: "short" }
       : { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false };
-    return new Intl.DateTimeFormat("en-GB", { ...options, timeZone: "UTC" }).format(date);
+    return new Intl.DateTimeFormat("en-GB", { ...options }).format(date);
   }
 
   function linePath(rows, xFor, yFor, key) {
