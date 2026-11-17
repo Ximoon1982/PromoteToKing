@@ -1235,9 +1235,12 @@
 
   function formatRecruitmentStartDate(timestamp) {
     if (!Number.isFinite(timestamp)) return "start unavailable";
-    const date = new Date(timestamp * 1000);
-    const pad = value => String(value).padStart(2, "0");
-    return `${pad(date.getUTCDate())}/${pad(date.getUTCMonth() + 1)}/${date.getUTCFullYear()} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())} UTC`;
+    const date=new Date(timestamp*1000);
+    const formatted=new Intl.DateTimeFormat("en-GB",{
+      day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false,timeZoneName:"short"
+    }).format(date);
+    const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC";
+    return formatted+" ("+zone+")";
   }
 
   function roundedRecruitmentRatingBounds(recommendation) {
