@@ -56,3 +56,13 @@ Version 0.3.4 (TGP + Team France):
 - Scans are admin-triggered and share the P2K Chess.com index rate limiter (minimum one second between request starts). Public widget reads do not scan arenas.
 - Configured Daily matches explicitly in progress or finished according to the club match index are removed automatically on public widget reads (also reconciled on admin refresh). Missing or unavailable upstream data never triggers deletion; current arena configuration and layout remain unchanged.
 - All existing club administrator permissions, CSRF protection, revision conflicts and live-card layout controls remain active.
+
+Standalone SSH delivery of Widget 0.3.4
+------------------------------------
+Do not use P2K Release Control: /TeamFrance/Widget/ is a physically served sibling application, not part of P2K public release-slot routing.
+The combined offline ZIP P2K_TGP_TeamFrance_Widget_v0.3.4_SSH_Installer includes an install.sh script and only the 20 updated code/documentation files for both widgets.
+Upload the ZIP via SSH/SFTP to the IONOS account home directory (outside PromoteToKing), extract it and run:
+  bash P2K_TGP_TeamFrance_Widget_v0.3.4_SSH_Installer/install.sh /kunden/homepages/43/d141198007/htdocs/PromoteToKing --check
+  bash P2K_TGP_TeamFrance_Widget_v0.3.4_SSH_Installer/install.sh /kunden/homepages/43/d141198007/htdocs/PromoteToKing
+The installer validates SHA-256 checksums and PHP syntax, checks the live widget baseline, saves source backups under storage/standalone-widget-backups, and copies code atomically.
+It never overwrites either widget's data/showcase.json, locks or API cache; does not touch P2K Release Control, public routing, OAuth or CRON.
