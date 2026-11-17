@@ -27,6 +27,6 @@ assert(cron.includes("private function invalidateDerivedMca(): void")&&cron.incl
        "Non-destructive and automatic derived processing must be present");
 assert(cron.includes("private function storeAutomaticCsv"),"Source acquisition must remain unchanged");
 assert(cron.includes("private function sourceCatalogue()"),"Duplicate detection and canonical selection are mandatory");
-assert(live.includes("private function sourceIntegrity()"),"Duplicate audit and canonical-source detection must remain in backend");
+assert(live.includes("public function sourceIntegrity()"),"Duplicate audit and canonical-source detection must remain in backend");
 assert(html.includes('id="liveRanksProcess"'),"Manual complete MCA processing must remain accessible");
 console.log("PASS duplicate UI hidden; canonical source auditing retained; MCA player/MIAC freshness explicit and cache versioned");
