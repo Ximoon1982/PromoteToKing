@@ -133,6 +133,31 @@ function club_daily_match_ids(array $index): array {
     }
     return $ids;
 }
+/**
+ * Only positive Chess.com club-index evidence qualifies a Daily match for
+ * automatic removal. An absent ID, failed fetch or delayed registration list
+ * must never result in deletion. Registration wins conflicting index buckets.
+ */
+function confirmed_started_daily_ids(array $index): array {
+    $registered = [];
+    foreach (is_array($index['registered'] ?? null) ? $index['registered'] : [] as $row) {
+        if (!is_array($row) || strtolower((string)($row['time_class'] ?? '')) !== 'daily') continue;
+        $id = row_match_id($row);
+        if ($id !== '') $registered[$id] = true;
+    }
+    $started = [];
+    foreach (['in_progress','finished'] as $status) {
+        foreach (is_array($index[$status] ?? null) ? $index[$status] : [] as $row) {
+            if (!is_array($row) || strtolower((string)($row['time_class'] ?? '')) !== 'daily') continue;
+            $id = row_match_id($row);
+            if ($id !== '' && !isset($registered[$id])) $started[$id] = true;
+        }
+    }
+    return array_keys($started);
+}
+function is_started_daily_status(mixed $status): bool {
+    return in_array(strtolower(trim((string)$status)), ['in_progress','finished','completed','started','in progress'], true);
+}
 function club_daily_match_map(array $index, string $teamSlug): array {
     $map = [];
     foreach (['registered', 'in_progress', 'finished'] as $bucketName) {
@@ -287,11 +312,32 @@ try {
     if ($action === 'cards') {
         request_method('GET');
         $state = $store->read();
+        // Public widget reads, not administrator visits, drive automatic cleanup.
+        // The cached Chess.com club index is a single bounded API read. Never
+        // prune on an outage or on missing/unknown index entries.
+        try {
+            $index = $chess->clubMatches($teamSlug);
+            $started = confirmed_started_daily_ids($index);
+            if ($started !== []) $state = $store->pruneStartedMatches($started);
+        } catch (ChessApiException $e) {
+            // Preserve existing cards during a transient Chess.com outage.
+        }
         $layout = $state['layout'] ?? ['arenaRows'=>1,'dailyRows'=>2];
         $limit = max(1, min(6, (int)($layout['dailyRows'] ?? 2) * 2));
-        $items = array_slice(array_values(array_filter($state['items'], static fn(array $item): bool => ($item['enabled'] ?? true) === true)), 0, $limit);
+        $items = array_values(array_filter($state['items'], static fn(array $item): bool => ($item['enabled'] ?? true) === true));
         $cards = [];
-        foreach ($items as $item) $cards[] = item_payload($item, $teamSlug, $chess, $config)['match'];
+        $newlyStarted = [];
+        foreach ($items as $item) {
+            $payload = item_payload($item, $teamSlug, $chess, $config);
+            $card = $payload['match'];
+            if (!empty($payload['resolved']) && is_started_daily_status($card['status'] ?? null)) {
+                $newlyStarted[] = (string)$item['matchId'];
+                continue;
+            }
+            $cards[] = $card;
+            if (count($cards) >= $limit) break;
+        }
+        if ($newlyStarted !== []) $store->pruneStartedMatches($newlyStarted);
         reply(200, ['ok'=>true,'version'=>$config['version'] ?? '0.2.0','teamSlug'=>$teamSlug,'cards'=>$cards,'arenas'=>array_slice(array_values(array_filter($state['arenas'] ?? [], static fn(array $a): bool => ($a['active'] ?? false) === true)), 0, max(2, min(4, (int)($layout['arenaRows'] ?? 1) * 2))),'layout'=>$layout]);
     }
 
@@ -328,6 +374,10 @@ try {
             // Admins must still be able to update arenas during a Chess.com API outage.
             $index = [];
         }
+        if ($index !== []) {
+            $started = confirmed_started_daily_ids($index);
+            if ($started !== []) $state = $store->pruneStartedMatches($started);
+        }
         $matchMap = club_daily_match_map($index, $teamSlug);
         $items = [];
         foreach ($state['items'] as $item) $items[] = admin_item_payload($item, $matchMap, $teamSlug);
@@ -339,12 +389,57 @@ try {
         Auth::requireAdmin($sessionLifetime, false);
         $force = (string)($_GET['refresh'] ?? '') === '1';
         $index = $chess->clubMatches($teamSlug, $force);
+        $started = confirmed_started_daily_ids($index);
+        if ($started !== []) $store->pruneStartedMatches($started);
         reply(200, [
             'ok'=>true,
             'source'=>'https://api.chess.com/pub/club/' . $teamSlug . '/matches',
             'loadedAt'=>time(),
             'matches'=>registration_index_rows($index, $teamSlug),
         ]);
+    }
+
+    if (str_starts_with($action, 'arena-discovery-')) {
+        // The existing TGP / Team France admin authorization and CSRF
+        // protections also cover discovery. Public widget readers cannot scan.
+        $root = dirname(__DIR__, 2);
+        require_once $root . '/server/events-showcase/src/StandaloneArenaDiscoveryService.php';
+        $discovery = new \P2K\EventsShowcase\StandaloneArenaDiscoveryService(__DIR__, $root);
+        if ($action === 'arena-discovery-state') {
+            request_method('GET');
+            Auth::requireAdmin($sessionLifetime, false);
+            reply(200, array_merge(['ok'=>true], $discovery->read()));
+        }
+        request_method('POST');
+        Auth::requireAdmin($sessionLifetime, true);
+        $body = body_json();
+        if ($action === 'arena-discovery-save') {
+            if (!is_array($body['organizers'] ?? null)) throw new InvalidArgumentException('Organizer list must be an array.');
+            $revision = filter_var($body['revision'] ?? null, FILTER_VALIDATE_INT);
+            if ($revision === false || $revision < 0) throw new InvalidArgumentException('Invalid organizer revision.');
+            reply(200, array_merge(['ok'=>true], $discovery->saveOrganizers($body['organizers'], $revision)));
+        }
+        if ($action === 'arena-discovery-begin') {
+            reply(200, array_merge(['ok'=>true], $discovery->begin()));
+        }
+        if ($action === 'arena-discovery-cancel') {
+            reply(200, array_merge(['ok'=>true], $discovery->cancel((string)($body['scanId'] ?? ''))));
+        }
+        if ($action === 'arena-discovery-page') {
+            $scanId = trim((string)($body['scanId'] ?? ''));
+            $page = filter_var($body['page'] ?? null, FILTER_VALIDATE_INT);
+            if ($page === false || $page < 1 || $page > \P2K\EventsShowcase\StandaloneArenaDiscoveryService::MAX_PAGES)
+                throw new InvalidArgumentException('Invalid arena scan page.');
+            $known = [];
+            foreach ($store->read()['arenas'] as $arena) {
+                $path = (string)parse_url((string)($arena['link'] ?? ''), PHP_URL_PATH);
+                if (preg_match('~/(?:play/arena|tournament/live/arena)/(?:[^/]*?-)?([0-9]{4,15})(?:/|$)~i', $path, $m))
+                    $known[] = $m[1];
+            }
+            reply(200, array_merge(['ok'=>true],
+                $discovery->scanPage($scanId, $page, $known)));
+        }
+        throw new InvalidArgumentException('Unknown arena discovery operation.');
     }
 
     if ($action === 'resolve') {
@@ -356,6 +451,8 @@ try {
         if ($id === '') throw new InvalidArgumentException('No Daily match for the configured club matched that URL, id or slug.');
         $match = $chess->match($id, true);
         $normalized = card_payload($match, $id, false, $teamSlug, $chess, $config);
+        if (is_started_daily_status($normalized['status'] ?? null))
+            throw new InvalidArgumentException('This Daily match has already started or finished and cannot be added to the showcase.');
         reply(200, ['ok'=>true,'match'=>$normalized]);
     }
 
