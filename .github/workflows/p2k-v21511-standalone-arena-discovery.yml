@@ -1,0 +1,192 @@
+name: P2K 2.15.11 TGP Team France upcoming MCA preselector
+on:
+  push:
+    branches: [release/v2.15.11]
+    paths:
+      - '.github/workflows/p2k-v21511-standalone-arena-discovery.yml'
+      - 'TGP/Widget/**'
+      - 'TeamFrance/Widget/**'
+      - 'server/events-showcase/public/standalone-arena-discovery-admin.*'
+      - 'server/events-showcase/src/StandaloneArenaDiscoveryService.php'
+      - 'tests/php_v21511_standalone_widget_discovery.php'
+      - 'tests/standalone_widget_mca_discovery_v21511.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Lint PHP/JavaScript and regress TGP, Team France and shared upcoming parser
+        run: |
+          set -euo pipefail
+          BASE=083e0380bd2303c063458c3291424af998bf37c4
+          test "$(git merge-base "$BASE" HEAD)" = "$BASE"
+          for f in \
+            TGP/Widget/api.php TGP/Widget/admin/index.php TGP/Widget/src/Store.php TGP/Widget/config.php \
+            TeamFrance/Widget/api.php TeamFrance/Widget/admin/index.php TeamFrance/Widget/src/Store.php TeamFrance/Widget/config.php \
+            server/events-showcase/src/StandaloneArenaDiscoveryService.php \
+            tests/php_v21511_standalone_widget_discovery.php
+          do php -l "$f"; done
+          for f in \
+            TGP/Widget/assets/admin.js TeamFrance/Widget/assets/admin.js \
+            server/events-showcase/public/standalone-arena-discovery-admin.js \
+            tests/standalone_widget_mca_discovery_v21511.cjs
+          do node --check "$f"; done
+          php tests/php_v21511_standalone_widget_discovery.php
+          php tests/showcase-admin-discovery.php
+          php tests/widget_arenas_v2153_test.php
+          php tests/team_france_clone_test.php
+          node tests/standalone_widget_mca_discovery_v21511.cjs
+          node tests/widget_arena_card_layout_v2153.test.cjs
+          node tests/team_france_admin_hub.test.cjs
+          node tests/tgp_admin_hub.test.cjs
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          base='083e0380bd2303c063458c3291424af998bf37c4'
+          expected={
+            'TGP/Widget/README.txt','TGP/Widget/admin/index.php','TGP/Widget/api.php',
+            'TGP/Widget/assets/admin.js','TGP/Widget/config.php','TGP/Widget/src/Store.php',
+            'TeamFrance/Widget/README.txt','TeamFrance/Widget/admin/index.php','TeamFrance/Widget/api.php',
+            'TeamFrance/Widget/assets/admin.js','TeamFrance/Widget/config.php','TeamFrance/Widget/src/Store.php',
+            'server/events-showcase/public/standalone-arena-discovery-admin.css',
+            'server/events-showcase/public/standalone-arena-discovery-admin.js',
+            'server/events-showcase/src/StandaloneArenaDiscoveryService.php',
+            'tests/php_v21511_standalone_widget_discovery.php',
+            'tests/standalone_widget_mca_discovery_v21511.cjs',
+            '.github/workflows/p2k-v21511-standalone-arena-discovery.yml'
+          }
+          actual=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          assert actual==expected,{'actual':sorted(actual),'expected':sorted(expected)}
+          assert not any(f.startswith('server/team-points/') or f.startswith('assets/js/widgets/')
+                         for f in actual),'P2K scoring/data and public widgets must stay unchanged'
+          for club in ['TGP','TeamFrance']:
+              for path in ['Widget/data/showcase.json','Widget/data/upcoming-arena-discovery.json']:
+                  assert club+'/'+path not in actual,'Stored widget state cannot be overwritten'
+          print('PASS exact scope, existing data and scoring untouched, both club states isolated')
+          PY
+      - name: Create compatible Release Control installer with both 0.3.4 standalone widgets
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import subprocess,json,zipfile
+          baseline='083e0380bd2303c063458c3291424af998bf37c4'
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert subprocess.check_output(['git','merge-base',baseline,head],text=True).strip()==baseline
+          sources={
+            'TGP/Widget/README.txt','TGP/Widget/admin/index.php','TGP/Widget/api.php',
+            'TGP/Widget/assets/admin.js','TGP/Widget/config.php','TGP/Widget/src/Store.php',
+            'TeamFrance/Widget/README.txt','TeamFrance/Widget/admin/index.php','TeamFrance/Widget/api.php',
+            'TeamFrance/Widget/assets/admin.js','TeamFrance/Widget/config.php','TeamFrance/Widget/src/Store.php',
+            'server/events-showcase/public/standalone-arena-discovery-admin.css',
+            'server/events-showcase/public/standalone-arena-discovery-admin.js',
+            'server/events-showcase/src/StandaloneArenaDiscoveryService.php'
+          }
+          changed=set(subprocess.check_output(['git','diff','--name-only',baseline,head],text=True).splitlines())
+          tests={'tests/php_v21511_standalone_widget_discovery.php','tests/standalone_widget_mca_discovery_v21511.cjs',
+                 '.github/workflows/p2k-v21511-standalone-arena-discovery.yml'}
+          assert changed==sources|tests,{'changed':sorted(changed)}
+          recovery=[
+            'ReleaseControl.php',
+            'server/release-control/src/bootstrap.php',
+            'server/release-control/src/ReleasePackageUploadInstaller.php',
+            'server/release-control/src/FilesystemCleanupManager.php',
+            'server/release-control/src/ReleaseVersionManager.php'
+          ]
+          overlay=sorted(sources|{'VERSION','ui-v2.html'})
+          root=Path('dist/P2K_2.15.11_TGP_TeamFrance_MCA_Selector')
+          payload=root/'payload'
+          payload.mkdir(parents=True,exist_ok=True)
+          for file in sorted(sources|set(recovery)):
+              path=payload/file
+              path.parent.mkdir(parents=True,exist_ok=True)
+              path.write_bytes(Path(file).read_bytes())
+          (payload/'VERSION').write_text('2.15.11\n')
+          cache_key='p2k-2.15.11-'+head[:12]+'-'+sha256((head+'|standalone-mca-selector-0.3.4').encode()).hexdigest()[:16]
+          ui=Path('ui-v2.html').read_text()
+          assert ui.count('<head>')==1
+          (payload/'ui-v2.html').write_text(ui.replace('<head>','<head>\n<meta name="p2k-build" content="'+cache_key+'">',1))
+          sha=lambda file:sha256(file.read_bytes()).hexdigest()
+          (root/'CANDIDATE_PAYLOAD.sha256').write_text(
+              ''.join(sha(payload/file)+'  ./'+file+'\n' for file in overlay))
+          (root/'RECOVERY_PLANE.sha256').write_text(
+              ''.join(sha(payload/file)+'  ./'+file+'\n' for file in sorted(recovery)))
+          metadata={
+              'schema_version':1,
+              'version':'2.15.11',
+              'source_head':head,
+              'cache_key':cache_key,
+              'build_id':'p2k-v21511-tgp-teamfrance-upcoming-mca-'+head[:12],
+              'qualification_workflow':'p2k-v21511-standalone-arena-discovery.yml',
+              'payload_manifest_sha256':sha(root/'CANDIDATE_PAYLOAD.sha256'),
+              'accepted_public_builds':[{'version':'2.15.11','source_head':baseline}]
+          }
+          (root/'CANDIDATE_RELEASE.json').write_text(json.dumps(metadata,indent=2)+'\n')
+          (root/'README.txt').write_text(
+            'P2K 2.15.11 compatibility release for The Golden Phoenix and Team France Widget 0.3.4.\n'
+            'Accepted public build: 2.15.11-083e0380bd23 only.\n'
+            'Admin-only upcoming MCA organizer watchlists and resumable seven-day discovery scans.\n'
+            'Independent organizer lists and saved scan states for TGP and Team France.\n'
+            'Shared P2K Chess.com upcoming-arena parser and cross-club request rate limiter.\n'
+            'Discovered arenas prepopulate the existing Add Arena editor, remaining disabled and\n'
+            'unpublished until the admin reviews duration/time control and explicitly saves.\n'
+            'Confirmed started/finished Daily matches are pruned automatically when public cards\n'
+            'are requested and during admin refresh; transient Chess.com outages never delete them.\n'
+            'Existing arena data, Daily layout, permissions, CSRF, scoring and cron stay intact.\n'
+            'Use Admin > Maintenance > Release Control: install, preview and manually promote.\n'
+            'After promotion open /TGP/Widget/admin/ and /TeamFrance/Widget/admin/ to configure\n'
+            'numeric Chess.com organizer club IDs and scan for candidate arenas.\n')
+          out=root.parent/('P2K_2.15.11_TGP_TeamFrance_MCA_Selector_'+head[:12]+'.zip')
+          with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+              for file in sorted(root.rglob('*')):
+                  if file.is_file():z.write(file,file.relative_to(root))
+          (root.parent/'SHA256SUMS').write_text(sha(out)+'  '+out.name+'\n')
+          print('ZIP',out,out.stat().st_size,'bytes SHA256',sha(out))
+          print('RELEASE',json.dumps(metadata))
+          PY
+      - name: Validate Release Control manifest and ZIP contents against promoted build
+        run: |
+          set -euo pipefail
+          php -r '
+            require "server/release-control/src/ReleaseSlotPolicy.php";
+            require "server/release-control/src/ReleaseCandidatePackage.php";
+            $candidate=new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
+            $m=$candidate->validate();
+            if($m["version"]!=="2.15.11")exit(2);
+            if($m["accepted_public_builds"]!==[["version"=>"2.15.11","source_head"=>"083e0380bd2303c063458c3291424af998bf37c4"]])exit(3);
+            echo "PASS Release Control ".$m["release_id"]." overlay=".$m["overlay_file_count"]."\n";
+          ' dist/P2K_2.15.11_TGP_TeamFrance_MCA_Selector
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,hashlib,zipfile
+          p=next(Path('dist').glob('P2K_2.15.11_TGP_TeamFrance_MCA_Selector_*.zip'))
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              assert len(z.namelist())==len(set(z.namelist()))
+              m=json.loads(z.read('CANDIDATE_RELEASE.json'))
+              assert m['accepted_public_builds']==[{'version':'2.15.11',
+                  'source_head':'083e0380bd2303c063458c3291424af998bf37c4'}]
+              for manifest in ['CANDIDATE_PAYLOAD.sha256','RECOVERY_PLANE.sha256']:
+                  for line in z.read(manifest).decode().splitlines():
+                      sha,path=line.split('  ./',1)
+                      assert hashlib.sha256(z.read('payload/'+path)).hexdigest()==sha,path
+              assert hashlib.sha256(z.read('CANDIDATE_PAYLOAD.sha256')).hexdigest()==m['payload_manifest_sha256']
+              assert 'payload/TGP/Widget/config.php' in z.namelist()
+              assert 'payload/TeamFrance/Widget/config.php' in z.namelist()
+              assert 'payload/server/events-showcase/src/StandaloneArenaDiscoveryService.php' in z.namelist()
+          print('PASS exact promoted compatibility, two standalone widgets, package and recovery hashes')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-v21511-tgp-teamfrance-mca-selector
+          path: |
+            dist/P2K_2.15.11_TGP_TeamFrance_MCA_Selector_*.zip
+            dist/SHA256SUMS
+          retention-days: 14
