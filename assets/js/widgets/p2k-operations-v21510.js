@@ -10,7 +10,45 @@
     previousSuggestions:'',queryRevision:0,analyzedId:0,analysisRevision:0,history:[],current:null,recent:null};
   const core=()=>window.P2K_RECRUITMENT_LINEUP_CORE;
   const fmt=n=>Number(n||0).toLocaleString('en-GB');
-  const when=value=>{if(!value)return '—';const d=new Date(typeof value==='number'?(value<1e11?value*1000:value):String(value));return Number.isFinite(d.getTime())?d.toLocaleString('en-GB',{timeZone:'Europe/Luxembourg',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';};
+  // Green SQL DATETIME fields are UTC although the wire format omits the Z.
+  // Never let the browser interpret those as a local timestamp.
+  const absoluteDate=value=>{
+    if(value===null||value===undefined||value==='')return null;
+    if(typeof value==='number'){
+      const n=value<1e11?value*1000:value;
+      const d=new Date(n);return Number.isFinite(d.getTime())?d:null;
+    }
+    let raw=String(value).trim();
+    if(/^\\d{4}-\\d\\d-\\d\\d[ T]\\d\\d:\\d\\d(?::\\d\\d(?:\\.\\d+)?)?$/.test(raw))raw=raw.replace(' ','T')+'Z';
+    const d=new Date(raw);return Number.isFinite(d.getTime())?d:null;
+  };
+  const timeZone=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
+  const when=value=>{const d=absoluteDate(value);return d?new Intl.DateTimeFormat('en-GB',
+    {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'}).format(d):'—';};
+  const dateKey=date=>[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),
+    String(date.getDate()).padStart(2,'0')].join('-');
+  // Re-group the server's UTC-buffered schedule into the visitor's seven
+  // local calendar dates, respecting midnight and DST changes.
+  const localSchedule=(utcBuckets,now=new Date())=>{
+    const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    const days=Array.from({length:7},(_,i)=>{
+      const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);
+      return {date:dateKey(d),matches:0,boards:0,items:[]};
+    });
+    const byDate=new Map(days.map(d=>[d.date,d]));
+    const seen=new Set();
+    for(const bucket of Array.isArray(utcBuckets)?utcBuckets:[]){
+      for(const m of Array.isArray(bucket?.items)?bucket.items:[]){
+        if(!Number.isFinite(Number(m.startTime))||Number(m.startTime)*1000<Date.now())continue;
+        const id=Number(m.matchId);if(!Number.isSafeInteger(id)||seen.has(id))continue;
+        const date=new Date(Number(m.startTime)*1000);
+        const day=byDate.get(dateKey(date));if(!day)continue;
+        seen.add(id);day.items.push(m);day.matches++;day.boards+=Number(m.boards)||0;
+      }
+    }
+    for(const day of days)day.items.sort((a,b)=>a.startTime-b.startTime||a.matchId-b.matchId);
+    return days;
+  };
   const text=(id,s)=>{const e=$(id);if(e)e.textContent=s;};
   const request=async(path,signal)=>{
     const response=await fetch(url(path),{credentials:'same-origin',cache:'no-store',signal});
@@ -93,7 +131,7 @@
   async function loadMatches(){
     text('awChartCaption','Loading verified seven-day match schedule…');
     const d=await request(api+'?action=matches');
-    state.days=Array.isArray(d.days)?d.days:[];
+    state.days=localSchedule(d.days);
     state.lastFetch=when(d.asOf);
     drawBars();if(state.view==='actions')renderActions();
   }
@@ -382,5 +420,7 @@
       emit('match-analysis-view');
     }catch(e){if(rev===state.analysisRevision){$('awAnalysisResult').hidden=true;text('awAnalysisFeedback',e.message);}}
   }
+  const zoneLabel=document.querySelector('[data-aw-timezone]');
+  if(zoneLabel)zoneLabel.textContent='Your time · '+timeZone.replaceAll('_',' ');
   selectTab('actions');
 })();
