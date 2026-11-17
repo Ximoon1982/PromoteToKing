@@ -4,12 +4,12 @@
 set -Eeuo pipefail
 umask 077
 
-ROOT_ARG="\${1:-/kunden/homepages/43/d141198007/htdocs/PromoteToKing}"
-MODE="\${2:---install}"
+ROOT_ARG="${1:-/kunden/homepages/43/d141198007/htdocs/PromoteToKing}"
+MODE="${2:---install}"
 [[ "$MODE" == "--install" || "$MODE" == "--check" ]] ||
   { echo "Usage: bash install.sh [PromoteToKing physical root] [--check]" >&2; exit 2; }
 
-HERE="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd -P)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 [[ -d "$ROOT_ARG" ]] || { echo "PromoteToKing root does not exist: $ROOT_ARG" >&2; exit 2; }
 ROOT="$(cd "$ROOT_ARG" && pwd -P)"
 [[ "$HERE" != "$ROOT" && "$HERE" != "$ROOT/"* ]] ||
@@ -20,7 +20,7 @@ command -v sha256sum >/dev/null || { echo "sha256sum is required." >&2; exit 2; 
 (cd "$HERE" && sha256sum --check --status FILE_SHA256SUMS) ||
   { echo "Installer payload checksum verification FAILED." >&2; exit 2; }
 
-PHP_CLI="\${PHP_CLI:-/usr/bin/php8.5-cli}"
+PHP_CLI="${PHP_CLI:-/usr/bin/php8.5-cli}"
 if [[ "$PHP_CLI" == */* ]]; then
   [[ -x "$PHP_CLI" ]] || { echo "PHP CLI not executable: $PHP_CLI" >&2; exit 2; }
 else
@@ -53,7 +53,7 @@ for club in TGP TeamFrance; do
   current="$("$PHP_CLI" -r '$v = require $argv[1]; echo (string)($v["version"] ?? "");' "$target/config.php")"
   [[ "$current" == "0.3.3" || "$current" == "0.3.4" ]] ||
     { echo "Unexpected $club widget version '$current': expected 0.3.3 or 0.3.4; no changes made." >&2; exit 2; }
-  for suffix in "\${widget_files[@]}"; do
+  for suffix in "${widget_files[@]}"; do
     rel="$club/$suffix"
     src="$HERE/payload/$rel"
     dst="$ROOT/$rel"
@@ -73,7 +73,7 @@ for club in TGP TeamFrance; do
   echo "$club widget $current -> 0.3.4: validated."
 done
 
-[[ "\${#files[@]}" -eq 20 ]] || { echo "Unexpected installer file count." >&2; exit 2; }
+[[ "${#files[@]}" -eq 20 ]] || { echo "Unexpected installer file count." >&2; exit 2; }
 if [[ "$MODE" == "--check" ]]; then
   echo "CHECK OK: 20 files verified; both showcase.json files will remain untouched."
   exit 0
@@ -83,7 +83,7 @@ backup_base="$ROOT/storage/standalone-widget-backups"
 mkdir -p "$backup_base"
 backup="$(mktemp -d "$backup_base/tgp-teamfrance-v034-$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")"
 mkdir -p "$backup/original" "$backup/new"
-for rel in "\${files[@]}"; do
+for rel in "${files[@]}"; do
   dst="$ROOT/$rel"
   if [[ -f "$dst" ]]; then
     mkdir -p "$backup/original/$(dirname "$rel")"
@@ -100,7 +100,7 @@ rollback() {
   trap - ERR INT TERM
   set +e
   echo "Installation failed: restoring original standalone widget files from $backup" >&2
-  for rel in "\${files[@]}"; do
+  for rel in "${files[@]}"; do
     dst="$ROOT/$rel"
     if [[ -f "$backup/original/$rel" ]]; then
       cp -p "$backup/original/$rel" "$dst"
@@ -113,7 +113,7 @@ rollback() {
 }
 trap rollback ERR INT TERM
 
-for rel in "\${files[@]}"; do
+for rel in "${files[@]}"; do
   dst="$ROOT/$rel"
   mkdir -p "$(dirname "$dst")"
   tmp="$(mktemp "$dst.v034.XXXXXX")"
@@ -121,9 +121,9 @@ for rel in "\${files[@]}"; do
   chmod 0644 "$tmp"
   mv -f "$tmp" "$dst"
   expected="$(sha256sum "$HERE/payload/$rel")"
-  expected="\${expected%% *}"
+  expected="${expected%% *}"
   actual="$(sha256sum "$dst")"
-  actual="\${actual%% *}"
+  actual="${actual%% *}"
   [[ "$actual" == "$expected" ]] || { echo "Installed file hash mismatch: $rel" >&2; false; }
 done
 trap - ERR INT TERM
