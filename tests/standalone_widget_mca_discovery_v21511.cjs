@@ -42,10 +42,16 @@ for(const club of ["TGP","TeamFrance"]){
     "arenaDiscoveryClubName","arenaDiscoveryAddOrganizer","arenaDiscoveryScan",
     "arenaDiscoveryCancel","arenaDiscoveryStatus","arenaDiscoveryResults"
   ]) assert(page.includes('id="'+id+'"'),club+" UI missing "+id);
-  assert(page.includes("../assets/arena-discovery.js?v=0.3.4"),
+  assert(page.includes("../assets/arena-discovery.js?v=0.3.4-club-reference-1"),
     club+" shared JS must be versioned");
-  assert(page.includes("../assets/arena-discovery.css?v=0.3.4"),
+  assert(page.includes("../assets/arena-discovery.css?v=0.3.4-club-reference-1"),
     club+" shared CSS must be versioned");
+  assert(page.includes('id="arenaDiscoveryClubReference"'),
+    club+" must accept one club URL/slug/numeric-ID field");
+  assert(!page.includes('id="arenaDiscoveryClubId"')&&!page.includes('id="arenaDiscoveryClubName"'),
+    club+" must no longer demand ID and name separately");
+  assert(admin.includes("preselectUpcomingArena(candidate)"),
+    club+" must preserve discovered arena preselection");
   assert(page.indexOf('src="../assets/admin.js')<page.indexOf("arena-discovery.js"),
     club+" existing admin bridge must initialize before shared UI module");
   assert(admin.includes("await window.P2K_STANDALONE_ARENA_DISCOVERY?.start?."),
