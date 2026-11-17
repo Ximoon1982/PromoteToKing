@@ -1,10 +1,10 @@
 "use strict";
 const fs=require("node:fs");
 const assert=require("node:assert/strict");
-const common=fs.readFileSync("server/events-showcase/public/standalone-arena-discovery-admin.js","utf8");
-const css=fs.readFileSync("server/events-showcase/public/standalone-arena-discovery-admin.css","utf8");
-const service=fs.readFileSync("server/events-showcase/src/StandaloneArenaDiscoveryService.php","utf8");
-const parser=fs.readFileSync("server/events-showcase/src/ArenaDiscoveryAdminService.php","utf8");
+const common=fs.readFileSync("TGP/Widget/assets/arena-discovery.js","utf8");
+const css=fs.readFileSync("TGP/Widget/assets/arena-discovery.css","utf8");
+const service=fs.readFileSync("TGP/Widget/src/StandaloneArenaDiscoveryService.php","utf8");
+const parser=fs.readFileSync("TGP/Widget/src/ArenaDiscoveryAdminService.php","utf8");
 assert(common.includes("P2K_STANDALONE_ARENA_DISCOVERY"),"Shared front end API missing");
 assert(common.includes("getArenas()"),"Discoverer must deduplicate against current configured arenas");
 assert(common.includes("candidate.localDate")===false && common.includes("candidate.localTime")===false,
@@ -26,6 +26,13 @@ for(const club of ["TGP","TeamFrance"]){
   const api=fs.readFileSync(club+"/Widget/api.php","utf8");
   const config=fs.readFileSync(club+"/Widget/config.php","utf8");
   const store=fs.readFileSync(club+"/Widget/src/Store.php","utf8");
+  assert.equal(fs.readFileSync(club+"/Widget/assets/arena-discovery.js","utf8"),common,
+    club+" must ship standalone discovery JS locally");
+  assert.equal(fs.readFileSync(club+"/Widget/src/StandaloneArenaDiscoveryService.php","utf8"),service,
+    club+" must ship standalone discovery service locally");
+  assert(api.includes("require_once __DIR__ . '/src/StandaloneArenaDiscoveryService.php'"),
+    club+" API must use physical standalone source path");
+
   assert(config.includes("'version' => '0.3.4'"),club+" version not updated");
   assert(page.indexOf('id="arenaDiscoveryPanel"')>0 &&
     page.indexOf('id="arenaDiscoveryPanel"')<page.indexOf('class="arena-editor"'),
@@ -35,11 +42,11 @@ for(const club of ["TGP","TeamFrance"]){
     "arenaDiscoveryClubName","arenaDiscoveryAddOrganizer","arenaDiscoveryScan",
     "arenaDiscoveryCancel","arenaDiscoveryStatus","arenaDiscoveryResults"
   ]) assert(page.includes('id="'+id+'"'),club+" UI missing "+id);
-  assert(page.includes("/server/events-showcase/public/standalone-arena-discovery-admin.js?v=0.3.4"),
+  assert(page.includes("../assets/arena-discovery.js?v=0.3.4"),
     club+" shared JS must be versioned");
-  assert(page.includes("/server/events-showcase/public/standalone-arena-discovery-admin.css?v=0.3.4"),
+  assert(page.includes("../assets/arena-discovery.css?v=0.3.4"),
     club+" shared CSS must be versioned");
-  assert(page.indexOf('src="../assets/admin.js')<page.indexOf("standalone-arena-discovery-admin.js"),
+  assert(page.indexOf('src="../assets/admin.js')<page.indexOf("arena-discovery.js"),
     club+" existing admin bridge must initialize before shared UI module");
   assert(admin.includes("await window.P2K_STANDALONE_ARENA_DISCOVERY?.start?."),
     club+" must load discoverer only after admin login");
