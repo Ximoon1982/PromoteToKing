@@ -402,8 +402,10 @@ try {
     if (str_starts_with($action, 'arena-discovery-')) {
         // The existing TGP / Team France admin authorization and CSRF
         // protections also cover discovery. Public widget readers cannot scan.
+        // Standalone widget code is served from the physical club directory,
+        // not P2K's immutable routed release slot. Keep this service local.
         $root = dirname(__DIR__, 2);
-        require_once $root . '/server/events-showcase/src/StandaloneArenaDiscoveryService.php';
+        require_once __DIR__ . '/src/StandaloneArenaDiscoveryService.php';
         $discovery = new \P2K\EventsShowcase\StandaloneArenaDiscoveryService(__DIR__, $root);
         if ($action === 'arena-discovery-state') {
             request_method('GET');
