@@ -86,6 +86,8 @@ final class StandaloneArenaDiscoveryService
             throw new InvalidArgumentException('Enter a Chess.com club URL, slug or numeric ID.');
         if (preg_match('/^[1-9][0-9]{0,14}$/D', $reference))
             return ['kind'=>'id','value'=>$reference];
+        if (ctype_digit($reference))
+            throw new InvalidArgumentException('Numeric club ID must be a positive Chess.com ID.');
         if (preg_match('/^[a-z0-9][a-z0-9-]{0,99}$/iD', $reference))
             return ['kind'=>'slug','value'=>strtolower($reference)];
         if (preg_match('~^(?:www\.|api\.)?chess\.com/~i', $reference))
@@ -106,6 +108,8 @@ final class StandaloneArenaDiscoveryService
         $value = strtolower($m[1]);
         if (preg_match('/^[1-9][0-9]{0,14}$/D', $value))
             return ['kind'=>'id','value'=>$value];
+        if (ctype_digit($value))
+            throw new InvalidArgumentException('Numeric club ID must be a positive Chess.com ID.');
         return ['kind'=>'slug','value'=>$value];
     }
 
