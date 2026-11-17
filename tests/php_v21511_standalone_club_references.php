@@ -1,7 +1,6 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/../TGP/Widget/src/StandaloneArenaDiscoveryService.php';
-require_once __DIR__.'/../TeamFrance/Widget/src/StandaloneArenaDiscoveryService.php';
 
 use P2K\EventsShowcase\StandaloneArenaDiscoveryService as Resolver;
 
@@ -60,6 +59,10 @@ verifyClubRef(Resolver::canonicalClubSlug('', '<a href="https://www.chess.com/cl
 verifyClubRef(Resolver::canonicalClubSlug("Location: https://evil.example/club/surprise\r\n",'')==='',
     'Cross-domain redirects must not be trusted.');
 
+verifyClubRef(
+    file_get_contents(__DIR__.'/../TGP/Widget/src/StandaloneArenaDiscoveryService.php') ===
+    file_get_contents(__DIR__.'/../TeamFrance/Widget/src/StandaloneArenaDiscoveryService.php'),
+    'Both physical widget services must carry the same audited lookup.');
 foreach(['TGP','TeamFrance'] as $club) {
     $api=(string)file_get_contents(__DIR__.'/../'.$club.'/Widget/api.php');
     $html=(string)file_get_contents(__DIR__.'/../'.$club.'/Widget/admin/index.php');
