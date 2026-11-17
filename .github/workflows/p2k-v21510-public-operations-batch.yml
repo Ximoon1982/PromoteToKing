@@ -1,0 +1,176 @@
+name: P2K 2.15.10 Public Club Operations and safe batch cleanup Release Control ZIP
+on:
+  push:
+    branches: [release/v2.15.10]
+    paths:
+      - '.github/workflows/p2k-v21510-public-operations-batch.yml'
+      - 'server/widgets/public/administrator.php'
+      - 'server/widgets/public/operations-api.php'
+      - 'server/widgets/public/embed.php'
+      - 'assets/js/widgets/p2k-operations-v21510.js'
+      - 'assets/css/widgets/p2k-operations-v21510.css'
+      - 'assets/js/shared/traffic-analytics.js'
+      - 'server/shared/TrafficAnalytics.php'
+      - 'ReleaseControl.php'
+      - 'server/release-control/src/ReleaseVersionManager.php'
+      - 'server/release-control/src/FilesystemCleanupManager.php'
+      - 'tests/php_v21510_public_widget_batch_cleanup.php'
+      - 'tests/test_v21510_public_operations.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PHP and JavaScript validation, safe deletion and anonymous widget isolation
+        run: |
+          set -euo pipefail
+          for f in \
+              ReleaseControl.php \
+              server/release-control/src/FilesystemCleanupManager.php \
+              server/release-control/src/ReleaseVersionManager.php \
+              server/widgets/public/administrator.php \
+              server/widgets/public/operations-api.php \
+              server/widgets/public/embed.php \
+              server/shared/TrafficAnalytics.php; do
+            php -l "$f"
+          done
+          node --check assets/js/widgets/p2k-operations-v21510.js
+          node --check assets/js/shared/traffic-analytics.js
+          node tests/test_v21510_public_operations.cjs
+          php tests/php_v21510_public_widget_batch_cleanup.php
+          php tests/php_v2147_release_management_harness.php
+          php tests/php_v2148_filesystem_cleanup_harness.php
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('server/widgets/public/administrator.php').read_text()
+          api=Path('server/widgets/public/operations-api.php').read_text()
+          rc=Path('ReleaseControl.php').read_text()
+          assert all('data-aw-tab="'+x+'"' in p for x in ('actions','matches','members','analysis'))
+          assert 'data-aw-tab="showcase"' not in p
+          assert 'Auth::requireAdmin()' in p and 'if($preview)' in p
+          assert "frame-ancestors 'self' https://www.chess.com https://chess.com" in p
+          assert "'match-search'" in api and "'match-history'" in api and "'member-lookup'" in api
+          assert 'require_admin_write' not in api
+          assert 'deleteReleases($ids,$username)' in rc
+          assert 'deleteMany($items,$username)' in rc
+          for f in ('server/team-points-green/public/api.php','server/events-showcase/public/admin-api.php'):
+            src=Path(f).read_text()
+            assert 'authorizeAdmin()' in src or 'Auth::requireAdmin()' in src
+          print('PASS public-only endpoints, retained admin authority and CSRF-protected batch cleanup')
+          PY
+      - name: Build cumulative Release Control candidate from promoted 111bad
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import json,subprocess,zipfile
+          base='111bad635dd3901e3ca00e19266f3893f633ee05'
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert subprocess.check_output(['git','merge-base',base,head],text=True).strip()==base,'Promoted build must be ancestor'
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,head],text=True).splitlines())
+          recovery=['ReleaseControl.php',
+              'server/release-control/src/bootstrap.php',
+              'server/release-control/src/ReleasePackageUploadInstaller.php',
+              'server/release-control/src/FilesystemCleanupManager.php',
+              'server/release-control/src/ReleaseVersionManager.php']
+          nonpayload={'.github/workflows/p2k-v21510-public-operations-batch.yml',
+              'tests/php_v21510_public_widget_batch_cleanup.php',
+              'tests/test_v21510_public_operations.cjs'}
+          required={
+              'server/widgets/public/administrator.php','server/widgets/public/operations-api.php',
+              'server/widgets/public/embed.php','assets/js/widgets/p2k-operations-v21510.js',
+              'assets/css/widgets/p2k-operations-v21510.css',
+              'ReleaseControl.php','server/release-control/src/ReleaseVersionManager.php',
+              'server/release-control/src/FilesystemCleanupManager.php'}
+          assert required.issubset(changed),required-changed
+          unknown=changed-set(recovery)-nonpayload-required-{
+              'assets/js/shared/traffic-analytics.js','server/shared/TrafficAnalytics.php'}
+          assert not unknown,unknown
+          overlay=['VERSION','ui-v2.html']+sorted(changed-set(recovery)-nonpayload)
+          package=Path('dist/P2K_2.15.10_Public_Operations_Batch_Cleanup_ReleaseControl')
+          payload=package/'payload'
+          payload.mkdir(parents=True,exist_ok=True)
+          for filename in overlay+recovery:
+            if filename in ('VERSION','ui-v2.html'):continue
+            path=payload/filename
+            path.parent.mkdir(parents=True,exist_ok=True)
+            path.write_bytes(Path(filename).read_bytes())
+          (payload/'VERSION').write_text('2.15.10\n')
+          cache_key='p2k-2.15.10-'+head[:12]+'-'+sha256((head+'|public-operations-batch').encode()).hexdigest()[:16]
+          ui=Path('ui-v2.html').read_text()
+          assert ui.count('<head>')==1
+          (payload/'ui-v2.html').write_text(ui.replace('<head>','<head>\n<meta name="p2k-build" content="'+cache_key+'">',1))
+          sha=lambda p:sha256(p.read_bytes()).hexdigest()
+          (package/'CANDIDATE_PAYLOAD.sha256').write_text(
+              ''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(overlay)))
+          (package/'RECOVERY_PLANE.sha256').write_text(
+              ''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(recovery)))
+          meta={'schema_version':1,'version':'2.15.10','source_head':head,'cache_key':cache_key,
+                'build_id':'p2k-public-ops-batch-v21510-'+head[:12],
+                'qualification_workflow':'p2k-v21510-public-operations-batch.yml',
+                'payload_manifest_sha256':sha(package/'CANDIDATE_PAYLOAD.sha256'),
+                'accepted_public_builds':[{'version':'2.15.10','source_head':base}]}
+          (package/'CANDIDATE_RELEASE.json').write_text(json.dumps(meta,indent=2)+'\n')
+          (package/'README.txt').write_text(
+              'P2K 2.15.10 public read-only Club Operations and guarded batch cleanup.\n'
+              'Accepts promoted build 2.15.10-111bad635dd3.\n'
+              'Club Operations publication is controlled by the existing widget enabled toggle.\n'
+              'Preview=1 requires P2K administrator login; anonymous published embedding is allowed at Chess.com.\n'
+              'Actions, Matches, Members and Match Analysis (three compact charts); no Showcase management in widget.\n'
+              'Release Control multi-select never bypasses current/rollback/candidate/physical baseline or recent backup safeguards.\n'
+              'Upload ZIP via Release Control, preview and manually promote. No automatic deployment.\n')
+          output=package.parent/('P2K_2.15.10_Public_Operations_Batch_Cleanup_ReleaseControl_'+head[:12]+'.zip')
+          with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+            for file in sorted(package.rglob('*')):
+              if file.is_file():z.write(file,file.relative_to(package))
+          (package.parent/'SHA256SUMS').write_text(sha(output)+'  '+output.name+'\n')
+          print('ZIP:',output,'size:',output.stat().st_size,'sha256:',sha(output))
+          print('OVERLAY:',overlay)
+          PY
+      - name: Verify candidate and package integrity
+        run: |
+          set -euo pipefail
+          php -r '
+            require "server/release-control/src/ReleaseSlotPolicy.php";
+            require "server/release-control/src/ReleaseCandidatePackage.php";
+            $p=new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
+            $m=$p->validate();
+            $expected=count(file($argv[1]."/CANDIDATE_PAYLOAD.sha256", FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES));
+            if($m["overlay_file_count"]!==$expected||$m["version"]!=="2.15.10")exit(2);
+            echo "PASS Release Control candidate ".$m["release_id"]."\n";
+          ' dist/P2K_2.15.10_Public_Operations_Batch_Cleanup_ReleaseControl
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,zipfile
+          f=next(Path('dist').glob('P2K_2.15.10_Public_Operations_Batch_Cleanup_ReleaseControl_*.zip'))
+          with zipfile.ZipFile(f) as z:
+            assert z.testzip() is None
+            files=z.namelist()
+            assert len(files)==len(set(files))
+            assert all(not x.startswith('/') and '..' not in x.split('/') for x in files)
+            meta=json.loads(z.read('CANDIDATE_RELEASE.json'))
+            assert meta['accepted_public_builds']==[{
+                'version':'2.15.10','source_head':'111bad635dd3901e3ca00e19266f3893f633ee05'}]
+            for manifest in ('CANDIDATE_PAYLOAD.sha256','RECOVERY_PLANE.sha256'):
+              for line in z.read(manifest).decode().splitlines():
+                sha,p=line.split('  ./',1)
+                assert hashlib.sha256(z.read('payload/'+p)).hexdigest()==sha,p
+            for filename in ('ReleaseControl.php','server/release-control/src/ReleaseVersionManager.php',
+                 'server/release-control/src/FilesystemCleanupManager.php'):
+              assert 'payload/'+filename in files
+          print('PASS ZIP checksum manifests, secured recovery files and exact promoted-base compatibility')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-v21510-public-operations-batch-cleanup-release-control
+          path: |
+            dist/P2K_2.15.10_Public_Operations_Batch_Cleanup_ReleaseControl_*.zip
+            dist/SHA256SUMS
+          retention-days: 14
