@@ -1,0 +1,172 @@
+name: P2K 2.15.11 Compact browser-local Showcase card labels
+on:
+  push:
+    branches: [release/v2.15.11]
+    paths:
+      - '.github/workflows/p2k-v21511-showcase-compact-local-card.yml'
+      - 'server/events-showcase/public/embed-card.php'
+      - 'tests/showcase_card_compact_timezone_v21511.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Lint, verify exact compact-card scope, and test all timezones
+        run: |
+          set -euo pipefail
+          BASE=eb58eb23fb3ce457cf5d7170f5579f610ba4c4bd
+          PUBLIC=083e0380bd2303c063458c3291424af998bf37c4
+          test "$(git merge-base "$BASE" HEAD)" = "$BASE"
+          test "$(git merge-base "$PUBLIC" HEAD)" = "$PUBLIC"
+          php -l server/events-showcase/public/embed-card.php
+          node --check tests/showcase_card_compact_timezone_v21511.cjs
+          node tests/showcase_card_compact_timezone_v21511.cjs
+          node tests/showcase_datetime_v21511.cjs
+          node tests/timezone_consistency_v21510.cjs
+          php tests/php_v21510_showcase_local_times.php
+          python3 tests/test_events_showcase_contract.py
+          python3 - <<'PY'
+          import subprocess
+          from pathlib import Path
+          base='eb58eb23fb3ce457cf5d7170f5579f610ba4c4bd'
+          changes=set(subprocess.check_output(
+              ['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          expected={
+              'server/events-showcase/public/embed-card.php',
+              'tests/showcase_card_compact_timezone_v21511.cjs',
+              '.github/workflows/p2k-v21511-showcase-compact-local-card.yml'
+          }
+          assert changes==expected,{'unexpected':sorted(changes^expected)}
+          before=subprocess.check_output([
+              'git','show',base+':server/events-showcase/public/embed-card.php'],text=True)
+          after=Path('server/events-showcase/public/embed-card.php').read_text()
+          for marker in [
+              'function tickArenaClock()','function arenaTiming(',
+              'function formatCountdown(','function formatStartsIn(',
+              'function hydrateFilter(','function renderDaily('
+          ]:
+              assert marker in before and marker in after,marker
+          assert 'start=formatCardDailyDate(match.startTime)' in after
+          assert 'start=CORE.formatStartCompact(match.startTime)' in before
+          assert 'timeZoneName:"short"}).format(date)' not in after
+          assert 'fullStart=CORE.formatStart(timing.start/1000)' in after
+          assert 'title="\${esc(fullStart)}"' in after
+          print('PASS only card presentation changed, countdown/urgency and scheduling retained')
+          PY
+      - name: Assemble release-owned overlay compatible with promoted P2K 2.15.11
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import subprocess,json,zipfile
+          public='083e0380bd2303c063458c3291424af998bf37c4'
+          baseline='eb58eb23fb3ce457cf5d7170f5579f610ba4c4bd'
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert subprocess.check_output(['git','merge-base',public,head],text=True).strip()==public
+          assert subprocess.check_output(['git','merge-base',baseline,head],text=True).strip()==baseline
+          changed=set(subprocess.check_output(['git','diff','--name-only',baseline,head],text=True).splitlines())
+          assert changed=={
+            'server/events-showcase/public/embed-card.php',
+            'tests/showcase_card_compact_timezone_v21511.cjs',
+            '.github/workflows/p2k-v21511-showcase-compact-local-card.yml'
+          },sorted(changed)
+          code=['server/events-showcase/public/embed-card.php']
+          recovery=[
+            'ReleaseControl.php',
+            'server/release-control/src/bootstrap.php',
+            'server/release-control/src/ReleasePackageUploadInstaller.php',
+            'server/release-control/src/FilesystemCleanupManager.php',
+            'server/release-control/src/ReleaseVersionManager.php'
+          ]
+          overlays=code+['VERSION','ui-v2.html']
+          root=Path('dist/P2K_2.15.11_Showcase_Compact_Local_Card')
+          payload=root/'payload'
+          payload.mkdir(parents=True,exist_ok=True)
+          for file in code+recovery:
+            dst=payload/file
+            dst.parent.mkdir(parents=True,exist_ok=True)
+            dst.write_bytes(Path(file).read_bytes())
+          (payload/'VERSION').write_text('2.15.11\n')
+          key='p2k-2.15.11-'+head[:12]+'-'+sha256(
+              (head+'|showcase-compact-browser-local').encode()).hexdigest()[:16]
+          ui=Path('ui-v2.html').read_text()
+          assert ui.count('<head>')==1
+          (payload/'ui-v2.html').write_text(ui.replace(
+              '<head>','<head>\n<meta name="p2k-build" content="'+key+'">',1))
+          sha=lambda p:sha256(p.read_bytes()).hexdigest()
+          (root/'CANDIDATE_PAYLOAD.sha256').write_text(''.join(
+              sha(payload/p)+'  ./'+p+'\n' for p in sorted(overlays)))
+          (root/'RECOVERY_PLANE.sha256').write_text(''.join(
+              sha(payload/p)+'  ./'+p+'\n' for p in sorted(recovery)))
+          manifest={
+              'schema_version':1,'version':'2.15.11',
+              'source_head':head,'cache_key':key,
+              'build_id':'p2k-v21511-showcase-compact-local-'+head[:12],
+              'qualification_workflow':'p2k-v21511-showcase-compact-local-card.yml',
+              'payload_manifest_sha256':sha(root/'CANDIDATE_PAYLOAD.sha256'),
+              'accepted_public_builds':[{'version':'2.15.11','source_head':public}]
+          }
+          (root/'CANDIDATE_RELEASE.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          (root/'README.txt').write_text(
+              'P2K 2.15.11 Events Showcase compact visitor-local card labels\n'
+              'Compatible with promoted P2K 2.15.11-083e0380bd23.\n'
+              'Daily card: day + short month (example 17 Nov), browser-local.\n'
+              'Arena card: day + short month + 24h time (example 17 Nov · 19:00), browser-local.\n'
+              'Visible card labels omit timezone abbreviations/UTC offsets for legibility.\n'
+              'Hover and accessible labels retain full browser-local date, time, year and zone.\n'
+              'No changes to shared formatter, line widget, arena countdown, DST storage,\n'
+              'match urgency, club match data, admin controls, DB, CRON or TGP/TeamFrance.\n'
+              'Release Control: upload, install candidate, preview and manually promote.\n')
+          out=root.parent/('P2K_2.15.11_Showcase_Compact_Local_Card_'+head[:12]+'.zip')
+          with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+            for file in sorted(root.rglob('*')):
+              if file.is_file():z.write(file,file.relative_to(root))
+          (root.parent/'SHA256SUMS').write_text(sha(out)+'  '+out.name+'\n')
+          print('ZIP',out,out.stat().st_size,'bytes SHA256',sha(out))
+          print('RELEASE',json.dumps(manifest))
+          PY
+      - name: Validate Release Control candidate and ZIP against exact promoted build
+        run: |
+          set -euo pipefail
+          php -r '
+            require "server/release-control/src/ReleaseSlotPolicy.php";
+            require "server/release-control/src/ReleaseCandidatePackage.php";
+            $candidate=new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
+            $m=$candidate->validate();
+            if($m["version"]!=="2.15.11")exit(2);
+            if($m["accepted_public_builds"]!==[["version"=>"2.15.11","source_head"=>"083e0380bd2303c063458c3291424af998bf37c4"]])exit(3);
+            echo "PASS Release Control ".$m["release_id"]." overlay=".$m["overlay_file_count"]."\n";
+          ' dist/P2K_2.15.11_Showcase_Compact_Local_Card
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile,hashlib,json
+          p=next(Path('dist').glob('P2K_2.15.11_Showcase_Compact_Local_Card_*.zip'))
+          with zipfile.ZipFile(p) as z:
+            assert z.testzip() is None
+            assert len(z.namelist())==len(set(z.namelist()))
+            m=json.loads(z.read('CANDIDATE_RELEASE.json'))
+            assert m['accepted_public_builds']==[{'version':'2.15.11','source_head':'083e0380bd2303c063458c3291424af998bf37c4'}]
+            for path in ('CANDIDATE_PAYLOAD.sha256','RECOVERY_PLANE.sha256'):
+              for row in z.read(path).decode().splitlines():
+                sha,file=row.split('  ./',1)
+                assert hashlib.sha256(z.read('payload/'+file)).hexdigest()==sha,file
+            assert hashlib.sha256(z.read('CANDIDATE_PAYLOAD.sha256')).hexdigest()==m['payload_manifest_sha256']
+            assert 'payload/server/events-showcase/public/embed-card.php' in z.namelist()
+            assert 'payload/assets/js/shared/events-showcase-core.js' not in z.namelist()
+            assert 'payload/TGP/Widget/api.php' not in z.namelist()
+          print('PASS ZIP checksum manifests, exact deployed version compatibility and card-only public overlay')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-v21511-showcase-compact-local-card-release-control
+          path: |
+            dist/P2K_2.15.11_Showcase_Compact_Local_Card_*.zip
+            dist/SHA256SUMS
+          retention-days: 14
