@@ -1,0 +1,219 @@
+name: P2K 2.15.11 MCA published-player preservation
+on:
+  push:
+    branches: [release/v2.15.11]
+    paths:
+      - '.github/workflows/p2k-v21511-mca-derived-preserve.yml'
+      - 'server/team-points/src/LiveRanksService.php'
+      - 'server/team-points/src/McaResultsCronService.php'
+      - 'server/team-points/src/McaRenameReviewService.php'
+      - 'assets/js/pages/team-points-features.js'
+      - 'assets/js/pages/mca-rename-review-v2157.js'
+      - 'assets/js/admin/admin-shell.js'
+      - 'TeamPointsAdmin.html'
+      - 'ui-v2.html'
+      - 'tests/php_v21511_mca_derived_preservation.php'
+      - 'tests/mca_derived_ui_v21511.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: p2k_mca_derived_test
+          MARIADB_USER: p2k
+          MARIADB_PASSWORD: p2k-test-only
+          MARIADB_ROOT_PASSWORD: root-test-only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=4s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Lint and exercise MCA derived-state and existing scraper contracts
+        run: |
+          set -euo pipefail
+          BASE=442015ce0444a173e31006ba5402824af48a6b36
+          test "$(git merge-base "$BASE" HEAD)" = "$BASE"
+          php -l server/team-points/src/LiveRanksService.php
+          php -l server/team-points/src/McaResultsCronService.php
+          php -l server/team-points/src/McaRenameReviewService.php
+          php -l tests/php_v21511_mca_derived_preservation.php
+          node --check assets/js/pages/team-points-features.js
+          node --check assets/js/pages/mca-rename-review-v2157.js
+          node --check assets/js/admin/admin-shell.js
+          node --check tests/mca_derived_ui_v21511.cjs
+          node tests/mca_derived_ui_v21511.cjs
+          node tests/mca_retry_ui_v21511.cjs
+          node tests/admin_mca_direct_access_v21511.cjs
+          php tests/php_v21511_mca_removed_pages.php
+          python3 tests/test_v2155_mca_results_priority.py
+          python3 tests/test_v21063_mca_pagination.py
+          php tests/php_v2147_release_management_harness.php
+          php tests/php_v2148_filesystem_cleanup_harness.php
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          base='442015ce0444a173e31006ba5402824af48a6b36'
+          unchanged=[
+            'server/team-points/src/McaArenaParser.php',
+            'server/team-points/src/McaBlueGreenSync.php',
+            'server/team-points/src/McaSourceCatalogue.php',
+            'server/team-points/src/McaRenameRecheckService.php',
+            'server/team-points/src/MiacService.php',
+            'server/events-showcase/src/EventsShowcaseStore.php'
+          ]
+          for p in unchanged:
+              assert not subprocess.check_output(['git','diff','--name-only',base,'HEAD','--',p]).strip(),p
+          live=Path('server/team-points/src/LiveRanksService.php').read_text()
+          cron=Path('server/team-points/src/McaResultsCronService.php').read_text()
+          assert 'DELETE FROM p2k_lr_players' in live
+          assert 'DELETE FROM p2k_lr_players' not in cron
+          assert 'MCA_REBUILD_EMPTY' in live and 'MCA_REBUILD_SOURCE_ERROR' in live
+          assert 'SELECT * FROM p2k_lr_files WHERE club_slug=? FOR UPDATE' in live
+          assert 'runPendingDerivedRebuild($deadline)' in cron
+          assert 'rebuild_retry' in cron
+          assert 'rebuild_required=0' in live
+          print('PASS parser, points formula, MIAC identity authority, canonical source policy remain intact')
+          PY
+      - name: Test automatic/manual CSV changes against MariaDB while preserving published player evidence
+        env:
+          P2K_TEST_MARIADB_DSN: mysql:host=127.0.0.1;port=3306;dbname=p2k_mca_derived_test;charset=utf8mb4
+          P2K_TEST_MARIADB_USER: p2k
+          P2K_TEST_MARIADB_PASS: p2k-test-only
+        run: |
+          set -euo pipefail
+          php -m | grep -qi pdo_mysql
+          php tests/php_v21511_mca_derived_preservation.php
+      - name: Build cumulative Release Control ZIP for currently promoted 442015ce
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import subprocess,json,zipfile
+          base='442015ce0444a173e31006ba5402824af48a6b36'
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert subprocess.check_output(['git','merge-base',base,head],text=True).strip()==base
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,head],text=True).splitlines())
+          overlay_sources={
+            'server/team-points/src/LiveRanksService.php',
+            'server/team-points/src/McaResultsCronService.php',
+            'server/team-points/src/McaRenameReviewService.php',
+            'assets/js/pages/team-points-features.js',
+            'assets/js/pages/mca-rename-review-v2157.js',
+            'assets/js/admin/admin-shell.js',
+            'TeamPointsAdmin.html',
+            'ui-v2.html'
+          }
+          non_payload={
+            'tests/php_v21511_mca_derived_preservation.php',
+            'tests/mca_derived_ui_v21511.cjs',
+            '.github/workflows/p2k-v21511-mca-derived-preserve.yml'
+          }
+          assert changed==overlay_sources|non_payload,{'actual':sorted(changed),'expected':sorted(overlay_sources|non_payload)}
+          recovery=[
+            'ReleaseControl.php',
+            'server/release-control/src/bootstrap.php',
+            'server/release-control/src/ReleasePackageUploadInstaller.php',
+            'server/release-control/src/FilesystemCleanupManager.php',
+            'server/release-control/src/ReleaseVersionManager.php'
+          ]
+          overlay=sorted(overlay_sources|{'VERSION'})
+          root=Path('dist/P2K_2.15.11_MCA_Published_Players_ReleaseControl')
+          payload=root/'payload'
+          payload.mkdir(parents=True,exist_ok=True)
+          for p in sorted((overlay_sources-{'ui-v2.html'})|set(recovery)):
+            target=payload/p
+            target.parent.mkdir(parents=True,exist_ok=True)
+            target.write_bytes(Path(p).read_bytes())
+          (payload/'VERSION').write_text('2.15.11\n')
+          cache_key='p2k-2.15.11-'+head[:12]+'-'+sha256((head+'|mca-derived-preservation-v21511').encode()).hexdigest()[:16]
+          html=Path('ui-v2.html').read_text()
+          assert html.count('<head>')==1
+          (payload/'ui-v2.html').write_text(
+            html.replace('<head>','<head>\n<meta name="p2k-build" content="'+cache_key+'">',1))
+          sha=lambda path:sha256(path.read_bytes()).hexdigest()
+          (root/'CANDIDATE_PAYLOAD.sha256').write_text(
+            ''.join(sha(payload/p)+'  ./'+p+'\n' for p in overlay))
+          (root/'RECOVERY_PLANE.sha256').write_text(
+            ''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(recovery)))
+          metadata={
+            'schema_version':1,
+            'version':'2.15.11',
+            'source_head':head,
+            'cache_key':cache_key,
+            'build_id':'p2k-v21511-mca-published-players-'+head[:12],
+            'qualification_workflow':'p2k-v21511-mca-derived-preserve.yml',
+            'payload_manifest_sha256':sha(root/'CANDIDATE_PAYLOAD.sha256'),
+            'accepted_public_builds':[{'version':'2.15.11','source_head':base}]
+          }
+          (root/'CANDIDATE_RELEASE.json').write_text(json.dumps(metadata,indent=2)+'\n')
+          (root/'README.txt').write_text(
+            'P2K MCA published-player preservation and admin legacy-duplicate UI cleanup.\n'
+            'Compatible only with deployed 2.15.11-442015ce0444.\n'
+            'Automatic and manual MCA CSV updates preserve previously published computed scores\n'
+            'and MIAC review until a complete, validated, atomic derived dataset rebuild succeeds.\n'
+            'CRON gives pending derived rebuilds first use of a worker slice; failed rebuilds\n'
+            'are retried after a five-minute backoff while arena acquisition continues.\n'
+            'Live Ranks administration shows pending/stale published data and last rebuild error.\n'
+            'MIAC review distinguishes empty/unverified results during an outstanding rebuild.\n'
+            'The legacy duplicate CSV statistics, message and duplicate-group table are hidden.\n'
+            'Canonical source selection and duplicate detection retain all files and safeguards.\n'
+            'No player score formulas, canonical data, CSV files, database schema, or CRON schedules change.\n'
+            'Install via Admin > Maintenance > Release Control; preview and then manually promote.\n'
+            'After promotion use Process complete MCA dataset if background rebuild remains pending.\n')
+          out=root.parent/('P2K_2.15.11_MCA_Published_Players_ReleaseControl_'+head[:12]+'.zip')
+          with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+            for f in sorted(root.rglob('*')):
+              if f.is_file(): z.write(f,f.relative_to(root))
+          (root.parent/'SHA256SUMS').write_text(sha(out)+'  '+out.name+'\n')
+          print('ZIP',out,out.stat().st_size,'bytes SHA256',sha(out))
+          print('RELEASE',json.dumps(metadata))
+          PY
+      - name: Validate candidate and ZIP contract for promoted baseline
+        run: |
+          set -euo pipefail
+          php -r '
+            require "server/release-control/src/ReleaseSlotPolicy.php";
+            require "server/release-control/src/ReleaseCandidatePackage.php";
+            $candidate=new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
+            $m=$candidate->validate();
+            if($m["version"]!=="2.15.11")exit(2);
+            if($m["accepted_public_builds"]!==[["version"=>"2.15.11","source_head"=>"442015ce0444a173e31006ba5402824af48a6b36"]])exit(3);
+            echo "PASS release candidate ".$m["release_id"]." overlay=".$m["overlay_file_count"]."\n";
+          ' dist/P2K_2.15.11_MCA_Published_Players_ReleaseControl
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,zipfile,hashlib
+          p=next(Path('dist').glob('P2K_2.15.11_MCA_Published_Players_ReleaseControl_*.zip'))
+          with zipfile.ZipFile(p) as z:
+            assert z.testzip() is None
+            assert len(z.namelist())==len(set(z.namelist()))
+            m=json.loads(z.read('CANDIDATE_RELEASE.json'))
+            assert m['accepted_public_builds']==[{
+              'version':'2.15.11','source_head':'442015ce0444a173e31006ba5402824af48a6b36'}]
+            for manifest in ['CANDIDATE_PAYLOAD.sha256','RECOVERY_PLANE.sha256']:
+              for line in z.read(manifest).decode().splitlines():
+                sha,p=line.split('  ./',1)
+                assert hashlib.sha256(z.read('payload/'+p)).hexdigest()==sha,p
+            assert hashlib.sha256(z.read('CANDIDATE_PAYLOAD.sha256')).hexdigest()==m['payload_manifest_sha256']
+          print('PASS exact deployed compatibility, checksum manifests and ZIP integrity')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-v21511-mca-published-players-release-control
+          path: |
+            dist/P2K_2.15.11_MCA_Published_Players_ReleaseControl_*.zip
+            dist/SHA256SUMS
+          retention-days: 14
