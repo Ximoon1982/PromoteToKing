@@ -6,11 +6,9 @@ use P2K\Widgets\WidgetConfigStore;
 use P2K\TeamPoints\Auth;
 $widget=trim((string)($_GET['widget']??''));
 if(!in_array($widget,WidgetConfigStore::IDS,true)){http_response_code(404);exit('Unknown widget');}
-// Protected administrator widget: enforce authorization for every display,
-// even when an embed is published, previewed, or opened outside the Admin shell.
+// Public read-only Club Operations widget; the handler checks publication,
+// and preview=1 still requires the same administrator authentication as before.
 if ($widget==='administrator') {
-    try { Auth::requireAdmin(); }
-    catch (Throwable $e) { http_response_code(403); exit('Administrator authentication required'); }
     require __DIR__.'/administrator.php';
     exit;
 }
