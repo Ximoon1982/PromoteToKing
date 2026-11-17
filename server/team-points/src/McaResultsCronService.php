@@ -157,8 +157,30 @@ final class McaResultsCronService
             return ['steps'=>$steps,'csv_added'=>$csvAdded,'source_dates_repaired'=>$dateRepairs,'sync'=>$this->status()];});
     }
 
+    /**
+     * Requeue errored arenas without obtaining the long-lived MCA scrape lock.
+     *
+     * The CRON intentionally holds that lock for almost a minute. Requeueing
+     * is a single atomic UPDATE of error rows: it never touches an active
+     * 'running' arena, and it preserves all page checkpoints and stored data.
+     * The worker will acquire the pending rows on its next normal slice.
+     */
     public function retryHydrationErrors(): array
-    {return $this->withGlobalLock(function(){$q=$this->pdo->prepare("UPDATE p2k_lr_arena_acquisition SET status='pending',last_error=NULL,updated_at=UTC_TIMESTAMP() WHERE club_slug=? AND status='error'");$q->execute([$this->clubSlug]);return ['requeued'=>$q->rowCount(),'sync'=>$this->status()];});}
+    {
+        $this->ensureState();
+        $this->seedHistoricalBacklog();
+        $q=$this->pdo->prepare("UPDATE p2k_lr_arena_acquisition a
+            SET a.status='pending',
+                a.priority=IF(NOT EXISTS (
+                    SELECT 1 FROM p2k_lr_files ready
+                    WHERE ready.club_slug=a.club_slug AND ready.arena_id=a.arena_id
+                      AND ready.status='processed' AND ready.row_count>0
+                ),GREATEST(a.priority,150),a.priority),
+                a.last_error=NULL,a.updated_at=UTC_TIMESTAMP()
+            WHERE a.club_slug=? AND a.status='error'");
+        $q->execute([$this->clubSlug]);
+        return ['requeued'=>$q->rowCount(),'sync'=>$this->status()];
+    }
 
     public function backfillHistoricalDates(int $maxSeconds=120): array
     {return $this->withGlobalLock(function()use($maxSeconds){$deadline=microtime(true)+max(5,min(600,$maxSeconds));$updated=0;$errors=[];foreach($this->sourceCatalogue()['canonical_rows'] as $file){if(!empty($file['actual_event_date']))continue;if(microtime(true)>=$deadline-6)break;$id=$this->fileIdentity($file);if($id===null)continue;try{$date=$this->dateFromArenaPage($id['arena_url'],$deadline);if($date['event_date']===null){$index=$this->findArenaOnIndex($id['arena_id'],$deadline);if($index!==null)$date=$index;}if($date['event_date']===null)throw new \RuntimeException('No MCA date found on arena page or club index.');$u=$this->pdo->prepare('UPDATE p2k_lr_files SET actual_event_date=?,event_date_updated_at=UTC_TIMESTAMP() WHERE club_slug=? AND id=? AND actual_event_date IS NULL');$u->execute([$date['event_date'],$this->clubSlug,(int)$file['id']]);$updated+=$u->rowCount();}catch(\Throwable $e){$errors[]=['arena_id'=>$id['arena_id'],'error'=>$e->getMessage()];}}if($updated>0)(new LiveRanksService($this->pdo,$this->repository,new ChessApi($this->repository)))->recomputeEventDates();return ['updated'=>$updated,'errors'=>$errors,'manual_only'=>true];});}
