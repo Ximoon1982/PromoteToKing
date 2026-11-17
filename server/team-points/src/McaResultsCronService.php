@@ -36,8 +36,17 @@ final class McaResultsCronService
         $total=array_sum($counts);$done=$counts['completed'];$workflow='current';if(($state['phase']??'')==='discovery_limited')$workflow='discovery_attention';elseif(($state['status']??'')==='running'&&($state['phase']??'')==='discovery')$workflow=!empty($state['last_error'])?'discovery_attention':'discovery';elseif($counts['running']+$counts['pending']>0)$workflow='acquisition';elseif($counts['error']>0)$workflow='attention';
         $catalogue=$this->sourceCatalogue();$missingDates=0;foreach($catalogue['canonical_rows'] as $row)if(empty($row['actual_event_date']))$missingDates++;
         $inventory=$this->adminArenaInventory($catalogue);
+        // Advisory-lock occupancy is diagnostic only: never acquire or wait on
+        // the CRON lock when showing admin status or queueing retries.
+        $workerLockHeld=null;
+        try{
+            $lockCheck=$this->pdo->prepare('SELECT IS_USED_LOCK(?)');
+            $lockCheck->execute(['p2k:mca-sync:'.substr($this->clubSlug,0,40)]);
+            $lockRow=$lockCheck->fetch(PDO::FETCH_NUM);
+            if(is_array($lockRow))$workerLockHeld=$lockRow[0]!==null;
+        }catch(\Throwable){}
         return $state+[
-            'mode'=>'v21094_row_scoped_live_tournaments','workflow_status'=>$workflow,'queue'=>$counts,'hydration_queue'=>$counts,'stage_queue'=>$stage,'errors'=>$errors,'arena_inventory'=>$inventory,
+            'mode'=>'v21094_row_scoped_live_tournaments','workflow_status'=>$workflow,'queue'=>$counts,'hydration_queue'=>$counts,'stage_queue'=>$stage,'errors'=>$errors,'arena_inventory'=>$inventory,'worker_lock_held'=>$workerLockHeld,
             'progress_percent'=>$total>0?round(100*$done/$total,1):100.0,'historical_missing_dates'=>$missingDates,
             'arena_backlog_total'=>$total,'index_confirmed_arenas'=>$indexConfirmed,'arena_backlog_remaining'=>$counts['pending']+$counts['running']+$counts['error'],'games_stored'=>$games,'club_rows_stored'=>(int)$perf[0],'player_rows_stored'=>(int)$perf[1],
             'source_records_stored'=>$catalogue['stored_records'],'canonical_source_count'=>$catalogue['canonical_sources'],'recognized_source_arenas'=>$catalogue['recognized_arena_sources'],
