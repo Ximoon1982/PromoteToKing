@@ -161,8 +161,12 @@ final class McaResultsCronService
     {
         return $this->withGlobalLock(function()use($maxSeconds){$this->ensureState();$this->ensureStorage();$this->seedHistoricalBacklog();$this->pdo->prepare("UPDATE p2k_lr_arena_acquisition SET status='pending' WHERE club_slug=? AND status='running'")->execute([$this->clubSlug]);$this->reconcileAcquisitionDatesFromCanonical();$dateRepairs=$this->reconcileStoredSourceDatesFromAcquisition();$this->requeueLegacyDateErrors();$this->markSourceIntegrityRebuildIfNeeded();
             $deadline=microtime(true)+max(5,min(55,$maxSeconds));$steps=0;$csvAdded=0;
+            // Rebuilds cannot live behind an always-full acquisition queue. Give
+            // pending derived statistics first use of the bounded worker slice.
+            // On a deadline/failure, retain the last published dataset and back
+            // off rebuild attempts so ordinary acquisition also progresses.
+            $this->runPendingDerivedRebuild($deadline);
             while(microtime(true)<$deadline-6.0){$item=$this->nextAcquisitionItem();if($item===null)break;$r=$this->acquisitionStep($item,$deadline);$steps++;if(!empty($r['csv_added']))$csvAdded++;}
-            if($this->rebuildRequired()&&microtime(true)<$deadline-6.0){try{$service=new LiveRanksService($this->pdo,$this->repository,new ChessApi($this->repository));$service->startProcessing($deadline-1.0);$this->pdo->prepare('UPDATE p2k_lr_sync_state SET rebuild_required=0,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')->execute([$this->clubSlug]);}catch(\Throwable $e){$this->pdo->prepare('UPDATE p2k_lr_sync_state SET last_error=?,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')->execute([substr($e->getMessage(),0,4000),$this->clubSlug]);}}
             return ['steps'=>$steps,'csv_added'=>$csvAdded,'source_dates_repaired'=>$dateRepairs,'sync'=>$this->status()];});
     }
 
@@ -334,7 +338,19 @@ final class McaResultsCronService
 
     private function storeHtmlFallbackCsv(array $item): void{$q=$this->pdo->prepare('SELECT rank_value,username,result_club,score,wins,draws,losses,streak,most_wins FROM p2k_lr_arena_players WHERE club_slug=? AND arena_id=? ORDER BY COALESCE(rank_value,999999),username_key');$q->execute([$this->clubSlug,(int)$item['arena_id']]);$rows=$q->fetchAll(PDO::FETCH_ASSOC)?:[];if($rows===[])throw new \RuntimeException('Cannot create HTML fallback Results source without player rows.');$fh=fopen('php://temp','w+');fputcsv($fh,['rank','username','club','score','wins','draws','losses','longest streak','most wins']);foreach($rows as $r)fputcsv($fh,[$r['rank_value'],$r['username'],$r['result_club'],$r['score'],$r['wins'],$r['draws'],$r['losses'],$r['streak'],$r['most_wins']]);rewind($fh);$body=stream_get_contents($fh);fclose($fh);$this->storeAutomaticCsv($item,(string)$body,['event_date'=>$item['event_date']??null,'event_start_at'=>$item['event_start_at']??null,'date_precision'=>$item['date_precision']??'unknown'],'html-fallback');$this->pdo->prepare('UPDATE p2k_lr_sync_state SET rebuild_required=1,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')->execute([$this->clubSlug]);}
     private function storeAutomaticCsv(array $item,string $body,array $date,string $origin): void{$this->ensureStorage();$stored=bin2hex(random_bytes(12)).'.csv';$path=$this->storageDir.'/'.$stored;if(file_put_contents($path,$body,LOCK_EX)===false)throw new \RuntimeException('Unable to store discovered MCA Results source.');@chmod($path,0660);try{$ins=$this->pdo->prepare("INSERT INTO p2k_lr_files(club_slug,original_name,stored_name,sha256,size_bytes,uploaded_at,arena_id,arena_slug,event_url,csv_url,source_origin,source_fetched_at,actual_event_date,effective_event_date,event_date_precision,event_date_updated_at,status,row_count,p2k_row_count) VALUES(?,?,?,?,?,UTC_TIMESTAMP(),?,?,?,?,?,UTC_TIMESTAMP(),?,?,?,UTC_TIMESTAMP(),'uploaded',0,0)");$eventDate=$date['event_date']??null;$ins->execute([$this->clubSlug,(string)$item['arena_slug'].'.csv',$stored,hash('sha256',$body),strlen($body),(int)$item['arena_id'],(string)$item['arena_slug'],(string)$item['arena_url'],(string)($item['csv_url']??''),$origin,$eventDate,$eventDate,$eventDate!==null?'known':'upload-fallback']);}catch(\Throwable $e){@unlink($path);throw $e;}$this->invalidateDerivedMca();}
-    private function invalidateDerivedMca(): void{$this->pdo->prepare('DELETE FROM p2k_lr_players WHERE club_slug=?')->execute([$this->clubSlug]);$this->pdo->prepare('DELETE FROM p2k_lr_arena_stats WHERE club_slug=?')->execute([$this->clubSlug]);$this->pdo->prepare("INSERT INTO p2k_lr_processing_state(club_slug,status,phase,total_files,processed_files,total_players,checked_players,possible_renamed,closed_accounts,started_at,updated_at,finished_at,last_error) VALUES(?,'idle','files_changed',0,0,0,0,0,0,NULL,UTC_TIMESTAMP(),NULL,NULL) ON DUPLICATE KEY UPDATE status='idle',phase='files_changed',total_files=0,processed_files=0,total_players=0,checked_players=0,possible_renamed=0,closed_accounts=0,started_at=NULL,updated_at=UTC_TIMESTAMP(),finished_at=NULL,last_error=NULL")->execute([$this->clubSlug]);}
+    private function invalidateDerivedMca(): void
+    {
+        // A newly acquired CSV invalidates the freshness of the published
+        // snapshot, NOT the snapshot itself. Leave player scores, arena stats,
+        // source rows and MIAC review evidence available until the next
+        // successful transactional rebuild replaces them.
+        $this->pdo->prepare("INSERT INTO p2k_lr_processing_state(club_slug,status,phase,updated_at,last_error)
+            VALUES(?,'pending','files_changed',UTC_TIMESTAMP(),NULL)
+            ON DUPLICATE KEY UPDATE status='pending',phase='files_changed',updated_at=UTC_TIMESTAMP(),last_error=NULL")
+            ->execute([$this->clubSlug]);
+        $this->pdo->prepare('UPDATE p2k_lr_sync_state SET rebuild_required=1,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')
+            ->execute([$this->clubSlug]);
+    }
 
     /**
      * Correct uploaded MCA source dates from existing discovery evidence.
@@ -388,7 +404,44 @@ final class McaResultsCronService
     private function existingFile(int $id,string $slug): ?array{$row=$this->sourceCatalogue()['canonical_by_arena'][$id]??null;return is_array($row)?$row:null;}
     private function applyDateToFile(int $arenaId,string $date): void{$file=$this->existingFile($arenaId,'');if(!is_array($file))return;$q=$this->pdo->prepare('UPDATE p2k_lr_files SET actual_event_date=?,event_date_updated_at=UTC_TIMESTAMP() WHERE club_slug=? AND id=? AND actual_event_date IS NULL');$q->execute([$date,$this->clubSlug,(int)$file['id']]);if($q->rowCount()>0)$this->pdo->prepare('UPDATE p2k_lr_sync_state SET dates_added=dates_added+1,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')->execute([$this->clubSlug]);}
     private function markSourceIntegrityRebuildIfNeeded(): void{$catalogue=$this->sourceCatalogue();if((int)$catalogue['duplicate_records']<=0)return;$canonical=[];foreach($catalogue['canonical_rows'] as $row)$canonical[(int)($row['id']??0)]=true;$q=$this->pdo->prepare('SELECT DISTINCT file_id FROM p2k_lr_arena_stats WHERE club_slug=?');$q->execute([$this->clubSlug]);$bad=false;foreach($q->fetchAll(PDO::FETCH_COLUMN)?:[] as $id)if(!isset($canonical[(int)$id])){$bad=true;break;}if($bad)$this->pdo->prepare('UPDATE p2k_lr_sync_state SET rebuild_required=1,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')->execute([$this->clubSlug]);}
-    private function rebuildRequired(): bool{$q=$this->pdo->prepare('SELECT rebuild_required FROM p2k_lr_sync_state WHERE club_slug=?');$q->execute([$this->clubSlug]);return (int)$q->fetchColumn()===1;}
+    private function rebuildRequired(): bool
+    {
+        $q=$this->pdo->prepare('SELECT rebuild_required FROM p2k_lr_sync_state WHERE club_slug=?');
+        $q->execute([$this->clubSlug]);
+        if((int)$q->fetchColumn()===1)return true;
+        // Recover releases which cleared the snapshot before adding the
+        // pending flag: processing state alone still calls for a rebuild.
+        $q=$this->pdo->prepare("SELECT phase FROM p2k_lr_processing_state WHERE club_slug=? LIMIT 1");
+        $q->execute([$this->clubSlug]);
+        return in_array((string)$q->fetchColumn(),['files_changed','rebuild_retry'],true);
+    }
+
+    private function runPendingDerivedRebuild(float $deadline): void
+    {
+        if(!$this->rebuildRequired()||microtime(true)>=$deadline-9.0)return;
+        $q=$this->pdo->prepare('SELECT phase,updated_at FROM p2k_lr_processing_state WHERE club_slug=? LIMIT 1');
+        $q->execute([$this->clubSlug]);
+        $state=$q->fetch(PDO::FETCH_ASSOC)?:[];
+        // Avoid exhausting every one-minute CRON slice with the same expensive
+        // failed rebuild. A manual processing request remains available at any time.
+        if(($state['phase']??'')==='rebuild_retry'){
+            $previous=strtotime((string)($state['updated_at']??'').' UTC');
+            if($previous!==false&&$previous>time()-300)return;
+        }
+        try{
+            $service=new LiveRanksService($this->pdo,$this->repository,new ChessApi($this->repository));
+            $service->startProcessing($deadline-5.0);
+            // startProcessing() atomically clears rebuild_required when it
+            // successfully publishes the complete source generation.
+        }catch(\Throwable $e){
+            $message=substr($e->getMessage(),0,4000);
+            $this->pdo->prepare("UPDATE p2k_lr_processing_state
+                SET status='pending',phase='rebuild_retry',last_error=?,updated_at=UTC_TIMESTAMP()
+                WHERE club_slug=?")->execute([$message,$this->clubSlug]);
+            $this->pdo->prepare('UPDATE p2k_lr_sync_state SET last_error=?,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')
+                ->execute([substr('MCA derived rebuild pending: '.$message,0,4000),$this->clubSlug]);
+        }
+    }
 
     private function dateFromArenaPage(string $url,?float $deadline=null): array{try{$p=McaArenaParser::arenaPage((string)$this->httpGet($url,$deadline)['body']);return ['event_start_at'=>$p['event_start_at'],'event_date'=>$p['event_date'],'date_precision'=>$p['date_precision']];}catch(\Throwable){return ['event_start_at'=>null,'event_date'=>null,'date_precision'=>'unknown'];}}
     private function findArenaOnIndex(int $arenaId,float $deadline): ?array{for($page=1;$page<=250&&microtime(true)<$deadline-6;$page++){$parsed=McaIndexParser::parse((string)$this->httpGet($this->indexUrl($page),$deadline)['body'],$page);if($parsed['events']===[])return null;foreach($parsed['events'] as $e){$id=(int)$e['arena_id'];if($id===$arenaId)return ['event_start_at'=>$e['event_start_at'],'event_date'=>$e['event_date'],'date_precision'=>$e['date_precision']];}if(empty($parsed['has_next']))return null;}return null;}
