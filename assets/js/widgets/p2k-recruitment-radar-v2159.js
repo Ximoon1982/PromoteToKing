@@ -13,10 +13,10 @@
   const enc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const number=v=>Number(v||0).toLocaleString('en-GB');
   const fmtDate=seconds=>{const d=new Date(Number(seconds)*1000);return Number.isFinite(d.getTime())
-    ?new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(d)+' UTC':'—';};
+    ?new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false,timeZoneName:'short'}).format(d):'—';};
   const hoursFor={ '24h':24,'48h':48,'72h':72,'7d':168 };
   const windows=Object.keys(hoursFor);
-  const shortDate=seconds=>{const d=new Date(Number(seconds)*1000);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',day:'numeric',month:'short'}).format(d):'—';};
+  const shortDate=seconds=>{const d=new Date(Number(seconds)*1000);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short'}).format(d):'—';};
   const state={settings:null,window:'48h',scope:'priority',catalog:[],upcoming:[],
     details:new Map(),needs:new Map(),username:'',draft:'',profile:null,authenticatedUser:'',
     fetching:false,scanned:0,total:0,scanToken:0,notice:'',error:'',effectiveWindow:'48h',baseDetails:[],partial:false};
