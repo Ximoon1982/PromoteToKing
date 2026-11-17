@@ -1,0 +1,201 @@
+name: P2K 2.15.11 Showcase compact local date labels - both layouts
+on:
+  push:
+    branches: [release/v2.15.11]
+    paths:
+      - '.github/workflows/p2k-v21511-showcase-all-styles-local-compact.yml'
+      - 'assets/js/shared/events-showcase-core.js'
+      - 'assets/js/events-showcase-line-v2122.js'
+      - 'server/events-showcase/public/embed.php'
+      - 'server/events-showcase/public/embed-card.php'
+      - 'tests/showcase_all_styles_compact_local_v21511.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify change scope and all timezone/display contracts
+        run: |
+          set -euo pipefail
+          BASE=caf4c96799d341c41a73f76f28e924512093cf0b
+          PUBLIC=083e0380bd2303c063458c3291424af998bf37c4
+          test "$(git merge-base "$BASE" HEAD)" = "$BASE"
+          test "$(git merge-base "$PUBLIC" HEAD)" = "$PUBLIC"
+          php -l server/events-showcase/public/embed.php
+          php -l server/events-showcase/public/embed-card.php
+          node --check assets/js/shared/events-showcase-core.js
+          node --check assets/js/events-showcase-line-v2122.js
+          node --check tests/showcase_all_styles_compact_local_v21511.cjs
+          node tests/showcase_all_styles_compact_local_v21511.cjs
+          node tests/showcase_card_compact_timezone_v21511.cjs
+          node tests/showcase_datetime_v21511.cjs
+          node tests/timezone_consistency_v21510.cjs
+          php tests/php_v21510_showcase_local_times.php
+          node tests/release_control_upload_action_shadow_v21511.cjs
+          node tests/release_control_batch_csp_layout_v21511.cjs
+          python3 - <<'PY'
+          import subprocess
+          from pathlib import Path
+          baseline='caf4c96799d341c41a73f76f28e924512093cf0b'
+          changed=set(subprocess.check_output(['git','diff','--name-only',baseline,'HEAD'],text=True).splitlines())
+          expected={
+            'assets/js/shared/events-showcase-core.js',
+            'assets/js/events-showcase-line-v2122.js',
+            'server/events-showcase/public/embed.php',
+            'server/events-showcase/public/embed-card.php',
+            'tests/showcase_all_styles_compact_local_v21511.cjs',
+            '.github/workflows/p2k-v21511-showcase-all-styles-local-compact.yml'
+          }
+          assert changed==expected,{'unexpected':sorted(changed^expected)}
+          original=subprocess.check_output(['git','show',baseline+':assets/js/shared/events-showcase-core.js'],text=True)
+          current=Path('assets/js/shared/events-showcase-core.js').read_text()
+          assert current.replace('month:"short"}).format(new Date(Number(epoch)*1000))',
+             'month:"short",timeZoneName:"short"}).format(new Date(Number(epoch)*1000))')==original, \
+             'Only core compact date suffix must change; preserve full and other logic'
+          before=subprocess.check_output(['git','show',baseline+':assets/js/events-showcase-line-v2122.js'],text=True)
+          after=Path('assets/js/events-showcase-line-v2122.js').read_text()
+          assert after.replace('hour12:false}).format(date)','hour12:false,timeZoneName:"short"}).format(date)')\
+             .replace('hour12:false}).format(date).replace(",","")',
+                      'hour12:false,timeZoneName:"short"}).format(date).replace(",","")')==before, \
+             'Only line arena visible timezone suffix must change'
+          assert 'timeZoneName:"short"' in current,'Full timestamp zone still used'
+          assert 'timeZoneName:"short"' not in after,'Line visible arena suffix removed'
+          for name in ('server/events-showcase/public/embed.php',
+                       'server/events-showcase/public/embed-card.php'):
+             assert 'p2k-2.15.11-compact-local-2' in Path(name).read_text(),name
+          for path in ('server/release-control/public/release-control-upload.js','ReleaseControl.php'):
+             assert path not in changed,'Keep previously repaired upload and Release Control unchanged'
+          print('PASS exact scope, shared formatter API unchanged, only visible zone suffixes removed')
+          PY
+      - name: Produce accepted 2.15.11 candidate for original or repaired public baseline
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import subprocess,json,zipfile
+          base='caf4c96799d341c41a73f76f28e924512093cf0b'
+          public='083e0380bd2303c063458c3291424af998bf37c4'
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert subprocess.check_output(['git','merge-base',base,head],text=True).strip()==base
+          code=[
+            'assets/js/shared/events-showcase-core.js',
+            'assets/js/events-showcase-line-v2122.js',
+            'server/events-showcase/public/embed.php',
+            'server/events-showcase/public/embed-card.php'
+          ]
+          recovery=[
+            'ReleaseControl.php',
+            'server/release-control/src/bootstrap.php',
+            'server/release-control/src/ReleasePackageUploadInstaller.php',
+            'server/release-control/src/FilesystemCleanupManager.php',
+            'server/release-control/src/ReleaseVersionManager.php',
+            'server/release-control/public/release-control-upload.js'
+          ]
+          overlay=code+['VERSION','ui-v2.html']
+          root=Path('dist/P2K_2.15.11_Showcase_Compact_Both_Styles')
+          payload=root/'payload'
+          payload.mkdir(parents=True,exist_ok=True)
+          for src in code+recovery:
+            dst=payload/src
+            dst.parent.mkdir(parents=True,exist_ok=True)
+            dst.write_bytes(Path(src).read_bytes())
+          (payload/'VERSION').write_text('2.15.11\n')
+          cache='p2k-2.15.11-'+head[:12]+'-'+sha256(
+            (head+'|showcase-line-card-compact-timezone').encode()).hexdigest()[:16]
+          ui=Path('ui-v2.html').read_text()
+          assert ui.count('<head>')==1
+          (payload/'ui-v2.html').write_text(
+            ui.replace('<head>','<head>\n<meta name="p2k-build" content="'+cache+'">',1))
+          sha=lambda path:sha256(path.read_bytes()).hexdigest()
+          (root/'CANDIDATE_PAYLOAD.sha256').write_text(''.join(
+            sha(payload/path)+'  ./'+path+'\n' for path in sorted(overlay)))
+          (root/'RECOVERY_PLANE.sha256').write_text(''.join(
+            sha(payload/path)+'  ./'+path+'\n' for path in sorted(recovery)))
+          manifest={
+            'schema_version':1,'version':'2.15.11',
+            'source_head':head,'cache_key':cache,
+            'build_id':'p2k-v21511-showcase-compact-both-'+head[:12],
+            'qualification_workflow':'p2k-v21511-showcase-all-styles-local-compact.yml',
+            'payload_manifest_sha256':sha(root/'CANDIDATE_PAYLOAD.sha256'),
+            'accepted_public_builds':[
+              {'version':'2.15.11','source_head':public},
+              {'version':'2.15.11','source_head':base}
+            ]
+          }
+          (root/'CANDIDATE_RELEASE.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          (root/'README.txt').write_text(
+            'P2K 2.15.11 Showcase compact timezone fix (line and card styles)\n'
+            'Accepts promoted public 2.15.11-083e0380bd23 or 2.15.11-caf4c96799d3.\n'
+            'Daily line: local day/month, no CET/CEST/GMT suffix.\n'
+            'Daily card: local day/month, no CET/CEST/GMT suffix.\n'
+            'Arena line: Today/Tomorrow or local day/month and 24h time, no suffix.\n'
+            'Arena card: local day/month and 24h time, no suffix.\n'
+            'Full local timestamps with timezone remain in hover titles.\n'
+            'Browser-local midnight and DST conversions, urgency, live count and layout unchanged.\n'
+            'This candidate also carries the previously fixed recovery upload JavaScript.\n'
+            'Upload using Release Control (fixed uploader), OR run the existing P2K CLI\n'
+            'ReleasePackageUploadInstaller::installZipPath via SSH. Preview then promote.\n'
+            'Installing a candidate by CLI does NOT alter public traffic; promotion is mandatory.\n'
+            'No DB, CRON, standalone TGP/TeamFrance, recruitment or scoring changes.\n')
+          out=root.parent/('P2K_2.15.11_Showcase_Compact_Both_Styles_'+head[:12]+'.zip')
+          with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+            for file in sorted(root.rglob('*')):
+              if file.is_file():z.write(file,file.relative_to(root))
+          (root.parent/'SHA256SUMS').write_text(sha(out)+'  '+out.name+'\n')
+          print('ZIP',out,out.stat().st_size,'SHA256',sha(out))
+          print('RELEASE',json.dumps(manifest))
+          PY
+      - name: Validate Release Control manifest, dual-baseline compatibility and ZIP integrity
+        run: |
+          set -euo pipefail
+          php -r '
+            require "server/release-control/src/ReleaseSlotPolicy.php";
+            require "server/release-control/src/ReleaseCandidatePackage.php";
+            $pkg=new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
+            $m=$pkg->validate();
+            $bases=$m["accepted_public_builds"];
+            if($m["version"]!=="2.15.11" || count($bases)!==2)exit(3);
+            foreach($bases as $b)if($b["version"]!=="2.15.11")exit(4);
+            echo "PASS validated candidate ".$m["release_id"]." with ".$m["overlay_file_count"]." release-owned overlays\n";
+          ' dist/P2K_2.15.11_Showcase_Compact_Both_Styles
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import zipfile,json
+          p=next(Path('dist').glob('P2K_2.15.11_Showcase_Compact_Both_Styles_*.zip'))
+          with zipfile.ZipFile(p) as z:
+            assert z.testzip() is None
+            assert len(z.namelist())==len(set(z.namelist()))
+            m=json.loads(z.read('CANDIDATE_RELEASE.json'))
+            heads={x['source_head'] for x in m['accepted_public_builds']}
+            assert heads=={
+              '083e0380bd2303c063458c3291424af998bf37c4',
+              'caf4c96799d341c41a73f76f28e924512093cf0b'}
+            for manifest in ('CANDIDATE_PAYLOAD.sha256','RECOVERY_PLANE.sha256'):
+              for row in z.read(manifest).decode().splitlines():
+                digest,path=row.split('  ./',1)
+                assert sha256(z.read('payload/'+path)).hexdigest()==digest,path
+            assert sha256(z.read('CANDIDATE_PAYLOAD.sha256')).hexdigest()==m['payload_manifest_sha256']
+            for file in ('assets/js/shared/events-showcase-core.js',
+                         'assets/js/events-showcase-line-v2122.js',
+                         'server/events-showcase/public/embed.php',
+                         'server/events-showcase/public/embed-card.php'):
+              assert 'payload/'+file in z.namelist(),file
+            assert 'payload/server/release-control/public/release-control-upload.js' in z.namelist()
+            assert 'payload/TGP/Widget/api.php' not in z.namelist()
+          print('PASS ZIP integrity, fixed uploader, both widget layouts, no standalone data and dual production baseline')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-v21511-showcase-compact-both-styles
+          path: |
+            dist/P2K_2.15.11_Showcase_Compact_Both_Styles_*.zip
+            dist/SHA256SUMS
+          retention-days: 14
