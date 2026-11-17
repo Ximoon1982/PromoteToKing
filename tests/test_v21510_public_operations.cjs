@@ -22,7 +22,7 @@ assert(!embed.includes("exit('Administrator authentication required')"));
 assert(!js.includes("getWriteClient") && !js.includes("arena-scan") && !js.includes("admin-api.php"),"no privileged controls in public widget");
 assert(js.includes("match-search")&&js.includes("match-data")&&js.includes("match-history"));
 assert(js.includes("renderRatings")&&js.includes("renderHistory")&&js.includes("C.compareRecruitmentLineups")&&js.includes("C.recruitmentMetrics"));
-assert(js.includes("includeRecruitment?")&&js.includes("modelFor(match,x.p2kRatings"),"history must avoid repeated recruitment optimizer");
+assert(js.includes("includeRecruitment?")&&js.includes("modelFor(match,r.p2kRatings")&&js.includes("historyOnly && n>512"),"history must avoid repeated recruitment optimizer and oversized historical analysis");
 assert(css.includes("width:100%")&&css.includes("max-width:100%"));
 for(const permission of ["GreenConfig::authorizeAdmin","Auth::requireAdmin","require_admin_write"]){
   assert(!api.includes(permission),"protected authorization must not be weakened for public read");
