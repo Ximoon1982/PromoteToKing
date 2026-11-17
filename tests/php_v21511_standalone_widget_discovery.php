@@ -112,7 +112,7 @@ try {
             $club.' must never prune on Chess.com index outage');
         checkStandalone(str_contains($api,"['in_progress','finished']"),
             $club.' must only prune known started/finished buckets');
-        checkStandalone(str_contains($api,"isset($registered[$id])"),
+        checkStandalone(str_contains($api,'isset($registered[$id])'),
             $club.' must preserve matches when Chess.com buckets conflict');
     }
     echo "PASS independent organizer watchlists/scans, seven-day and page limits, "
