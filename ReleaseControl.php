@@ -723,7 +723,7 @@ $filesystemAuditRunning = $filesystemAuditRequested && is_array($filesystemAudit
   </div>
 <?php endif; ?>
 </main>
-<script src="/server/release-control/public/release-control-upload.js"></script>
+<script src="/server/release-control/public/release-control-upload.js?v=2.15.11-upload-target-1"></script>
 
 
 <script src="/server/release-control/public/release-control-batch.js?v=2.15.11-batch-csp-1"></script>
