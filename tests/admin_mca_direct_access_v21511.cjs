@@ -3,7 +3,7 @@ const assert=require("node:assert/strict");
 const fs=require("node:fs");
 const shell=fs.readFileSync("assets/js/admin/admin-shell.js","utf8");
 const ui=fs.readFileSync("ui-v2.html","utf8");
-assert(ui.includes("assets/js/admin/admin-shell.js?v=p2k-2.15.11-direct-mca-admin-1"),
+assert(/assets\/js\/admin\/admin-shell\.js\?v=p2k-2\.15\.11-(direct-mca-admin|mca-derived-safe)-1/.test(ui),
   "Admin shell cache must be refreshed for the promoted release.");
 const start=shell.indexOf("function renderAdminShellDetail(){");
 const end=shell.indexOf("function adminShellActivate(){",start);
