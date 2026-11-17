@@ -4,7 +4,7 @@
 (() => {
   "use strict";
   const byId = id => document.getElementById(id);
-  const state = {revision:0,organizers:[],scan:null,busy:false,cancel:false,ready:false,ctx:null};
+  const state = {revision:0,organizers:[],scan:null,busy:false,cancel:false,ready:false,ctx:null,notice:null};
   const host = byId("arenaDiscoveryPanel");
   if (!host) return;
 
@@ -28,10 +28,12 @@
     }
     return data;
   }
-  function message(text,isError=false) {
+  function message(text,isError=false,persist=true) {
+    if(persist)state.notice={text:String(text||""),isError:!!isError};
+    const active=state.notice||{text:String(text||""),isError:!!isError};
     const node=byId("arenaDiscoveryStatus");
-    node.textContent=String(text||"");
-    node.classList.toggle("is-error",!!isError);
+    node.textContent=active.text;
+    node.classList.toggle("is-error",active.isError);
   }
   function apply(data) {
     state.revision=Number(data.revision)||0;
@@ -134,11 +136,12 @@
     if(scan) message(
       (scan.status||"Unknown")+" · "+Number(scan.pages||0)+" pages · "+
       Number(scan.seen||0)+" arenas examined · "+candidates.length+
-      " new candidates"+(scan.message?" · "+scan.message:""));
-    else message("No scan yet. Add organizers and click Scan upcoming arenas.");
+      " new candidates"+(scan.message?" · "+scan.message:""),false,false);
+    else message("No scan yet. Add organizers and click Scan upcoming arenas.",false,false);
   }
   async function editOrganizers(change) {
     if(state.busy)return;
+    state.notice=null;
     const next=state.organizers.map(row=>({...row}));
     change(next);
     try {
@@ -175,7 +178,7 @@
   }
   async function scan() {
     if(state.busy||!state.ctx)return;
-    state.busy=true;state.cancel=false;render();
+    state.notice=null;state.busy=true;state.cancel=false;render();
     try {
       if(state.scan?.status!=="running")apply(await request("begin",{}));
       while(!state.cancel&&state.scan?.status==="running") {
@@ -199,6 +202,7 @@
   window.P2K_STANDALONE_ARENA_DISCOVERY={
     async start(ctx) {
       state.ctx=ctx;
+      state.notice=null;
       if(!state.ready){connect();state.ready=true;}
       try{apply(await request("state"));}
       catch(e){message("Arena discovery unavailable: "+e.message,true);}
