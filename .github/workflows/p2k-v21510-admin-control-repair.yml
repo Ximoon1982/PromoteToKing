@@ -1,0 +1,139 @@
+name: P2K 2.15.10 Administrator widget control repair Release Control ZIP
+on:
+  push:
+    branches: [release/v2.15.10]
+    paths:
+      - '.github/workflows/p2k-v21510-admin-control-repair.yml'
+      - 'ui-v2.html'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify restored widget management references and unchanged traffic collector
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from subprocess import check_output
+          import re
+          html=Path('ui-v2.html').read_text()
+          base='a0d155c29bdcd8e6f6869f69ab86a09804aae859'
+          head=check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert check_output(['git','merge-base',base,head],text=True).strip()==base
+          changes=set(check_output(['git','diff','--name-only',base,head],text=True).splitlines())
+          assert changes <= {'ui-v2.html','.github/workflows/p2k-v21510-admin-control-repair.yml'},changes
+          references={
+            'assets/js/admin/admin-shell.js':'p2k-2.15.10-administrator-b40a954cd66f',
+            'assets/js/admin/admin-session-controller.js':'p2k-2.15.10-administrator-b40a954cd66f',
+            'assets/js/admin/tool-registry.js':'p2k-2.15.10-administrator-b40a954cd66f',
+            'assets/js/site-config.js':'p2k-2.15.10-traffic-activity-1'
+          }
+          for name,version in references.items():
+            matches=re.findall(r'(?<![-\w])'+re.escape(name)+r'\?v=([^"\x27\s<>]+)',html)
+            assert matches==[version],(name,matches)
+            assert Path(name).is_file(),name
+          for legacy in ('admin-shell.js?v=p2k-2.15.9-competition-1',
+                         'admin-session-controller.js?v=2.11.5-bf6a828490f57',
+                         'tool-registry.js?v=p2k-2.15.9-competition-12'):
+            assert legacy not in html,legacy
+          print('PASS restored all 3 Administrator widget references, retained traffic changes, minimal diff')
+          PY
+          node --check assets/js/admin/admin-shell.js
+          node --check assets/js/admin/admin-session-controller.js
+          node --check assets/js/admin/tool-registry.js
+          node tests/test_v21510_administrator_widget_actions.js
+      - name: Build minimal Release Control repair overlay
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import subprocess,zipfile,json
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          base='a0d155c29bdcd8e6f6869f69ab86a09804aae859'
+          assert subprocess.check_output(['git','merge-base',base,head],text=True).strip()==base
+          package=Path('dist/P2K_2.15.10_Admin_Widget_Control_Repair_ReleaseControl')
+          payload=package/'payload'
+          payload.mkdir(parents=True,exist_ok=True)
+          overlay=['VERSION','ui-v2.html']
+          recovery=['ReleaseControl.php','server/release-control/src/bootstrap.php',
+                    'server/release-control/src/ReleasePackageUploadInstaller.php',
+                    'server/release-control/src/FilesystemCleanupManager.php']
+          for name in recovery:
+            dst=payload/name
+            dst.parent.mkdir(parents=True,exist_ok=True)
+            dst.write_bytes(Path(name).read_bytes())
+          cache_key='p2k-2.15.10-'+head[:12]+'-'+sha256((head+'|admin-control-repair').encode()).hexdigest()[:16]
+          html=Path('ui-v2.html').read_text()
+          assert html.count('<head>')==1
+          (payload/'ui-v2.html').write_text(html.replace('<head>','<head>\n<meta name="p2k-build" content="'+cache_key+'">',1))
+          (payload/'VERSION').write_text('2.15.10\n')
+          sha=lambda p:sha256(p.read_bytes()).hexdigest()
+          (package/'CANDIDATE_PAYLOAD.sha256').write_text(''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(overlay)))
+          (package/'RECOVERY_PLANE.sha256').write_text(''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(recovery)))
+          meta={
+            'schema_version':1,'version':'2.15.10','source_head':head,
+            'cache_key':cache_key,
+            'build_id':'p2k-admin-widget-control-repair-'+head[:12],
+            'qualification_workflow':'p2k-v21510-admin-control-repair.yml',
+            'payload_manifest_sha256':sha(package/'CANDIDATE_PAYLOAD.sha256'),
+            'accepted_public_builds':[{'version':'2.15.10','source_head':base}]
+          }
+          (package/'CANDIDATE_RELEASE.json').write_text(json.dumps(meta,indent=2)+'\n')
+          (package/'README.txt').write_text(
+            'P2K 2.15.10 minimal Administrator widget management repair.\n'
+            'Accepts deployed 2.15.10-a0d155c29bdc. No application/DB/CRON changes.\n'
+            'Restores three admin JS cache references in ui-v2.html while retaining traffic instrumentation.\n'
+            'Install using Release Control, preview and manually promote.\n')
+          output=package.parent/('P2K_2.15.10_Admin_Widget_Control_Repair_ReleaseControl_'+head[:12]+'.zip')
+          with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+            for p in sorted(package.rglob('*')):
+              if p.is_file():z.write(p,p.relative_to(package))
+          (package.parent/'SHA256SUMS').write_text(sha(output)+'  '+output.name+'\n')
+          print('ZIP:',output,'size:',output.stat().st_size,'sha256:',sha(output))
+          PY
+      - name: Validate Release Control contract, hashes and minimal payload
+        run: |
+          set -euo pipefail
+          php -r '
+            require "server/release-control/src/ReleaseSlotPolicy.php";
+            require "server/release-control/src/ReleaseCandidatePackage.php";
+            $p=new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
+            $m=$p->validate();
+            if ($m["overlay_file_count"]!==2 || $m["version"]!=="2.15.10") exit(2);
+            echo "PASS ".$m["release_id"]." accepted from ".implode(",",array_column($m["accepted_public_builds"],"source_head"))."\n";
+          ' dist/P2K_2.15.10_Admin_Widget_Control_Repair_ReleaseControl
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,zipfile
+          zpath=next(Path('dist').glob('P2K_2.15.10_Admin_Widget_Control_Repair_ReleaseControl_*.zip'))
+          with zipfile.ZipFile(zpath) as z:
+            assert z.testzip() is None
+            names=z.namelist()
+            assert len(names)==10 and len(set(names))==10,names
+            assert {x for x in names if x.startswith('payload/') and
+                 not x.startswith('payload/server/release-control/') and
+                 x!='payload/ReleaseControl.php'}=={'payload/VERSION','payload/ui-v2.html'}
+            meta=json.loads(z.read('CANDIDATE_RELEASE.json'))
+            assert meta['accepted_public_builds']==[
+                 {'version':'2.15.10','source_head':'a0d155c29bdcd8e6f6869f69ab86a09804aae859'}]
+            for manifest in ('CANDIDATE_PAYLOAD.sha256','RECOVERY_PLANE.sha256'):
+              for entry in z.read(manifest).decode().splitlines():
+                h,p=entry.split('  ./',1)
+                assert hashlib.sha256(z.read('payload/'+p)).hexdigest()==h,p
+          print('PASS package integrity, production compatibility and minimal overlay')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-v21510-admin-widget-control-repair
+          path: |
+            dist/P2K_2.15.10_Admin_Widget_Control_Repair_ReleaseControl_*.zip
+            dist/SHA256SUMS
+          retention-days: 14
