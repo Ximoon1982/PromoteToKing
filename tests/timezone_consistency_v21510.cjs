@@ -49,7 +49,7 @@ assert(admin.includes("Start time (Luxembourg)")&&admin.includes("Date (Luxembou
 assert(get("assets/js/pages/admin-features.js").includes('timeZone: "UTC"'),"admin logs stay UTC");
 assert(get("server/widgets/src/HallOfFameLeaderboardService.php").includes("UTC"),
     "monthly and quarterly periods retain UTC");
-assert(get("assets/js/dashboard/dashboard-v2.js").includes('timeZone: "UTC"'),
+assert(get("assets/js/pages/dashboard-v2.js").includes('timeZone: "UTC"'),
     "dashboard's statistical/date-only convention remains UTC");
 for(const path of ["assets/js/pages/match-creation-analyzer.js","assets/js/pages/match-creation-charts.js"]){
  const code=get(path);
