@@ -12,7 +12,7 @@ header('Cache-Control: no-store');
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?= htmlspecialchars((string)($config['team_name'] ?? 'Team'), ENT_QUOTES) ?> Match Showcase · Admin</title>
 <link rel="stylesheet" href="../assets/admin.css?v=<?= rawurlencode((string)($config['version'] ?? '0.2.0')) ?>">
-<link rel="stylesheet" href="../assets/arena-discovery.css?v=0.3.4">
+<link rel="stylesheet" href="../assets/arena-discovery.css?v=0.3.4-club-reference-1">
 <link rel="stylesheet" href="/TeamFrance/assets/widget-theme.css?v=tf-2153-en2">
 </head>
 <body>
@@ -32,11 +32,10 @@ header('Cache-Control: no-store');
 <div id="matchList" class="match-list"></div>
 <section class="arena-discovery" id="arenaDiscoveryPanel" aria-labelledby="arenaDiscoveryHeading">
 <div class="arena-discovery-head"><h2 id="arenaDiscoveryHeading">Upcoming MCA discovery</h2><span class="hint">Admin only · manual scan · next 7 days</span></div>
-<p class="hint">Monitor Chess.com organizing clubs to preselect upcoming Multi Club Arenas. Suggestions are not published until you review the arena's duration/time control and save it.</p>
+<p class="hint">Enter a Chess.com club URL, numeric ID or slug. The club name and ID are retrieved automatically. Suggested arenas remain unpublished until manually reviewed and saved.</p>
 <div id="arenaDiscoveryOrganizers" class="arena-discovery-organizers"></div>
 <div class="arena-discovery-fields">
-<input id="arenaDiscoveryClubId" inputmode="numeric" maxlength="15" autocomplete="off" aria-label="Organizing club numeric ID" placeholder="Chess.com club ID">
-<input id="arenaDiscoveryClubName" maxlength="80" autocomplete="off" aria-label="Organizing club name" placeholder="Organizer name">
+<input id="arenaDiscoveryClubReference" maxlength="600" autocomplete="off" spellcheck="false" aria-label="Chess.com organizing club URL, slug or numeric ID" placeholder="Chess.com club URL, ID or slug">
 <button id="arenaDiscoveryAddOrganizer" type="button" class="secondary">Add organizer</button>
 </div>
 <div class="arena-discovery-tools">
@@ -77,6 +76,6 @@ header('Cache-Control: no-store');
 </main>
 <script>window.TEAM_FRANCE_WIDGET_CONFIG={teamSlug:<?= json_encode((string)($config['team_slug'] ?? 'team-france')) ?>,teamName:<?= json_encode((string)($config['team_name'] ?? 'Team France')) ?>,version:<?= json_encode((string)($config['version'] ?? '0.2.0')) ?>};</script>
 <script src="../assets/admin.js?v=<?= rawurlencode((string)($config['version'] ?? '0.2.0')) ?>-tf-en2"></script>
-<script src="../assets/arena-discovery.js?v=0.3.4"></script>
+<script src="../assets/arena-discovery.js?v=0.3.4-club-reference-1"></script>
 </body>
 </html>
