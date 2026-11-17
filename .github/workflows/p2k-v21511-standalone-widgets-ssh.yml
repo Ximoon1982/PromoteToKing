@@ -7,6 +7,8 @@ on:
       - 'tools/install-tgp-teamfrance-widgets-v034.sh'
       - 'TGP/Widget/**'
       - 'TeamFrance/Widget/**'
+      - 'tests/php_v21511_standalone_widget_discovery.php'
+      - 'tests/standalone_widget_mca_discovery_v21511.cjs'
   workflow_dispatch:
 permissions:
   contents: read
