@@ -139,7 +139,7 @@ function loadEventsShowcaseV2122() {
 if (document.getElementById("p2kEventsShowcaseV2122")) return;
 const script = document.createElement("script");
 script.id = "p2kEventsShowcaseV2122";
-script.src = "assets/js/admin/events-showcase-v2122.js?v=p2k-2.15.10-lux-label-1";
+script.src = "assets/js/admin/events-showcase-v2122.js?v=p2k-2.15.10-showcase-local-dst-1";
 script.defer = true;
 document.head.appendChild(script);
 }
