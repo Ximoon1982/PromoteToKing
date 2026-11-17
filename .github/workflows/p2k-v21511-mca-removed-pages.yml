@@ -1,0 +1,158 @@
+name: P2K 2.15.11 MCA removed-player pagination repair
+on:
+  push:
+    branches: [release/v2.15.11]
+    paths:
+      - '.github/workflows/p2k-v21511-mca-removed-pages.yml'
+      - 'server/team-points/src/McaArenaParser.php'
+      - 'server/team-points/src/McaResultsCronService.php'
+      - 'tests/php_v21511_mca_removed_pages.php'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Test MCA removed-only page detection and scoring isolation
+        run: |
+          set -euo pipefail
+          BASE=0fe1c8a1e1c941e61e7f16384aea330f216ba38c
+          test "$(git merge-base "$BASE" HEAD)" = "$BASE"
+          php -l server/team-points/src/McaArenaParser.php
+          php -l server/team-points/src/McaResultsCronService.php
+          php -l tests/php_v21511_mca_removed_pages.php
+          php tests/php_v21511_mca_removed_pages.php
+          python3 tests/test_v2155_mca_results_priority.py
+          python3 tests/test_v21063_mca_pagination.py
+          python3 tests/test_v2158_mca_recheck_contract.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          base='0fe1c8a1e1c941e61e7f16384aea330f216ba38c'
+          unchanged=[
+              'server/team-points/src/LiveRanksService.php',
+              'server/team-points/src/McaBlueGreenSync.php',
+              'server/team-points/src/McaSourceCatalogue.php',
+              'server/team-points/src/McaRenameRecheckService.php',
+          ]
+          for p in unchanged:
+              assert not subprocess.check_output(['git','diff','--name-only',base,'HEAD','--',p]).strip(),p
+          parser=Path('server/team-points/src/McaArenaParser.php').read_text()
+          worker=Path('server/team-points/src/McaResultsCronService.php').read_text()
+          assert 'removedOnlyPlayerPage' in parser and 'removedOnlyPlayerPage($html,$page)' in worker
+          assert "if($rows===[]&&!McaArenaParser::removedOnlyPlayerPage($html,$page))" in worker
+          diff=subprocess.check_output(['git','diff','-U0',base,'HEAD','--','server/team-points/src/McaArenaParser.php'],text=True)
+          assert diff.count('@@')==2, 'Expected only one added helper method in parser'
+          for line in diff.splitlines():
+              if line.startswith('-') and not line.startswith('---'):
+                  raise AssertionError('The parser must not change existing extraction/points behavior: '+line)
+          print('PASS player scoring and club standings source unmodified')
+          PY
+      - name: Build 2.15.11 Release Control installer for promoted 0fe1 baseline
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import subprocess,json,zipfile
+          base='0fe1c8a1e1c941e61e7f16384aea330f216ba38c'
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert subprocess.check_output(['git','merge-base',base,head],text=True).strip()==base
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,head],text=True).splitlines())
+          expected={
+              'server/team-points/src/McaArenaParser.php',
+              'server/team-points/src/McaResultsCronService.php'}
+          allowed=expected|{
+              'tests/php_v21511_mca_removed_pages.php',
+              '.github/workflows/p2k-v21511-mca-removed-pages.yml'}
+          assert changed==allowed,{'actual':changed,'expected':allowed}
+          recovery=['ReleaseControl.php','server/release-control/src/bootstrap.php',
+              'server/release-control/src/ReleasePackageUploadInstaller.php',
+              'server/release-control/src/FilesystemCleanupManager.php',
+              'server/release-control/src/ReleaseVersionManager.php']
+          overlay=['VERSION','ui-v2.html']+sorted(expected)
+          root=Path('dist/P2K_2.15.11_MCA_Removed_Pages_ReleaseControl')
+          payload=root/'payload';payload.mkdir(parents=True,exist_ok=True)
+          for name in sorted(expected|set(recovery)):
+              target=payload/name;target.parent.mkdir(parents=True,exist_ok=True)
+              target.write_bytes(Path(name).read_bytes())
+          (payload/'VERSION').write_text('2.15.11\n')
+          cache_key='p2k-2.15.11-'+head[:12]+'-'+sha256((head+'|mca-removed-players-v21511').encode()).hexdigest()[:16]
+          html=Path('ui-v2.html').read_text()
+          assert html.count('<head>')==1
+          (payload/'ui-v2.html').write_text(
+              html.replace('<head>','<head>\n<meta name="p2k-build" content="'+cache_key+'">',1))
+          sha=lambda path:sha256(path.read_bytes()).hexdigest()
+          (root/'CANDIDATE_PAYLOAD.sha256').write_text(
+              ''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(overlay)))
+          (root/'RECOVERY_PLANE.sha256').write_text(
+              ''.join(sha(payload/p)+'  ./'+p+'\n' for p in sorted(recovery)))
+          metadata={
+              'schema_version':1,'version':'2.15.11','source_head':head,
+              'cache_key':cache_key,'build_id':'p2k-v21511-mca-removed-'+head[:12],
+              'qualification_workflow':'p2k-v21511-mca-removed-pages.yml',
+              'payload_manifest_sha256':sha(root/'CANDIDATE_PAYLOAD.sha256'),
+              'accepted_public_builds':[{'version':'2.15.11','source_head':base}]
+          }
+          (root/'CANDIDATE_RELEASE.json').write_text(json.dumps(metadata,indent=2)+'\n')
+          (root/'README.txt').write_text(
+              'P2K 2.15.11 MCA removed-player-only Player Results page handling.\n'
+              'Compatible with currently promoted 2.15.11-0fe1c8a1e1c9.\n'
+              'The MCA HTML scraper now accepts only-removed player pages if the results table,\n'
+              'removal icons, usernames and current/total page metadata are valid.\n'
+              'Malformed/empty/wrong-pagination pages remain acquisition errors.\n'
+              'No changes to player scores, achievements, points, club standings, Results CSV,\n'
+              'database schema, CRON scheduling or already stored arena records.\n'
+              'After promotion use the MCA admin Retry control for any arena that remains in\n'
+              'error at a player page, preserving its existing page checkpoint.\n'
+              'Upload ZIP to Admin > Maintenance > Release Control, preview, then promote.\n')
+          output=root.parent/('P2K_2.15.11_MCA_Removed_Pages_ReleaseControl_'+head[:12]+'.zip')
+          with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+              for f in sorted(root.rglob('*')):
+                  if f.is_file():z.write(f,f.relative_to(root))
+          (root.parent/'SHA256SUMS').write_text(sha(output)+'  '+output.name+'\n')
+          print('ZIP',output,output.stat().st_size,'bytes SHA256',sha(output))
+          print('Release',metadata)
+          PY
+      - name: Validate Release Control candidate and checksums
+        run: |
+          set -euo pipefail
+          php -r '
+            require "server/release-control/src/ReleaseSlotPolicy.php";
+            require "server/release-control/src/ReleaseCandidatePackage.php";
+            $candidate=new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
+            $m=$candidate->validate();
+            if ($m["version"]!=="2.15.11") exit(2);
+            if ($m["accepted_public_builds"]!==[["version"=>"2.15.11","source_head"=>"0fe1c8a1e1c941e61e7f16384aea330f216ba38c"]]) exit(3);
+            echo "PASS Release Control candidate ".$m["release_id"].", overlay=".$m["overlay_file_count"]."\n";
+          ' dist/P2K_2.15.11_MCA_Removed_Pages_ReleaseControl
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,zipfile
+          path=next(Path('dist').glob('P2K_2.15.11_MCA_Removed_Pages_ReleaseControl_*.zip'))
+          with zipfile.ZipFile(path) as z:
+              assert z.testzip() is None
+              assert len(z.namelist())==len(set(z.namelist()))
+              m=json.loads(z.read('CANDIDATE_RELEASE.json'))
+              assert m['version']=='2.15.11'
+              assert m['accepted_public_builds']==[{
+                  'version':'2.15.11','source_head':'0fe1c8a1e1c941e61e7f16384aea330f216ba38c'}]
+              for manifest in ('CANDIDATE_PAYLOAD.sha256','RECOVERY_PLANE.sha256'):
+                  for line in z.read(manifest).decode().splitlines():
+                      hash_value,p=line.split('  ./',1)
+                      assert hashlib.sha256(z.read('payload/'+p)).hexdigest()==hash_value,p
+              assert hashlib.sha256(z.read('CANDIDATE_PAYLOAD.sha256')).hexdigest()==m['payload_manifest_sha256']
+          print("PASS ZIP, manifests, exact source and production compatibility")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-v21511-mca-removed-pages-release-control
+          path: |
+            dist/P2K_2.15.11_MCA_Removed_Pages_ReleaseControl_*.zip
+            dist/SHA256SUMS
+          retention-days: 14
