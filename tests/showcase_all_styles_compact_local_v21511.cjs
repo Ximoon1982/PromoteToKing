@@ -83,9 +83,10 @@ if(process.argv[2]==="--child"){
     assert.match(full,/2027/);
     return{iso,shownLineDaily,shownLineArena,visibleCardArena,full};
   });
-  const now=FixedDate.now();
-  const today=vm.runInContext("formatArenaStart("+(now+7200000)+")",ctx);
-  const tomorrow=vm.runInContext("formatArenaStart("+(now+30*3600000)+")",ctx);
+  const todayLocal=new FixedDate(dateNow.getFullYear(),dateNow.getMonth(),dateNow.getDate(),12).getTime();
+  const tomorrowLocal=new FixedDate(dateNow.getFullYear(),dateNow.getMonth(),dateNow.getDate()+1,12).getTime();
+  const today=vm.runInContext("formatArenaStart("+todayLocal+")",ctx);
+  const tomorrow=vm.runInContext("formatArenaStart("+tomorrowLocal+")",ctx);
   assert(today.startsWith("Today "),"Today label retained");
   assert(tomorrow.startsWith("Tomorrow "),"Tomorrow label retained");
   assert(!today.includes("CET")&&!tomorrow.includes("CET"),"Relative arena dates have no timezone suffix");
