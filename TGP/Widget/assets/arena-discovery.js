@@ -61,7 +61,7 @@
     const watch=byId("arenaDiscoveryOrganizers");
     watch.replaceChildren();
     if(!state.organizers.length) watch.append(element("p","arena-discovery-empty",
-      "No organizers monitored yet. Add a numeric Chess.com club ID and name."));
+      "No organizers monitored yet. Enter a Chess.com club URL, slug or numeric ID."));
     state.organizers.forEach((org,index)=>{
       const row=element("div","arena-discovery-organizer");
       const name=element("strong","",org.name+" · #"+org.clubId);
@@ -154,18 +154,39 @@
   }
   function connect() {
     byId("arenaDiscoveryAddOrganizer").addEventListener("click",()=>void (async()=>{
-      const id=byId("arenaDiscoveryClubId").value.trim();
-      const name=byId("arenaDiscoveryClubName").value.trim();
-      if(!/^[1-9][0-9]{0,14}$/.test(id)||!name||name.length>80){
-        message("Provide a numeric club ID and an organizer name (1–80 characters).",true);return;
+      if(state.busy)return;
+      const input=byId("arenaDiscoveryClubReference");
+      const reference=input.value.trim();
+      if(!reference){
+        message("Enter a Chess.com club URL, slug or numeric ID.",true);return;
       }
-      if(state.organizers.some(o=>String(o.clubId)===id)){
-        message("This organizing club is already monitored.",true);return;
-      }
-      await editOrganizers(rows=>rows.push({clubId:id,name,enabled:true}));
-      if(state.organizers.some(o=>String(o.clubId)===id)){
-        byId("arenaDiscoveryClubId").value="";
-        byId("arenaDiscoveryClubName").value="";
+      state.notice=null;
+      state.busy=true;
+      render();
+      try{
+        message("Resolving club name and numeric ID from Chess.com…");
+        const result=await request("resolve",{reference});
+        const organizer=result.organizer;
+        if(!organizer || !/^[1-9][0-9]{0,14}$/.test(String(organizer.clubId)) || !organizer.name)
+          throw new Error("Chess.com did not return a verified organizing club.");
+        if(state.organizers.some(o=>String(o.clubId)===String(organizer.clubId)))
+          throw new Error(organizer.name+" (#"+organizer.clubId+") is already monitored.");
+        const saved=await request("save",{
+          revision:state.revision,
+          organizers:[...state.organizers,{clubId:String(organizer.clubId),
+            name:String(organizer.name),enabled:true}]
+        });
+        state.notice={text:organizer.name+" (#"+organizer.clubId+") added to monitored clubs.",isError:false};
+        apply(saved);
+        input.value="";
+      }catch(e){
+        message(e.message||"Unable to resolve this Chess.com club.",true);
+        if(e.status===409){
+          try{apply(await request("state"));}catch{}
+        }
+      }finally{
+        state.busy=false;
+        render();
       }
     })());
     byId("arenaDiscoveryScan").addEventListener("click",()=>void scan());
