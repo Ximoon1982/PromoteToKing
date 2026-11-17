@@ -6,7 +6,7 @@ declare(strict_types=1);
  * No writes, worker triggers, OAuth credentials, closure reasons or raw visitor identifiers.
  */
 require_once dirname(__DIR__, 3).'/api/_common.php';
-require_once dirname(__DIR__, 2).'/../team-points-green/src/bootstrap.php';
+require_once dirname(__DIR__, 2).'/team-points-green/src/bootstrap.php';
 
 use P2K\TeamPoints\PublicReadDatabase;
 use P2K\TeamPoints\ResponseCache;
@@ -102,7 +102,7 @@ function ops_match_query(string $where,array $args,string $suffix=''): array {
             last_verified_at,status
         FROM p2k_g_matches WHERE club_verified=1 AND verified_club_slug=?
         AND is_void=0 AND COALESCE(NULLIF(time_class,''),NULLIF(index_time_class,''))='daily'
-        AND ".$where." ".$suffix;
+        AND (".$where.") ".$suffix;
     $q=PublicReadDatabase::core()->prepare($sql);
     $q->execute(array_merge([strtolower((string)(p2k_tp_config()['app']['club_slug']??'promote-to-king'))],$args));
     return $q->fetchAll(PDO::FETCH_ASSOC)?:[];
@@ -279,7 +279,7 @@ try {
                     }
                     $members[]=['isP2K'=>str_contains($identity,'promote-to-king'),'count'=>count($players),'ratings'=>$ratings];
                 }
-                if(count($members)<2)continue;
+                if(count($members)!==2 || !in_array(true,array_column($members,'isP2K'),true))continue;
                 usort($members,static fn(array $a,array $b):int=>(int)$b['isP2K']<=>(int)$a['isP2K']);
                 $out[]=['at'=>(string)($raw['trackedAt']??''),
                     'p2k'=>$members[0]['count'],'opponent'=>$members[1]['count'],
