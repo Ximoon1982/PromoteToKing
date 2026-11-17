@@ -476,9 +476,15 @@ try {
         if ($newIds !== []) {
             $index = $chess->clubMatches($teamSlug);
             $knownDailyIds = club_daily_match_ids($index);
+            $startedDailyIds = array_fill_keys(confirmed_started_daily_ids($index), true);
             foreach (array_keys($newIds) as $id) {
+                if (isset($startedDailyIds[$id]))
+                    throw new InvalidArgumentException('This Daily match has already started or finished and cannot be added.');
                 if (isset($knownDailyIds[$id])) continue;
-                validate_match($chess->match($id), $teamSlug);
+                $detail = $chess->match($id);
+                validate_match($detail, $teamSlug);
+                if (is_started_daily_status($detail['status'] ?? null))
+                    throw new InvalidArgumentException('This Daily match has already started or finished and cannot be added.');
             }
         }
         $saved = $store->save($body, (int)$expected);
