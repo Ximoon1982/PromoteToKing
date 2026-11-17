@@ -13,7 +13,8 @@ const between=(start,end)=>{
 const arenaFormatter=between("function formatArenaStart(","function renderArenas(");
 const formatArenaStart=new Function(arenaFormatter+"\nreturn formatArenaStart;")();
 for(const iso of ["2027-01-15T18:00:00Z","2027-07-15T18:00:00Z","2027-10-31T00:30:00Z","2027-10-31T01:30:00Z"]){
-  const shown=assert.doesNotThrow(()=>formatArenaStart({startAt:iso}));
+  let shown;
+  assert.doesNotThrow(()=>{shown=formatArenaStart({startAt:iso});});
   assert(shown&&shown!=="Start unavailable",tz+": display format "+iso);
 }
 assert.equal(formatArenaStart({startAt:"not-a-date"}),"Start unavailable");
