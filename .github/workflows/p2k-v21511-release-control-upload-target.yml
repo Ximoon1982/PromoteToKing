@@ -7,6 +7,7 @@ on:
       - 'ReleaseControl.php'
       - 'server/release-control/public/release-control-upload.js'
       - 'tests/release_control_upload_action_shadow_v21511.cjs'
+      - 'tests/release_control_batch_csp_layout_v21511.cjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -43,6 +44,7 @@ jobs:
             'ReleaseControl.php',
             'server/release-control/public/release-control-upload.js',
             'tests/release_control_upload_action_shadow_v21511.cjs',
+            'tests/release_control_batch_csp_layout_v21511.cjs',
             '.github/workflows/p2k-v21511-release-control-upload-target.yml'
           }
           changed=set(subprocess.check_output(
@@ -78,6 +80,7 @@ jobs:
           assert changed=={
             'ReleaseControl.php','server/release-control/public/release-control-upload.js',
             'tests/release_control_upload_action_shadow_v21511.cjs',
+            'tests/release_control_batch_csp_layout_v21511.cjs',
             '.github/workflows/p2k-v21511-release-control-upload-target.yml'
           },sorted(changed)
           code=['server/events-showcase/public/embed-card.php']
