@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/p2k-v21510-timezone-consistency.yml'
       - 'tests/timezone_consistency_v21510.cjs'
+      - 'tests/php_v21510_showcase_local_times.php'
+      - 'server/events-showcase/src/EventsShowcaseStore.php'
       - 'server/widgets/public/operations-api.php'
       - 'assets/js/widgets/p2k-operations-v21510.js'
       - 'server/widgets/public/administrator.php'
@@ -57,6 +59,7 @@ jobs:
           done
           node tests/test_v21510_public_operations.cjs
           php tests/php_v21510_public_widget_batch_cleanup.php
+          php tests/php_v21510_showcase_local_times.php
           php tests/php_v2147_release_management_harness.php
           php tests/php_v2148_filesystem_cleanup_harness.php
           node tests/widget_recruitment_radar_v2159.test.cjs
@@ -68,7 +71,7 @@ jobs:
           html=Path('ui-v2.html').read_text()
           for s in ('admin-shell.js?v=p2k-2.15.10-administrator-b40a954cd66f',
                     'admin-session-controller.js?v=p2k-2.15.10-administrator-b40a954cd66f',
-                    'tool-registry.js?v=p2k-2.15.10-timezones-1'):
+                    'tool-registry.js?v=p2k-2.15.10-showcase-local-dst-1'):
             assert s in html,s
           assert Path('server/release-control/src/ReleaseVersionManager.php').exists()
           assert Path('server/release-control/src/FilesystemCleanupManager.php').exists()
@@ -91,7 +94,8 @@ jobs:
               'server/release-control/src/FilesystemCleanupManager.php',
               'server/release-control/src/ReleaseVersionManager.php']
           excluded={'.github/workflows/p2k-v21510-timezone-consistency.yml',
-              'tests/timezone_consistency_v21510.cjs'}
+              'tests/timezone_consistency_v21510.cjs',
+              'tests/php_v21510_showcase_local_times.php'}
           allow={
               'server/widgets/public/operations-api.php',
               'assets/js/widgets/p2k-operations-v21510.js',
@@ -104,6 +108,7 @@ jobs:
               'assets/js/shared/match-history-ui.js',
               'assets/js/shared/upcoming-analysis-core.js',
               'assets/js/admin/events-showcase-v2122.js',
+              'server/events-showcase/src/EventsShowcaseStore.php',
               'assets/js/admin/tool-registry.js',
               'server/events-showcase/public/embed-card.php',
               'server/events-showcase/public/embed.php',
@@ -137,16 +142,17 @@ jobs:
               'cache_key':cache_key,'build_id':'p2k-v21510-timezone-'+head[:12],
               'qualification_workflow':'p2k-v21510-timezone-consistency.yml',
               'payload_manifest_sha256':sha(root/'CANDIDATE_PAYLOAD.sha256'),
-              'accepted_public_builds':[{'version':'2.15.10','source_head':base}]
+              'accepted_public_builds':[{'version':'2.15.10','source_head':'399110495a85abe89c35618b7016d07ddb0521bb'}]
           }
           (root/'CANDIDATE_RELEASE.json').write_text(json.dumps(meta,indent=2)+'\n')
           (root/'README.txt').write_text(
               'P2K 2.15.10 timezone consistency corrective Release Control installer.\n'
-              'Accepts current promoted public build 2.15.10-d4fc5371deb7.\n'
+              'Accepts current promoted public build 2.15.10-399110495a85.\n'
               'Public events: visitor-local match and arena starts, with displayed timezone.\n'
               'Public Club Operations: correct UTC SQL timestamp interpretation and client-local 7-day histogram.\n'
               'Match Creation Analyzer: visitor-local schedule days, DST-safe date arithmetic.\n'
-              'Admin Showcase arena editor: explicitly Luxembourg time. Admin logs/reporting months stay UTC.\n'
+              'Admin Showcase arena editor: browser-local time with event-date DST, explicit UTC instants and legacy fields.\n'
+              'Arena scan and configured arena times are visitor-local; existing schedules keep exact instants.\n'
               'Existing widget/public access and batch cleanup protections are preserved.\n'
               'No database migration or CRON change. Upload ZIP to Release Control; preview and promote manually.\n')
           output=root.parent/('P2K_2.15.10_Timezone_Consistency_ReleaseControl_'+head[:12]+'.zip')
@@ -177,7 +183,7 @@ jobs:
             assert len(z.namelist())==len(set(z.namelist()))
             m=json.loads(z.read('CANDIDATE_RELEASE.json'))
             assert m['accepted_public_builds']==[{
-                'version':'2.15.10','source_head':'d4fc5371deb72ec1ff41cb915d943d29f4b49911'}]
+                'version':'2.15.10','source_head':'399110495a85abe89c35618b7016d07ddb0521bb'}]
             for manifest in ('CANDIDATE_PAYLOAD.sha256','RECOVERY_PLANE.sha256'):
               for line in z.read(manifest).decode().splitlines():
                 sha,p=line.split('  ./',1)
