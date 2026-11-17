@@ -13,7 +13,7 @@
 
   const esc=value=>String(value??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#039;");
   const normalizedText=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
-  function formatStart(epoch){if(!Number.isFinite(Number(epoch))||Number(epoch)<=0)return"Start unavailable";return new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeStyle:"short",timeZoneName:"short"}).format(new Date(Number(epoch)*1000));}
+  function formatStart(epoch){if(!Number.isFinite(Number(epoch))||Number(epoch)<=0)return"Start unavailable";return new Intl.DateTimeFormat("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",timeZoneName:"short"}).format(new Date(Number(epoch)*1000));}
   function formatStartCompact(epoch){if(!Number.isFinite(Number(epoch))||Number(epoch)<=0)return"—";return new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short",timeZoneName:"short"}).format(new Date(Number(epoch)*1000));}
   function timeControlSeconds(value){if(value===undefined||value===null||value==="")return null;if(typeof value==="number")return Number.isFinite(value)&&value>0?value:null;const raw=String(value).trim();if(!raw)return null;const ratio=raw.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);if(ratio){const moves=Number(ratio[1]),seconds=Number(ratio[2]);return Number.isFinite(moves)&&moves>0&&Number.isFinite(seconds)&&seconds>0?seconds/moves:null;}const numeric=Number(raw);return Number.isFinite(numeric)&&numeric>0?numeric:null;}
   const matchTimePerMove=match=>timeControlSeconds(match?.settings?.time_control??match?.time_control??match?.settings?.time_per_move??match?.time_per_move??match?.timePerMove);
