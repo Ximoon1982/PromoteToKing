@@ -40,6 +40,7 @@ if(!is_string($src))throw new RuntimeException('No MCA source to check.');
 if(!preg_match('~public function retryHydrationErrors\(\): array\s*\{(.*?)\n    \}~s',$src,$match))throw new RuntimeException('Retry method not found.');
 $body=$match[1];
 if(str_contains($body,'withGlobalLock')||str_contains($body,'GET_LOCK'))throw new RuntimeException('Retry must not take the busy scrape lock.');
+if(!str_contains($src,'IS_USED_LOCK(?)')||!str_contains($src,"'worker_lock_held'"))throw new RuntimeException('MCA lock diagnostic must remain read-only and available to admin.');
 if(!preg_match('~\$q=\$this->pdo->prepare\("(UPDATE p2k_lr_arena_acquisition a.*?)"\);~s',$body,$sqlMatch))throw new RuntimeException('Exact retry SQL not found.');
 $sql=$sqlMatch[1];
 $key='p2k:mca-sync:promote-to-king';
