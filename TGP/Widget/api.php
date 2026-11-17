@@ -415,6 +415,10 @@ try {
         request_method('POST');
         Auth::requireAdmin($sessionLifetime, true);
         $body = body_json();
+        if ($action === 'arena-discovery-resolve') {
+            $reference=trim((string)($body['reference'] ?? ''));
+            reply(200, ['ok'=>true,'organizer'=>$discovery->resolveOrganizer($reference)]);
+        }
         if ($action === 'arena-discovery-save') {
             if (!is_array($body['organizers'] ?? null)) throw new InvalidArgumentException('Organizer list must be an array.');
             $revision = filter_var($body['revision'] ?? null, FILTER_VALIDATE_INT);
