@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__.'/../TGP/Widget/src/Store.php';
 require_once __DIR__.'/../TeamFrance/Widget/src/Store.php';
-require_once __DIR__.'/../server/events-showcase/src/StandaloneArenaDiscoveryService.php';
+require_once __DIR__.'/../TGP/Widget/src/StandaloneArenaDiscoveryService.php';
 
 use P2K\EventsShowcase\StandaloneArenaDiscoveryService;
 
