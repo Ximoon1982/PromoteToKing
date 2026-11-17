@@ -89,6 +89,34 @@ final class McaArenaParser
         return $out;
     }
 
+    /**
+     * A Chess.com Player Results page can contain only removed participants.
+     * Such rows have no competitive rank and must NOT be fed into the existing
+     * player-score / points pipeline, but they still count as page evidence.
+     *
+     * This strict predicate is used only after playerRows() found no ranked
+     * records. Missing/malformed tables and pagination to the wrong page
+     * remain errors rather than silently completing an arena acquisition.
+     */
+    public static function removedOnlyPlayerPage(string $html, int $requestedPage): bool
+    {
+        if ($requestedPage < 1) return false;
+        $section = self::between($html, 'Player Results', 'Pairings');
+        if ($section === '') return false;
+        if (!preg_match('~<tbody[^>]*>(.*?)</tbody>~is', $section, $table)) return false;
+        preg_match_all('~<tr[^>]*class=["\'][^"\']*tournaments-live-view-results-row[^"\']*["\'][^>]*>(.*?)</tr>~is', $table[1], $rows);
+        if (($rows[1] ?? []) === []) return false;
+        foreach ($rows[1] as $row) {
+            if (!str_contains($row, 'tournaments-live-view-removed-icon')) return false;
+            if (!preg_match('~<span\b[^>]*class=["\'][^"\']*tournaments-live-view-results-rank[^"\']*["\'][^>]*>\s*-\s*</span>~is', $row)) return false;
+            if (self::usernameFromRow($row) === null) return false;
+        }
+        if (!preg_match('~<div\b(?=[^>]*\bid=["\']players-pagination-bottom["\'])[^>]*>~is', $html, $pagination)) return false;
+        if (!preg_match('~\bdata-current-page=["\'](\d+)["\']~i', $pagination[0], $current)) return false;
+        if (!preg_match('~\bdata-total-pages=["\'](\d+)["\']~i', $pagination[0], $total)) return false;
+        return (int)$current[1] === $requestedPage && (int)$total[1] >= $requestedPage;
+    }
+
     public static function pairingRows(string $html): array
     {
         $pos=stripos($html,'>Pairings<');$section=$pos===false?$html:substr($html,$pos);
