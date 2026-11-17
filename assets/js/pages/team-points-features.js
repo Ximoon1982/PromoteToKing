@@ -468,12 +468,26 @@
 
   async function retryMcaSourceErrors() {
     if (state.mcaSyncRunning) return;
+    state.mcaSyncRunning = true;
+    renderMcaSync(state.mcaSync || {});
+    let resultMessage = '';
+    let resultKind = 'success';
     try {
       message('liveRanksSyncStatus', 'Re-queueing failed MCA arena-acquisition steps…');
       const payload = await endpoint(liveEndpoint, { action: 'sync_retry_download_errors', method: 'POST', body: {}, timeoutMs: 45_000 });
       renderLive(payload);
-      if (Number(payload.sync?.queue?.pending || 0) > 0) await runMcaSourceSync(false);
-    } catch (error) { message('liveRanksSyncStatus', error.message, 'error'); }
+      const requeued = Number(payload.retry?.requeued || 0);
+      resultMessage = requeued > 0
+        ? `${fmt(requeued,0)} failed arena acquisition(s) queued. The every-minute CRON will resume at their saved pages; no competing manual scan was started.`
+        : 'No failed acquisitions remain to re-queue. The normal MCA CRON continues queued work.';
+    } catch (error) {
+      resultMessage = error.message;
+      resultKind = 'error';
+    } finally {
+      state.mcaSyncRunning = false;
+      renderMcaSync(state.mcaSync || {});
+      message('liveRanksSyncStatus', resultMessage, resultKind);
+    }
   }
 
   async function runMcaDateSync(force = false) {
