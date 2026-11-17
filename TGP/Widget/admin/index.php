@@ -12,6 +12,7 @@ header('Cache-Control: no-store');
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?= htmlspecialchars((string)($config['team_name'] ?? 'Team'), ENT_QUOTES) ?> Match Showcase · Admin</title>
 <link rel="stylesheet" href="../assets/admin.css?v=<?= rawurlencode((string)($config['version'] ?? '0.2.0')) ?>">
+<link rel="stylesheet" href="/server/events-showcase/public/standalone-arena-discovery-admin.css?v=0.3.4">
 </head>
 <body>
 <main class="admin-shell">
@@ -26,8 +27,25 @@ header('Cache-Control: no-store');
 <section id="editor" class="panel" hidden>
 <div class="add-row"><input id="matchReference" type="text" autocomplete="off" placeholder="Chess.com match URL, ID or slug"><button id="addButton" type="button">Add match</button></div>
 <div id="message" class="message" aria-live="polite"></div>
-<div class="hint">The first enabled Daily matches fill the configured rows (two cards per row, up to six cards).</div>
+<div class="hint">The first enabled Daily matches fill the configured rows (two cards per row, up to six cards). Matches confirmed as in progress or finished are automatically removed from the saved showcase.</div>
 <div id="matchList" class="match-list"></div>
+<section class="arena-discovery" id="arenaDiscoveryPanel" aria-labelledby="arenaDiscoveryHeading">
+<div class="arena-discovery-head"><h2 id="arenaDiscoveryHeading">Upcoming MCA discovery</h2><span class="hint">Admin only · manual scan · next 7 days</span></div>
+<p class="hint">Monitor Chess.com organizing clubs to preselect upcoming Multi Club Arenas. Suggestions are not published until you review the arena's duration/time control and save it.</p>
+<div id="arenaDiscoveryOrganizers" class="arena-discovery-organizers"></div>
+<div class="arena-discovery-fields">
+<input id="arenaDiscoveryClubId" inputmode="numeric" maxlength="15" autocomplete="off" aria-label="Organizing club numeric ID" placeholder="Chess.com club ID">
+<input id="arenaDiscoveryClubName" maxlength="80" autocomplete="off" aria-label="Organizing club name" placeholder="Organizer name">
+<button id="arenaDiscoveryAddOrganizer" type="button" class="secondary">Add organizer</button>
+</div>
+<div class="arena-discovery-tools">
+<button id="arenaDiscoveryScan" type="button">Scan upcoming arenas</button>
+<button id="arenaDiscoveryCancel" type="button" class="secondary" hidden>Cancel scan</button>
+<span class="hint">20 pages maximum · at least 1 second between requests</span>
+</div>
+<div id="arenaDiscoveryStatus" class="arena-discovery-status" role="status" aria-live="polite">Sign in to load arena discovery.</div>
+<div id="arenaDiscoveryResults" class="arena-discovery-results"></div>
+</section>
 <section class="arena-editor" aria-labelledby="arenaTitle">
 <div class="arena-editor-head"><h2 id="arenaTitle">Multi-club arenas</h2><button id="addArenaButton" type="button" class="secondary">Add arena</button></div>
 <p class="hint">Up to four enabled arenas fill the configured MCA rows. Dates and times use Europe/Luxembourg time. Arena edits save immediately; Daily-match changes use Save configuration.</p>
@@ -58,5 +76,6 @@ header('Cache-Control: no-store');
 </main>
 <script>window.TGP_WIDGET_CONFIG={teamSlug:<?= json_encode((string)($config['team_slug'] ?? 'the-golden-phoenix')) ?>,teamName:<?= json_encode((string)($config['team_name'] ?? 'The Golden Phoenix')) ?>,version:<?= json_encode((string)($config['version'] ?? '0.2.0')) ?>};</script>
 <script src="../assets/admin.js?v=<?= rawurlencode((string)($config['version'] ?? '0.2.0')) ?>"></script>
+<script src="/server/events-showcase/public/standalone-arena-discovery-admin.js?v=0.3.4"></script>
 </body>
 </html>
