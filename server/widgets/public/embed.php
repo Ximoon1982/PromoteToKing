@@ -58,7 +58,7 @@ header('Cache-Control: private, no-cache, max-age=30');
 <script src="../../../assets/js/widgets/p2k-competition-v2159.js?v=p2k-2159-competition-3" defer></script>
 <?php elseif($widget==='recruitment-radar'): ?>
 <script src="../../../assets/js/shared/recruitment-lineup-core.js?v=p2k-2159-rivalry-green-1" defer></script>
-<script src="../../../assets/js/widgets/p2k-recruitment-radar-v2159.js?v=p2k-2159-radar-ui-3" defer></script>
+<script src="../../../assets/js/widgets/p2k-recruitment-radar-v2159.js?v=p2k-2.15.10-local-time-1" defer></script>
 <?php elseif($widget==='rivalry-spotlight'): ?>
 <script src="../../../assets/js/widgets/p2k-rivalry-v2159.js?v=p2k-2159-rival-linked-2" defer></script>
 <?php elseif(in_array($widget,['player-spotlight','tournament-winners','hall-of-fame'],true)): ?>
