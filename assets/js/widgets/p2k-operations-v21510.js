@@ -227,7 +227,7 @@
   };
 
   const eligible=(ratings,minimum,maximum)=>ratings.filter(r=>Number.isFinite(r)&&r>=minimum&&(!maximum||r<=maximum)).sort((a,b)=>b-a);
-  const modelFor=(match,p2k,opponents,includeRecruitment=false)=>{
+  const modelFor=(match,p2k,opponents,includeRecruitment=false,historyOnly=false)=>{
     const C=core();if(!C)return null;
     const settings={min_rating:match.minRating,max_rating:match.maxRating,
       min_team_players:match.minimumPlayers,max_team_players:match.maximumPlayers};
@@ -241,6 +241,7 @@
     const compare=C.compareRecruitmentLineups(p,o,max);
     const minimum=C.minimumTeamPlayers(template);
     const forfeited=minimum>0&&p.length<minimum;
+    if(historyOnly)return {win:forfeited?0:compare.p2kWinProbability,forfeited};
     const probs=[];
     for(let i=0;i<n;i++)probs.push(C.eloExpectedScore(p[i],o[i]));
     // The full analyzer uses four independent half-point trials per paired board.
@@ -253,7 +254,13 @@
       }dist=next;
     }
     const modal=dist.reduce((best,x,i)=>x>dist[best]?i:best,0);
-    const recruitment=includeRecruitment?C.recruitmentMetrics({match:template,p2kTeam:pTeam,opponentTeam:oTeam,isLeague:isLeague(match.name)}):null;
+    const target=Number.isFinite(max)?Math.min(max,Math.max(minimum,o.length)):Math.max(minimum,o.length);
+    const baseline=Math.max(0,target-p.length);
+    // The optimizer explores many possible portfolios, so retain the exact model
+    // for ordinary matches and show the minimum need for very large lineups.
+    const recruitment=!includeRecruitment?null:Math.max(p.length,o.length)>300?
+      {count:baseline,baseline,largeMatch:true,ready:baseline===0,locked:match.locked===true}:
+      C.recruitmentMetrics({match:template,p2kTeam:pTeam,opponentTeam:oTeam,isLeague:isLeague(match.name)});
     return {win:forfeited?0:compare.p2kWinProbability,predicted:[modal/2,n*2-modal/2],
       boards:n,recruitment,forfeited};
   };
@@ -302,14 +309,8 @@
   function renderHistory(match,history,current){
     const clean=(history||[]).filter(x=>Number.isFinite(Date.parse(x.at))).sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
     if(!clean.length){$('awChartHistory').innerHTML='<p class="aw-note">No stored registration snapshots for this match.</p>';return;}
-    const rows=clean.map(x=>{
-      const model=modelFor(match,x.p2kRatings||[],x.opponentRatings||[]);
-      return {...x,win:model?.win??null};
-    });
-    if(current){
-      const model=modelFor(match,current.roster.p2kRatings||[],current.roster.opponentRatings||[]);
-      rows.push({at:current.asOf,p2k:current.roster.p2k,opponent:current.roster.opponent,win:model?.win??null});
-    }
+    const rows=clean.map(x=>({...x}));
+    if(current)rows.push({at:current.asOf,p2k:current.roster.p2k,opponent:current.roster.opponent});
     const samples=rows.slice(-32),max=Math.max(1,...samples.map(r=>Math.max(r.p2k||0,r.opponent||0)));
     const x=i=>18+207*i/Math.max(1,samples.length-1),y=n=>70-53*(Number(n)||0)/max;
     const grid=[17,44,70].map(v=>'<line x1="18" y1="'+v+'" x2="225" y2="'+v+
@@ -319,14 +320,21 @@
       '<text x="18" y="90" font-size="9" fill="currentColor">'+esc(when(samples[0].at).slice(0,11))+'</text>'+
       '<text x="225" y="90" font-size="9" text-anchor="end" fill="currentColor">Now</text>',96,
       'Stored snapshot progression of P2K and opponent registered players');
-    const wins=samples.filter(r=>r.win!==null);
+    const probabilitySamples=clean.slice(-12);
+    const wins=probabilitySamples.map(r=>({
+      at:r.at,win:modelFor(match,r.p2kRatings||[],r.opponentRatings||[],false,true)?.win??null
+    })).filter(r=>r.win!==null);
+    if(current){
+      const latest=modelFor(match,current.roster.p2kRatings||[],current.roster.opponentRatings||[],false,true);
+      if(latest?.win!==null && latest?.win!==undefined)wins.push({at:current.asOf,win:latest.win});
+    }
     const winline=wins.length>1?svg('<line x1="18" y1="37" x2="225" y2="37" stroke="currentColor" opacity=".1"/>'+
       poly(wins.map((r,i)=>[18+207*i/Math.max(1,wins.length-1),50-42*r.win]),palette.win)+
       '<text x="18" y="61" font-size="9" fill="currentColor">0%</text>'+
       '<text x="225" y="61" text-anchor="end" font-size="9" fill="currentColor">100%</text>',66,
       'Modeled historical P2K match win probability'):'<p class="aw-muted">Historical win-probability data is insufficient.</p>';
     $('awChartHistory').innerHTML=players+'<p class="aw-muted">Modeled P2K win probability</p>'+winline+legend(true)+
-      '<p class="aw-muted">Observed snapshots, not individual join timestamps.</p>';
+      '<p class="aw-muted">Observed snapshots; probability curve samples up to 12 recent history points (not individual join timestamps).</p>';
   }
   async function loadAnalysis(id){
     if(!Number.isInteger(id)||id<=0)return;
@@ -353,6 +361,7 @@
       ].map(([a,b])=>'<div><small>'+esc(a)+'</small><strong>'+esc(b)+'</strong></div>').join('');
       let advice='Unavailable';
       if(model){const rec=model.recruitment;advice=rec?.locked?'Registration locked':
+        rec?.largeMatch?(rec.count>0?'At least +'+rec.count+' players (minimum)':'Optimized target: open full analyzer'):
         rec?.ready?'No additional players advised':rec?'+'+rec.count+' players'+
         (rec.minimumRating!==undefined&&rec.minimumRating!==null?' · '+rec.minimumRating+'+ Elo':''):'Unavailable';}
       $('awAnalysisPrediction').innerHTML=
