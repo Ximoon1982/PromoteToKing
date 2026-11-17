@@ -42,9 +42,14 @@
     ].map(pair => '<div class="p2k-tp-metric"><span>' + esc(pair[0]) + '</span><strong>' + number(pair[1]) + '</strong></div>').join('');
     const rebuild = $('mcaRenameRebuild');
     if (rebuild) rebuild.disabled = state.busy || !mira.stale || !mira.source_rows_available;
-    if ($('mcaRenameAttributionStatus')) $('mcaRenameAttributionStatus').textContent = mira.stale
-      ? 'MCA attribution is stale: MIAC identity generation ' + number(mira.derived_generation) + ' → ' + number(mira.generation) + '. Rebuild after reviewing changes.'
-      : 'MCA attribution matches MIAC identity generation ' + number(mira.derived_generation || mira.generation) + '.';
+    if ($('mcaRenameAttributionStatus')) $('mcaRenameAttributionStatus').textContent = mira.rebuild_pending
+      ? 'MCA source processing is pending. ' + (Number(mira.published_players || 0)
+        ? 'The last published rename review remains available but may be stale until a complete rebuild.'
+        : 'No computed players are currently published; zero rename candidates is not a verified result.') +
+        ' MIAC identity generation ' + number(mira.generation) + '.'
+      : (mira.stale
+        ? 'MCA attribution is stale: MIAC identity generation ' + number(mira.derived_generation) + ' → ' + number(mira.generation) + '. Rebuild after reviewing changes.'
+        : 'MCA attribution matches MIAC identity generation ' + number(mira.derived_generation || mira.generation) + '.');
     const totalPages = Math.max(1, Math.ceil(rows.length / perPage));
     state.page = Math.max(1, Math.min(state.page, totalPages));
     const subset = rows.slice((state.page - 1) * perPage, state.page * perPage);
@@ -87,7 +92,8 @@
       $('mcaRenamePrev')?.addEventListener('click', () => {state.page--; render();});
       $('mcaRenameNext')?.addEventListener('click', () => {state.page++; render();});
     }
-    if (d.ok) message(number(c.unresolved) + ' unresolved · ' + number(c.resolved_pending_attribution) + ' already mapped · ' + number(c.ready_for_miac_review) + ' MIAC candidates.');
+    if (d.ok) message((mira.rebuild_pending ? 'Computed-player data pending rebuild; counts may be stale. ' : '') +
+      number(c.unresolved) + ' unresolved · ' + number(c.resolved_pending_attribution) + ' already mapped · ' + number(c.ready_for_miac_review) + ' MIAC candidates.');
     window.P2K_EMBEDDED_PAGE?.notifyHeight?.();
   }
 
