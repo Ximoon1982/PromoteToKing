@@ -12,7 +12,7 @@ header('Cache-Control: no-store');
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?= htmlspecialchars((string)($config['team_name'] ?? 'Team'), ENT_QUOTES) ?> Match Showcase · Admin</title>
 <link rel="stylesheet" href="../assets/admin.css?v=<?= rawurlencode((string)($config['version'] ?? '0.2.0')) ?>">
-<link rel="stylesheet" href="/server/events-showcase/public/standalone-arena-discovery-admin.css?v=0.3.4">
+<link rel="stylesheet" href="../assets/arena-discovery.css?v=0.3.4">
 <link rel="stylesheet" href="/TeamFrance/assets/widget-theme.css?v=tf-2153-en2">
 </head>
 <body>
@@ -77,6 +77,6 @@ header('Cache-Control: no-store');
 </main>
 <script>window.TEAM_FRANCE_WIDGET_CONFIG={teamSlug:<?= json_encode((string)($config['team_slug'] ?? 'team-france')) ?>,teamName:<?= json_encode((string)($config['team_name'] ?? 'Team France')) ?>,version:<?= json_encode((string)($config['version'] ?? '0.2.0')) ?>};</script>
 <script src="../assets/admin.js?v=<?= rawurlencode((string)($config['version'] ?? '0.2.0')) ?>-tf-en2"></script>
-<script src="/server/events-showcase/public/standalone-arena-discovery-admin.js?v=0.3.4"></script>
+<script src="../assets/arena-discovery.js?v=0.3.4"></script>
 </body>
 </html>
