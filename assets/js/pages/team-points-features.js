@@ -167,6 +167,7 @@
       ['Parsed Results sources', covered], ['Need Results / parsing', attention.length],
       ['Results ready; enrichment incomplete', inventory.results_ready_with_enrichment_errors || 0],
       ['Acquisition stages remaining', sync.arena_backlog_remaining || 0],
+      ['MCA shared worker lock', sync.worker_lock_held === true ? 'Occupied' : sync.worker_lock_held === false ? 'Available' : 'Unknown'],
       ['Games stored', sync.games_stored || 0], ['Player rows stored', sync.player_rows_stored || 0],
       ['Club rows stored', sync.club_rows_stored || 0], ['New discoveries this cycle', sync.total_events || 0],
       ['Requests this cycle', sync.request_count || 0], ['Next index discovery', sync.next_scan_at || '—']
