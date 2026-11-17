@@ -55,6 +55,33 @@ final class Store
         });
     }
 
+    /**
+     * Remove only independently confirmed started/finished Daily IDs. The
+     * public cards endpoint invokes this even if no admin opens the page.
+     * Locking and revision increment preserve concurrent editor safety.
+     * Missing/outage IDs are intentionally never treated as started.
+     */
+    public function pruneStartedMatches(array $startedIds): array
+    {
+        $safe = [];
+        foreach ($startedIds as $id) {
+            $id = (string)$id;
+            if (preg_match('/^[0-9]{1,18}$/D', $id)) $safe[$id] = true;
+        }
+        return $this->withLock(function () use ($safe): array {
+            $current = $this->normalizeState($this->readJson($this->statePath) ?? $this->emptyState());
+            if ($safe === []) return $current;
+            $kept = array_values(array_filter($current['items'],
+                static fn(array $item): bool => !isset($safe[(string)$item['matchId']])));
+            if (count($kept) === count($current['items'])) return $current;
+            $current['items'] = $kept;
+            $current['revision']++;
+            $current['updatedAt'] = gmdate('Y-m-d\TH:i:s\Z');
+            $this->writeRaw($current);
+            return $current;
+        });
+    }
+
     private function emptyState(): array
     {
         return [
