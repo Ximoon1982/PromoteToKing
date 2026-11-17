@@ -29,42 +29,38 @@
       .replace(/'/g, "&#039;");
   }
 
-  function utcToday() {
-    const now = new Date();
-    return new Date(Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate()
-    ));
+  function localToday() {
+    const now=new Date();
+    return new Date(now.getFullYear(),now.getMonth(),now.getDate());
   }
 
   function dateKeyFromDate(date) {
     return [
-      date.getUTCFullYear(),
-      String(date.getUTCMonth() + 1).padStart(2, "0"),
-      String(date.getUTCDate()).padStart(2, "0")
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, "0"),
+      String(date.getDate()).padStart(2, "0")
     ].join("-");
   }
 
   function upcomingDateKeys(numberOfDays = UPCOMING_DAYS) {
-    const today = utcToday();
+    const today = localToday();
     const keys = [];
     for (let offset = 0; offset < numberOfDays; offset += 1) {
       const date = new Date(today);
-      date.setUTCDate(today.getUTCDate() + offset);
+      date.setDate(today.getDate() + offset);
       keys.push(dateKeyFromDate(date));
     }
     return keys;
   }
 
   function dateFromKey(key) {
-    return new Date(`${key}T00:00:00Z`);
+    const [y,m,d]=key.split("-").map(Number);
+    return new Date(y,m-1,d);
   }
 
   function formatDate(key) {
     return new Intl.DateTimeFormat("en-GB", {
-      timeZone: "UTC",
-      day: "2-digit",
+            day: "2-digit",
       month: "short",
       year: "numeric"
     }).format(dateFromKey(key));
@@ -72,8 +68,7 @@
 
   function formatShortDate(key) {
     return new Intl.DateTimeFormat("en-GB", {
-      timeZone: "UTC",
-      day: "2-digit",
+            day: "2-digit",
       month: "short"
     }).format(dateFromKey(key));
   }
@@ -495,14 +490,14 @@
     const value = Number(timestamp);
     if (!Number.isFinite(value) || value <= 0) return "Start time unavailable";
     return new Intl.DateTimeFormat("en-GB", {
-      timeZone: "UTC",
-      day: "2-digit",
+            day: "2-digit",
       month: "short",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
       hour12: false
-    }).format(new Date(value * 1000)) + " UTC";
+      timeZoneName:"short"
+    }).format(new Date(value * 1000));
   }
 
   function closeChartMatchOverlay(returnFocus = true) {
