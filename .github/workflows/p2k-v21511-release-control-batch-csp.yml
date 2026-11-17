@@ -1,0 +1,171 @@
+name: P2K 2.15.11 Release Control batch selection and workflow layout
+on:
+  push:
+    branches: [release/v2.15.11]
+    paths:
+      - '.github/workflows/p2k-v21511-release-control-batch-csp.yml'
+      - 'ReleaseControl.php'
+      - 'server/release-control/public/release-control-batch.js'
+      - 'tests/release_control_batch_csp_layout_v21511.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate release control CSP, selection UI, layout, and existing deletion guards
+        run: |
+          set -euo pipefail
+          BASE=60e7d427bedbb8d58c6976a7352c55ea6d10748f
+          test "$(git merge-base "$BASE" HEAD)" = "$BASE"
+          php -l ReleaseControl.php
+          node --check server/release-control/public/release-control-batch.js
+          node --check tests/release_control_batch_csp_layout_v21511.cjs
+          node --check server/release-control/public/release-control-upload.js
+          node tests/release_control_batch_csp_layout_v21511.cjs
+          php tests/php_v21510_public_widget_batch_cleanup.php
+          php tests/php_v2147_release_management_harness.php
+          php tests/php_v2148_filesystem_cleanup_harness.php
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          base='60e7d427bedbb8d58c6976a7352c55ea6d10748f'
+          changed=set(subprocess.check_output(
+              ['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          expected={'ReleaseControl.php',
+              'server/release-control/public/release-control-batch.js',
+              'tests/release_control_batch_csp_layout_v21511.cjs',
+              '.github/workflows/p2k-v21511-release-control-batch-csp.yml'}
+          assert changed==expected,{'actual':sorted(changed),'expected':sorted(expected)}
+          baseline=subprocess.check_output(['git','show',base+':ReleaseControl.php'],text=True)
+          current=Path('ReleaseControl.php').read_text()
+          for k in ['deleteReleases($ids,$username)',
+                    '$filesystemCleanup->deleteMany($items,$username)',
+                    'Confirm permanent removal of selected obsolete releases',
+                    'Confirm permanent removal of selected maintenance artifacts']:
+              assert k in baseline and k in current,k
+          import re
+          for m in re.finditer(r'<input\s[^>]*data-batch-item="(release|filesystem)"',baseline):
+              assert m.group(0) in current,m.group(0)
+          assert "script-src 'self'" in current and "connect-src 'self'" in current
+          assert "script-src 'unsafe-inline'" not in current
+          print('PASS exact diff, protected deletion APIs unchanged and strict browser policy retained')
+          PY
+      - name: Build minimal Release Control candidate, recovery-plane patch for deployed 60e7
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import json, subprocess, zipfile
+          baseline='60e7d427bedbb8d58c6976a7352c55ea6d10748f'
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert subprocess.check_output(['git','merge-base',baseline,head],text=True).strip()==baseline
+          changed=set(subprocess.check_output(['git','diff','--name-only',baseline,head],text=True).splitlines())
+          assert changed=={
+              'ReleaseControl.php',
+              'server/release-control/public/release-control-batch.js',
+              'tests/release_control_batch_csp_layout_v21511.cjs',
+              '.github/workflows/p2k-v21511-release-control-batch-csp.yml'
+          }
+          recovery=[
+              'ReleaseControl.php',
+              'server/release-control/public/release-control-batch.js',
+              'server/release-control/src/bootstrap.php',
+              'server/release-control/src/ReleasePackageUploadInstaller.php',
+              'server/release-control/src/FilesystemCleanupManager.php',
+              'server/release-control/src/ReleaseVersionManager.php'
+          ]
+          overlay=['VERSION','ui-v2.html']
+          root=Path('dist/P2K_2.15.11_ReleaseControl_Batch_CSP_Layout')
+          payload=root/'payload'
+          payload.mkdir(parents=True,exist_ok=True)
+          for p in recovery:
+              dest=payload/p
+              dest.parent.mkdir(parents=True,exist_ok=True)
+              dest.write_bytes(Path(p).read_bytes())
+          (payload/'VERSION').write_text('2.15.11\n')
+          key='p2k-2.15.11-'+head[:12]+'-'+sha256((head+'|release-control-batch-csp-layout-v21511').encode()).hexdigest()[:16]
+          html=Path('ui-v2.html').read_text()
+          assert html.count('<head>')==1
+          (payload/'ui-v2.html').write_text(html.replace(
+              '<head>','<head>\n<meta name="p2k-build" content="'+key+'">',1))
+          sha=lambda p:sha256(p.read_bytes()).hexdigest()
+          (root/'CANDIDATE_PAYLOAD.sha256').write_text(''.join(
+              sha(payload/p)+'  ./'+p+'\n' for p in sorted(overlay)))
+          (root/'RECOVERY_PLANE.sha256').write_text(''.join(
+              sha(payload/p)+'  ./'+p+'\n' for p in sorted(recovery)))
+          metadata={
+              'schema_version':1,
+              'version':'2.15.11',
+              'source_head':head,
+              'cache_key':key,
+              'build_id':'p2k-v21511-release-control-batch-'+head[:12],
+              'qualification_workflow':'p2k-v21511-release-control-batch-csp.yml',
+              'payload_manifest_sha256':sha(root/'CANDIDATE_PAYLOAD.sha256'),
+              'accepted_public_builds':[{'version':'2.15.11','source_head':baseline}]
+          }
+          (root/'CANDIDATE_RELEASE.json').write_text(json.dumps(metadata,indent=2)+'\n')
+          (root/'README.txt').write_text(
+              'P2K 2.15.11 Release Control batch selection and layout repair.\n'
+              'Exact compatible promoted build: 2.15.11-60e7d427bedb.\n'
+              'Browser CSP now permits only same-origin external JS and same-origin upload XHR.\n'
+              'Release and filesystem batch checkboxes/counters/select-all execute from audited JS.\n'
+              'Install release ZIP, candidate identity, and preview/promote/rollback cards move\n'
+              'directly after Recovery health, before cleanup and filesystem cards.\n'
+              'No modification to server-side deletion eligibility, protected roles or CSRF.\n'
+              'Release Control recovery files are updated at ZIP install, with backups.\n'
+              'No MCA source, parsing, points, MIAC, CRON or database changes.\n'
+              'Install through Release Control, preview the site, then promote deliberately.\n')
+          out=root.parent/('P2K_2.15.11_ReleaseControl_Batch_CSP_Layout_'+head[:12]+'.zip')
+          with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+              for f in sorted(root.rglob('*')):
+                  if f.is_file(): z.write(f,f.relative_to(root))
+          (root.parent/'SHA256SUMS').write_text(sha(out)+'  '+out.name+'\n')
+          print('ZIP',out,out.stat().st_size,'bytes SHA256',sha(out))
+          print('RELEASE',json.dumps(metadata))
+          PY
+      - name: Validate candidate package, recovery-plane integrity and exact public compatibility
+        run: |
+          set -euo pipefail
+          php -r '
+            require "server/release-control/src/ReleaseSlotPolicy.php";
+            require "server/release-control/src/ReleaseCandidatePackage.php";
+            $candidate=new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]);
+            $m=$candidate->validate();
+            if ($m["version"]!=="2.15.11") exit(2);
+            if ($m["accepted_public_builds"]!==[["version"=>"2.15.11","source_head"=>"60e7d427bedbb8d58c6976a7352c55ea6d10748f"]]) exit(3);
+            echo "PASS Release Control overlay ".$m["overlay_file_count"]." release ".$m["release_id"]."\n";
+          ' dist/P2K_2.15.11_ReleaseControl_Batch_CSP_Layout
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,zipfile
+          p=next(Path('dist').glob('P2K_2.15.11_ReleaseControl_Batch_CSP_Layout_*.zip'))
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              assert len(z.namelist())==len(set(z.namelist()))
+              m=json.loads(z.read('CANDIDATE_RELEASE.json'))
+              assert m['accepted_public_builds']==[{
+                  'version':'2.15.11','source_head':'60e7d427bedbb8d58c6976a7352c55ea6d10748f'}]
+              for manifest in ('CANDIDATE_PAYLOAD.sha256','RECOVERY_PLANE.sha256'):
+                  for line in z.read(manifest).decode().splitlines():
+                      digest,path=line.split('  ./',1)
+                      assert hashlib.sha256(z.read('payload/'+path)).hexdigest()==digest,path
+              assert hashlib.sha256(z.read('CANDIDATE_PAYLOAD.sha256')).hexdigest()==m['payload_manifest_sha256']
+              recovery=z.read('RECOVERY_PLANE.sha256').decode()
+              assert '  ./ReleaseControl.php' in recovery
+              assert '  ./server/release-control/public/release-control-batch.js' in recovery
+          print('PASS ZIP checksum manifests, recovery-plane JS, exact promoted build compatibility')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-v21511-release-control-batch-csp-layout
+          path: |
+            dist/P2K_2.15.11_ReleaseControl_Batch_CSP_Layout_*.zip
+            dist/SHA256SUMS
+          retention-days: 14
