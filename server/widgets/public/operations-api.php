@@ -117,12 +117,14 @@ function ops_cache(string $key,int $ttl,callable $builder): array {
 }
 try {
     if ($action==='matches') {
-        $tz=new DateTimeZone('Europe/Luxembourg');
-        $start=new DateTimeImmutable('today',$tz);
-        $end=$start->modify('+7 days');
-        $result=ops_cache('week|'.$start->format('Y-m-d'),45,static function() use($tz,$start,$end):array {
+        // Fixed UTC buffer covering any browser's seven local calendar days
+        // (including UTC-12 through UTC+14), with final grouping in the browser.
+        $tz=new DateTimeZone('UTC');
+        $start=new DateTimeImmutable('yesterday',$tz);
+        $end=$start->modify('+10 days');
+        $result=ops_cache('week-utc-buffer-v2|'.$start->format('Y-m-d'),45,static function() use($tz,$start,$end):array {
             $days=[];
-            for ($i=0;$i<7;$i++) {
+            for ($i=0;$i<10;$i++) {
                 $date=$start->modify('+'.$i.' days')->format('Y-m-d');
                 $days[$date]=['date'=>$date,'matches'=>0,'boards'=>0,'items'=>[]];
             }
@@ -167,7 +169,8 @@ try {
                 $item['rosterComplete']=$item['oursCount']+$item['opponentCount']>0 || $item['boards']===0;
             }
             unset($day,$item);
-            return ['ok'=>true,'source'=>'Green verified daily registration','timezone'=>'Europe/Luxembourg',
+            return ['ok'=>true,'source'=>'Green verified daily registration',
+                'timezone'=>'UTC','day_grouping'=>'client_local_from_utc_buffer',
                 'asOf'=>gmdate(DATE_ATOM),'days'=>array_values($days)];
         });
         json_response(200,$result);
