@@ -132,15 +132,16 @@ final class GreenCompatibility
         if(!$boards)return ['rows'=>[],'duplicates_resolved'=>0,'member_duplicates_resolved'=>0];
         $boardByNo=[];foreach($boards as $b)$boardByNo[(int)$b['board_no']]=$b;
 
-        $cq=$this->green->core->prepare("SELECT mp.*,COALESCE(im.canonical_username_key,mp.username_key) canonical_username_key,
-              CASE WHEN im.username_key IS NOT NULL AND im.username_key=im.canonical_username_key THEN 1 ELSE 0 END identity_is_canonical,
-              COALESCE(im.trusted,0) identity_trusted,
+        $cq=$this->green->core->prepare("SELECT mp.*,COALESCE(mi.canonical_username_key,im.canonical_username_key,mp.username_key) canonical_username_key,
+              CASE WHEN COALESCE(mi.canonical_username_key,im.canonical_username_key,mp.username_key)=mp.username_key THEN 1 ELSE 0 END identity_is_canonical,
+              CASE WHEN mi.canonical_username_key IS NOT NULL THEN 1 ELSE COALESCE(im.trusted,0) END identity_trusted,
               CASE WHEN EXISTS(SELECT 1 FROM p2k_g_point_events e WHERE e.match_id=mp.match_id AND e.board_no=mp.board_no AND e.username_key=mp.username_key) THEN 1 ELSE 0 END has_point_event
             FROM p2k_g_match_players mp
             LEFT JOIN p2k_g_identity_map im ON im.username_key=mp.username_key
+            LEFT JOIN p2k_miac_canonical_map mi ON mi.club_slug=? AND mi.username_key=mp.username_key AND mi.conflict=0
             WHERE mp.match_id=? AND mp.board_no IS NOT NULL
             ORDER BY mp.board_no,mp.is_p2k DESC,mp.updated_at DESC,mp.username_key");
-        $cq->execute([$matchId]);
+        $cq->execute([$this->green->clubSlug,$matchId]);
         $byBoard=[];$p2kCandidates=[];
         foreach($cq->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){
             $bn=(int)($row['board_no']??0);if($bn<=0||!isset($boardByNo[$bn]))continue;
@@ -226,17 +227,20 @@ final class GreenCompatibility
     {
         $memberKey=strtolower(trim($memberKey));
         $q=$this->green->core->prepare("SELECT g.game_index,g.white_username,g.black_username,g.white_rating,g.black_rating,g.updated_at,
-                   e.username_key event_username_key,COALESCE(im.canonical_username_key,e.username_key) event_canonical_username_key,
-                   COALESCE(iw.canonical_username_key,LOWER(g.white_username)) white_canonical_username_key,
-                   COALESCE(ib.canonical_username_key,LOWER(g.black_username)) black_canonical_username_key
+                   e.username_key event_username_key,COALESCE(me.canonical_username_key,im.canonical_username_key,e.username_key) event_canonical_username_key,
+                   COALESCE(mw.canonical_username_key,iw.canonical_username_key,LOWER(g.white_username)) white_canonical_username_key,
+                   COALESCE(mb.canonical_username_key,ib.canonical_username_key,LOWER(g.black_username)) black_canonical_username_key
               FROM p2k_g_games g
               LEFT JOIN p2k_g_point_events e ON e.game_url=g.game_url AND e.match_id=g.match_id AND e.board_no=g.board_no
               LEFT JOIN p2k_g_identity_map im ON im.username_key=e.username_key
               LEFT JOIN p2k_g_identity_map iw ON iw.username_key=LOWER(g.white_username)
               LEFT JOIN p2k_g_identity_map ib ON ib.username_key=LOWER(g.black_username)
+              LEFT JOIN p2k_miac_canonical_map me ON me.club_slug=? AND me.username_key=e.username_key AND me.conflict=0
+              LEFT JOIN p2k_miac_canonical_map mw ON mw.club_slug=? AND mw.username_key=LOWER(g.white_username) AND mw.conflict=0
+              LEFT JOIN p2k_miac_canonical_map mb ON mb.club_slug=? AND mb.username_key=LOWER(g.black_username) AND mb.conflict=0
              WHERE g.match_id=? AND g.board_no=?
              ORDER BY g.game_index,g.updated_at DESC,e.updated_at DESC");
-        $q->execute([$matchId,$boardNo]);
+        $q->execute([$this->green->clubSlug,$this->green->clubSlug,$this->green->clubSlug,$matchId,$boardNo]);
         foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){
             $wr=is_numeric($row['white_rating']??null)?(int)$row['white_rating']:0;
             $br=is_numeric($row['black_rating']??null)?(int)$row['black_rating']:0;
@@ -272,17 +276,18 @@ final class GreenCompatibility
         $memberKey=strtolower(trim($memberKey));
         $q=$this->green->core->prepare("SELECT g.*,
                    e.username_key event_username_key,e.result event_result,e.points event_points,e.updated_at event_updated_at,
-                   COALESCE(im.canonical_username_key,e.username_key) event_canonical_username_key,
-                   COALESCE(im.trusted,0) event_identity_trusted
+                   COALESCE(mi.canonical_username_key,im.canonical_username_key,e.username_key) event_canonical_username_key,
+                   CASE WHEN mi.canonical_username_key IS NOT NULL THEN 1 ELSE COALESCE(im.trusted,0) END event_identity_trusted
               FROM p2k_g_games g
               JOIN p2k_g_point_events e ON e.game_url=g.game_url AND e.match_id=g.match_id AND e.board_no=g.board_no
               LEFT JOIN p2k_g_identity_map im ON im.username_key=e.username_key
-             WHERE g.match_id=? AND g.board_no=? AND COALESCE(im.canonical_username_key,e.username_key)=?
+              LEFT JOIN p2k_miac_canonical_map mi ON mi.club_slug=? AND mi.username_key=e.username_key AND mi.conflict=0
+             WHERE g.match_id=? AND g.board_no=? AND COALESCE(mi.canonical_username_key,im.canonical_username_key,e.username_key)=?
              ORDER BY g.game_index,
                       CASE WHEN e.username_key=? THEN 0 ELSE 1 END,
                       COALESCE(im.trusted,0) DESC,
                       e.updated_at DESC,g.updated_at DESC,e.username_key,g.game_url");
-        $q->execute([$matchId,$boardNo,$memberKey,$memberKey]);
+        $q->execute([$this->green->clubSlug,$matchId,$boardNo,$memberKey,$memberKey]);
         $bySequence=[];$duplicates=0;
         foreach($q->fetchAll(PDO::FETCH_ASSOC)?:[] as $row){
             $seq=max(1,(int)($row['game_index']??0));
@@ -347,8 +352,12 @@ final class GreenCompatibility
         $boards=$projectedBoards;
         $insB=$this->green->core->prepare("INSERT INTO p2k_tp_boards(member_id,match_id,board_no,p2k_rating,opponent_rating,opponent_username,rating_source,rating_captured_at,board_url_override,white_result,black_result,source_bucket,state,finished_game_count,first_discovered_at,last_discovered_at,last_checked_at,next_check_at,completed_at,failure_count,last_error) VALUES(?,?,?,?,?,?,'green',UTC_TIMESTAMP(),?,?,?,?,?,?,?,?,?,?,?,?,?)");
         $memberId=$this->green->core->prepare('SELECT member_id FROM p2k_tp_members WHERE club_slug=? AND username_key=? LIMIT 1');
+        // MIAC is the canonical alias authority. Reuse an existing compatibility member
+        // from the same non-conflicting confirmed identity component; never fabricate
+        // a new member or infer an alias from a failed Chess.com profile lookup.
+        $memberAliasId=$this->green->core->prepare('SELECT u.member_id FROM p2k_miac_canonical_map mi JOIN p2k_tp_members u ON u.club_slug=mi.club_slug AND u.username_key=mi.username_key WHERE mi.club_slug=? AND mi.canonical_username_key=? AND mi.conflict=0 ORDER BY u.current_member DESC,u.member_id LIMIT 1');
         $gameRows=0;$boardRows=0;$gameDuplicatesResolved=0;
-        foreach($boards as $b){$memberKey=(string)($b['canonical_username_key']??$b['username_key']);$memberId->execute([$club,$memberKey]);$mid=(int)$memberId->fetchColumn();if($mid<=0){$memberId->execute([$club,$b['username_key']]);$mid=(int)$memberId->fetchColumn();}if($mid<=0)continue;$source=in_array($b['match_status'],['registered','in_progress','finished'],true)?$b['match_status']:'unknown';$state=match((string)$b['state']){'finished'=>'complete_immutable','in_progress'=>'recent_in_progress','cancelled','unavailable'=>'failed_malformed',default=>'potentially_incomplete'};$completed=$b['state']==='finished'?($b['last_verified_at']??$b['updated_at']):null;
+        foreach($boards as $b){$memberKey=(string)($b['canonical_username_key']??$b['username_key']);$memberId->execute([$club,$memberKey]);$mid=(int)$memberId->fetchColumn();if($mid<=0){$memberId->execute([$club,$b['username_key']]);$mid=(int)$memberId->fetchColumn();}if($mid<=0){$memberAliasId->execute([$club,$memberKey]);$mid=(int)$memberAliasId->fetchColumn();}if($mid<=0)continue;$source=in_array($b['match_status'],['registered','in_progress','finished'],true)?$b['match_status']:'unknown';$state=match((string)$b['state']){'finished'=>'complete_immutable','in_progress'=>'recent_in_progress','cancelled','unavailable'=>'failed_malformed',default=>'potentially_incomplete'};$completed=$b['state']==='finished'?($b['last_verified_at']??$b['updated_at']):null;
             $insB->execute([$mid,$matchId,(int)$b['board_no'],$b['p2k_rating'],$b['opponent_rating'],$b['opponent_username']??null,$b['board_url'],$b['played_as_white'],$b['played_as_black'],$source,$state,(int)$b['finished_game_count'],$b['updated_at'],$b['updated_at'],$b['last_verified_at'],$b['retry_after'],$completed,0,$b['last_http_status']>=400?'Green HTTP '.$b['last_http_status']:null]);$boardRows++;
             $bid=(int)$this->green->core->lastInsertId();if($bid<=0){$z=$this->green->core->prepare('SELECT board_id FROM p2k_tp_boards WHERE match_id=? AND board_no=?');$z->execute([$matchId,(int)$b['board_no']]);$bid=(int)$z->fetchColumn();}
             $gameProjection=$this->canonicalGameProjection($matchId,(int)$b['board_no'],$memberKey);
@@ -384,7 +393,7 @@ final class GreenCompatibility
             OR COALESCE(UNIX_TIMESTAMP(gm.updated_at),0)>COALESCE(UNIX_TIMESTAMP(cm.updated_at),0)
             OR COALESCE((SELECT UNIX_TIMESTAMP(MAX(gb.updated_at)) FROM p2k_g_boards gb WHERE gb.match_id=gm.match_id),0)>COALESCE(UNIX_TIMESTAMP(cm.updated_at),0)
             OR COALESCE((SELECT UNIX_TIMESTAMP(MAX(gg.updated_at)) FROM p2k_g_games gg WHERE gg.match_id=gm.match_id),0)>COALESCE(UNIX_TIMESTAMP(cm.updated_at),0)
-            OR (SELECT COUNT(DISTINCT COALESCE(im2.canonical_username_key,mp2.username_key)) FROM p2k_g_match_players mp2 LEFT JOIN p2k_g_identity_map im2 ON im2.username_key=mp2.username_key WHERE mp2.match_id=gm.match_id AND mp2.is_p2k=1 AND mp2.board_no IS NOT NULL)
+            OR (SELECT COUNT(DISTINCT COALESCE(mi2.canonical_username_key,im2.canonical_username_key,mp2.username_key)) FROM p2k_g_match_players mp2 LEFT JOIN p2k_g_identity_map im2 ON im2.username_key=mp2.username_key LEFT JOIN p2k_miac_canonical_map mi2 ON mi2.club_slug=? AND mi2.username_key=mp2.username_key AND mi2.conflict=0 WHERE mp2.match_id=gm.match_id AND mp2.is_p2k=1 AND mp2.board_no IS NOT NULL)
                <> (SELECT COUNT(*) FROM p2k_tp_boards cb JOIN p2k_tp_members cu ON cu.member_id=cb.member_id WHERE cu.club_slug=? AND cb.match_id=gm.match_id)
             OR EXISTS(SELECT 1 FROM p2k_g_boards gb
                       JOIN p2k_tp_boards cb ON cb.match_id=gb.match_id AND cb.board_no=gb.board_no
@@ -397,7 +406,7 @@ final class GreenCompatibility
                <> (SELECT COUNT(*) FROM p2k_tp_games cg JOIN p2k_tp_boards cbg ON cbg.board_id=cg.board_id JOIN p2k_tp_members cug ON cug.member_id=cbg.member_id WHERE cug.club_slug=? AND cbg.match_id=gm.match_id)
          )
          ORDER BY gm.match_id LIMIT {$limit}";
-        $q=$this->green->core->prepare($candidateSql);$q->execute([$club,$afterId,$club,$club,$club]);$ids=array_map('intval',$q->fetchAll(PDO::FETCH_COLUMN)?:[]);
+        $q=$this->green->core->prepare($candidateSql);$q->execute([$club,$afterId,$club,$club,$club,$club]);$ids=array_map('intval',$q->fetchAll(PDO::FETCH_COLUMN)?:[]);
         $last=$afterId;$changed=0;$boards=0;$games=0;$gameDuplicatesResolved=0;
         foreach($ids as $id){$r=$this->projectMatch($id,false);$last=$id;$changed++;$boards+=(int)($r['boards']??0);$games+=(int)($r['games']??0);$gameDuplicatesResolved+=(int)($r['game_duplicates_resolved']??0);}
         $passDrained=count($ids)<$limit;$remaining=0;
@@ -408,7 +417,7 @@ final class GreenCompatibility
                  OR COALESCE(UNIX_TIMESTAMP(gm.updated_at),0)>COALESCE(UNIX_TIMESTAMP(cm.updated_at),0)
                  OR COALESCE((SELECT UNIX_TIMESTAMP(MAX(gb.updated_at)) FROM p2k_g_boards gb WHERE gb.match_id=gm.match_id),0)>COALESCE(UNIX_TIMESTAMP(cm.updated_at),0)
                  OR COALESCE((SELECT UNIX_TIMESTAMP(MAX(gg.updated_at)) FROM p2k_g_games gg WHERE gg.match_id=gm.match_id),0)>COALESCE(UNIX_TIMESTAMP(cm.updated_at),0)
-                 OR (SELECT COUNT(DISTINCT COALESCE(im2.canonical_username_key,mp2.username_key)) FROM p2k_g_match_players mp2 LEFT JOIN p2k_g_identity_map im2 ON im2.username_key=mp2.username_key WHERE mp2.match_id=gm.match_id AND mp2.is_p2k=1 AND mp2.board_no IS NOT NULL)
+                 OR (SELECT COUNT(DISTINCT COALESCE(mi2.canonical_username_key,im2.canonical_username_key,mp2.username_key)) FROM p2k_g_match_players mp2 LEFT JOIN p2k_g_identity_map im2 ON im2.username_key=mp2.username_key LEFT JOIN p2k_miac_canonical_map mi2 ON mi2.club_slug=? AND mi2.username_key=mp2.username_key AND mi2.conflict=0 WHERE mp2.match_id=gm.match_id AND mp2.is_p2k=1 AND mp2.board_no IS NOT NULL)
                     <> (SELECT COUNT(*) FROM p2k_tp_boards cb JOIN p2k_tp_members cu ON cu.member_id=cb.member_id WHERE cu.club_slug=? AND cb.match_id=gm.match_id)
                  OR EXISTS(SELECT 1 FROM p2k_g_boards gb
                            JOIN p2k_tp_boards cb ON cb.match_id=gb.match_id AND cb.board_no=gb.board_no
@@ -420,7 +429,7 @@ final class GreenCompatibility
                  OR (SELECT COUNT(DISTINCT CONCAT(gx.board_no,':',GREATEST(1,gx.game_index))) FROM p2k_g_games gx JOIN p2k_g_point_events ex ON ex.game_url=gx.game_url AND ex.match_id=gx.match_id AND ex.board_no=gx.board_no WHERE gx.match_id=gm.match_id)
                     <> (SELECT COUNT(*) FROM p2k_tp_games cg JOIN p2k_tp_boards cbg ON cbg.board_id=cg.board_id JOIN p2k_tp_members cug ON cug.member_id=cbg.member_id WHERE cug.club_slug=? AND cbg.match_id=gm.match_id)
               )";
-            $c=$this->green->core->prepare($countSql);$c->execute([$club,$club,$club,$club]);$remaining=(int)$c->fetchColumn();
+            $c=$this->green->core->prepare($countSql);$c->execute([$club,$club,$club,$club,$club]);$remaining=(int)$c->fetchColumn();
         }
         return ['processed'=>$changed,'changed'=>$changed,'boards'=>$boards,'games'=>$games,'game_duplicates_resolved'=>$gameDuplicatesResolved,'last_id'=>$last,'pass_drained'=>$passDrained,'remaining'=>$remaining,'drained'=>$passDrained&&$remaining===0,'reset_cursor'=>$passDrained&&$remaining>0];
     }
@@ -460,7 +469,7 @@ final class GreenCompatibility
             $q=$this->green->core->prepare('SELECT COUNT(*) FROM p2k_tp_members WHERE club_slug=?');$q->execute([$club]);$counts['compat_members']=(int)$q->fetchColumn();
             $counts['green_matches']=(int)$this->green->core->query("SELECT COUNT(*) FROM p2k_g_matches WHERE club_verified=1 AND time_class='daily'")->fetchColumn();
             $q=$this->green->core->prepare('SELECT COUNT(*) FROM p2k_tp_match_metadata WHERE club_slug=?');$q->execute([$club]);$counts['compat_matches']=(int)$q->fetchColumn();
-            $counts['green_boards']=(int)$this->green->core->query("SELECT COUNT(DISTINCT CONCAT(mp.match_id,':',COALESCE(im.canonical_username_key,mp.username_key))) FROM p2k_g_match_players mp JOIN p2k_g_matches m ON m.match_id=mp.match_id LEFT JOIN p2k_g_identity_map im ON im.username_key=mp.username_key WHERE mp.is_p2k=1 AND mp.board_no IS NOT NULL AND m.club_verified=1 AND m.time_class='daily'")->fetchColumn();
+            $counts['green_boards']=(int)$this->green->core->query("SELECT COUNT(DISTINCT CONCAT(mp.match_id,':',COALESCE(mi.canonical_username_key,im.canonical_username_key,mp.username_key))) FROM p2k_g_match_players mp JOIN p2k_g_matches m ON m.match_id=mp.match_id LEFT JOIN p2k_g_identity_map im ON im.username_key=mp.username_key LEFT JOIN p2k_miac_canonical_map mi ON mi.club_slug=m.verified_club_slug AND mi.username_key=mp.username_key AND mi.conflict=0 WHERE mp.is_p2k=1 AND mp.board_no IS NOT NULL AND m.club_verified=1 AND m.time_class='daily'")->fetchColumn();
             $q=$this->green->core->prepare('SELECT COUNT(*) FROM p2k_tp_boards b JOIN p2k_tp_members u ON u.member_id=b.member_id WHERE u.club_slug=?');$q->execute([$club]);$counts['compat_boards']=(int)$q->fetchColumn();
             $counts['green_games']=(int)$this->green->core->query("SELECT COUNT(DISTINCT CONCAT(g.match_id,':',g.board_no,':',GREATEST(1,g.game_index))) FROM p2k_g_games g JOIN p2k_g_matches m ON m.match_id=g.match_id JOIN p2k_g_point_events e ON e.match_id=g.match_id AND e.board_no=g.board_no AND e.game_url=g.game_url WHERE m.club_verified=1 AND m.time_class='daily'")->fetchColumn();
             $q=$this->green->core->prepare('SELECT COUNT(*) FROM p2k_tp_games g JOIN p2k_tp_boards b ON b.board_id=g.board_id JOIN p2k_tp_members u ON u.member_id=b.member_id WHERE u.club_slug=?');$q->execute([$club]);$counts['compat_games']=(int)$q->fetchColumn();
