@@ -62,7 +62,7 @@ STATE="\$RUNTIME/release-control/state.json"
 MODE="direct-root"
 RELEASE=""
 if [[ -f "\$STATE" ]]; then
-  read -r MODE RELEASE < <("\$PHP_BIN" -r '\$s=json_decode((string)file_get_contents(\$argv[1]),true); \$m=(string)(\$s["mode"]??"direct-root"); \$r=(string)(\$s["public_release"]??""); if(\$m==="slots"&&!preg_match("/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}\$/D",\$r)) exit(3); echo \$m," ",\$r;' "\$STATE")
+  read -r MODE RELEASE < <("\$PHP_BIN" -r '\$s=json_decode((string)file_get_contents(\$argv[1]),true); \$m=(string)(\$s["mode"]??"direct-root"); \$r=(string)(\$s["public_release"]??""); if(\$m==="slots"&&!preg_match("/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}\$/D",\$r)) exit(3); echo \$m," ",\$r,PHP_EOL;' "\$STATE")
 fi
 if [[ "\$MODE" == "slots" ]]; then
   APP="\$RUNTIME/release-control/runtime-trees/\$RELEASE/app"
