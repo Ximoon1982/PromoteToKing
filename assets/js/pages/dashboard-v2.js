@@ -222,7 +222,14 @@ const abs = Math.abs(delta);
 const units = abs < 3600000 ? [60000, "minute"] : abs < 86400000 ? [3600000, "hour"] : [86400000, "day"];
 return new Intl.RelativeTimeFormat("en-GB", { numeric: "auto" }).format(Math.round(-delta / units[0]), units[1]);
 };
-const challengeProgress = member => Array.isArray(member?.challenges) && member.challenges.length ? member.challenges : Array.isArray(member?.achievement_progress) ? member.achievement_progress : [];
+const challengeProgress = member => {
+  const full=Array.isArray(member?.achievement_progress)?member.achievement_progress:[];
+  const shortlist=Array.isArray(member?.challenges)?member.challenges:[];
+  return (full.length?full:shortlist).filter(c=>{
+    const target=Number(c?.target),current=Number(c?.current);
+    return Number.isFinite(target)&&target>0&&Number.isFinite(current)&&current<target&&Number(c?.remaining)>0&&Number(c?.progress_percent)<100;
+  }).slice(0,5);
+};
 const matchURL = match => String(match?.url || match?.["@id"] || "").replace("https://api.chess.com/pub/match/", "https://www.chess.com/club/matches/");
 const publicReadCache = new Map();
 async function loadJSON(url, options = {}) {
