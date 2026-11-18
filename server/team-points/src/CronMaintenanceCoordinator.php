@@ -31,6 +31,8 @@ final class CronMaintenanceCoordinator
             $out['classes']['pir']=$this->runClass('pir',6.0,2.0,fn(float $deadline):array=>(new PointIntegrityService($this->core,$this->repository,$this->clubSlug))->runStep(30,$deadline));
             // Dedicated, idempotent Green league-flag reconciliation. Keep PIR ahead of it.
             $out['classes']['league_flags']=$this->runClass('league_flags',3.0,1.5,fn(float $deadline):array=>(new LeagueClassificationReconciler($this->core,$this->clubSlug))->runStep(50,$deadline));
+            // Green-native bounded opponent profile upkeep; legacy Blue Club workers stay retired.
+            $out['classes']['opponent_profiles']=$this->runClass('opponent_profiles',5.0,2.0,fn(float $deadline):array=>(new OpponentProfileMaintenance($this->core,$this->repository,$this->clubSlug))->runStep(2,$deadline));
         }else{
             $out['classes']['achievements']=$this->runClass('achievements',15.0,11.0,function(float $deadline):array{
                 $builder=new AnalyticsBuilder($this->core,$this->analytics);return $builder->refreshAchievementsIfDue($this->clubSlug,1800,$deadline)+['maintenance_class'=>'achievements'];
@@ -54,7 +56,7 @@ final class CronMaintenanceCoordinator
         $slice=max($minimumStart,min($maxSlice,$remaining));$deadline=min($this->requestDeadlineAt-$this->hardReturnReserve,microtime(true)+$slice);$started=microtime(true);
         if(getenv('P2K_MAINT_TRACE')==='1')fwrite(STDERR,'[maintenance-class] '.$this->lane.'/'.$name.' start'.PHP_EOL);
         $this->setStatementBudget(max(0.5,$deadline-$started-0.25));
-        try{$result=$callback($deadline);if(!is_array($result))$result=['ran'=>true];if($name==='league_flags'&&getenv('P2K_MAINT_TRACE')==='1')fwrite(STDERR,'[league-flags] '.json_encode(['corrected'=>$result['corrected']??0,'to_league'=>$result['to_league']??0,'to_friendly'=>$result['to_friendly']??0,'remaining'=>$result['remaining']??null],JSON_UNESCAPED_SLASHES).PHP_EOL);return $result+['cmdi_slice_seconds'=>round($slice,3),'cmdi_elapsed_ms'=>(int)round((microtime(true)-$started)*1000),'cmdi_deadline_epoch_ms'=>(int)round($deadline*1000)];}
+        try{$result=$callback($deadline);if(!is_array($result))$result=['ran'=>true];if($name==='league_flags'&&getenv('P2K_MAINT_TRACE')==='1')fwrite(STDERR,'[league-flags] '.json_encode(['corrected'=>$result['corrected']??0,'to_league'=>$result['to_league']??0,'to_friendly'=>$result['to_friendly']??0,'remaining'=>$result['remaining']??null],JSON_UNESCAPED_SLASHES).PHP_EOL);if($name==='opponent_profiles'&&getenv('P2K_MAINT_TRACE')==='1')fwrite(STDERR,'[opponent-profiles] '.json_encode(['checked'=>$result['checked']??0,'updated'=>$result['updated']??0,'not_found'=>$result['not_found']??0,'errors'=>$result['errors']??0,'remaining'=>$result['remaining']??null],JSON_UNESCAPED_SLASHES).PHP_EOL);return $result+['cmdi_slice_seconds'=>round($slice,3),'cmdi_elapsed_ms'=>(int)round((microtime(true)-$started)*1000),'cmdi_deadline_epoch_ms'=>(int)round($deadline*1000)];}
         catch(\Throwable $e){return ['ran'=>false,'deferred'=>false,'error'=>$e->getMessage(),'maintenance_class'=>$name,'cmdi_slice_seconds'=>round($slice,3),'cmdi_elapsed_ms'=>(int)round((microtime(true)-$started)*1000),'cmdi_deadline_epoch_ms'=>(int)round($deadline*1000)];}
         finally{$this->setStatementBudget(0.0);if(getenv('P2K_MAINT_TRACE')==='1')fwrite(STDERR,'[maintenance-class] '.$this->lane.'/'.$name.' end'.PHP_EOL);}
     }
