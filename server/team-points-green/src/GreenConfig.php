@@ -82,6 +82,10 @@ final class GreenConfig
             PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES=>false,
             PDO::ATTR_TIMEOUT=>max(2,(int)($db['connect_timeout_seconds'] ?? 5)),
+            // Keep DATETIME defaults and ON UPDATE CURRENT_TIMESTAMP in UTC.
+            // Inheriting SYSTEM (e.g. CET/CEST) made Green match updated_at
+            // appear newer than the UTC compatibility projection forever.
+            PDO::MYSQL_ATTR_INIT_COMMAND => "SET time_zone = '+00:00'",
         ]);
         if (class_exists(\P2K\TeamPoints\PreviewIsolation::class)) \P2K\TeamPoints\PreviewIsolation::enforceReadOnlyPdo($pdo);
         return $pdo;
