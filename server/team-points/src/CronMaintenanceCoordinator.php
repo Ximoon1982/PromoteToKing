@@ -54,7 +54,7 @@ final class CronMaintenanceCoordinator
         $slice=max($minimumStart,min($maxSlice,$remaining));$deadline=min($this->requestDeadlineAt-$this->hardReturnReserve,microtime(true)+$slice);$started=microtime(true);
         if(getenv('P2K_MAINT_TRACE')==='1')fwrite(STDERR,'[maintenance-class] '.$this->lane.'/'.$name.' start'.PHP_EOL);
         $this->setStatementBudget(max(0.5,$deadline-$started-0.25));
-        try{$result=$callback($deadline);if(!is_array($result))$result=['ran'=>true];return $result+['cmdi_slice_seconds'=>round($slice,3),'cmdi_elapsed_ms'=>(int)round((microtime(true)-$started)*1000),'cmdi_deadline_epoch_ms'=>(int)round($deadline*1000)];}
+        try{$result=$callback($deadline);if(!is_array($result))$result=['ran'=>true];if($name==='league_flags'&&getenv('P2K_MAINT_TRACE')==='1')fwrite(STDERR,'[league-flags] '.json_encode(['corrected'=>$result['corrected']??0,'to_league'=>$result['to_league']??0,'to_friendly'=>$result['to_friendly']??0,'remaining'=>$result['remaining']??null],JSON_UNESCAPED_SLASHES).PHP_EOL);return $result+['cmdi_slice_seconds'=>round($slice,3),'cmdi_elapsed_ms'=>(int)round((microtime(true)-$started)*1000),'cmdi_deadline_epoch_ms'=>(int)round($deadline*1000)];}
         catch(\Throwable $e){return ['ran'=>false,'deferred'=>false,'error'=>$e->getMessage(),'maintenance_class'=>$name,'cmdi_slice_seconds'=>round($slice,3),'cmdi_elapsed_ms'=>(int)round((microtime(true)-$started)*1000),'cmdi_deadline_epoch_ms'=>(int)round($deadline*1000)];}
         finally{$this->setStatementBudget(0.0);if(getenv('P2K_MAINT_TRACE')==='1')fwrite(STDERR,'[maintenance-class] '.$this->lane.'/'.$name.' end'.PHP_EOL);}
     }
