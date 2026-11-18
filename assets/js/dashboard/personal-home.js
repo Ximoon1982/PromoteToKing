@@ -33,7 +33,14 @@ const { state, byId, setText, number, escapeHTML, viewed, adminEntryUsername, sh
     return ranks.reduce((selected, rank) => numeric >= rank.minimum ? rank : selected, null) || unrankedRank;
   }
   const nullableMetric = value => value === null || value === undefined || value === "" ? "—" : number(value);
-  const challengeProgress=m=>Array.isArray(m?.challenges)&&m.challenges.length?m.challenges:Array.isArray(m?.achievement_progress)?m.achievement_progress:[];
+  const challengeProgress=m=>{
+    const full=Array.isArray(m?.achievement_progress)?m.achievement_progress:[];
+    const shortlist=Array.isArray(m?.challenges)?m.challenges:[];
+    return (full.length?full:shortlist).filter(c=>{
+      const target=Number(c?.target),current=Number(c?.current);
+      return Number.isFinite(target)&&target>0&&Number.isFinite(current)&&current<target&&Number(c?.remaining)>0&&Number(c?.progress_percent)<100;
+    }).slice(0,5);
+  };
   function setPersonalRankImage(source, fallback, alt, title) {
     const image = byId("personalRankImage");
     if (!image) return;
