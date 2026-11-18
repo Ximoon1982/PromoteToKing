@@ -255,27 +255,20 @@ final class FairPlayReconciliationService
 
     public function runStep(int $maxMatches=3,?float $deadline=null): array
     {
-        $this->ensureSchema();
-        $maxMatches=max(1,min(10,$maxMatches));
-        $processed=0;$live=0;$backfilled=0;$corrected=0;$pointsAdded=0.0;$errors=[];
-
-        $limit=min($maxMatches,3);
-        $q=$this->core->prepare("SELECT m.match_id FROM p2k_tp_match_metadata m LEFT JOIN p2k_tp_fair_play_match_state f ON f.club_slug=m.club_slug AND f.match_id=m.match_id WHERE m.club_slug=? AND m.status='in_progress' ORDER BY COALESCE(f.checked_at,'1970-01-01') ASC,m.match_id ASC LIMIT {$limit}");
-        $q->execute([$this->clubSlug]);
-        foreach($q->fetchAll(PDO::FETCH_COLUMN)?:[] as $id) {
-            if ($deadline!==null && microtime(true)+1.5>=$deadline) break;
-            try {
-                $match=$this->api->json('https://api.chess.com/pub/match/'.(int)$id,true);
-                $r=$this->applyMatchPayload((int)$id,$match,false,false);$processed++;$live++;$corrected+=(int)($r['corrected_games']??0);$pointsAdded+=(float)($r['points_added']??0);
-            } catch(\Throwable $e) {$errors[]='match '.(int)$id.': '.$e->getMessage();}
-        }
-
-        // Historical Fair Play backfill is intentionally retired from automatic
-        // maintenance after the Blue→Green cutover. Routine maintenance checks active
-        // matches and the coordinator's single newly-finished match only. Historical
-        // backfill remains available solely through explicit admin controls/tools.
-
-        return ['ran'=>true,'processed_matches'=>$processed,'live_matches_checked'=>$live,'finished_matches_backfilled'=>0,'historical_backfill_auto'=>false,'corrected_games'=>$corrected,'points_added'=>$pointsAdded,'errors'=>$errors,'status'=>$this->status()+['historical_backfill_auto'=>false]];
+        // Routine Fair Play verification is finished-only in maintenance.php via
+        // FairPlayPriorityRunner. Preserve this compatibility method as a no-op:
+        // it must never resume scanning active matches or historical backfill.
+        return [
+            'ran'=>false,
+            'reason'=>'finished_match_priority_owner',
+            'processed_matches'=>0,
+            'live_matches_checked'=>0,
+            'finished_matches_backfilled'=>0,
+            'historical_backfill_auto'=>false,
+            'corrected_games'=>0,
+            'points_added'=>0.0,
+            'errors'=>[],
+        ];
     }
 
     public function status(): array

@@ -42,8 +42,9 @@ set -euo pipefail
 ROOT=$(printf '%q' "$ROOT")
 PHP_BIN=$(printf '%q' "$PHP_BIN")
 CONFIG="\$ROOT/server/team-points/config/config.local.php"
-RUNTIME="\$("\$PHP_BIN" -r '\$c=require \$argv[1]; \$r=rtrim((string)((\$c["storage"]["runtime_dir"]??"")),"/\\\\"); echo \$r!==""?\$r:dirname(dirname(dirname(\$argv[1])))."/data/runtime-v280";' "\$CONFIG")"
+RUNTIME="\$("\$PHP_BIN" -r '\$c=require \$argv[1]; \$r=rtrim((string)((\$c["storage"]["runtime_dir"]??"")),"/\\\\"); echo \$r!==""?\$r:rtrim((string)\$argv[2],"/\\\\")."/data/runtime-v280";' "\$CONFIG" "\$ROOT")"
 STATE="\$RUNTIME/release-control/state.json"
+[[ -r "\$STATE" ]] || { echo "ERROR: Release Control state unavailable at \$STATE; refusing physical-root maintenance fallback." >&2; exit 5; }
 MODE="direct-root"
 RELEASE=""
 if [[ -f "\$STATE" ]]; then

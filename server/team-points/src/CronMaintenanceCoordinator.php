@@ -25,18 +25,9 @@ final class CronMaintenanceCoordinator
                 $scan=$service->automaticAnomalyScan();RuntimeTelemetry::record('intelligence_maintenance',['lane'=>$this->lane,'anomalies'=>(int)($scan['summary']['total']??0)]);
                 return ['ran'=>true,'snapshot_date'=>$snapshot['date']??null,'anomaly_scan'=>$scan['summary']??null,'scanned_at'=>$scan['scanned_at']??null];
             });
-            $out['classes']['fair_play']=$this->runClass('fair_play',8.0,3.0,function(float $deadline):array{
-                $api=new ChessApi($this->repository);$api->setDeadlineAt($deadline);$service=new FairPlayReconciliationService($this->core,$this->repository,$api,$this->clubSlug);$firstFinished=null;
-                if($this->hasTime($deadline,2.0)){
-                    try{
-                        $service->ensureSchema();
-                        $q=$this->core->prepare("SELECT m.match_id FROM p2k_tp_match_metadata m LEFT JOIN p2k_tp_fair_play_match_state f ON f.club_slug=m.club_slug AND f.match_id=m.match_id WHERE m.club_slug=? AND m.status='finished' AND f.finalized_at IS NULL ORDER BY COALESCE(m.end_time,m.last_verified_at) DESC,m.match_id DESC LIMIT 1");
-                        $q->execute([$this->clubSlug]);$id=(int)($q->fetchColumn()?:0);
-                        if($id>0&&$this->hasTime($deadline,1.5))$firstFinished=$service->applyMatchPayload($id,$api->json('https://api.chess.com/pub/match/'.$id,true),true,false);
-                    }catch(\Throwable $e){$firstFinished=['ran'=>false,'error'=>$e->getMessage()];}
-                }
-                return $service->runStep(4,$deadline)+['first_finished_check'=>$firstFinished,'maintenance_class'=>'fair_play'];
-            });
+            // Finished-match Fair Play is owned by the priority slice in maintenance.php.
+            // Do not duplicate it here or poll in-progress matches.
+            $out['classes']['fair_play']=['ran'=>false,'reason'=>'finished_match_priority_owner'];
             $out['classes']['pir']=$this->runClass('pir',6.0,2.0,fn(float $deadline):array=>(new PointIntegrityService($this->core,$this->repository,$this->clubSlug))->runStep(30,$deadline));
         }else{
             $out['classes']['achievements']=$this->runClass('achievements',15.0,11.0,function(float $deadline):array{
