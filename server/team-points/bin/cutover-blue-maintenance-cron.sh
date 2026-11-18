@@ -39,10 +39,24 @@ chmod 700 "$HELPER_DIR"
 cat >"$HELPER" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
+LOG_DIR="\$HOME/.p2k"
+LOG="\$LOG_DIR/team-points-maintenance.log"
+mkdir -p "\$LOG_DIR"
+chmod 700 "\$LOG_DIR"
+# Keep two bounded diagnostic files outside Release Control slots.
+if [[ -f "\$LOG" && "\$(wc -c <"\$LOG")" -ge 65536 ]]; then
+  mv -f "\$LOG" "\$LOG.1"
+fi
+exec >>"\$LOG" 2>&1
+p2k_diag(){ printf '[maintenance-helper %s] %s\n' "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" "\$1"; }
+trap 'p2k_status=\$?; p2k_diag "exit status=\$p2k_status"; exit "\$p2k_status"' EXIT
+p2k_diag "start"
 ROOT=$(printf '%q' "$ROOT")
 PHP_BIN=$(printf '%q' "$PHP_BIN")
 CONFIG="\$ROOT/server/team-points/config/config.local.php"
 RUNTIME="\$("\$PHP_BIN" -r '\$c=require \$argv[1]; \$r=rtrim((string)((\$c["storage"]["runtime_dir"]??"")),"/\\\\"); echo \$r!==""?\$r:rtrim((string)\$argv[2],"/\\\\")."/data/runtime-v280";' "\$CONFIG" "\$ROOT")"
+p2k_diag "runtime-resolved"
 STATE="\$RUNTIME/release-control/state.json"
 [[ -r "\$STATE" ]] || { echo "ERROR: Release Control state unavailable at \$STATE; refusing physical-root maintenance fallback." >&2; exit 5; }
 MODE="direct-root"
@@ -55,9 +69,12 @@ if [[ "\$MODE" == "slots" ]]; then
 else
   APP="\$ROOT"
 fi
+p2k_diag "release-selected mode=\$MODE release=\$RELEASE"
 SCRIPT="\$APP/server/team-points/bin/maintenance.php"
 [[ -f "\$SCRIPT" ]] || { echo "ERROR: Active Team Points maintenance worker unavailable: \$SCRIPT" >&2; exit 4; }
-exec env P2K_TP_CONFIG="\$CONFIG" "\$PHP_BIN" -d display_errors=0 -d 'error_reporting=E_ALL & ~E_DEPRECATED' "\$SCRIPT" 45
+p2k_diag "worker-start"
+env P2K_MAINT_TRACE=1 P2K_TP_CONFIG="\$CONFIG" "\$PHP_BIN" -d display_errors=0 -d 'error_reporting=E_ALL & ~E_DEPRECATED' "\$SCRIPT" 45 >/dev/null
+p2k_diag "worker-finished"
 EOF
 chmod 700 "$HELPER"
 

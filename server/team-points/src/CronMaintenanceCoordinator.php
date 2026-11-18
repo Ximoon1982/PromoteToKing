@@ -50,10 +50,11 @@ final class CronMaintenanceCoordinator
         $remaining=$this->requestDeadlineAt-microtime(true)-$this->hardReturnReserve;
         if($remaining<$minimumStart)return ['ran'=>false,'deferred'=>true,'reason'=>'cmdi_no_budget','available_seconds'=>max(0.0,round($remaining,3))];
         $slice=max($minimumStart,min($maxSlice,$remaining));$deadline=min($this->requestDeadlineAt-$this->hardReturnReserve,microtime(true)+$slice);$started=microtime(true);
+        if(getenv('P2K_MAINT_TRACE')==='1')fwrite(STDERR,'[maintenance-class] '.$this->lane.'/'.$name.' start'.PHP_EOL);
         $this->setStatementBudget(max(0.5,$deadline-$started-0.25));
         try{$result=$callback($deadline);if(!is_array($result))$result=['ran'=>true];return $result+['cmdi_slice_seconds'=>round($slice,3),'cmdi_elapsed_ms'=>(int)round((microtime(true)-$started)*1000),'cmdi_deadline_epoch_ms'=>(int)round($deadline*1000)];}
         catch(\Throwable $e){return ['ran'=>false,'deferred'=>false,'error'=>$e->getMessage(),'maintenance_class'=>$name,'cmdi_slice_seconds'=>round($slice,3),'cmdi_elapsed_ms'=>(int)round((microtime(true)-$started)*1000),'cmdi_deadline_epoch_ms'=>(int)round($deadline*1000)];}
-        finally{$this->setStatementBudget(0.0);}
+        finally{$this->setStatementBudget(0.0);if(getenv('P2K_MAINT_TRACE')==='1')fwrite(STDERR,'[maintenance-class] '.$this->lane.'/'.$name.' end'.PHP_EOL);}
     }
     private function hasTime(float $deadline,float $reserve=0.5):bool{return microtime(true)+max(0.0,$reserve)<$deadline;}
     private function setStatementBudget(float $seconds):void
