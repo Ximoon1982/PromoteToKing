@@ -29,6 +29,8 @@ final class CronMaintenanceCoordinator
             // Do not duplicate it here or poll in-progress matches.
             $out['classes']['fair_play']=['ran'=>false,'reason'=>'finished_match_priority_owner'];
             $out['classes']['pir']=$this->runClass('pir',6.0,2.0,fn(float $deadline):array=>(new PointIntegrityService($this->core,$this->repository,$this->clubSlug))->runStep(30,$deadline));
+            // Dedicated, idempotent Green league-flag reconciliation. Keep PIR ahead of it.
+            $out['classes']['league_flags']=$this->runClass('league_flags',3.0,1.5,fn(float $deadline):array=>(new LeagueClassificationReconciler($this->core,$this->clubSlug))->runStep(50,$deadline));
         }else{
             $out['classes']['achievements']=$this->runClass('achievements',15.0,11.0,function(float $deadline):array{
                 $builder=new AnalyticsBuilder($this->core,$this->analytics);return $builder->refreshAchievementsIfDue($this->clubSlug,1800,$deadline)+['maintenance_class'=>'achievements'];
