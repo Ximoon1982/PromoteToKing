@@ -568,6 +568,38 @@ final class AnalyticsBuilder
         }
     }
 
+    /**
+     * Rebuild only explicitly named players after a proven compatibility repair.
+     * Uses the same lock as scheduled achievement maintenance; a targeted run
+     * must not advance the global achievement watermark or discard the queue.
+     */
+    public function refreshAchievementPlayers(string $clubSlug, array $usernames): array
+    {
+        $users = [];
+        foreach ($usernames as $name) {
+            $key = \p2k_tp_username_key((string)$name);
+            if ($key !== '') $users[$key] = $key;
+        }
+        if ($users === []) throw new \InvalidArgumentException('At least one player is required for a targeted achievement refresh.');
+        if (count($users) > 20) throw new \InvalidArgumentException('A targeted achievement refresh accepts at most 20 players.');
+        [$marker, $lockPath] = $this->runtimeRefreshPaths($clubSlug, 'achievements');
+        $handle = @fopen($lockPath, 'c+');
+        if ($handle === false) throw new \RuntimeException('Achievement refresh lock is unavailable.');
+        try {
+            if (!flock($handle, LOCK_EX | LOCK_NB)) {
+                throw new \RuntimeException('Scheduled achievement maintenance is in progress. Retry later.');
+            }
+            try {
+                $count = $this->rebuildAchievements($clubSlug, array_values($users));
+            } finally {
+                flock($handle, LOCK_UN);
+            }
+            return ['players' => array_values($users), 'unlock_rows_seen' => $count, 'global_watermark_advanced' => false];
+        } finally {
+            fclose($handle);
+        }
+    }
+
     private function rebuildAchievements(string $clubSlug, ?array $targetUsers = null): int
     {
         $targetKeys = [];
