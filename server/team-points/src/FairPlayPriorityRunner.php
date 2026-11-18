@@ -41,7 +41,7 @@ final class FairPlayPriorityRunner
                     LEFT JOIN p2k_tp_fair_play_match_state f
                       ON f.club_slug=m.club_slug AND f.match_id=m.match_id
                     WHERE m.club_slug=? AND m.status='finished' AND (
-                        (f.finalized_at IS NULL AND m.end_time>=UTC_TIMESTAMP()-INTERVAL 30 DAY)
+                        (f.finalized_at IS NULL AND (m.end_time>=UTC_TIMESTAMP()-INTERVAL 30 DAY OR (m.end_time IS NULL AND m.last_verified_at>=UTC_TIMESTAMP()-INTERVAL 7 DAY)))
                         OR (f.finalized_at IS NOT NULL AND m.last_verified_at>f.checked_at AND m.last_verified_at>=UTC_TIMESTAMP()-INTERVAL 7 DAY)
                     )
                     ORDER BY COALESCE(m.end_time,m.last_verified_at) DESC,m.match_id DESC

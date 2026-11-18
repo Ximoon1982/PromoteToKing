@@ -66,7 +66,7 @@ try{
             $repository,
             new ChessApi($repository),
             $club
-        ))->run($priorityDeadline,2);
+        ))->run($priorityDeadline,0);
         $traceStage('fair-play-priority-end');
     }catch(Throwable $e){
         $out['fair_play_priority']=['ran'=>false,'error'=>$e->getMessage()];
