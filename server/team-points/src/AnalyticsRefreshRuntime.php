@@ -12,6 +12,17 @@ final class AnalyticsRefreshRuntime
     {
         $config = \p2k_tp_config();
         $storage = is_array($config['storage'] ?? null) ? $config['storage'] : [];
+        // Protected configuration is anchored at the physical site root even when
+        // a CLI worker executes inside a read-only Release Control slot.
+        // Its default runtime must remain shared across promotions and rollbacks.
+        if (trim((string)($storage['runtime_dir'] ?? '')) === '') {
+            $configPath = getenv('P2K_TP_CONFIG');
+            $suffix = '/server/team-points/config/config.local.php';
+            if (is_string($configPath) && str_ends_with(str_replace('\\\\', '/', $configPath), $suffix)) {
+                $siteRoot = substr(str_replace('\\\\', '/', $configPath), 0, -strlen($suffix));
+                if ($siteRoot !== '') $storage['runtime_dir'] = rtrim($siteRoot, '/') . '/data/runtime-v280';
+            }
+        }
         $root = FilesystemCache::runtimeRoot($storage) . '/analytics';
         FilesystemCache::ensureProtectedDirectory($root);
         $slug = preg_replace('/[^a-z0-9_-]+/i', '-', $clubSlug);
