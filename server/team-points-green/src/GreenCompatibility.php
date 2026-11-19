@@ -372,34 +372,32 @@ final class GreenCompatibility
             (club_slug,match_id,board_no,username_key,reason,observed_at)
             VALUES(?,?,?,?, 'missing_verified_member',UTC_TIMESTAMP())
             ON DUPLICATE KEY UPDATE username_key=VALUES(username_key),observed_at=UTC_TIMESTAMP()");
+        // Identify contradictory trusted Green and MIAC evidence once per match,
+        // rather than issuing a separate database lookup for every board.
+        $identityConflictsByBoard=[];
+        $identityConflict=$this->green->core->prepare("SELECT DISTINCT e.board_no,e.username_key,im.canonical_username_key
+            FROM p2k_g_games g
+            JOIN p2k_g_point_events e ON e.match_id=g.match_id AND e.board_no=g.board_no AND e.game_url=g.game_url
+            JOIN p2k_g_identity_map im ON im.username_key=e.username_key AND im.trusted=1
+            JOIN p2k_miac_canonical_map mi ON mi.club_slug=? AND mi.username_key=e.username_key AND mi.conflict=0
+            WHERE g.match_id=? AND mi.canonical_username_key<>im.canonical_username_key");
+        $identityConflict->execute([$club,$matchId]);
+        foreach($identityConflict->fetchAll(PDO::FETCH_ASSOC)?:[] as $conflict){
+            $identityConflictsByBoard[(int)$conflict['board_no']][(string)$conflict['canonical_username_key']]
+                =(string)$conflict['username_key'];
+        }
+        $identityConflictIssue=$this->green->core->prepare("INSERT INTO p2k_g_gab_unresolved_boards
+            (club_slug,match_id,board_no,username_key,reason,observed_at)
+            VALUES(?,?,?,?,'identity_authority_conflict',UTC_TIMESTAMP())
+            ON DUPLICATE KEY UPDATE username_key=VALUES(username_key),reason=VALUES(reason),observed_at=UTC_TIMESTAMP()");
         $gameRows=0;$boardRows=0;$gameDuplicatesResolved=0;
         foreach($boards as $b){$memberKey=(string)($b['canonical_username_key']??$b['username_key']);$memberId->execute([$club,$memberKey]);$mid=(int)$memberId->fetchColumn();if($mid<=0){$memberId->execute([$club,$b['username_key']]);$mid=(int)$memberId->fetchColumn();}if($mid<=0){$memberAliasId->execute([$club,$memberKey]);$mid=(int)$memberAliasId->fetchColumn();}if($mid<=0){$identityIssue->execute([$club,$matchId,(int)$b['board_no'],$memberKey]);continue;}$source=in_array($b['match_status'],['registered','in_progress','finished'],true)?$b['match_status']:'unknown';$state=match((string)$b['state']){'finished'=>'complete_immutable','in_progress'=>'recent_in_progress','cancelled','unavailable'=>'failed_malformed',default=>'potentially_incomplete'};$completed=$b['state']==='finished'?($b['last_verified_at']??$b['updated_at']):null;
             $insB->execute([$mid,$matchId,(int)$b['board_no'],$b['p2k_rating'],$b['opponent_rating'],$b['opponent_username']??null,$b['board_url'],$b['played_as_white'],$b['played_as_black'],$source,$state,(int)$b['finished_game_count'],$b['updated_at'],$b['updated_at'],$b['last_verified_at'],$b['retry_after'],$completed,0,$b['last_http_status']>=400?'Green HTTP '.$b['last_http_status']:null]);$boardRows++;
             $bid=(int)$this->green->core->lastInsertId();if($bid<=0){$z=$this->green->core->prepare('SELECT board_id FROM p2k_tp_boards WHERE match_id=? AND board_no=?');$z->execute([$matchId,(int)$b['board_no']]);$bid=(int)$z->fetchColumn();}
-            // Keep divergent trusted Green and MIAC canonical identities visible. Do not
-            // infer an alias or override either authority; preserve the board and only
-            // withhold games whose point-event identity cannot be safely reconciled.
-            $identityConflict=$this->green->core->prepare("SELECT e.username_key
-                FROM p2k_g_games g
-                JOIN p2k_g_point_events e ON e.match_id=g.match_id AND e.board_no=g.board_no AND e.game_url=g.game_url
-                JOIN p2k_g_identity_map im ON im.username_key=e.username_key AND im.trusted=1
-                JOIN p2k_miac_canonical_map mi ON mi.club_slug=? AND mi.username_key=e.username_key AND mi.conflict=0
-                WHERE g.match_id=? AND g.board_no=?
-                  AND im.canonical_username_key=?
-                  AND mi.canonical_username_key<>im.canonical_username_key
-                  AND NOT EXISTS (
-                      SELECT 1 FROM p2k_tp_members safe
-                      WHERE safe.club_slug=? AND safe.username_key=mi.canonical_username_key
-                        AND safe.username_key=?
-                  )
-                LIMIT 1");
-            $identityConflict->execute([$club,$matchId,(int)$b['board_no'],$memberKey,$club,$memberKey]);
-            $conflictKey=$identityConflict->fetchColumn();
+            // Preserve compatibility board identity; withhold only conflicting games
+            // until the two trusted identity authorities converge.
+            $conflictKey=$identityConflictsByBoard[(int)$b['board_no']][$memberKey]??null;
             if(is_string($conflictKey)&&$conflictKey!==''){
-                $identityConflictIssue=$this->green->core->prepare("INSERT INTO p2k_g_gab_unresolved_boards
-                    (club_slug,match_id,board_no,username_key,reason,observed_at)
-                    VALUES(?,?,?,?,'identity_authority_conflict',UTC_TIMESTAMP())
-                    ON DUPLICATE KEY UPDATE username_key=VALUES(username_key),reason=VALUES(reason),observed_at=UTC_TIMESTAMP()");
                 $identityConflictIssue->execute([$club,$matchId,(int)$b['board_no'],$conflictKey]);
             }
             $gameProjection=$this->canonicalGameProjection($matchId,(int)$b['board_no'],$memberKey);
