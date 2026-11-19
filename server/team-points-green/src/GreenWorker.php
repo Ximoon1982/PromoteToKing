@@ -97,26 +97,6 @@ final class GreenWorker
         return true;
     }
 
-    /**
-     * Keep member joins/departures fresh even when a Quick cycle has thousands
-     * of profile/stats obligations.  The authoritative roster is still ingested
-     * and projected through the existing validated Green pipeline.
-     */
-    private function refreshRosterIfStale(array $state): void
-    {
-        $stage=(string)($state['stage']??'');
-        if(in_array($stage,['quick_index_roster','seed_index_roster'],true))return;
-        $last=(string)($state['last_roster_fetch']??'');
-        $timestamp=$last!==''?strtotime($last.' UTC'):false;
-        if($timestamp!==false&&$timestamp>time()-900)return;
-        // A roster snapshot/projection can involve thousands of members.
-        // Reserve room for that job before allocating the finite-cycle budget.
-        if(!$this->timeLeft(20.0))return;
-        $this->inc('roster_freshness_due');
-        $ok=$this->timed('roster_freshness',fn()=>$this->fetchRoster());
-        $this->inc($ok?'roster_freshness_refreshed':'roster_freshness_failed');
-    }
-
     private function fetchMatch(int $id,string $requestType='match_detail',bool $deepProbe=false): array
     {
         $r=$this->request($requestType,'https://api.chess.com/pub/match/'.$id);$status=(int)$r['status'];
@@ -415,9 +395,6 @@ final class GreenWorker
             }
             $mode=(string)$state['mode'];
             $forced=(string)($this->repo->state()['force_mode']??'auto');if($forced!=='auto'&&$forced!==$mode){$this->repo->forceStage($forced);$state=$this->ensureCycle($this->repo->state());$mode=$forced;$this->cycle=(int)$state['cycle_no'];}
-            // Member freshness has its own cadence, independent of completion of
-            // the thousands of tasks in each finite Quick cycle.
-            $this->refreshRosterIfStale($this->repo->state());
             // v2.10.6 finite-cycle fairness. Continuous GAB/GFFL/current-match
             // sidecars must never consume the whole server invocation before the finite
             // Seed/Quick/Deep phase gets a chance to converge. Reserve ~70% of the soft
