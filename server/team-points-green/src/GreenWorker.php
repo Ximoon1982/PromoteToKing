@@ -97,6 +97,26 @@ final class GreenWorker
         return true;
     }
 
+    /**
+     * Keep member joins/departures fresh even when a Quick cycle has thousands
+     * of profile/stats obligations.  The authoritative roster is still ingested
+     * and projected through the existing validated Green pipeline.
+     */
+    private function refreshRosterIfStale(array $state): void
+    {
+        $stage=(string)($state['stage']??'');
+        if(in_array($stage,['quick_index_roster','seed_index_roster'],true))return;
+        $last=(string)($state['last_roster_fetch']??'');
+        $timestamp=$last!==''?strtotime($last.' UTC'):false;
+        if($timestamp!==false&&$timestamp>time()-900)return;
+        // A roster snapshot/projection can involve thousands of members.
+        // Reserve room for that job before allocating the finite-cycle budget.
+        if(!$this->timeLeft(20.0))return;
+        $this->inc('roster_freshness_due');
+        $ok=$this->timed('roster_freshness',fn()=>$this->fetchRoster());
+        $this->inc($ok?'roster_freshness_refreshed':'roster_freshness_failed');
+    }
+
     private function fetchMatch(int $id,string $requestType='match_detail',bool $deepProbe=false): array
     {
         $r=$this->request($requestType,'https://api.chess.com/pub/match/'.$id);$status=(int)$r['status'];
@@ -326,6 +346,41 @@ final class GreenWorker
         return $result;
     }
 
+    /**
+     * MariaDB can spend minutes inside one GAB reconciliation SQL statement.
+     * PHP's slice deadline is cooperative and cannot interrupt such a query.
+     * Bound each SQL statement on this worker connection, and restore its
+     * previous setting before returning to current-member/freshness work.
+     * If MariaDB cannot enforce the cap, defer GAB rather than run unbounded.
+     */
+    private function runGabWithStatementBudget(GreenAnalyticsBootstrap $gab): void
+    {
+        $previous=null;$pdo=$this->repo->core;
+        try {
+            $previous=(float)$pdo->query('SELECT @@SESSION.max_statement_time')->fetchColumn();
+            $pdo->exec('SET SESSION max_statement_time=5');
+        } catch(\Throwable $e) {
+            $this->inc('gab_deferred_statement_cap_unavailable');
+            return;
+        }
+        try {
+            try {
+                $this->timed('gab',fn()=>$gab->runSlice(4.0));
+                $this->inc('gab_slices');
+            } catch(\Throwable $e) {
+                // A GAB slice must not break the finite-cycle worker. GAB
+                // maintains its own lane/error state and can be resumed.
+                $this->inc('gab_slice_failures');
+            }
+        } finally {
+            try {
+                $pdo->exec('SET SESSION max_statement_time='.sprintf('%.6F',$previous));
+            } catch(\Throwable $ignored) {
+                $this->inc('gab_statement_cap_restore_failed');
+            }
+        }
+    }
+
     private function runPostLockAnalytics(): void
     {
         $got=0;try{$got=(int)$this->repo->core->query("SELECT GET_LOCK('p2k_green_analytics_maintenance',0)")->fetchColumn();}catch(\Throwable $ignored){$got=0;}
@@ -360,6 +415,9 @@ final class GreenWorker
             }
             $mode=(string)$state['mode'];
             $forced=(string)($this->repo->state()['force_mode']??'auto');if($forced!=='auto'&&$forced!==$mode){$this->repo->forceStage($forced);$state=$this->ensureCycle($this->repo->state());$mode=$forced;$this->cycle=(int)$state['cycle_no'];}
+            // Member freshness has its own cadence, independent of completion of
+            // the thousands of tasks in each finite Quick cycle.
+            $this->refreshRosterIfStale($this->repo->state());
             // v2.10.6 finite-cycle fairness. Continuous GAB/GFFL/current-match
             // sidecars must never consume the whole server invocation before the finite
             // Seed/Quick/Deep phase gets a chance to converge. Reserve ~70% of the soft
@@ -379,7 +437,7 @@ final class GreenWorker
             // accelerator-fed. Do not add GAB/GFFL pseudo-phases to the finite cycle
             // progress list: each has its own dedicated telemetry panel.
             $gabState=(string)($this->repo->state()['gab_status']??'not_started');
-            if(in_array($gabState,['running','error'],true)){$gabBootstrap=new GreenAnalyticsBootstrap($this->repo);if($gabState==='error')$gabBootstrap->resumeTransientErrorIfSafe();if((string)($this->repo->state()['gab_status']??'not_started')==='running'&&$this->timeLeft(8.0)){$this->timed('gab',fn()=>$gabBootstrap->runSlice(min(5.0,max(1.0,$this->softTargetSeconds/10))));$this->inc('gab_slices');}}
+            if(in_array($gabState,['running','error'],true)){$gabBootstrap=new GreenAnalyticsBootstrap($this->repo);if($gabState==='error')$gabBootstrap->resumeTransientErrorIfSafe();if((string)($this->repo->state()['gab_status']??'not_started')==='running'&&$this->timeLeft(10.0))$this->runGabWithStatementBudget($gabBootstrap);}
             $beforeGffl=$this->requestCount;$this->timed('gffl',function(){foreach($this->repo->gfflPlan(4) as $debt){if(!$this->timeLeft(7.0))break;$this->fetchMatch((int)$debt['match_id'],'gffl_match_detail');$this->inc('gffl_matches_served');}});$this->inc('gffl_requests',$this->requestCount-$beforeGffl);
             $beforeMaintenance=$this->requestCount;$this->timed('current_maintenance',fn()=>$this->maintainCurrentMatches((string)($this->repo->state()['stage']??''),4));$this->inc('current_maintenance_requests',$this->requestCount-$beforeMaintenance);
 
