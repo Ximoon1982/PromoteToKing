@@ -486,7 +486,7 @@ final class GreenCompatibility
         $blockedQuery=$this->green->core->prepare('SELECT COUNT(*) FROM p2k_g_gab_unresolved_boards WHERE club_slug=?');
         $blockedQuery->execute([$club]);$blocked=(int)$blockedQuery->fetchColumn();
         return ['processed'=>$changed,'changed'=>$changed,'boards'=>$boards,'games'=>$games,
-            'game_duplicates_resolved'=>$gameDuplicatesResolved,'last_id'=>$last,'pass_drained'=>$passDrained,
+            'game_duplicates_resolved'=>$gameDuplicatesResolved,'candidate_ids'=>$ids,'last_id'=>$last,'pass_drained'=>$passDrained,
             'remaining'=>$remaining+$blocked,'unresolved_identity_boards'=>$blocked,
             'drained'=>$passDrained&&$remaining===0&&$blocked===0,
             'reset_cursor'=>$passDrained&&($remaining>0||$blocked>0)];
