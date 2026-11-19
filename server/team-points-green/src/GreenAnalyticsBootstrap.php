@@ -49,6 +49,13 @@ final class GreenAnalyticsBootstrap
 
     private function ensureStateTables(): void
     {
+        $this->green->core->exec("CREATE TABLE IF NOT EXISTS p2k_g_gab_unresolved_boards (
+            club_slug VARCHAR(100) NOT NULL, match_id BIGINT UNSIGNED NOT NULL,
+            board_no INT UNSIGNED NOT NULL, username_key VARCHAR(100) NOT NULL,
+            reason VARCHAR(64) NOT NULL, observed_at DATETIME NOT NULL,
+            PRIMARY KEY(club_slug,match_id,board_no),
+            KEY idx_gab_identity_issue(club_slug,reason)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         $this->green->core->exec("CREATE TABLE IF NOT EXISTS p2k_g_gab_lanes(lane_key VARCHAR(64) NOT NULL PRIMARY KEY,label VARCHAR(160) NOT NULL,priority INT NOT NULL,status ENUM('pending','running','completed','error') NOT NULL DEFAULT 'pending',total_rows BIGINT UNSIGNED NOT NULL DEFAULT 0,processed_rows BIGINT UNSIGNED NOT NULL DEFAULT 0,changed_rows BIGINT UNSIGNED NOT NULL DEFAULT 0,error_rows BIGINT UNSIGNED NOT NULL DEFAULT 0,cursor_json MEDIUMTEXT NULL,started_at DATETIME NULL,completed_at DATETIME NULL,last_error TEXT NULL,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,KEY idx_g_gab_status(status,priority)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         $this->green->core->exec("CREATE TABLE IF NOT EXISTS p2k_g_gab_external_work(work_key VARCHAR(190) NOT NULL PRIMARY KEY,kind VARCHAR(48) NOT NULL,url VARCHAR(500) NOT NULL,status ENUM('pending','completed','failed') NOT NULL DEFAULT 'pending',attempts INT UNSIGNED NOT NULL DEFAULT 0,retry_after DATETIME NULL,last_http_status INT NULL,last_error TEXT NULL,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,KEY idx_g_gab_external(status,retry_after,kind)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     }
@@ -123,8 +130,12 @@ final class GreenAnalyticsBootstrap
         $percent=$fractions?round(100*array_sum($fractions)/count($fractions),2):0.0;
         if((string)($s['gab_status']??'')==='ready'&&$allCompleted)$percent=100.0;elseif($percent>=100.0)$percent=99.9;
         $ext=$this->green->core->query("SELECT COUNT(*) total,COALESCE(SUM(status='completed'),0) completed,COALESCE(SUM(status='pending'),0) pending,COALESCE(SUM(status='failed'),0) failed,COALESCE(SUM(status='completed' AND last_http_status IN (404,410)),0) terminal_retired,COALESCE(SUM(status='pending' AND (retry_after IS NULL OR retry_after<=UTC_TIMESTAMP())),0) currently_due,MIN(CASE WHEN status IN ('pending','failed') THEN updated_at END) oldest_unresolved FROM p2k_g_gab_external_work WHERE kind='gab_opponent_profile'")->fetch(PDO::FETCH_ASSOC)?:[];
-        $convergence=['progress_numerator'=>$progressNumerator,'progress_denominator'=>$progressDenominator,'total_obligations'=>$progressDenominator,'completed'=>$progressNumerator,'unresolved'=>max(0,$progressDenominator-$progressNumerator),'retryable'=>(int)($ext['pending']??0),'terminal_retired'=>(int)($ext['terminal_retired']??0),'currently_due'=>(int)($ext['currently_due']??0),'oldest_unresolved'=>$ext['oldest_unresolved']??null,'last_real_progress_at'=>$lastRealProgressAt,'display_percent_is_lane_weighted'=>true];
-        return ['status'=>(string)($s['gab_status']??'not_started'),'phase'=>(string)($s['gab_phase']??'not_started'),'started_at'=>$s['gab_started_at']??null,'completed_at'=>$s['gab_completed_at']??null,'last_error'=>$s['gab_last_error']??null,'percent'=>$percent,'completed_lanes'=>$completedLanes,'total_lanes'=>count($rows),'convergence'=>$convergence,'lanes'=>$rows,'external'=>$ext];
+        // Unresolved identities are tracked independently from retryable
+        // reconciliation: do not infer aliases or declare parity.
+        $unresolvedIdentity=(int)$this->green->core->query("SELECT COUNT(*) FROM p2k_g_gab_unresolved_boards WHERE club_slug=".$this->green->core->quote($this->green->clubSlug))->fetchColumn();
+        $identitySamples=$this->green->core->query("SELECT match_id,board_no,username_key,reason,observed_at FROM p2k_g_gab_unresolved_boards WHERE club_slug=".$this->green->core->quote($this->green->clubSlug)." ORDER BY match_id,board_no LIMIT 20")->fetchAll(PDO::FETCH_ASSOC)?:[];
+        $convergence=['progress_numerator'=>$progressNumerator,'progress_denominator'=>$progressDenominator,'total_obligations'=>$progressDenominator,'completed'=>$progressNumerator,'unresolved'=>max(0,$progressDenominator-$progressNumerator),'retryable'=>(int)($ext['pending']??0),'terminal_retired'=>(int)($ext['terminal_retired']??0),'currently_due'=>(int)($ext['currently_due']??0),'oldest_unresolved'=>$ext['oldest_unresolved']??null,'last_real_progress_at'=>$lastRealProgressAt,'display_percent_is_lane_weighted'=>true,'unresolved_identity_boards'=>$unresolvedIdentity];
+        return ['status'=>(string)($s['gab_status']??'not_started'),'phase'=>(string)($s['gab_phase']??'not_started'),'started_at'=>$s['gab_started_at']??null,'completed_at'=>$s['gab_completed_at']??null,'last_error'=>$s['gab_last_error']??null,'percent'=>$percent,'completed_lanes'=>$completedLanes,'total_lanes'=>count($rows),'convergence'=>$convergence,'lanes'=>$rows,'external'=>$ext,'identity_issues'=>['count'=>$unresolvedIdentity,'sample'=>$identitySamples]];
     }
     private function lane(): ?array {$q=$this->green->core->query("SELECT * FROM p2k_g_gab_lanes WHERE status<>'completed' ORDER BY priority LIMIT 1");$r=$q->fetch(PDO::FETCH_ASSOC);return is_array($r)?$r:null;}
     private function setLane(string $key,string $status,array $extra=[]): void
