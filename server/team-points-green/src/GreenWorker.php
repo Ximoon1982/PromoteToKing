@@ -333,7 +333,7 @@ final class GreenWorker
      * previous setting before returning to current-member/freshness work.
      * If MariaDB cannot enforce the cap, defer GAB rather than run unbounded.
      */
-    private function runGabWithStatementBudget(GreenAnalyticsBootstrap $gab): void
+    private function runGabWithStatementBudget(): void
     {
         $previous=null;$pdo=$this->repo->core;
         try {
@@ -345,7 +345,7 @@ final class GreenWorker
         }
         try {
             try {
-                $this->timed('gab',fn()=>$gab->runSlice(4.0));
+                $this->timed('gab',fn()=>(new GreenAnalyticsBootstrap($this->repo))->runSlice(4.0));
                 $this->inc('gab_slices');
             } catch(\Throwable $e) {
                 // A GAB slice must not break the finite-cycle worker. GAB
@@ -414,7 +414,7 @@ final class GreenWorker
             // accelerator-fed. Do not add GAB/GFFL pseudo-phases to the finite cycle
             // progress list: each has its own dedicated telemetry panel.
             $gabState=(string)($this->repo->state()['gab_status']??'not_started');
-            if(in_array($gabState,['running','error'],true)){$gabBootstrap=new GreenAnalyticsBootstrap($this->repo);if($gabState==='error')$gabBootstrap->resumeTransientErrorIfSafe();if((string)($this->repo->state()['gab_status']??'not_started')==='running'&&$this->timeLeft(10.0))$this->runGabWithStatementBudget($gabBootstrap);}
+            if(in_array($gabState,['running','error'],true)){if($gabState==='error')(new GreenAnalyticsBootstrap($this->repo))->resumeTransientErrorIfSafe();if((string)($this->repo->state()['gab_status']??'not_started')==='running'&&$this->timeLeft(10.0))$this->runGabWithStatementBudget();}
             $beforeGffl=$this->requestCount;$this->timed('gffl',function(){foreach($this->repo->gfflPlan(4) as $debt){if(!$this->timeLeft(7.0))break;$this->fetchMatch((int)$debt['match_id'],'gffl_match_detail');$this->inc('gffl_matches_served');}});$this->inc('gffl_requests',$this->requestCount-$beforeGffl);
             $beforeMaintenance=$this->requestCount;$this->timed('current_maintenance',fn()=>$this->maintainCurrentMatches((string)($this->repo->state()['stage']??''),4));$this->inc('current_maintenance_requests',$this->requestCount-$beforeMaintenance);
 
