@@ -421,7 +421,21 @@ final class GreenRepository
         // reappearance clear only that terminal suppression. Trusted-legacy facts/status stay
         // intact; non-trusted rows that were voided solely by HTTP terminal state are revived
         // to the index bucket so a fresh authoritative detail check can rebuild current facts.
-        $q=$this->core->prepare("INSERT INTO p2k_g_matches(match_id,api_url,status,index_bucket,index_time_class,index_result,club_verified,verified_club_slug,discovery_index,created_at,updated_at) VALUES(?,?,'unknown',?,?,?,1,?,1,UTC_TIMESTAMP(),UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE status=CASE WHEN trusted_legacy=0 AND last_http_status IN (404,410) AND exclusion_reason IN ('http_404','http_410') THEN CASE VALUES(index_bucket) WHEN 'registered' THEN 'registered' WHEN 'in_progress' THEN 'in_progress' WHEN 'finished' THEN 'finished' ELSE status END ELSE status END,is_void=CASE WHEN trusted_legacy=0 AND last_http_status IN (404,410) AND exclusion_reason IN ('http_404','http_410') THEN 0 ELSE is_void END,exclusion_reason=CASE WHEN trusted_legacy=0 AND last_http_status IN (404,410) AND exclusion_reason IN ('http_404','http_410') THEN NULL ELSE exclusion_reason END,index_bucket=VALUES(index_bucket),index_time_class=VALUES(index_time_class),index_result=VALUES(index_result),club_verified=1,verified_club_slug=VALUES(verified_club_slug),discovery_index=1,last_http_status=CASE WHEN last_http_status IN (404,410) THEN NULL ELSE last_http_status END,retry_after=NULL,updated_at=UTC_TIMESTAMP()");
+        $q=$this->core->prepare("INSERT INTO p2k_g_matches(match_id,api_url,status,index_bucket,index_time_class,index_result,club_verified,verified_club_slug,discovery_index,created_at,updated_at) VALUES(?,?,'unknown',?,?,?,1,?,1,UTC_TIMESTAMP(),UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE
+            -- Match index observations must not refresh Green's substantive watermark
+            -- unless index facts actually changed. Assigning updated_at explicitly
+            -- also suppresses ON UPDATE CURRENT_TIMESTAMP for no-op observations.
+            updated_at=IF(
+                NOT (index_bucket <=> VALUES(index_bucket))
+                OR NOT (index_time_class <=> VALUES(index_time_class))
+                OR NOT (index_result <=> VALUES(index_result))
+                OR club_verified<>1
+                OR NOT (verified_club_slug <=> VALUES(verified_club_slug))
+                OR discovery_index<>1
+                OR (trusted_legacy=0 AND last_http_status IN (404,410)
+                    AND exclusion_reason IN ('http_404','http_410')),
+                UTC_TIMESTAMP(),updated_at),
+            status=CASE WHEN trusted_legacy=0 AND last_http_status IN (404,410) AND exclusion_reason IN ('http_404','http_410') THEN CASE VALUES(index_bucket) WHEN 'registered' THEN 'registered' WHEN 'in_progress' THEN 'in_progress' WHEN 'finished' THEN 'finished' ELSE status END ELSE status END,is_void=CASE WHEN trusted_legacy=0 AND last_http_status IN (404,410) AND exclusion_reason IN ('http_404','http_410') THEN 0 ELSE is_void END,exclusion_reason=CASE WHEN trusted_legacy=0 AND last_http_status IN (404,410) AND exclusion_reason IN ('http_404','http_410') THEN NULL ELSE exclusion_reason END,index_bucket=VALUES(index_bucket),index_time_class=VALUES(index_time_class),index_result=VALUES(index_result),club_verified=1,verified_club_slug=VALUES(verified_club_slug),discovery_index=1,last_http_status=CASE WHEN last_http_status IN (404,410) THEN NULL ELSE last_http_status END,retry_after=NULL");
         foreach(['registered','in_progress','finished'] as $bucket){
             foreach(is_array($payload[$bucket]??null)?$payload[$bucket]:[] as $m){
                 if(!is_array($m))continue;$url=(string)($m['@id']??'');
