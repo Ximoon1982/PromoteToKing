@@ -31,6 +31,20 @@ final class GreenAnalyticsBootstrap
         if($e instanceof \PDOException){$info=$e->errorInfo??null;if(is_array($info)&&((string)($info[0]??'')==='40001'||(int)($info[1]??0)===1213))return true;}
         return str_contains($message,'deadlock found')||str_contains($message,'serialization failure')||str_contains($message,'try restarting transaction');
     }
+    /**
+     * MariaDB 1969 / SQLSTATE 70100 is the per-statement execution budget.
+     * During finite worker cycles this is a voluntary yield, not a GAB failure.
+     */
+    private function isStatementBudgetExceeded(\Throwable $e): bool
+    {
+        $info=$e instanceof \PDOException?($e->errorInfo??null):null;
+        if(is_array($info)&&(int)($info[1]??0)===1969)return true;
+        $message=strtolower($e->getMessage());
+        return str_contains($message,'max_statement_time')
+            || str_contains($message,'maximum statement execution time exceeded')
+            || ((string)$e->getCode()==='70100'&&str_contains($message,'interrupted'));
+    }
+
     private function storedGabErrorIsTransient(): bool
     {
         $s=$this->green->state();$message=strtolower((string)($s['gab_last_error']??''));
@@ -177,15 +191,27 @@ final class GreenAnalyticsBootstrap
             if($key==='core_projection_matches'){$cur=json_decode((string)($lane['cursor_json']??''),true);$after=(int)($cur['last_id']??0);$r=$this->compat->projectMatchBatch($after,25);$done=(bool)$r['drained'];$processed=(int)$lane['processed_rows']+(int)$r['processed'];$this->setLane($key,$done?'completed':'running',['processed_rows'=>$processed,'changed_rows'=>$processed,'cursor_json'=>json_encode(['last_id'=>(int)$r['last_id']])]);$actions[]=$r;if(!$done)break;continue;}
             if($key==='compat_reconciliation'){
                 $cur=json_decode((string)($lane['cursor_json']??''),true);if(!is_array($cur))$cur=[];$after=(int)($cur['last_id']??0);$r=null;$transient=null;
+                $budgetExceeded=false;
                 for($attempt=1;$attempt<=3;$attempt++){
                     try{$r=$this->compat->reconcileCompatibilityBatch($after,40);$transient=null;break;}
-                    catch(\Throwable $e){if(!$this->isTransientSerializationFailure($e))throw $e;$transient=$e;if($attempt<3){usleep(50000*$attempt);continue;}}
+                    catch(\Throwable $e){
+                        if($this->isStatementBudgetExceeded($e)){
+                            $transient=$e;$budgetExceeded=true;break;
+                        }
+                        if(!$this->isTransientSerializationFailure($e))throw $e;
+                        $transient=$e;if($attempt<3){usleep(50000*$attempt);continue;}
+                    }
                 }
                 if(!is_array($r)){
-                    // Preserve cursor/pass/counters and yield. The next CRON slice retries the
-                    // same authoritative batch; a normal InnoDB deadlock must never kill GAB.
-                    $message='Transient GABCRF database contention; batch yielded for retry.';
-                    $this->setLane($key,'running',['last_error'=>$message]);$actions[]=['gabcrf_transient_retry'=>true,'attempts'=>3,'error'=>$transient?->getMessage()];break;
+                    // Preserve cursor, counters and the entire completed-pass snapshot.
+                    // Never make a bounded SQL timeout an error or a reset.
+                    $message=$budgetExceeded
+                        ?'GABCRF SQL exceeded its background statement budget; deferred.'
+                        :'Transient GABCRF database contention; batch yielded for retry.';
+                    $this->setLane($key,'running',['last_error'=>$message]);
+                    $actions[]=['gabcrf_deferred'=>true,'statement_budget'=>$budgetExceeded,
+                        'attempts'=>$budgetExceeded?1:3,'error'=>$transient?->getMessage()];
+                    break;
                 }
                 $done=(bool)$r['drained'];$processed=(int)$lane['processed_rows']+(int)$r['processed'];$changed=(int)$lane['changed_rows']+(int)$r['changed'];$nextAfter=!empty($r['reset_cursor'])?0:(int)$r['last_id'];$passNo=max(1,(int)($cur['pass_no']??1));$knownRemaining=array_key_exists('last_full_pass_remaining',$cur)?(int)$cur['last_full_pass_remaining']:null;if(!empty($r['pass_drained'])){$knownRemaining=(int)$r['remaining'];if(!empty($r['reset_cursor']))$passNo++;}// Capture actual candidates from normal bounded GAB batches; do not run a
                 // second full-history diagnostic query on constrained IONOS hosting.
@@ -212,7 +238,7 @@ final class GreenAnalyticsBootstrap
                 $this->setLane($key,'error',['processed_rows'=>count(array_filter($r['checks']??[])),'error_rows'=>count(array_filter($r['checks']??[],fn($v)=>!$v)),'last_error'=>json_encode($r)]);throw new RuntimeException('Green public read compatibility audit failed.');
             }$this->setLane($key,'completed',['processed_rows'=>$count,'changed_rows'=>$count,'cursor_json'=>json_encode($r)]);continue;}
             throw new RuntimeException('Unknown GAB lane '.$key);
-        }}catch(\Throwable $e){$lane=$this->lane();if(is_array($lane)&&(string)($lane['lane_key']??'')==='compat_reconciliation'&&$this->isTransientSerializationFailure($e)){try{$this->setLane('compat_reconciliation','running',['last_error'=>'Transient GABCRF database contention; slice yielded for retry.']);}catch(\Throwable){}return ['ran'=>true,'ok'=>true,'transient_retry'=>true,'error'=>$e->getMessage(),'actions'=>$actions,'gab'=>$this->status()];}if($lane)$this->setLane((string)$lane['lane_key'],'error',['error_rows'=>(int)($lane['error_rows']??0)+1,'last_error'=>$e->getMessage()]);$this->green->core->prepare("UPDATE p2k_g_state SET gab_status='error',gab_last_error=? WHERE club_slug=?")->execute([substr($e->getMessage(),0,2000),$this->green->clubSlug]);return ['ran'=>true,'ok'=>false,'error'=>$e->getMessage(),'actions'=>$actions,'gab'=>$this->status()];}
+        }}catch(\Throwable $e){$lane=$this->lane();if(is_array($lane)&&(string)($lane['lane_key']??'')==='compat_reconciliation'&&($this->isTransientSerializationFailure($e)||$this->isStatementBudgetExceeded($e))){try{$this->setLane('compat_reconciliation','running',['last_error'=>$this->isStatementBudgetExceeded($e)?'GABCRF SQL statement budget reached; deferred.':'Transient GABCRF database contention; slice yielded for retry.']);}catch(\Throwable){}return ['ran'=>true,'ok'=>true,'transient_retry'=>true,'error'=>$e->getMessage(),'actions'=>$actions,'gab'=>$this->status()];}if($lane)$this->setLane((string)$lane['lane_key'],'error',['error_rows'=>(int)($lane['error_rows']??0)+1,'last_error'=>$e->getMessage()]);$this->green->core->prepare("UPDATE p2k_g_state SET gab_status='error',gab_last_error=? WHERE club_slug=?")->execute([substr($e->getMessage(),0,2000),$this->green->clubSlug]);return ['ran'=>true,'ok'=>false,'error'=>$e->getMessage(),'actions'=>$actions,'gab'=>$this->status()];}
         // Finalize immediately when the last lane completed at the end of this slice.
         if(!$this->lane())$this->green->core->prepare("UPDATE p2k_g_state SET gab_status='ready',gab_phase='complete',gab_completed_at=COALESCE(gab_completed_at,UTC_TIMESTAMP()),gab_last_error=NULL WHERE club_slug=?")->execute([$this->green->clubSlug]);
         return ['ran'=>true,'ok'=>true,'actions'=>$actions,'gab'=>$this->status()];
