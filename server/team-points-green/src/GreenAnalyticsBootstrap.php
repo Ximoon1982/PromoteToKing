@@ -191,6 +191,22 @@ final class GreenAnalyticsBootstrap
             if($key==='core_projection_matches'){$cur=json_decode((string)($lane['cursor_json']??''),true);$after=(int)($cur['last_id']??0);$r=$this->compat->projectMatchBatch($after,25);$done=(bool)$r['drained'];$processed=(int)$lane['processed_rows']+(int)$r['processed'];$this->setLane($key,$done?'completed':'running',['processed_rows'=>$processed,'changed_rows'=>$processed,'cursor_json'=>json_encode(['last_id'=>(int)$r['last_id']])]);$actions[]=$r;if(!$done)break;continue;}
             if($key==='compat_reconciliation'){
                 $cur=json_decode((string)($lane['cursor_json']??''),true);if(!is_array($cur))$cur=[];$after=(int)($cur['last_id']??0);$r=null;$transient=null;
+                // Repair a single previously diagnosed, player-ID-confirmed identity
+                // board before the expensive global reconciliation scan. This uses
+                // the existing ledger, never changes MIAC or historical Green facts,
+                // and never takes time away from the finite Quick-cycle reservation.
+                try{
+                    $repair=$this->compat->repairTrustedIdentityBoard();
+                    if((int)($repair['repaired']??0)>0){
+                        $actions[]=['verified_identity_board_repaired'=>$repair];
+                        break;
+                    }
+                }catch(\Throwable $e){
+                    if(!$this->isStatementBudgetExceeded($e))throw $e;
+                    $this->setLane($key,'running',['last_error'=>'Bounded GAB identity-board repair deferred by SQL time budget.']);
+                    $actions[]=['identity_board_repair_deferred'=>true,'error'=>$e->getMessage()];
+                    break;
+                }
                 $budgetExceeded=false;
                 for($attempt=1;$attempt<=3;$attempt++){
                     try{$r=$this->compat->reconcileCompatibilityBatch($after,40);$transient=null;break;}
