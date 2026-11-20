@@ -135,6 +135,35 @@ final class GreenCompatibility
      * compatibility UNIQUE(match_id,board_no) key. Prefer point-event evidence and the
      * authoritative board payload, then trusted/canonical identity evidence.
      */
+    /**
+     * Trust Green's stable player-ID alias only over a stale MIAC self-map.
+     * Explicit MIAC canonical choices and rejected/conflicting edges are never
+     * overridden. Both names must independently have the same trusted player ID.
+     */
+    private function verifiedCanonicalSql(string $usernameSql,string $greenAlias,string $miacAlias): string
+    {
+        return "COALESCE(CASE WHEN {$miacAlias}.canonical_username_key={$usernameSql}
+          AND {$greenAlias}.trusted=1
+          AND {$greenAlias}.chess_player_id IS NOT NULL
+          AND {$greenAlias}.canonical_username_key IS NOT NULL
+          AND {$greenAlias}.canonical_username_key<>{$usernameSql}
+          AND EXISTS(SELECT 1 FROM p2k_g_identity_map canonical_id
+            WHERE canonical_id.username_key={$greenAlias}.canonical_username_key
+              AND canonical_id.chess_player_id={$greenAlias}.chess_player_id AND canonical_id.trusted=1)
+          AND EXISTS(SELECT 1 FROM p2k_g_player_aliases historical_id
+            WHERE historical_id.username_key={$usernameSql}
+              AND historical_id.chess_player_id={$greenAlias}.chess_player_id)
+          AND NOT EXISTS(SELECT 1 FROM p2k_miac_edges rejected_edge
+            WHERE rejected_edge.club_slug={$miacAlias}.club_slug
+              AND rejected_edge.status IN ('rejected','conflict')
+              AND ((rejected_edge.old_username_key={$usernameSql}
+                     AND rejected_edge.new_username_key={$greenAlias}.canonical_username_key)
+                OR (rejected_edge.new_username_key={$usernameSql}
+                     AND rejected_edge.old_username_key={$greenAlias}.canonical_username_key)))
+          THEN {$greenAlias}.canonical_username_key END,
+          {$miacAlias}.canonical_username_key,{$greenAlias}.canonical_username_key,{$usernameSql})";
+    }
+
     private function canonicalBoardProjection(int $matchId): array
     {
         $bq=$this->green->core->prepare("SELECT gb.*,m.status match_status FROM p2k_g_boards gb JOIN p2k_g_matches m ON m.match_id=gb.match_id WHERE gb.match_id=? ORDER BY gb.board_no");
@@ -143,8 +172,9 @@ final class GreenCompatibility
         if(!$boards)return ['rows'=>[],'duplicates_resolved'=>0,'member_duplicates_resolved'=>0];
         $boardByNo=[];foreach($boards as $b)$boardByNo[(int)$b['board_no']]=$b;
 
-        $cq=$this->green->core->prepare("SELECT mp.*,COALESCE(mi.canonical_username_key,im.canonical_username_key,mp.username_key) canonical_username_key,
-              CASE WHEN COALESCE(mi.canonical_username_key,im.canonical_username_key,mp.username_key)=mp.username_key THEN 1 ELSE 0 END identity_is_canonical,
+        $boardIdentity=$this->verifiedCanonicalSql('mp.username_key','im','mi');
+        $cq=$this->green->core->prepare("SELECT mp.*,{$boardIdentity} canonical_username_key,
+              CASE WHEN {$boardIdentity}=mp.username_key THEN 1 ELSE 0 END identity_is_canonical,
               CASE WHEN mi.canonical_username_key IS NOT NULL THEN 1 ELSE COALESCE(im.trusted,0) END identity_trusted,
               CASE WHEN EXISTS(SELECT 1 FROM p2k_g_point_events e WHERE e.match_id=mp.match_id AND e.board_no=mp.board_no AND e.username_key=mp.username_key) THEN 1 ELSE 0 END has_point_event
             FROM p2k_g_match_players mp
@@ -237,10 +267,13 @@ final class GreenCompatibility
     private function storedGameRatingPair(int $matchId,int $boardNo,string $memberKey): array
     {
         $memberKey=strtolower(trim($memberKey));
+        $eventIdentity=$this->verifiedCanonicalSql('e.username_key','im','me');
+        $whiteIdentity=$this->verifiedCanonicalSql('LOWER(g.white_username)','iw','mw');
+        $blackIdentity=$this->verifiedCanonicalSql('LOWER(g.black_username)','ib','mb');
         $q=$this->green->core->prepare("SELECT g.game_index,g.white_username,g.black_username,g.white_rating,g.black_rating,g.updated_at,
-                   e.username_key event_username_key,COALESCE(me.canonical_username_key,im.canonical_username_key,e.username_key) event_canonical_username_key,
-                   COALESCE(mw.canonical_username_key,iw.canonical_username_key,LOWER(g.white_username)) white_canonical_username_key,
-                   COALESCE(mb.canonical_username_key,ib.canonical_username_key,LOWER(g.black_username)) black_canonical_username_key
+                   e.username_key event_username_key,{$eventIdentity} event_canonical_username_key,
+                   {$whiteIdentity} white_canonical_username_key,
+                   {$blackIdentity} black_canonical_username_key
               FROM p2k_g_games g
               LEFT JOIN p2k_g_point_events e ON e.game_url=g.game_url AND e.match_id=g.match_id AND e.board_no=g.board_no
               LEFT JOIN p2k_g_identity_map im ON im.username_key=e.username_key
@@ -285,15 +318,16 @@ final class GreenCompatibility
     private function canonicalGameProjection(int $matchId,int $boardNo,string $memberKey): array
     {
         $memberKey=strtolower(trim($memberKey));
+        $eventIdentity=$this->verifiedCanonicalSql('e.username_key','im','mi');
         $q=$this->green->core->prepare("SELECT g.*,
                    e.username_key event_username_key,e.result event_result,e.points event_points,e.updated_at event_updated_at,
-                   COALESCE(mi.canonical_username_key,im.canonical_username_key,e.username_key) event_canonical_username_key,
+                   {$eventIdentity} event_canonical_username_key,
                    CASE WHEN mi.canonical_username_key IS NOT NULL THEN 1 ELSE COALESCE(im.trusted,0) END event_identity_trusted
               FROM p2k_g_games g
               JOIN p2k_g_point_events e ON e.game_url=g.game_url AND e.match_id=g.match_id AND e.board_no=g.board_no
               LEFT JOIN p2k_g_identity_map im ON im.username_key=e.username_key
               LEFT JOIN p2k_miac_canonical_map mi ON mi.club_slug=? AND mi.username_key=e.username_key AND mi.conflict=0
-             WHERE g.match_id=? AND g.board_no=? AND COALESCE(mi.canonical_username_key,im.canonical_username_key,e.username_key)=?
+             WHERE g.match_id=? AND g.board_no=? AND {$eventIdentity}=?
              ORDER BY g.game_index,
                       CASE WHEN e.username_key=? THEN 0 ELSE 1 END,
                       COALESCE(im.trusted,0) DESC,
@@ -375,12 +409,13 @@ final class GreenCompatibility
         // Identify contradictory trusted Green and MIAC evidence once per match,
         // rather than issuing a separate database lookup for every board.
         $identityConflictsByBoard=[];
+        $conflictIdentity=$this->verifiedCanonicalSql('e.username_key','im','mi');
         $identityConflict=$this->green->core->prepare("SELECT DISTINCT e.board_no,e.username_key,im.canonical_username_key
             FROM p2k_g_games g
             JOIN p2k_g_point_events e ON e.match_id=g.match_id AND e.board_no=g.board_no AND e.game_url=g.game_url
             JOIN p2k_g_identity_map im ON im.username_key=e.username_key AND im.trusted=1
             JOIN p2k_miac_canonical_map mi ON mi.club_slug=? AND mi.username_key=e.username_key AND mi.conflict=0
-            WHERE g.match_id=? AND mi.canonical_username_key<>im.canonical_username_key");
+            WHERE g.match_id=? AND {$conflictIdentity}<>im.canonical_username_key");
         $identityConflict->execute([$club,$matchId]);
         foreach($identityConflict->fetchAll(PDO::FETCH_ASSOC)?:[] as $conflict){
             $identityConflictsByBoard[(int)$conflict['board_no']][(string)$conflict['canonical_username_key']]
