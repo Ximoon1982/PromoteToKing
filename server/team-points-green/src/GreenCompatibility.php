@@ -444,6 +444,93 @@ final class GreenCompatibility
         return ['projected'=>true,'match_id'=>$matchId,'boards'=>$boardRows,'games'=>$gameRows,'lineup_duplicates_resolved'=>(int)($projection['duplicates_resolved']??0),'member_duplicates_resolved'=>(int)($projection['member_duplicates_resolved']??0),'game_duplicates_resolved'=>$gameDuplicatesResolved];
     }
 
+    /**
+     * Bounded GAB repair of a known identity ledger entry. Never change MIAC,
+     * Green point events, board ownership or an existing game attribution.
+     * A board is retired only after its full verified game projection agrees.
+     * One board per GAB slice keeps live finite-cycle work first.
+     */
+    public function repairTrustedIdentityBoard(): array
+    {
+        $club=$this->green->clubSlug;
+        $q=$this->green->core->prepare("SELECT u.match_id,u.board_no,u.username_key,
+                  im.canonical_username_key,cb.board_id
+            FROM p2k_g_gab_unresolved_boards u
+            JOIN p2k_g_identity_map im ON im.username_key=u.username_key
+              AND im.trusted=1 AND im.chess_player_id IS NOT NULL
+            JOIN p2k_g_identity_map current_id
+              ON current_id.username_key=im.canonical_username_key
+              AND current_id.chess_player_id=im.chess_player_id AND current_id.trusted=1
+            JOIN p2k_g_player_aliases old_alias
+              ON old_alias.username_key=u.username_key
+              AND old_alias.chess_player_id=im.chess_player_id
+            JOIN p2k_miac_canonical_map mi
+              ON mi.club_slug=u.club_slug AND mi.username_key=u.username_key
+              AND mi.conflict=0 AND mi.canonical_username_key=u.username_key
+            JOIN p2k_tp_members member ON member.club_slug=u.club_slug
+              AND member.username_key=im.canonical_username_key
+            JOIN p2k_tp_boards cb ON cb.member_id=member.member_id
+              AND cb.match_id=u.match_id AND cb.board_no=u.board_no
+            WHERE u.club_slug=? AND u.reason='identity_authority_conflict'
+              AND NOT EXISTS(SELECT 1 FROM p2k_miac_edges reject_edge
+                WHERE reject_edge.club_slug=u.club_slug
+                  AND reject_edge.status IN ('rejected','conflict')
+                  AND ((reject_edge.old_username_key=u.username_key
+                        AND reject_edge.new_username_key=im.canonical_username_key)
+                    OR (reject_edge.new_username_key=u.username_key
+                        AND reject_edge.old_username_key=im.canonical_username_key)))
+            ORDER BY u.match_id,u.board_no LIMIT 1");
+        $q->execute([$club]);$row=$q->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($row))return ['attempted'=>0,'repaired'=>0,'inserted_games'=>0];
+        $matchId=(int)$row['match_id'];$boardNo=(int)$row['board_no'];$boardId=(int)$row['board_id'];
+        $projection=$this->canonicalGameProjection($matchId,$boardNo,(string)$row['canonical_username_key']);
+        $expected=[];
+        foreach($projection['rows']??[] as $g){
+            $end=(int)($g['end_epoch']??0);if($end<=0)continue;
+            $seq=max(1,(int)($g['game_index']??0));
+            $expected[$seq]=$g;
+        }
+        if(!$expected)return ['attempted'=>1,'repaired'=>0,'inserted_games'=>0,'reason'=>'no_verified_game_projection',
+            'match_id'=>$matchId,'board_no'=>$boardNo];
+        $db=$this->green->core;
+        $db->beginTransaction();
+        try{
+            $old=$db->prepare('SELECT sequence_no,game_url_override FROM p2k_tp_games WHERE board_id=?');
+            $old->execute([$boardId]);$existing=[];
+            foreach($old->fetchAll(PDO::FETCH_ASSOC)?:[] as $r)$existing[(int)$r['sequence_no']]=(string)$r['game_url_override'];
+            // Do not overwrite, delete or claim to repair a contradictory game.
+            foreach($existing as $seq=>$url){
+                if(!isset($expected[$seq]) || $url!==(string)$expected[$seq]['game_url']){
+                    $db->rollBack();
+                    return ['attempted'=>1,'repaired'=>0,'inserted_games'=>0,
+                        'reason'=>'existing_game_conflict','match_id'=>$matchId,'board_no'=>$boardNo];
+                }
+            }
+            $inserted=0;
+            $add=$db->prepare("INSERT INTO p2k_tp_games(board_id,sequence_no,game_id,game_url_override,game_end_utc,result_code,points_x2,source_hash,verified_at,is_seed) VALUES(?,?,?,?,?,?,?,?,?,0)");
+            foreach($expected as $seq=>$g){
+                if(isset($existing[$seq]))continue;
+                $gid=null;if(preg_match('~/(?:daily|live)/(\d+)(?:$|[/?#])~',(string)$g['game_url'],$m))$gid=(int)$m[1];
+                $hash=hash('sha256',(string)$g['game_url'].'|'.(string)$g['result'].'|'.(string)$g['points'],true);
+                $add->execute([$boardId,$seq,$gid,(string)$g['game_url'],
+                    gmdate('Y-m-d H:i:s',(int)$g['end_epoch']), (string)($g['result']??''),
+                    max(0,min(4,(int)round(((float)$g['points'])*2))),$hash,$g['updated_at']]);
+                $inserted++;
+            }
+            if($inserted>0)$db->prepare('UPDATE p2k_tp_state SET core_generation=core_generation+1,updated_at=UTC_TIMESTAMP() WHERE club_slug=?')->execute([$club]);
+            $clear=$db->prepare("DELETE FROM p2k_g_gab_unresolved_boards
+                WHERE club_slug=? AND match_id=? AND board_no=? AND username_key=? AND reason='identity_authority_conflict'");
+            $clear->execute([$club,$matchId,$boardNo,(string)$row['username_key']]);
+            $repaired=$clear->rowCount();
+            $db->commit();
+            return ['attempted'=>1,'repaired'=>$repaired,'inserted_games'=>$inserted,
+                'match_id'=>$matchId,'board_no'=>$boardNo];
+        }catch(\Throwable $e){
+            if($db->inTransaction())$db->rollBack();
+            throw $e;
+        }
+    }
+
     public function projectMatchBatch(int $afterId=0,int $limit=100): array
     {
         $limit=max(1,min(500,$limit));$this->projectMembers();$q=$this->green->core->prepare("SELECT match_id FROM p2k_g_matches WHERE match_id>? AND club_verified=1 AND time_class='daily' ORDER BY match_id LIMIT {$limit}");$q->execute([$afterId]);$ids=array_map('intval',$q->fetchAll(PDO::FETCH_COLUMN)?:[]);$last=$afterId;$changed=0;
