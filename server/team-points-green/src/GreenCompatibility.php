@@ -490,17 +490,32 @@ final class GreenCompatibility
             $seq=max(1,(int)($g['game_index']??0));
             $expected[$seq]=$g;
         }
-        if(!$expected)return ['attempted'=>1,'repaired'=>0,'inserted_games'=>0,'reason'=>'no_verified_game_projection',
-            'match_id'=>$matchId,'board_no'=>$boardNo];
+        $raw=$this->green->core->prepare("SELECT COUNT(DISTINCT GREATEST(1,g.game_index))
+            FROM p2k_g_games g JOIN p2k_g_point_events e
+              ON e.match_id=g.match_id AND e.board_no=g.board_no AND e.game_url=g.game_url
+            WHERE g.match_id=? AND g.board_no=?");
+        $raw->execute([$matchId,$boardNo]);
+        // A missing/invalid end time or unprojected sequence must never retire
+        // the original unresolved identity evidence.
+        if(!$expected || count($expected)!==count($projection['rows']??[])
+            || (int)$raw->fetchColumn()!==count($expected)){
+            return ['attempted'=>1,'repaired'=>0,'inserted_games'=>0,
+                'reason'=>'incomplete_verified_game_projection','match_id'=>$matchId,'board_no'=>$boardNo];
+        }
         $db=$this->green->core;
         $db->beginTransaction();
         try{
-            $old=$db->prepare('SELECT sequence_no,game_url_override FROM p2k_tp_games WHERE board_id=?');
+            $old=$db->prepare('SELECT sequence_no,game_url_override,source_hash FROM p2k_tp_games WHERE board_id=?');
             $old->execute([$boardId]);$existing=[];
-            foreach($old->fetchAll(PDO::FETCH_ASSOC)?:[] as $r)$existing[(int)$r['sequence_no']]=(string)$r['game_url_override'];
+            foreach($old->fetchAll(PDO::FETCH_ASSOC)?:[] as $r)$existing[(int)$r['sequence_no']]=$r;
             // Do not overwrite, delete or claim to repair a contradictory game.
-            foreach($existing as $seq=>$url){
-                if(!isset($expected[$seq]) || $url!==(string)$expected[$seq]['game_url']){
+            foreach($existing as $seq=>$stored){
+                $g=$expected[$seq]??null;
+                $expectedHash=is_array($g)?hash('sha256',
+                    (string)$g['game_url'].'|'.(string)$g['result'].'|'.(string)$g['points'],true):'';
+                if(!is_array($g)
+                    || (string)$stored['game_url_override']!==(string)$g['game_url']
+                    || !hash_equals($expectedHash,(string)$stored['source_hash'])){
                     $db->rollBack();
                     return ['attempted'=>1,'repaired'=>0,'inserted_games'=>0,
                         'reason'=>'existing_game_conflict','match_id'=>$matchId,'board_no'=>$boardNo];
