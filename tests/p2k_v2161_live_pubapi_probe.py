@@ -59,3 +59,27 @@ time.sleep(1)
 daily=get(*TARGETS[2])
 if isinstance(daily,dict): print("DAILY_DETAIL",json.dumps({k:daily.get(k) for k in ("@id","url","name","status","time_class") if k in daily}))
 else: print("DAILY_DETAIL_UNAVAILABLE")
+
+# The documented PubAPI index omits scheduled live events for this club.
+# Check public web listings only to assess whether a read-only fallback is feasible.
+for label,url in [
+    ("club_live_listing","https://www.chess.com/clubs/matches/live/team-france"),
+    ("club_homepage","https://www.chess.com/club/team-france"),
+    ("target_web_match","https://www.chess.com/play/match/31195524"),
+]:
+    try:
+        request=urllib.request.Request(url,headers={
+            "User-Agent":"Mozilla/5.0 (compatible; P2KReadOnlyAudit/1.0)",
+            "Accept":"text/html,application/xhtml+xml"})
+        with urllib.request.urlopen(request,timeout=14) as response:
+            html=response.read(1_500_000).decode("utf-8","replace")
+            import re
+            ids=re.findall(r'(?:match/live/|play/match/|matches/live/)([0-9]{5,18})',html)
+            print("WEBPAGE",label,"status",response.status,"size",len(html),
+                  "target_present",MATCH in html,"match_ids",list(dict.fromkeys(ids))[:15],
+                  "final_url",response.url[:180])
+    except urllib.error.HTTPError as exc:
+        print("WEBPAGE",label,"HTTP",exc.code)
+    except Exception as exc:
+        print("WEBPAGE",label,type(exc).__name__,str(exc)[:160])
+    time.sleep(1)
