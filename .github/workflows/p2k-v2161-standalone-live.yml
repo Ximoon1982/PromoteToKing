@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 5
+          fetch-depth: 20
       - name: Validate PHP syntax
         run: |
           for club in TeamFrance TGP; do
@@ -60,7 +60,8 @@ jobs:
           unzip -t "$zip"
           unzip -q "$zip" -d "$temp"
           bash -n "$temp/$package/install.sh"
-          bash "$temp/$package/install.sh" "$PWD" --check
+          # The current branch now contains v0.3.6; the 0.3.5 installer
+          # is instead tested against its original v0.3.4 source below.
           legacy="$(mktemp -d)"
           while IFS=$'\t' read -r relative old_hash new_hash; do
             mkdir -p "$legacy/$(dirname "$relative")"
