@@ -9,6 +9,7 @@ on:
       - 'tests/standalone_widget_live_v2161.php'
       - 'tests/standalone_widget_live_v2161.cjs'
       - '.github/workflows/p2k-v2161-standalone-live.yml'
+      - 'release-packages/v2.16.1/P2K_TGP_TeamFrance_Widget_v0.3.5_Live_Matches_SSH_Installer.zip'
   workflow_dispatch:
 
 permissions:
@@ -20,6 +21,8 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 5
       - name: Validate PHP syntax
         run: |
           for club in TeamFrance TGP; do
@@ -41,3 +44,27 @@ jobs:
         run: php tests/standalone_widget_live_v2161.php
       - name: Public cards and admin wiring regression
         run: node tests/standalone_widget_live_v2161.cjs
+      - name: Verify offline SSH package and reversible installation
+        run: |
+          set -euo pipefail
+          package="P2K_TGP_TeamFrance_Widget_v0.3.5_Live_Matches_SSH_Installer"
+          zip="release-packages/v2.16.1/$package.zip"
+          temp="$(mktemp -d)"
+          unzip -t "$zip"
+          unzip -q "$zip" -d "$temp"
+          bash -n "$temp/$package/install.sh"
+          bash "$temp/$package/install.sh" "$PWD" --check
+          legacy="$(mktemp -d)"
+          while IFS=$'\t' read -r relative old_hash new_hash; do
+            mkdir -p "$legacy/$(dirname "$relative")"
+            git show "2a56632bce825aaa9c8947719aa055490e8bd154:$relative" > "$legacy/$relative"
+          done < "$temp/$package/FILE_CHECKSUMS.tsv"
+          mkdir -p "$legacy/TeamFrance/Widget/data" "$legacy/TGP/Widget/data"
+          echo 'keep-team-france-state' > "$legacy/TeamFrance/Widget/data/showcase.json"
+          echo 'keep-tgp-state' > "$legacy/TGP/Widget/data/showcase.json"
+          bash "$temp/$package/install.sh" "$legacy" --check
+          bash "$temp/$package/install.sh" "$legacy" --apply
+          bash "$temp/$package/install.sh" "$legacy" --check
+          grep -Fxq 'keep-team-france-state' "$legacy/TeamFrance/Widget/data/showcase.json"
+          grep -Fxq 'keep-tgp-state' "$legacy/TGP/Widget/data/showcase.json"
+          test -d "$legacy/storage/standalone-widget-backups"
