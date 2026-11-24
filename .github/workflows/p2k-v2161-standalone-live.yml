@@ -8,6 +8,7 @@ on:
       - 'TGP/Widget/**'
       - 'tests/standalone_widget_live_v2161.php'
       - 'tests/standalone_widget_live_v2161.cjs'
+      - 'tests/widget_live_pubapi_real_payload_v2161.php'
       - '.github/workflows/p2k-v2161-standalone-live.yml'
       - 'release-packages/v2.16.1/P2K_TGP_TeamFrance_Widget_v0.3.5_Live_Matches_SSH_Installer.zip'
   workflow_dispatch:
@@ -31,8 +32,10 @@ jobs:
             php -l "$club/Widget/admin/index.php"
             php -l "$club/Widget/config.php"
             php -l "$club/Widget/src/Store.php"
+            php -l "$club/Widget/src/ChessApi.php"
           done
           php -l tests/standalone_widget_live_v2161.php
+          php -l tests/widget_live_pubapi_real_payload_v2161.php
       - name: Validate JavaScript syntax
         run: |
           for club in TeamFrance TGP; do
@@ -42,6 +45,10 @@ jobs:
           node --check tests/standalone_widget_live_v2161.cjs
       - name: State migration and identity-safe pruning regression
         run: php tests/standalone_widget_live_v2161.php
+      - name: Actual Chess.com Live match payload regression
+        run: |
+          php tests/widget_live_pubapi_real_payload_v2161.php TeamFrance
+          php tests/widget_live_pubapi_real_payload_v2161.php TGP
       - name: Public cards and admin wiring regression
         run: node tests/standalone_widget_live_v2161.cjs
       - name: Verify offline SSH package and reversible installation

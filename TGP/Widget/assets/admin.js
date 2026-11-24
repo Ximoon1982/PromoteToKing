@@ -571,7 +571,9 @@
     try {
       const payload = await json(`${API}?action=registration-list&timeClass=live${force ? "&refresh=1" : ""}&_=${Date.now()}`);
       liveRegistrationMatches = Array.isArray(payload.matches) ? payload.matches : [];
-      liveRegistrationStatus.textContent = `${liveRegistrationMatches.length} Live match${liveRegistrationMatches.length === 1 ? "" : "es"} currently in registration.`;
+      liveRegistrationStatus.textContent = liveRegistrationMatches.length
+        ? `${liveRegistrationMatches.length} Live match${liveRegistrationMatches.length === 1 ? "" : "es"} currently in the public registration index.`
+        : "Chess.com currently lists no scheduled Live matches in its public registration index. Paste a Live match URL or ID above to add one directly.";
       renderLiveRegistration();
     } catch (error) {
       liveRegistrationMatches = [];

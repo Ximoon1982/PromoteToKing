@@ -94,11 +94,46 @@ function title_from_slug(string $slug): string {
     if ($slug === '') return 'Opponent';
     return ucwords(str_replace(['-', '_'], ' ', $slug));
 }
+/** Index time_class is the speed (lightning/blitz/standard) for Live matches. */
+function match_index_type(array $row, string $wanted): bool {
+    $class = strtolower(trim((string)($row['time_class'] ?? '')));
+    $api = strtolower(trim((string)($row['@id'] ?? '')));
+    $web = strtolower(trim((string)($row['url'] ?? '')));
+    $isLive = str_contains($api, '/pub/match/live/')
+        || str_contains($web, '/club/matches/live/')
+        || str_contains($web, '/play/match/');
+    if ($isLive || $class === 'live') return $wanted === 'live';
+    return $wanted === 'daily' && $class === 'daily';
+}
+function match_api_path(string $matchId, string $timeClass): string {
+    return 'https://api.chess.com/pub/match/' . ($timeClass === 'live' ? 'live/' : '') . rawurlencode($matchId);
+}
+function match_web_path(string $matchId, string $teamSlug, string $timeClass): string {
+    return $timeClass === 'live'
+        ? 'https://www.chess.com/play/match/' . rawurlencode($matchId)
+        : 'https://www.chess.com/club/matches/' . rawurlencode($teamSlug) . '/' . rawurlencode($matchId);
+}
+function live_control_display(array $match): string {
+    $settings = is_array($match['settings'] ?? null) ? $match['settings'] : [];
+    $raw = trim((string)($settings['time_control'] ?? $match['time_control'] ?? ''));
+    $inc = max(0, (int)($settings['time_increment'] ?? $match['time_increment'] ?? 0));
+    if (preg_match('/^([0-9]+)(?:[+]([0-9]+))?$/D', $raw, $parts)) {
+        $seconds = (int)$parts[1];
+        if (isset($parts[2])) $inc = (int)$parts[2];
+        $minutes = $seconds / 60;
+        $display = abs($minutes - round($minutes)) < 0.000001
+            ? (string)(int)round($minutes)
+            : rtrim(rtrim(sprintf('%.2f', $minutes), '0'), '.');
+        return $display . '+' . $inc;
+    }
+    return $raw;
+}
+
 function registration_index_rows(array $index, string $teamSlug, string $timeClass = 'daily'): array {
     $registered = is_array($index['registered'] ?? null) ? $index['registered'] : [];
     $rows = []; $seen = [];
     foreach ($registered as $row) {
-        if (!is_array($row) || strtolower(trim((string)($row['time_class'] ?? ''))) !== $timeClass) continue;
+        if (!is_array($row) || !match_index_type($row, $timeClass)) continue;
         $id = row_match_id($row);
         if ($id === '' || isset($seen[$id])) continue;
         $seen[$id] = true;
@@ -106,8 +141,8 @@ function registration_index_rows(array $index, string $teamSlug, string $timeCla
         $rows[] = [
             'matchId' => $id,
             'name' => trim((string)($row['name'] ?? '')) ?: 'Match #' . $id,
-            'apiUrl' => trim((string)($row['@id'] ?? '')) ?: 'https://api.chess.com/pub/match/' . rawurlencode($id),
-            'url' => 'https://www.chess.com/club/matches/' . rawurlencode($teamSlug) . '/' . rawurlencode($id),
+            'apiUrl' => trim((string)($row['@id'] ?? '')) ?: match_api_path($id, $timeClass),
+            'url' => trim((string)($row['url'] ?? '')) ?: match_web_path($id, $teamSlug, $timeClass),
             'opponentSlug' => $opponentSlug,
             'opponentName' => title_from_slug($opponentSlug),
             'timeClass' => $timeClass,
@@ -120,7 +155,7 @@ function club_daily_match_ids(array $index, string $timeClass = 'daily'): array 
     foreach (['registered', 'in_progress', 'finished'] as $bucketName) {
         $bucket = is_array($index[$bucketName] ?? null) ? $index[$bucketName] : [];
         foreach ($bucket as $row) {
-            if (!is_array($row) || strtolower(trim((string)($row['time_class'] ?? ''))) !== $timeClass) continue;
+            if (!is_array($row) || !match_index_type($row, $timeClass)) continue;
             $id = row_match_id($row);
             if ($id !== '') $ids[$id] = true;
         }
@@ -135,14 +170,14 @@ function club_daily_match_ids(array $index, string $timeClass = 'daily'): array 
 function confirmed_started_daily_ids(array $index, string $timeClass = 'daily'): array {
     $registered = [];
     foreach (is_array($index['registered'] ?? null) ? $index['registered'] : [] as $row) {
-        if (!is_array($row) || strtolower((string)($row['time_class'] ?? '')) !== $timeClass) continue;
+        if (!is_array($row) || !match_index_type($row, $timeClass)) continue;
         $id = row_match_id($row);
         if ($id !== '') $registered[$id] = true;
     }
     $started = [];
     foreach (['in_progress','finished'] as $status) {
         foreach (is_array($index[$status] ?? null) ? $index[$status] : [] as $row) {
-            if (!is_array($row) || strtolower((string)($row['time_class'] ?? '')) !== $timeClass) continue;
+            if (!is_array($row) || !match_index_type($row, $timeClass)) continue;
             $id = row_match_id($row);
             if ($id !== '' && !isset($registered[$id])) $started[$id] = true;
         }
@@ -158,16 +193,15 @@ function club_daily_match_map(array $index, string $teamSlug, string $wantedTime
         $bucket = is_array($index[$bucketName] ?? null) ? $index[$bucketName] : [];
         foreach ($bucket as $row) {
             if (!is_array($row)) continue;
-            $timeClass = strtolower(trim((string)($row['time_class'] ?? '')));
-            if ($timeClass !== $wantedTimeClass) continue;
+            if (!match_index_type($row, $wantedTimeClass)) continue;
             $id = row_match_id($row);
             if ($id === '') continue;
             $opponentSlug = club_slug_from_url((string)($row['opponent'] ?? ''));
             $map[$id] = [
                 'matchId' => $id,
                 'name' => trim((string)($row['name'] ?? '')) ?: 'Match #' . $id,
-                'apiUrl' => trim((string)($row['@id'] ?? '')) ?: 'https://api.chess.com/pub/match/' . rawurlencode($id),
-                'url' => 'https://www.chess.com/club/matches/' . rawurlencode($teamSlug) . '/' . rawurlencode($id),
+                'apiUrl' => trim((string)($row['@id'] ?? '')) ?: match_api_path($id, $wantedTimeClass),
+                'url' => trim((string)($row['url'] ?? '')) ?: match_web_path($id, $teamSlug, $wantedTimeClass),
                 'opponentSlug' => $opponentSlug,
                 'opponentName' => title_from_slug($opponentSlug),
                 'status' => $bucketName,
@@ -197,7 +231,7 @@ function resolve_match_reference(string $reference, string $teamSlug, ChessApi $
         if (!is_array($bucket)) continue;
         foreach ($bucket as $row) {
             if (!is_array($row)) continue;
-            if (strtolower(trim((string)($row['time_class'] ?? ''))) !== $timeClass) continue;
+            if (!match_index_type($row, $timeClass)) continue;
             $candidateId = row_match_id($row);
             if ($candidateId === '') continue;
             $keys = [];
@@ -233,8 +267,15 @@ function match_teams(array $match): array {
 }
 function validate_match(array $match, string $teamSlug, string $timeClass = 'daily'): array {
     $actualTimeClass = strtolower(trim((string)($match['time_class'] ?? ($match['settings']['time_class'] ?? ''))));
-    if ($actualTimeClass !== '' && $actualTimeClass !== $timeClass) throw new InvalidArgumentException('Expected a ' . $timeClass . ' Chess.com team match.');
-    if ($actualTimeClass === '' && $timeClass === 'live') throw new InvalidArgumentException('Chess.com did not confirm that this is a Live team match.');
+    $apiPath = (string)parse_url((string)($match['@id'] ?? ''), PHP_URL_PATH);
+    $webPath = (string)parse_url((string)($match['url'] ?? ''), PHP_URL_PATH);
+    $isLive = str_starts_with($apiPath, '/pub/match/live/')
+        || str_starts_with($webPath, '/club/matches/live/')
+        || str_starts_with($webPath, '/play/match/');
+    if ($timeClass === 'live' && !$isLive)
+        throw new InvalidArgumentException('Chess.com did not identify this as a Live team match.');
+    if ($timeClass === 'daily' && ($isLive || ($actualTimeClass !== '' && $actualTimeClass !== 'daily')))
+        throw new InvalidArgumentException('Expected a Daily Chess team match.');
     $our = null; $opponent = null;
     foreach (match_teams($match) as $team) {
         if (team_slug_from_team($team) === $teamSlug) $our = $team;
@@ -270,8 +311,8 @@ function card_payload(array $match, string $matchId, bool $urgent, string $teamS
     }
     $name = trim((string)($match['name'] ?? '')) ?: 'Match #' . $matchId;
     $codes = league_codes($name, $config);
-    $apiUrl = trim((string)($match['@id'] ?? '')) ?: 'https://api.chess.com/pub/match/' . rawurlencode($matchId);
-    $url = trim((string)($match['url'] ?? '')) ?: 'https://www.chess.com/club/matches/' . rawurlencode($teamSlug) . '/' . rawurlencode($matchId);
+    $apiUrl = trim((string)($match['@id'] ?? '')) ?: match_api_path($matchId, $timeClass);
+    $url = trim((string)($match['url'] ?? '')) ?: match_web_path($matchId, $teamSlug, $timeClass);
     $start = $match['start_time'] ?? $match['startTime'] ?? null;
     $start = is_numeric($start) && (int)$start > 0 ? (int)$start : null;
     return [
@@ -288,8 +329,8 @@ function card_payload(array $match, string $matchId, bool $urgent, string $teamS
         'opponentName' => $opponentName,
         'opponentLogo' => $logo,
         'settings' => is_array($match['settings'] ?? null) ? $match['settings'] : [],
-        'time_control' => $match['time_control'] ?? ($match['settings']['time_control'] ?? null),
-        'liveTimeControl' => $match['time_control'] ?? ($match['settings']['time_control'] ?? null),
+        'time_control' => $timeClass === 'live' ? live_control_display($match) : ($match['time_control'] ?? ($match['settings']['time_control'] ?? null)),
+        'liveTimeControl' => $timeClass === 'live' ? live_control_display($match) : null,
         'ourTeam' => $our,
         'opponentTeam' => $opponent,
         'status' => $match['status'] ?? null,
@@ -298,7 +339,7 @@ function card_payload(array $match, string $matchId, bool $urgent, string $teamS
 function item_payload(array $item, string $teamSlug, ChessApi $chess, array $config, string $timeClass = 'daily'): array {
     $id = (string)($item['matchId'] ?? '');
     try {
-        $match = $chess->match($id);
+        $match = $timeClass === 'live' ? $chess->liveMatch($id) : $chess->match($id);
         return array_merge($item, ['resolved' => true, 'match' => card_payload($match, $id, ($item['urgent'] ?? false) === true, $teamSlug, $chess, $config, $timeClass)]);
     } catch (Throwable $e) {
         return array_merge($item, ['resolved' => false, 'error' => $e->getMessage(), 'match' => ['matchId'=>$id,'name'=>'Match #'.$id,'url'=>'https://www.chess.com/club/matches/'.rawurlencode($teamSlug).'/'.rawurlencode($id),'urgent'=>(($item['urgent']??false)===true)]]);
@@ -398,7 +439,34 @@ try {
         $liveMap = club_daily_match_map($index, $teamSlug, 'live');
         $items = []; $liveItems = [];
         foreach ($state['items'] as $item) $items[] = admin_item_payload($item, $dailyMap, $teamSlug);
-        foreach ($state['liveItems'] as $item) $liveItems[] = admin_item_payload($item, $liveMap, $teamSlug);
+        // Chess.com currently omits scheduled Live matches from the public
+        // 'registered' index. Resolve only the first four configured missing
+        // Live IDs through the dedicated (cached) detail endpoint, not by
+        // assuming that index absence means a missing/invalid match.
+        $detailsChecked = 0;
+        foreach ($state['liveItems'] as $item) {
+            $id = (string)($item['matchId'] ?? '');
+            if ($id !== '' && !isset($liveMap[$id]) && $detailsChecked < 4) {
+                $detailsChecked++;
+                try {
+                    $detail = $chess->liveMatch($id);
+                    [, $opponent] = validate_match($detail, $teamSlug, 'live');
+                    $liveMap[$id] = [
+                        'matchId' => $id,
+                        'name' => trim((string)($detail['name'] ?? '')) ?: 'Match #' . $id,
+                        'url' => trim((string)($detail['url'] ?? '')) ?: match_web_path($id, $teamSlug, 'live'),
+                        'apiUrl' => match_api_path($id, 'live'),
+                        'opponentSlug' => team_slug_from_team($opponent),
+                        'opponentName' => trim((string)($opponent['name'] ?? '')) ?: 'Opponent',
+                        'timeClass' => 'live',
+                        'status' => (string)($detail['status'] ?? ''),
+                    ];
+                } catch (Throwable) {
+                    // Never misclassify an unreturned match as started.
+                }
+            }
+            $liveItems[] = admin_item_payload($item, $liveMap, $teamSlug);
+        }
         reply(200, [
             'ok'=>true,'schemaVersion'=>$state['schemaVersion'],'revision'=>$state['revision'],
             'updatedAt'=>$state['updatedAt'],'items'=>$items,'liveItems'=>$liveItems,
@@ -487,7 +555,7 @@ try {
         $reference = trim((string)($body['reference'] ?? ''));
         $id = resolve_match_reference($reference, $teamSlug, $chess, $timeClass);
         if ($id === '') throw new InvalidArgumentException('No ' . $timeClass . ' match for this club matched the URL, ID or slug.');
-        $match = $chess->match($id, true);
+        $match = $timeClass === 'live' ? $chess->liveMatch($id, true) : $chess->match($id, true);
         $normalized = card_payload($match, $id, false, $teamSlug, $chess, $config, $timeClass);
         if (is_started_daily_status($normalized['status'] ?? null))
             throw new InvalidArgumentException('This ' . $timeClass . ' match has already started or finished and cannot be added.');
@@ -537,7 +605,7 @@ try {
                 if (isset($started[$type][$id]))
                     throw new InvalidArgumentException('This ' . $type . ' match has already started or finished.');
                 if (isset($known[$type][$id])) continue;
-                $detail = $chess->match((string)$id);
+                $detail = $type === 'live' ? $chess->liveMatch((string)$id) : $chess->match((string)$id);
                 validate_match($detail, $teamSlug, $type);
                 if (is_started_daily_status($detail['status'] ?? null))
                     throw new InvalidArgumentException('This ' . $type . ' match has already started or finished.');

@@ -28,6 +28,13 @@ final class ChessApi
         return $this->getJson('https://api.chess.com/pub/match/' . rawurlencode($matchId), $this->matchTtl, $force);
     }
 
+    /** Live team matches have a separate documented PubAPI endpoint. */
+    public function liveMatch(string $matchId, bool $force = false): array
+    {
+        if (!preg_match('/^[0-9]{1,18}$/D', $matchId)) throw new ChessApiException('Invalid match id.');
+        return $this->getJson('https://api.chess.com/pub/match/live/' . rawurlencode($matchId), $this->matchTtl, $force);
+    }
+
     public function club(string $slug, bool $force = false): array
     {
         $slug = strtolower(trim($slug));

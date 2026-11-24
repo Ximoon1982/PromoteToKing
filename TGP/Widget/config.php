@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 return [
-    'version' => '0.3.5',
+    'version' => '0.3.6',
     'team_slug' => 'the-golden-phoenix',
     'team_name' => 'The Golden Phoenix',
     'max_display_matches' => 6,

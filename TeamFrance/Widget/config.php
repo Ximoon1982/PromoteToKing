@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 return [
-    'version' => '0.3.5',
+    'version' => '0.3.6',
     'team_slug' => 'team-france',
     'team_name' => 'Team France',
     'max_display_matches' => 6,
