@@ -101,7 +101,7 @@ checkLive(!match_index_type(['time_class'=>'lightning'],'live'),
 $liveStarted=$index;
 $liveStarted['in_progress'][]=$liveStarted['registered'][1];
 $liveStarted['registered']=[$liveStarted['registered'][0],$liveStarted['registered'][2]];
-checkLive(confirmed_started_daily_ids($liveStarted,'live')===['31195588'],
+checkLive(array_map('strval', confirmed_started_daily_ids($liveStarted,'live'))===['31195588'],
     'Live start cleanup did not respect registered bucket');
 $realIndex=['registered'=>[['@id'=>'https://api.chess.com/pub/match/20201111',
                             'time_class'=>'daily']]];
