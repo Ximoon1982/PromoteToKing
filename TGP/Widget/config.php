@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 return [
-    'version' => '0.3.4',
+    'version' => '0.3.5',
     'team_slug' => 'the-golden-phoenix',
     'team_name' => 'The Golden Phoenix',
     'max_display_matches' => 6,
@@ -10,6 +10,6 @@ return [
     'cache_ttl_match_seconds' => 45,
     'cache_ttl_club_seconds' => 300,
     'admin_session_seconds' => 3600,
-    'league_acronyms' => ['1WL', 'TCMAC', 'KOTML', 'TMCL', 'WKCL', 'PCL', 'CW', 'WCGC'],
+    'league_acronyms' => ['1WL', 'TCMAC', 'KOTML', 'TMCL', 'WKCL', 'PCL', 'CW', 'WCGC', 'GCWL'],
     'user_agent' => 'TGP-Match-Showcase/0.2.0 (https://www.promotetoking.org/)',
 ];

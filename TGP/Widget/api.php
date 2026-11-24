@@ -94,39 +94,33 @@ function title_from_slug(string $slug): string {
     if ($slug === '') return 'Opponent';
     return ucwords(str_replace(['-', '_'], ' ', $slug));
 }
-function registration_index_rows(array $index, string $teamSlug): array {
+function registration_index_rows(array $index, string $teamSlug, string $timeClass = 'daily'): array {
     $registered = is_array($index['registered'] ?? null) ? $index['registered'] : [];
-    $rows = [];
-    $seen = [];
+    $rows = []; $seen = [];
     foreach ($registered as $row) {
-        if (!is_array($row)) continue;
-        $timeClass = strtolower(trim((string)($row['time_class'] ?? '')));
-        if ($timeClass !== 'daily') continue;
+        if (!is_array($row) || strtolower(trim((string)($row['time_class'] ?? ''))) !== $timeClass) continue;
         $id = row_match_id($row);
         if ($id === '' || isset($seen[$id])) continue;
         $seen[$id] = true;
         $opponentSlug = club_slug_from_url((string)($row['opponent'] ?? ''));
-        $name = trim((string)($row['name'] ?? '')) ?: 'Match #' . $id;
         $rows[] = [
             'matchId' => $id,
-            'name' => $name,
+            'name' => trim((string)($row['name'] ?? '')) ?: 'Match #' . $id,
             'apiUrl' => trim((string)($row['@id'] ?? '')) ?: 'https://api.chess.com/pub/match/' . rawurlencode($id),
             'url' => 'https://www.chess.com/club/matches/' . rawurlencode($teamSlug) . '/' . rawurlencode($id),
             'opponentSlug' => $opponentSlug,
             'opponentName' => title_from_slug($opponentSlug),
-            'timeClass' => 'daily',
+            'timeClass' => $timeClass,
         ];
     }
     return $rows;
 }
-function club_daily_match_ids(array $index): array {
+function club_daily_match_ids(array $index, string $timeClass = 'daily'): array {
     $ids = [];
     foreach (['registered', 'in_progress', 'finished'] as $bucketName) {
         $bucket = is_array($index[$bucketName] ?? null) ? $index[$bucketName] : [];
         foreach ($bucket as $row) {
-            if (!is_array($row)) continue;
-            $timeClass = strtolower(trim((string)($row['time_class'] ?? '')));
-            if ($timeClass !== 'daily') continue;
+            if (!is_array($row) || strtolower(trim((string)($row['time_class'] ?? ''))) !== $timeClass) continue;
             $id = row_match_id($row);
             if ($id !== '') $ids[$id] = true;
         }
@@ -138,17 +132,17 @@ function club_daily_match_ids(array $index): array {
  * automatic removal. An absent ID, failed fetch or delayed registration list
  * must never result in deletion. Registration wins conflicting index buckets.
  */
-function confirmed_started_daily_ids(array $index): array {
+function confirmed_started_daily_ids(array $index, string $timeClass = 'daily'): array {
     $registered = [];
     foreach (is_array($index['registered'] ?? null) ? $index['registered'] : [] as $row) {
-        if (!is_array($row) || strtolower((string)($row['time_class'] ?? '')) !== 'daily') continue;
+        if (!is_array($row) || strtolower((string)($row['time_class'] ?? '')) !== $timeClass) continue;
         $id = row_match_id($row);
         if ($id !== '') $registered[$id] = true;
     }
     $started = [];
     foreach (['in_progress','finished'] as $status) {
         foreach (is_array($index[$status] ?? null) ? $index[$status] : [] as $row) {
-            if (!is_array($row) || strtolower((string)($row['time_class'] ?? '')) !== 'daily') continue;
+            if (!is_array($row) || strtolower((string)($row['time_class'] ?? '')) !== $timeClass) continue;
             $id = row_match_id($row);
             if ($id !== '' && !isset($registered[$id])) $started[$id] = true;
         }
@@ -158,14 +152,14 @@ function confirmed_started_daily_ids(array $index): array {
 function is_started_daily_status(mixed $status): bool {
     return in_array(strtolower(trim((string)$status)), ['in_progress','finished','completed','started','in progress'], true);
 }
-function club_daily_match_map(array $index, string $teamSlug): array {
+function club_daily_match_map(array $index, string $teamSlug, string $wantedTimeClass = 'daily'): array {
     $map = [];
     foreach (['registered', 'in_progress', 'finished'] as $bucketName) {
         $bucket = is_array($index[$bucketName] ?? null) ? $index[$bucketName] : [];
         foreach ($bucket as $row) {
             if (!is_array($row)) continue;
             $timeClass = strtolower(trim((string)($row['time_class'] ?? '')));
-            if ($timeClass !== 'daily') continue;
+            if ($timeClass !== $wantedTimeClass) continue;
             $id = row_match_id($row);
             if ($id === '') continue;
             $opponentSlug = club_slug_from_url((string)($row['opponent'] ?? ''));
@@ -192,7 +186,7 @@ function admin_item_payload(array $item, array $matchMap, string $teamSlug): arr
     ];
     return array_merge($item, ['resolved' => isset($matchMap[$id]), 'match' => $match, 'error' => isset($matchMap[$id]) ? '' : 'Not present in the current club match index.']);
 }
-function resolve_match_reference(string $reference, string $teamSlug, ChessApi $chess): string {
+function resolve_match_reference(string $reference, string $teamSlug, ChessApi $chess, string $timeClass = 'daily'): string {
     $id = match_reference_id($reference);
     if ($id !== '') return $id;
     $needle = slug_key($reference);
@@ -203,6 +197,7 @@ function resolve_match_reference(string $reference, string $teamSlug, ChessApi $
         if (!is_array($bucket)) continue;
         foreach ($bucket as $row) {
             if (!is_array($row)) continue;
+            if (strtolower(trim((string)($row['time_class'] ?? ''))) !== $timeClass) continue;
             $candidateId = row_match_id($row);
             if ($candidateId === '') continue;
             $keys = [];
@@ -236,9 +231,10 @@ function match_teams(array $match): array {
     $teams = $match['teams'] ?? [];
     return is_array($teams) ? array_values(array_filter($teams, 'is_array')) : [];
 }
-function validate_match(array $match, string $teamSlug): array {
-    $timeClass = strtolower(trim((string)($match['time_class'] ?? ($match['settings']['time_class'] ?? ''))));
-    if ($timeClass !== '' && $timeClass !== 'daily') throw new InvalidArgumentException('Only Daily Chess team matches are supported.');
+function validate_match(array $match, string $teamSlug, string $timeClass = 'daily'): array {
+    $actualTimeClass = strtolower(trim((string)($match['time_class'] ?? ($match['settings']['time_class'] ?? ''))));
+    if ($actualTimeClass !== '' && $actualTimeClass !== $timeClass) throw new InvalidArgumentException('Expected a ' . $timeClass . ' Chess.com team match.');
+    if ($actualTimeClass === '' && $timeClass === 'live') throw new InvalidArgumentException('Chess.com did not confirm that this is a Live team match.');
     $our = null; $opponent = null;
     foreach (match_teams($match) as $team) {
         if (team_slug_from_team($team) === $teamSlug) $our = $team;
@@ -261,8 +257,8 @@ function league_codes(string $name, array $config): array {
     }
     return $matches;
 }
-function card_payload(array $match, string $matchId, bool $urgent, string $teamSlug, ChessApi $chess, array $config): array {
-    [$our, $opponent] = validate_match($match, $teamSlug);
+function card_payload(array $match, string $matchId, bool $urgent, string $teamSlug, ChessApi $chess, array $config, string $timeClass = 'daily'): array {
+    [$our, $opponent] = validate_match($match, $teamSlug, $timeClass);
     $opponentSlug = team_slug_from_team($opponent);
     $opponentName = trim((string)($opponent['name'] ?? '')) ?: ($opponentSlug !== '' ? str_replace('-', ' ', $opponentSlug) : 'Opponent');
     $logo = '';
@@ -280,6 +276,7 @@ function card_payload(array $match, string $matchId, bool $urgent, string $teamS
     $start = is_numeric($start) && (int)$start > 0 ? (int)$start : null;
     return [
         'matchId' => $matchId,
+        'timeClass' => $timeClass,
         'name' => $name,
         'url' => $url,
         'apiUrl' => $apiUrl,
@@ -292,16 +289,17 @@ function card_payload(array $match, string $matchId, bool $urgent, string $teamS
         'opponentLogo' => $logo,
         'settings' => is_array($match['settings'] ?? null) ? $match['settings'] : [],
         'time_control' => $match['time_control'] ?? ($match['settings']['time_control'] ?? null),
+        'liveTimeControl' => $match['time_control'] ?? ($match['settings']['time_control'] ?? null),
         'ourTeam' => $our,
         'opponentTeam' => $opponent,
         'status' => $match['status'] ?? null,
     ];
 }
-function item_payload(array $item, string $teamSlug, ChessApi $chess, array $config): array {
+function item_payload(array $item, string $teamSlug, ChessApi $chess, array $config, string $timeClass = 'daily'): array {
     $id = (string)($item['matchId'] ?? '');
     try {
         $match = $chess->match($id);
-        return array_merge($item, ['resolved' => true, 'match' => card_payload($match, $id, ($item['urgent'] ?? false) === true, $teamSlug, $chess, $config)]);
+        return array_merge($item, ['resolved' => true, 'match' => card_payload($match, $id, ($item['urgent'] ?? false) === true, $teamSlug, $chess, $config, $timeClass)]);
     } catch (Throwable $e) {
         return array_merge($item, ['resolved' => false, 'error' => $e->getMessage(), 'match' => ['matchId'=>$id,'name'=>'Match #'.$id,'url'=>'https://www.chess.com/club/matches/'.rawurlencode($teamSlug).'/'.rawurlencode($id),'urgent'=>(($item['urgent']??false)===true)]]);
     }
@@ -312,33 +310,51 @@ try {
     if ($action === 'cards') {
         request_method('GET');
         $state = $store->read();
-        // Public widget reads, not administrator visits, drive automatic cleanup.
-        // The cached Chess.com club index is a single bounded API read. Never
-        // prune on an outage or on missing/unknown index entries.
+        // Only positive Chess.com index evidence can retire configured cards.
+        // Public reads use one cached club index; transient errors never delete cards.
         try {
             $index = $chess->clubMatches($teamSlug);
-            $started = confirmed_started_daily_ids($index);
-            if ($started !== []) $state = $store->pruneStartedMatches($started);
+            $startedDaily = confirmed_started_daily_ids($index, 'daily');
+            $startedLive = confirmed_started_daily_ids($index, 'live');
+            if ($startedDaily !== [] || $startedLive !== [])
+                $state = $store->pruneStartedMatches($startedDaily, $startedLive);
         } catch (ChessApiException $e) {
-            // Preserve existing cards during a transient Chess.com outage.
+            // Keep all saved cards when the upstream index is unavailable.
         }
-        $layout = $state['layout'] ?? ['arenaRows'=>1,'dailyRows'=>2];
-        $limit = max(1, min(6, (int)($layout['dailyRows'] ?? 2) * 2));
-        $items = array_values(array_filter($state['items'], static fn(array $item): bool => ($item['enabled'] ?? true) === true));
-        $cards = [];
-        $newlyStarted = [];
-        foreach ($items as $item) {
-            $payload = item_payload($item, $teamSlug, $chess, $config);
+        $layout = $state['layout'] ?? ['arenaRows'=>1,'liveRows'=>1,'dailyRows'=>2];
+        $dailyLimit = max(1, min(6, (int)($layout['dailyRows'] ?? 2) * 2));
+        $liveLimit = max(1, min(4, (int)($layout['liveRows'] ?? 1) * 2));
+        $cards = []; $liveCards = []; $newlyStarted = []; $newlyStartedLive = [];
+        foreach (array_values(array_filter($state['items'], static fn(array $v): bool => ($v['enabled'] ?? true) === true)) as $item) {
+            $payload = item_payload($item, $teamSlug, $chess, $config, 'daily');
             $card = $payload['match'];
             if (!empty($payload['resolved']) && is_started_daily_status($card['status'] ?? null)) {
                 $newlyStarted[] = (string)$item['matchId'];
                 continue;
             }
             $cards[] = $card;
-            if (count($cards) >= $limit) break;
+            if (count($cards) >= $dailyLimit) break;
         }
-        if ($newlyStarted !== []) $store->pruneStartedMatches($newlyStarted);
-        reply(200, ['ok'=>true,'version'=>$config['version'] ?? '0.2.0','teamSlug'=>$teamSlug,'cards'=>$cards,'arenas'=>array_slice(array_values(array_filter($state['arenas'] ?? [], static fn(array $a): bool => ($a['active'] ?? false) === true)), 0, max(2, min(4, (int)($layout['arenaRows'] ?? 1) * 2))),'layout'=>$layout]);
+        foreach (array_values(array_filter($state['liveItems'], static fn(array $v): bool => ($v['enabled'] ?? true) === true)) as $item) {
+            $payload = item_payload($item, $teamSlug, $chess, $config, 'live');
+            $card = $payload['match'];
+            if (!empty($payload['resolved']) && is_started_daily_status($card['status'] ?? null)) {
+                $newlyStartedLive[] = (string)$item['matchId'];
+                continue;
+            }
+            $liveCards[] = $card;
+            if (count($liveCards) >= $liveLimit) break;
+        }
+        if ($newlyStarted !== [] || $newlyStartedLive !== [])
+            $store->pruneStartedMatches($newlyStarted, $newlyStartedLive);
+        reply(200, [
+            'ok'=>true,'version'=>$config['version'] ?? '0.3.5','teamSlug'=>$teamSlug,
+            'cards'=>$cards,'liveCards'=>$liveCards,
+            'arenas'=>array_slice(array_values(array_filter($state['arenas'] ?? [],
+                static fn(array $a): bool => ($a['active'] ?? false) === true)),
+                0, max(2, min(4, (int)($layout['arenaRows'] ?? 1) * 2))),
+            'layout'=>$layout,
+        ]);
     }
 
     if ($action === 'admin-status') {
@@ -367,35 +383,48 @@ try {
         request_method('GET');
         Auth::requireAdmin($sessionLifetime, false);
         $state = $store->read();
-        // Admin rows need only the lightweight club match index: no per-match detail calls.
         try {
             $index = $chess->clubMatches($teamSlug);
         } catch (ChessApiException $e) {
-            // Admins must still be able to update arenas during a Chess.com API outage.
-            $index = [];
+            $index = []; // Admin editing remains available during Chess.com outages.
         }
         if ($index !== []) {
-            $started = confirmed_started_daily_ids($index);
-            if ($started !== []) $state = $store->pruneStartedMatches($started);
+            $startedDaily = confirmed_started_daily_ids($index, 'daily');
+            $startedLive = confirmed_started_daily_ids($index, 'live');
+            if ($startedDaily !== [] || $startedLive !== [])
+                $state = $store->pruneStartedMatches($startedDaily, $startedLive);
         }
-        $matchMap = club_daily_match_map($index, $teamSlug);
-        $items = [];
-        foreach ($state['items'] as $item) $items[] = admin_item_payload($item, $matchMap, $teamSlug);
-        reply(200, ['ok'=>true,'schemaVersion'=>$state['schemaVersion'],'revision'=>$state['revision'],'updatedAt'=>$state['updatedAt'],'items'=>$items,'arenas'=>$state['arenas'] ?? [],'layout'=>$state['layout'] ?? ['arenaRows'=>1,'dailyRows'=>2],'teamSlug'=>$teamSlug,'teamName'=>$config['team_name'] ?? $teamSlug]);
+        $dailyMap = club_daily_match_map($index, $teamSlug, 'daily');
+        $liveMap = club_daily_match_map($index, $teamSlug, 'live');
+        $items = []; $liveItems = [];
+        foreach ($state['items'] as $item) $items[] = admin_item_payload($item, $dailyMap, $teamSlug);
+        foreach ($state['liveItems'] as $item) $liveItems[] = admin_item_payload($item, $liveMap, $teamSlug);
+        reply(200, [
+            'ok'=>true,'schemaVersion'=>$state['schemaVersion'],'revision'=>$state['revision'],
+            'updatedAt'=>$state['updatedAt'],'items'=>$items,'liveItems'=>$liveItems,
+            'arenas'=>$state['arenas'] ?? [],
+            'layout'=>$state['layout'] ?? ['arenaRows'=>1,'liveRows'=>1,'dailyRows'=>2],
+            'teamSlug'=>$teamSlug,'teamName'=>$config['team_name'] ?? $teamSlug,
+        ]);
     }
 
     if ($action === 'registration-list') {
         request_method('GET');
         Auth::requireAdmin($sessionLifetime, false);
+        $timeClass = strtolower(trim((string)($_GET['timeClass'] ?? 'daily')));
+        if (!in_array($timeClass, ['daily','live'], true))
+            throw new InvalidArgumentException('Unknown match type.');
         $force = (string)($_GET['refresh'] ?? '') === '1';
         $index = $chess->clubMatches($teamSlug, $force);
-        $started = confirmed_started_daily_ids($index);
-        if ($started !== []) $store->pruneStartedMatches($started);
+        $started = confirmed_started_daily_ids($index, $timeClass);
+        if ($started !== []) $store->pruneStartedMatches(
+            $timeClass === 'daily' ? $started : [],
+            $timeClass === 'live' ? $started : []
+        );
         reply(200, [
-            'ok'=>true,
-            'source'=>'https://api.chess.com/pub/club/' . $teamSlug . '/matches',
-            'loadedAt'=>time(),
-            'matches'=>registration_index_rows($index, $teamSlug),
+            'ok'=>true,'source'=>'https://api.chess.com/pub/club/' . $teamSlug . '/matches',
+            'timeClass'=>$timeClass,'loadedAt'=>time(),
+            'matches'=>registration_index_rows($index, $teamSlug, $timeClass),
         ]);
     }
 
@@ -452,13 +481,16 @@ try {
         request_method('POST');
         Auth::requireAdmin($sessionLifetime, true);
         $body = body_json();
+        $timeClass = strtolower(trim((string)($body['timeClass'] ?? 'daily')));
+        if (!in_array($timeClass, ['daily','live'], true))
+            throw new InvalidArgumentException('Unknown match type.');
         $reference = trim((string)($body['reference'] ?? ''));
-        $id = resolve_match_reference($reference, $teamSlug, $chess);
-        if ($id === '') throw new InvalidArgumentException('No Daily match for the configured club matched that URL, id or slug.');
+        $id = resolve_match_reference($reference, $teamSlug, $chess, $timeClass);
+        if ($id === '') throw new InvalidArgumentException('No ' . $timeClass . ' match for this club matched the URL, ID or slug.');
         $match = $chess->match($id, true);
-        $normalized = card_payload($match, $id, false, $teamSlug, $chess, $config);
+        $normalized = card_payload($match, $id, false, $teamSlug, $chess, $config, $timeClass);
         if (is_started_daily_status($normalized['status'] ?? null))
-            throw new InvalidArgumentException('This Daily match has already started or finished and cannot be added to the showcase.');
+            throw new InvalidArgumentException('This ' . $timeClass . ' match has already started or finished and cannot be added.');
         reply(200, ['ok'=>true,'match'=>$normalized]);
     }
 
@@ -467,30 +499,48 @@ try {
         Auth::requireAdmin($sessionLifetime, true);
         $body = body_json();
         $expected = filter_var($body['revision'] ?? null, FILTER_VALIDATE_INT);
-        if ($expected === false || $expected < 0) throw new InvalidArgumentException('revision must be a non-negative integer.');
-        // Arena-only edits and changes to existing match flags must not depend on Chess.com API uptime.
-        // Validate newly introduced Daily IDs only; the stored revision is checked atomically by Store.
+        if ($expected === false || $expected < 0)
+            throw new InvalidArgumentException('revision must be a non-negative integer.');
+        // Arena/layout-only saves preserve both lists even when an editor has
+        // unsaved local changes; new match IDs are validated by time_class.
         $current = $store->read();
         $currentIds = [];
-        foreach ($current['items'] as $existing) $currentIds[(string)$existing['matchId']] = true;
+        foreach (['daily'=>'items', 'live'=>'liveItems'] as $type=>$field) {
+            foreach ($current[$field] as $existing)
+                $currentIds[$type . ':' . (string)$existing['matchId']] = true;
+        }
         $newIds = [];
-        foreach (is_array($body['items'] ?? null) ? $body['items'] : [] as $item) {
-            $id = trim((string)($item['matchId'] ?? ''));
-            if ($id === '' || !preg_match('/^[0-9]{1,18}$/D', $id)) throw new InvalidArgumentException('Invalid match id.');
-            if (!isset($currentIds[$id])) $newIds[$id] = true;
+        $allIds = [];
+        foreach (['daily'=>'items', 'live'=>'liveItems'] as $type=>$field) {
+            $rows = $body[$field] ?? $current[$field];
+            if (!is_array($rows)) throw new InvalidArgumentException($field . ' must be an array.');
+            foreach ($rows as $item) {
+                if (!is_array($item)) throw new InvalidArgumentException('Invalid configured match.');
+                $id = trim((string)($item['matchId'] ?? ''));
+                if ($id === '' || !preg_match('/^[0-9]{1,18}$/D', $id))
+                    throw new InvalidArgumentException('Invalid match id.');
+                if (isset($allIds[$id]) && $allIds[$id] !== $type)
+                    throw new InvalidArgumentException('A match cannot be configured as both Live and Daily.');
+                $allIds[$id] = $type;
+                if (!isset($currentIds[$type . ':' . $id])) $newIds[$id] = $type;
+            }
         }
         if ($newIds !== []) {
             $index = $chess->clubMatches($teamSlug);
-            $knownDailyIds = club_daily_match_ids($index);
-            $startedDailyIds = array_fill_keys(confirmed_started_daily_ids($index), true);
-            foreach (array_keys($newIds) as $id) {
-                if (isset($startedDailyIds[$id]))
-                    throw new InvalidArgumentException('This Daily match has already started or finished and cannot be added.');
-                if (isset($knownDailyIds[$id])) continue;
-                $detail = $chess->match($id);
-                validate_match($detail, $teamSlug);
+            $known = [];
+            $started = [];
+            foreach (['daily','live'] as $type) {
+                $known[$type] = club_daily_match_ids($index, $type);
+                $started[$type] = array_fill_keys(confirmed_started_daily_ids($index, $type), true);
+            }
+            foreach ($newIds as $id=>$type) {
+                if (isset($started[$type][$id]))
+                    throw new InvalidArgumentException('This ' . $type . ' match has already started or finished.');
+                if (isset($known[$type][$id])) continue;
+                $detail = $chess->match((string)$id);
+                validate_match($detail, $teamSlug, $type);
                 if (is_started_daily_status($detail['status'] ?? null))
-                    throw new InvalidArgumentException('This Daily match has already started or finished and cannot be added.');
+                    throw new InvalidArgumentException('This ' . $type . ' match has already started or finished.');
             }
         }
         $saved = $store->save($body, (int)$expected);

@@ -1,0 +1,43 @@
+name: P2K 2.16.1 - standalone Live showcase verification
+
+on:
+  push:
+    branches: [release/v2.16.1]
+    paths:
+      - 'TeamFrance/Widget/**'
+      - 'TGP/Widget/**'
+      - 'tests/standalone_widget_live_v2161.php'
+      - 'tests/standalone_widget_live_v2161.cjs'
+      - '.github/workflows/p2k-v2161-standalone-live.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-widgets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PHP syntax
+        run: |
+          for club in TeamFrance TGP; do
+            php -l "$club/Widget/api.php"
+            php -l "$club/Widget/index.php"
+            php -l "$club/Widget/admin/index.php"
+            php -l "$club/Widget/config.php"
+            php -l "$club/Widget/src/Store.php"
+          done
+          php -l tests/standalone_widget_live_v2161.php
+      - name: Validate JavaScript syntax
+        run: |
+          for club in TeamFrance TGP; do
+            node --check "$club/Widget/assets/widget.js"
+            node --check "$club/Widget/assets/admin.js"
+          done
+          node --check tests/standalone_widget_live_v2161.cjs
+      - name: State migration and identity-safe pruning regression
+        run: php tests/standalone_widget_live_v2161.php
+      - name: Public cards and admin wiring regression
+        run: node tests/standalone_widget_live_v2161.cjs

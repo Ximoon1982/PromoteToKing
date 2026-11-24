@@ -23,11 +23,19 @@
   const registrationList = document.getElementById("registrationList");
   const registrationStatus = document.getElementById("registrationStatus");
   const refreshRegistration = document.getElementById("refreshRegistration");
+  const liveInput = document.getElementById("liveReference");
+  const liveAddButton = document.getElementById("liveAddButton");
+  const liveList = document.getElementById("liveList");
+  const liveRegistrationList = document.getElementById("liveRegistrationList");
+  const liveRegistrationStatus = document.getElementById("liveRegistrationStatus");
+  const refreshLiveRegistration = document.getElementById("refreshLiveRegistration");
 
   let csrf = "";
   let revision = 0;
   let items = [];
   let registrationMatches = [];
+  let liveItems = [];
+  let liveRegistrationMatches = [];
   let dirty = false;
 
   const esc = value => String(value ?? "")
@@ -105,10 +113,12 @@
   const arenaModalSave = document.getElementById("arenaModalSave");
   let arenas = [];
   let persistedItems = [];
-  let layout = {arenaRows: 1, dailyRows: 2};
+  let persistedLiveItems = [];
+  let layout = {arenaRows: 1, liveRows: 1, dailyRows: 2};
   const arenaRowsControl = document.getElementById("arenaRows");
   const dailyRowsControl = document.getElementById("dailyRows");
-  const toLayout = raw => ({arenaRows:Math.max(1,Math.min(2,Number(raw?.arenaRows)||1)),dailyRows:Math.max(1,Math.min(3,Number(raw?.dailyRows)||2))});
+  const liveRowsControl = document.getElementById("liveRows");
+  const toLayout = raw => ({arenaRows:Math.max(1,Math.min(2,Number(raw?.arenaRows)||1)),liveRows:Math.max(1,Math.min(2,Number(raw?.liveRows)||1)),dailyRows:Math.max(1,Math.min(3,Number(raw?.dailyRows)||2))});
   let arenaSaving = false;
   let dailySaving = false;
   let editingArenaIndex = null;
@@ -217,12 +227,13 @@
     try {
       const payload = await json(`${API}?action=save`, {
         method: "POST", headers: { ["X-" + (CFG.teamSlug === "team-france" ? "TF" : "TGP") + "-CSRF"]: csrf },
-        body: JSON.stringify({revision, items: persistedItems, arenas: next.map(toArena), layout}),
+        body: JSON.stringify({revision, items: persistedItems, liveItems: persistedLiveItems, arenas: next.map(toArena), layout}),
       });
       revision = Number(payload.revision);
       if (!Number.isInteger(revision) || revision < 0) throw new Error("Invalid revision returned by server.");
       arenas = (payload.arenas || []).map(toArena);
       persistedItems = compactItems(payload.items || persistedItems);
+      persistedLiveItems = compactItems(payload.liveItems || persistedLiveItems);
       window.P2K_STANDALONE_ARENA_DISCOVERY?.render?.();
       updateEmbedFields();
       preview.src = `../?_=${Date.now()}`;
@@ -305,8 +316,9 @@
     const activeArenas = arenas.filter(a => a.active && a.name && a.link && (!a.endAt || Date.parse(a.endAt) > today)).length;
     const arenaLines = Math.ceil(Math.min(activeArenas, layout.arenaRows * 2) / 2);
     const dailyLines = Math.ceil(Math.min(persistedItems.filter(i => i.enabled).length, layout.dailyRows * 2) / 2);
+    const liveLines = Math.ceil(Math.min(persistedLiveItems.filter(i => i.enabled).length, layout.liveRows * 2) / 2);
     // Card content is ~130-140px per row at 260px, with section titles and spacing.
-    const height = 24 + 132 * (arenaLines + dailyLines) + (arenaLines > 0 ? 17 : 0);
+    const height = 24 + 132 * (arenaLines + liveLines + dailyLines) + (arenaLines > 0 ? 17 : 0) + (liveLines > 0 ? 17 : 0);
     preview.style.height = `${height}px`;
     iframeHtml.value = `<iframe src="${url}" width="260" height="${height}" style="border:0;overflow:hidden" scrolling="no" loading="lazy" title="${title.replace(/\"/g, "&quot;")}"></iframe>`;
   }
@@ -335,9 +347,11 @@
     revision = Number(payload.revision) || 0;
     arenas = (payload.arenas || []).map(toArena);
     persistedItems = compactItems(payload.items || []);
+    persistedLiveItems = compactItems(payload.liveItems || []);
     layout = toLayout(payload.layout);
     arenaRowsControl.value = String(layout.arenaRows);
     dailyRowsControl.value = String(layout.dailyRows);
+    liveRowsControl.value = String(layout.liveRows);
     renderArenas();
     window.P2K_STANDALONE_ARENA_DISCOVERY?.render?.();
     updateEmbedFields();
@@ -349,9 +363,19 @@
       match: row.match || {},
       error: row.error || "",
     }));
+    liveItems = (payload.liveItems || []).map(row => ({
+      matchId: String(row.matchId),
+      enabled: row.enabled !== false,
+      urgent: row.urgent === true,
+      resolved: row.resolved !== false,
+      match: row.match || {},
+      error: row.error || "",
+    }));
     setDirty(false);
     render();
     renderRegistration();
+    renderLiveAdmin();
+    renderLiveRegistration();
   }
 
   function publicRank(index) {
@@ -498,6 +522,150 @@
     }
   }
 
+  function livePublicRank(index) {
+    if (!liveItems[index]?.enabled) return "—";
+    const rank = liveItems.filter((item, i) => i <= index && item.enabled).length;
+    return rank <= layout.liveRows * 2 ? String(rank) : "—";
+  }
+
+  function renderLiveAdmin() {
+    liveList.innerHTML = liveItems.map((item, index) => {
+      const match = item.match || {};
+      const title = match.name || `Match #${item.matchId}`;
+      const opponent = match.opponentName || item.error || "Unresolved";
+      const rank = livePublicRank(index);
+      const shown = rank !== "—";
+      return `<div class="match-row" data-live-index="${index}">
+        <div class="match-rank">${rank}</div>
+        <div class="match-title"><strong>${esc(title)}</strong><span>#${esc(item.matchId)} · ${esc(opponent)}${shown ? " · PUBLIC" : ""}</span></div>
+        <div class="match-controls">
+          <button type="button" data-action="up" ${index === 0 ? "disabled" : ""}>↑</button>
+          <button type="button" data-action="down" ${index === liveItems.length - 1 ? "disabled" : ""}>↓</button>
+          <label><input type="checkbox" data-action="enabled" ${item.enabled ? "checked" : ""}> Enabled</label>
+          <label><input type="checkbox" data-action="urgent" ${item.urgent ? "checked" : ""}> Priority</label>
+          <button type="button" class="remove" data-action="remove">Remove</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  function renderLiveRegistration() {
+    const configured = new Set(liveItems.map(item => String(item.matchId)));
+    if (!liveRegistrationMatches.length) {
+      liveRegistrationList.innerHTML = '<div class="registration-empty">No Live matches are currently in registration.</div>';
+      return;
+    }
+    liveRegistrationList.innerHTML = liveRegistrationMatches.map(match => {
+      const id = String(match.matchId || "");
+      const added = configured.has(id);
+      return `<div class="registration-row" data-live-registration-id="${esc(id)}">
+        <div class="registration-copy"><strong>${esc(match.name || `Match #${id}`)}</strong><span>#${esc(id)} · ${esc(match.opponentName || match.opponentSlug || "Opponent")}</span></div>
+        <button type="button" data-action="add-live-registration" ${added ? "disabled" : ""}>${added ? "Added" : "Add"}</button>
+      </div>`;
+    }).join("");
+  }
+
+  async function loadLiveRegistration(force = false) {
+    refreshLiveRegistration.disabled = true;
+    liveRegistrationStatus.textContent = force ? "Refreshing registration matches…" : "Loading registration matches…";
+    try {
+      const payload = await json(`${API}?action=registration-list&timeClass=live${force ? "&refresh=1" : ""}&_=${Date.now()}`);
+      liveRegistrationMatches = Array.isArray(payload.matches) ? payload.matches : [];
+      liveRegistrationStatus.textContent = `${liveRegistrationMatches.length} Live match${liveRegistrationMatches.length === 1 ? "" : "es"} currently in registration.`;
+      renderLiveRegistration();
+    } catch (error) {
+      liveRegistrationMatches = [];
+      liveRegistrationStatus.textContent = error.message;
+      liveRegistrationList.innerHTML = "";
+    } finally {
+      refreshLiveRegistration.disabled = false;
+    }
+  }
+
+  liveList.addEventListener("click", event => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    const row = button.closest("[data-live-index]");
+    const index = Number(row?.dataset.liveIndex);
+    if (!Number.isInteger(index) || !liveItems[index]) return;
+    const action = button.dataset.action;
+    if (action === "up" && index > 0) [liveItems[index - 1], liveItems[index]] = [liveItems[index], liveItems[index - 1]];
+    if (action === "down" && index < liveItems.length - 1) [liveItems[index + 1], liveItems[index]] = [liveItems[index], liveItems[index + 1]];
+    if (action === "remove") liveItems.splice(index, 1);
+    setDirty(true);
+    renderLiveAdmin();
+    renderLiveRegistration();
+  });
+
+  liveList.addEventListener("change", event => {
+    const element = event.target;
+    if (!(element instanceof HTMLInputElement) || !element.dataset.action) return;
+    const row = element.closest("[data-live-index]");
+    const index = Number(row?.dataset.liveIndex);
+    if (!Number.isInteger(index) || !liveItems[index]) return;
+    if (element.dataset.action === "enabled") liveItems[index].enabled = element.checked;
+    if (element.dataset.action === "urgent") liveItems[index].urgent = element.checked;
+    setDirty(true);
+    renderLiveAdmin();
+  });
+
+  liveRegistrationList.addEventListener("click", event => {
+    const button = event.target.closest('button[data-action="add-live-registration"]');
+    if (!button) return;
+    const row = button.closest("[data-live-registration-id]");
+    const id = String(row?.dataset.liveRegistrationId || "");
+    const match = liveRegistrationMatches.find(candidate => String(candidate.matchId) === id);
+    if (!match || liveItems.some(item => item.matchId === id)) return;
+    liveItems.push({
+      matchId: id,
+      enabled: true,
+      urgent: false,
+      resolved: true,
+      match: {
+        matchId: id,
+        name: match.name || `Match #${id}`,
+        opponentName: match.opponentName || match.opponentSlug || "Opponent",
+        opponentSlug: match.opponentSlug || "",
+        url: match.url || "",
+        apiUrl: match.apiUrl || "",
+      },
+      error: "",
+    });
+    setDirty(true);
+    renderLiveAdmin();
+    renderLiveRegistration();
+    setMessage(`Added ${match.name || `match #${id}`} from the Live registration list.`, "success");
+  });
+
+  async function addLiveMatch() {
+    const reference = liveInput.value.trim();
+    if (!reference) return;
+    liveAddButton.disabled = true;
+    setMessage("Resolving match…");
+    try {
+      const payload = await json(`${API}?action=resolve`, {
+        method: "POST",
+        headers: { "X-TF-CSRF": csrf },
+        body: JSON.stringify({ reference, timeClass: "live" }),
+      });
+      const id = String(payload.match?.matchId || "");
+      if (liveItems.some(item => item.matchId === id)) {
+        setMessage("That match is already configured.", "error");
+        return;
+      }
+      liveItems.push({ matchId: id, enabled: true, urgent: false, resolved: true, match: payload.match, error: "" });
+      liveInput.value = "";
+      setDirty(true);
+      renderLiveAdmin();
+      renderLiveRegistration();
+      setMessage(`Added ${payload.match?.name || `match #${id}`}.`, "success");
+    } catch (error) {
+      setMessage(error.message, "error");
+    } finally {
+      liveAddButton.disabled = false;
+    }
+  }
+
   async function save() {
     if (arenaSaving || dailySaving) return;
     dailySaving = true;
@@ -512,16 +680,19 @@
           revision,
           layout,
           items: items.map(({ matchId, enabled, urgent }) => ({ matchId, enabled, urgent })),
+          liveItems: liveItems.map(({ matchId, enabled, urgent }) => ({ matchId, enabled, urgent })),
           arenas: arenas.map(toArena),
         }),
       });
       revision = Number(payload.revision) || revision + 1;
       persistedItems = compactItems(payload.items || items);
+      persistedLiveItems = compactItems(payload.liveItems || liveItems);
       setDirty(false);
       setMessage("Configuration saved.", "success");
       preview.src = `../?_=${Date.now()}`;
       await loadAdminState();
       await loadRegistration(false);
+      await loadLiveRegistration(false);
     } catch (error) {
       if (error.status === 409) {
         setMessage("Configuration changed elsewhere. Reload the page before retrying; unsaved edits remain on this page.", "error");
@@ -537,38 +708,43 @@
 
   async function saveLayoutConfiguration() {
     if (arenaSaving || dailySaving) return;
-    const next = toLayout({arenaRows:arenaRowsControl.value, dailyRows:dailyRowsControl.value});
+    const next = toLayout({arenaRows:arenaRowsControl.value, liveRows:liveRowsControl.value, dailyRows:dailyRowsControl.value});
     const previous = {...layout};
-    if (next.arenaRows === previous.arenaRows && next.dailyRows === previous.dailyRows) return;
+    if (next.arenaRows === previous.arenaRows && next.liveRows === previous.liveRows && next.dailyRows === previous.dailyRows) return;
     arenaSaving = true;
     renderArenas();
     arenaRowsControl.disabled = true;
+    liveRowsControl.disabled = true;
     dailyRowsControl.disabled = true;
     try {
       const payload = await json(`${API}?action=save`, {
         method:"POST",headers:{["X-"+(CFG.teamSlug === "team-france" ? "TF" : "TGP")+"-CSRF"]:csrf},
-        body:JSON.stringify({revision, items:persistedItems, arenas:arenas.map(toArena), layout:next}),
+        body:JSON.stringify({revision, items:persistedItems, liveItems:persistedLiveItems, arenas:arenas.map(toArena), layout:next}),
       });
       revision = Number(payload.revision);
       layout = toLayout(payload.layout);
       arenaRowsControl.value = String(layout.arenaRows);
+      liveRowsControl.value = String(layout.liveRows);
       dailyRowsControl.value = String(layout.dailyRows);
       updateEmbedFields();
       preview.src = `../?_=${Date.now()}`;
       setMessage("Card rows saved. Copy the updated iframe HTML if the widget is embedded externally.","success");
     } catch (error) {
       arenaRowsControl.value = String(previous.arenaRows);
+      liveRowsControl.value = String(previous.liveRows);
       dailyRowsControl.value = String(previous.dailyRows);
       setMessage(error.status === 409 ? "Configuration changed in another session. Reload before retrying; unsaved Daily edits remain." : error.message,"error");
     } finally {
       arenaSaving = false;
       arenaRowsControl.disabled = false;
+      liveRowsControl.disabled = false;
       dailyRowsControl.disabled = false;
       renderArenas();
     }
   }
   arenaRowsControl.addEventListener("change", () => void saveLayoutConfiguration());
   dailyRowsControl.addEventListener("change", () => void saveLayoutConfiguration());
+  liveRowsControl.addEventListener("change", () => void saveLayoutConfiguration());
 
   async function logout() {
     try {
@@ -593,6 +769,7 @@
     updateEmbedFields();
     await loadAdminState();
     await loadRegistration(false);
+    await loadLiveRegistration(false);
     await window.P2K_STANDALONE_ARENA_DISCOVERY?.start?.({
       api:API,
       clubSlug:String(CFG.teamSlug || ""),
@@ -607,8 +784,13 @@
     loginButton.addEventListener("click", startLogin);
     logoutButton.addEventListener("click", logout);
     addButton.addEventListener("click", addMatch);
+    liveAddButton.addEventListener("click", addLiveMatch);
     saveButton.addEventListener("click", save);
     refreshRegistration.addEventListener("click", () => void loadRegistration(true));
+    refreshLiveRegistration.addEventListener("click", () => void loadLiveRegistration(true));
+    liveInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {event.preventDefault();void addLiveMatch();}
+    });
     input.addEventListener("keydown", event => {
       if (event.key === "Enter") {
         event.preventDefault();

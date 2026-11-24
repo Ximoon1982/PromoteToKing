@@ -23,6 +23,12 @@ header('Cache-Control: no-cache, max-age=30');
   </header>
   <div id="arenaShowcase" class="tgp-grid arena-showcase" aria-live="polite"></div>
 </section>
+<section id="liveSection" class="widget-section" hidden aria-label="Live team matches">
+  <header class="widget-section-head">
+    <div class="widget-section-title">⚔️ Matchs en direct ⚔️</div>
+  </header>
+  <div id="liveShowcase" class="tgp-grid live-showcase" aria-live="polite"></div>
+</section>
 <section id="dailySection" class="widget-section" aria-label="Daily matches">
   <header class="widget-section-head">
     <div class="widget-section-title">⚔️ Matchs en différé ⚔️</div>

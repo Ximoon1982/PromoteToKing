@@ -36,3 +36,8 @@
 
 /* Row selectors for the public two-column card grid. */
 .layout-editor{margin-top:18px;padding-top:12px;border-top:1px solid rgba(255,255,255,.12)}.layout-editor h2{margin:0 0 10px;font-size:16px}.layout-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.layout-fields label{display:grid;gap:5px;font-size:12px;color:#c9c2b9}.layout-fields select{max-width:100%;padding:9px 10px;border:1px solid rgba(255,255,255,.18);border-radius:8px;background:#24211e;color:#f0e8dc;font:inherit}@media(max-width:500px){.layout-fields{grid-template-columns:1fr}}
+
+/* Live-match editor mirrors the established Daily editor. */
+.live-editor{margin-top:19px;padding-top:15px;border-top:1px solid var(--border)}
+.live-editor h2{margin:0 0 8px;color:var(--gold);font-size:16px}
+.live-editor .match-list{margin-top:9px}

@@ -16,7 +16,7 @@ final class RevisionConflict extends RuntimeException
 
 final class Store
 {
-    public const SCHEMA_VERSION = 3;
+    public const SCHEMA_VERSION = 4;
 
     private string $statePath;
     private string $lockPath;
@@ -47,6 +47,7 @@ final class Store
                 'revision' => $expectedRevision + 1,
                 'updatedAt' => gmdate('Y-m-d\TH:i:s\Z'),
                 'items' => $this->normalizeItems($payload['items'] ?? []),
+                'liveItems' => $this->normalizeItems($payload['liveItems'] ?? $current['liveItems']),
                 'arenas' => $this->normalizeArenas($payload['arenas'] ?? $current['arenas']),
                 'layout' => $this->normalizeLayout($payload['layout'] ?? $current['layout']),
             ];
@@ -61,20 +62,29 @@ final class Store
      * Locking and revision increment preserve concurrent editor safety.
      * Missing/outage IDs are intentionally never treated as started.
      */
-    public function pruneStartedMatches(array $startedIds): array
+    public function pruneStartedMatches(array $startedIds, array $startedLiveIds = []): array
     {
         $safe = [];
         foreach ($startedIds as $id) {
             $id = (string)$id;
             if (preg_match('/^[0-9]{1,18}$/D', $id)) $safe[$id] = true;
         }
-        return $this->withLock(function () use ($safe): array {
+        $safeLive = [];
+        foreach ($startedLiveIds as $id) {
+            $id = (string)$id;
+            if (preg_match('/^[0-9]{1,18}$/D', $id)) $safeLive[$id] = true;
+        }
+        return $this->withLock(function () use ($safe, $safeLive): array {
             $current = $this->normalizeState($this->readJson($this->statePath) ?? $this->emptyState());
-            if ($safe === []) return $current;
+            if ($safe === [] && $safeLive === []) return $current;
             $kept = array_values(array_filter($current['items'],
                 static fn(array $item): bool => !isset($safe[(string)$item['matchId']])));
-            if (count($kept) === count($current['items'])) return $current;
+            $keptLive = array_values(array_filter($current['liveItems'],
+                static fn(array $item): bool => !isset($safeLive[(string)$item['matchId']])));
+            if (count($kept) === count($current['items'])
+                && count($keptLive) === count($current['liveItems'])) return $current;
             $current['items'] = $kept;
+            $current['liveItems'] = $keptLive;
             $current['revision']++;
             $current['updatedAt'] = gmdate('Y-m-d\TH:i:s\Z');
             $this->writeRaw($current);
@@ -89,8 +99,9 @@ final class Store
             'revision' => 0,
             'updatedAt' => null,
             'items' => [],
+            'liveItems' => [],
             'arenas' => [],
-            'layout' => ['arenaRows' => 1, 'dailyRows' => 2],
+            'layout' => ['arenaRows' => 1, 'liveRows' => 1, 'dailyRows' => 2],
         ];
     }
 
@@ -101,6 +112,7 @@ final class Store
             'revision' => max(0, (int)($raw['revision'] ?? 0)),
             'updatedAt' => is_string($raw['updatedAt'] ?? null) ? $raw['updatedAt'] : null,
             'items' => $this->normalizeItems(is_array($raw['items'] ?? null) ? $raw['items'] : []),
+            'liveItems' => $this->normalizeItems(is_array($raw['liveItems'] ?? null) ? $raw['liveItems'] : []),
             'arenas' => $this->normalizeArenas(is_array($raw['arenas'] ?? null) ? $raw['arenas'] : []),
             'layout' => $this->normalizeLayout($raw['layout'] ?? null),
         ];
@@ -111,8 +123,10 @@ final class Store
         $layout = is_array($raw) ? $raw : [];
         $arenaRows = (int)($layout['arenaRows'] ?? 1);
         $dailyRows = (int)($layout['dailyRows'] ?? 2);
+        $liveRows = (int)($layout['liveRows'] ?? 1);
         return [
             'arenaRows' => max(1, min(2, $arenaRows)),
+            'liveRows' => max(1, min(2, $liveRows)),
             'dailyRows' => max(1, min(3, $dailyRows)),
         ];
     }

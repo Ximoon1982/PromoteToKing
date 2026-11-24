@@ -32,10 +32,101 @@ const arenaSection = document.getElementById("arenaSection");
 let configuredArenas = [];
 let arenaRows = 1;
 let dailyRows = 2;
+let liveRows = 1;
+let liveCards = [];
+const liveHost = document.getElementById('liveShowcase');
+const liveSection = document.getElementById('liveSection');
 function applyLayout(value) {
   const data=value&&typeof value==="object"?value:{};
   arenaRows=Math.max(1,Math.min(2,Number(data.arenaRows)||1));
   dailyRows=Math.max(1,Math.min(3,Number(data.dailyRows)||2));
+  liveRows=Math.max(1,Math.min(2,Number(data.liveRows)||1));
+}
+
+// Live team matches are compact versions of the established Daily-match cards.
+// Keep the original arena SVG path artwork; only scale the corner overlay down.
+function liveControl(value) {
+  const raw=String(value??"").trim();
+  if(!raw)return "—";
+  const hit=raw.match(/^(\d+)\s*\+\s*(\d+)$/);
+  if(hit) {
+    const base=Number(hit[1]),inc=Number(hit[2]);
+    return String(base>=60 && base%60===0?base/60:base)+"+"+String(inc);
+  }
+  if(/^\d+$/.test(raw)){
+    const n=Number(raw);
+    return String(n>=60&&n%60===0?n/60:n)+"+0";
+  }
+  return raw;
+}
+function liveStartText(epoch) {
+  if(!Number.isFinite(epoch)||epoch<=0)return "Date indisponible";
+  const value=new Date(epoch*1000);
+  // The viewer's browser time zone determines the date, including historical DST.
+  const date=new Intl.DateTimeFormat(window.WIDGET_FRANCE?"fr-FR":"en-GB",
+    {day:"numeric",month:"short"}).format(value);
+  const clock=new Intl.DateTimeFormat("en-GB",{hour:"2-digit",minute:"2-digit",hour12:false}).format(value);
+  return date+" · "+clock;
+}
+function liveTiming(epoch,now) {
+  const start=Number(epoch)*1000;
+  if(!Number.isFinite(start)||start<=0)return {text:"—",phase:"upcoming"};
+  const remaining=start-now;
+  if(remaining<=0)return {text:window.WIDGET_FRANCE?"En cours":"Started",phase:"started"};
+  if(remaining<=3600000)
+    return {text:(window.WIDGET_FRANCE?"Dans ":"In ")+Math.max(1,Math.ceil(remaining/60000))+" min",phase:"registration"};
+  return {text:liveStartText(Number(epoch)),phase:"upcoming"};
+}
+function liveCard(match,now) {
+  const name=String(match.opponentName||"Adversaire"),control=liveControl(match.time_control??match.liveTimeControl);
+  const kind=parseArenaControl(control),start=liveTiming(match.startTime,now);
+  const codes=Array.isArray(match.leagueAcronyms)?match.leagueAcronyms.filter(Boolean).join("/"):"";
+  const league=match.category==="league",badge=league?(codes||"Ligue"):(window.WIDGET_FRANCE?"Amical":"Friendly");
+  const matchType=league?(window.WIDGET_FRANCE?"Ligue":"League"):(window.WIDGET_FRANCE?"Amical":"Friendly");
+  const priority=match.urgent===true;
+  const logo=match.opponentLogo
+    ?'<img class="tgp-logo" src="'+esc(match.opponentLogo)+'" alt="'+esc(name)+'" loading="lazy" referrerpolicy="no-referrer">'
+    :'<div class="tgp-logo-fallback" aria-hidden="true">'+esc(initials(name))+'</div>';
+  const title=name+" · "+matchType+" · "+badge+" · "+control+" · "+start.text;
+  return '<a class="tgp-card live-card'+(league&&start.phase==="registration"?' league-48h':'')+'" href="'+esc(match.url||"#")+'" target="_blank" rel="noopener noreferrer" title="'+esc(title)+'" aria-label="'+esc(title)+'" data-live-start="'+esc(match.startTime||"")+'">'+
+    '<div class="tgp-visual">'+logo+
+      '<span class="tgp-badge'+(league?'':' friendly')+'">'+esc(badge)+'</span>'+
+      '<span class="live-speed" aria-label="'+esc(kind)+'">'+arenaSpeedIcon(kind)+'</span>'+
+      (priority?'<span class="live-priority" aria-label="Priorité">!</span>':'')+
+    '</div>'+
+    '<div class="tgp-info"><div class="tgp-line tgp-primary">'+
+      '<span class="tgp-start '+(start.phase==="registration"?"green":"gold")+'" data-live-timing>'+esc(start.text)+'</span>'+
+    '</div><div class="tgp-line tgp-secondary"><span class="tgp-time">'+esc(matchType)+'</span>'+
+      '<span class="tgp-separator">·</span><span class="tgp-rating">'+esc(control)+'</span>'+
+    '</div></div></a>';
+}
+function renderLive(next) {
+  if(Array.isArray(next))liveCards=next;
+  if(!liveHost||!liveSection)return;
+  const now=Date.now();
+  const visible=liveCards.filter(x=>x&&typeof x==="object"
+    && !["in_progress","finished","completed","started","in progress"].includes(String(x.status||"").trim().toLowerCase())
+    && (!x.startTime || !Number.isFinite(Number(x.startTime)) || Number(x.startTime)*1000>now))
+    .slice(0,liveRows*2);
+  liveSection.hidden=visible.length===0;
+  liveHost.innerHTML=visible.map(x=>liveCard(x,now)).join("");
+}
+function tickLiveClock() {
+  if(!liveHost||!liveSection||liveSection.hidden)return;
+  const now=Date.now();let rerender=false;
+  liveHost.querySelectorAll(".live-card").forEach(card=>{
+    const seconds=Number(card.dataset.liveStart);
+    if(!Number.isFinite(seconds)||seconds<=0)return;
+    const live=liveTiming(seconds,now);
+    if(live.phase==="started"){rerender=true;return;}
+    const node=card.querySelector("[data-live-timing]");
+    if(node){
+      node.textContent=live.text;
+      node.classList.toggle("green",live.phase==="registration");
+      node.classList.toggle("gold",live.phase!=="registration");
+    }
+  });
+  if(rerender)renderLive();
 }
 
 function arenaTiming(a, now=Date.now()) {
@@ -108,6 +199,6 @@ function tickArenaClock() {
   if(changed)renderArenas();
 }
 
-async function load(){try{const r=await fetch(`api.php?action=cards&_=${Date.now()}`,{cache:"no-store",credentials:"same-origin",headers:{Accept:"application/json"}}),p=await r.json();if(!r.ok||p?.ok===false)throw Error(p?.error?.message||`HTTP ${r.status}`);const cards=Array.isArray(p.cards)?p.cards:[];applyLayout(p.layout);grid.innerHTML=cards.slice(0,dailyRows*2).map(card).join("");renderArenas(p.arenas)}catch(error){console.error("TGP Match Showcase",error);grid.replaceChildren();renderArenas([])}}
-void load();window.setInterval(load,60000);window.setInterval(tickArenaClock,1000);
+async function load(){try{const r=await fetch(`api.php?action=cards&_=${Date.now()}`,{cache:"no-store",credentials:"same-origin",headers:{Accept:"application/json"}}),p=await r.json();if(!r.ok||p?.ok===false)throw Error(p?.error?.message||`HTTP ${r.status}`);const cards=Array.isArray(p.cards)?p.cards:[];applyLayout(p.layout);grid.innerHTML=cards.slice(0,dailyRows*2).map(card).join("");renderArenas(p.arenas);renderLive(p.liveCards)}catch(error){console.error("TGP Match Showcase",error);grid.replaceChildren();renderArenas([]);renderLive([])}}
+void load();window.setInterval(load,60000);window.setInterval(()=>{tickArenaClock();tickLiveClock()},1000);
 })();

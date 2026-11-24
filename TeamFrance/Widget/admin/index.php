@@ -17,7 +17,7 @@ header('Cache-Control: no-store');
 </head>
 <body>
 <main class="admin-shell">
-<header class="admin-head"><div><h1>Match Showcase</h1><p><?= htmlspecialchars((string)($config['team_name'] ?? 'Team'), ENT_QUOTES) ?> · Daily matches and arenas</p></div><a class="preview-link" href="../" target="_blank" rel="noopener">Open display</a></header>
+<header class="admin-head"><div><h1>Match Showcase</h1><p><?= htmlspecialchars((string)($config['team_name'] ?? 'Team'), ENT_QUOTES) ?> · Live, Daily matches and arenas</p></div><a class="preview-link" href="../" target="_blank" rel="noopener">Open display</a></header>
 <section id="authPanel" class="panel"><div id="authStatus">Checking Chess.com login…</div><button id="loginButton" type="button" hidden>Log in with Chess.com</button><button id="logoutButton" type="button" class="secondary" hidden>End admin session</button></section>
 <section id="embedPanel" class="panel embed-panel" hidden>
 <h2>Embed</h2>
@@ -30,6 +30,12 @@ header('Cache-Control: no-store');
 <div id="message" class="message" aria-live="polite"></div>
 <div class="hint">The first enabled Daily matches fill the configured rows (two cards per row, up to six cards). Matches confirmed as in progress or finished are automatically removed from the saved showcase.</div>
 <div id="matchList" class="match-list"></div>
+<section class="live-editor" aria-labelledby="liveEditorTitle">
+<h2 id="liveEditorTitle">Live team matches</h2>
+<p class="hint">Configure up to four live-match cards. Add from registration or paste a Chess.com URL, ID or slug; use the same ordering, Enabled and Priority controls as Daily matches. Started or finished live matches are retired on positive club-index evidence.</p>
+<div class="add-row"><input id="liveReference" type="text" autocomplete="off" placeholder="Live match URL, ID or slug"><button id="liveAddButton" type="button">Add live match</button></div>
+<div id="liveList" class="match-list"></div>
+</section>
 <section class="arena-discovery" id="arenaDiscoveryPanel" aria-labelledby="arenaDiscoveryHeading">
 <div class="arena-discovery-head"><h2 id="arenaDiscoveryHeading">Upcoming MCA discovery</h2><span class="hint">Admin only · manual scan · next 7 days</span></div>
 <p class="hint">Enter a Chess.com club URL, numeric ID or slug. The club name and ID are retrieved automatically. Suggested arenas remain unpublished until manually reviewed and saved.</p>
@@ -66,13 +72,16 @@ header('Cache-Control: no-store');
     <div class="arena-modal-actions"><button type="button" class="secondary" onclick="document.getElementById('arenaModalCancel').click()">Cancel</button><button id="arenaModalSave" type="submit">Save arena</button></div>
   </form>
 </dialog>
-<section class="layout-editor" aria-labelledby="layoutTitle"><h2 id="layoutTitle">Public widget card rows</h2><div class="layout-fields"><label for="arenaRows">MCA rows<select id="arenaRows"><option value="1">1 row · 2 cards</option><option value="2">2 rows · 4 cards</option></select></label><label for="dailyRows">Daily-match rows<select id="dailyRows"><option value="1">1 row · 2 cards</option><option value="2">2 rows · 4 cards</option><option value="3">3 rows · 6 cards</option></select></label></div><p class="hint">Changes save immediately. The iframe HTML above updates its height for the selected rows. Copy the refreshed iframe when changing the layout on an external page.</p></section>
+<section class="layout-editor" aria-labelledby="layoutTitle"><h2 id="layoutTitle">Public widget card rows</h2><div class="layout-fields"><label for="arenaRows">MCA rows<select id="arenaRows"><option value="1">1 row · 2 cards</option><option value="2">2 rows · 4 cards</option></select></label><label for="liveRows">Live-match rows<select id="liveRows"><option value="1">1 row · 2 cards</option><option value="2">2 rows · 4 cards</option></select></label><label for="dailyRows">Daily-match rows<select id="dailyRows"><option value="1">1 row · 2 cards</option><option value="2">2 rows · 4 cards</option><option value="3">3 rows · 6 cards</option></select></label></div><p class="hint">Changes save immediately. The iframe HTML above updates its height for the selected rows. Copy the refreshed iframe when changing the layout on an external page.</p></section>
 <div class="actions"><button id="saveButton" type="button">Save configuration</button><span id="dirtyState"></span></div>
 <div class="registration-head"><div><h2>Matches currently in registration</h2><p>Loaded directly from the Chess.com club match index.</p></div><button id="refreshRegistration" type="button" class="secondary">Refresh</button></div>
 <div id="registrationStatus" class="registration-status" aria-live="polite"></div>
 <div id="registrationList" class="registration-list"></div>
+<div class="registration-head"><div><h2>Live matches currently in registration</h2><p>The same Chess.com club match index, filtered to Live.</p></div><button id="refreshLiveRegistration" type="button" class="secondary">Refresh</button></div>
+<div id="liveRegistrationStatus" class="registration-status" aria-live="polite"></div>
+<div id="liveRegistrationList" class="registration-list"></div>
 </section>
-<section class="panel preview-panel"><h2>Live showcase preview (arenas + Daily matches)</h2><iframe id="preview" src="../" title="Match Showcase preview" loading="eager"></iframe></section>
+<section class="panel preview-panel"><h2>Showcase preview (arenas + Live + Daily matches)</h2><iframe id="preview" src="../" title="Match Showcase preview" loading="eager"></iframe></section>
 </main>
 <script>window.TEAM_FRANCE_WIDGET_CONFIG={teamSlug:<?= json_encode((string)($config['team_slug'] ?? 'team-france')) ?>,teamName:<?= json_encode((string)($config['team_name'] ?? 'Team France')) ?>,version:<?= json_encode((string)($config['version'] ?? '0.2.0')) ?>};</script>
 <script src="../assets/admin.js?v=<?= rawurlencode((string)($config['version'] ?? '0.2.0')) ?>-tf-en2"></script>

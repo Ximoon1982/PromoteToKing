@@ -74,3 +74,18 @@ The verified Chess.com profile supplies the numeric club ID and display name aut
 Numeric IDs are accepted when Chess.com resolves them to an exact matching club identity; an unresolved ID is rejected with an instruction to enter the club URL or slug instead.
 Pre-existing organizer IDs/names/enabled flags, candidate scans and arena showcase configuration are preserved.
 This is a standalone SSH widget hotfix. Do not upload it through P2K Release Control.
+
+
+Version 0.3.5 (P2K 2.16.1 development branch): Live team-match showcase
+--------------------------------------------------------------------------
+- New two-column Live team matches section between MCA Arenas and Daily matches.
+- Team France heading: “Matchs en direct”; TGP: “Live Matches”.
+- One or two Live rows (2 or 4 cards) with saved layout and iframe-height integration.
+- Same compact logo cards, league/friendly status and priority styling as Daily matches.
+- Miniature exact MCA Bullet/Blitz/Rapid SVG speed icon on the opponent-logo card corner.
+- A viewer-local start date/time; within one hour, countdown replaces the date and updates live.
+- Admin-only Live match URL/ID/slug resolver and registered-match chooser using the existing Chess.com club matches index with time_class=live.
+- Independent Live configuration list supports add, remove, reorder, Enabled, Priority and Save configuration; arena/layout immediate saves preserve unsaved match edits.
+- Started/finished Live cards are retired only when the Chess.com index or verified detail says so; existing Daily cards are unaffected.
+- GCWL recognized as league in both club widgets.
+- No changes to P2K core, analytics, OAuth, CRON, or public slot routing. Standalone widgets require the SSH/SFTP installer (not Release Control).

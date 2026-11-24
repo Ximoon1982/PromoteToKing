@@ -23,3 +23,12 @@
 .arena-start-line.ongoing{color:var(--red)}
 .arena-meta-line{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:10px;font-weight:800;line-height:1.25}
 .arena-meta-line strong{color:var(--text);font-weight:900}
+
+/* Live team matches: same 260px two-column cards and opponent logos as Daily. */
+.live-card .tgp-visual{height:82px}
+.live-card .tgp-badge{max-width:calc(100% - 35px)}
+.live-speed{position:absolute;right:5px;top:5px;display:grid;place-items:center;width:26px;height:26px;border:1px solid var(--border);border-radius:8px;background:color-mix(in srgb,var(--card) 94%,transparent)}
+.live-speed .tgp-speed-icon{width:19px;height:19px;filter:none}
+.live-priority{position:absolute;right:5px;bottom:5px;display:grid;place-items:center;width:17px;height:17px;border:1px solid color-mix(in srgb,var(--red) 40%,transparent);border-radius:50%;background:var(--card);color:var(--red);font-size:12px;font-weight:900}
+.live-card .tgp-start{font-size:10.6px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.live-card .tgp-info{padding:6px 4px 7px}
