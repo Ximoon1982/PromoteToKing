@@ -11,6 +11,7 @@ on:
       - 'tests/widget_live_pubapi_real_payload_v2161.php'
       - '.github/workflows/p2k-v2161-standalone-live.yml'
       - 'release-packages/v2.16.1/P2K_TGP_TeamFrance_Widget_v0.3.5_Live_Matches_SSH_Installer.zip'
+      - 'release-packages/v2.16.1/P2K_TGP_TeamFrance_Widget_v0.3.6_Live_PubAPI_Fix_SSH_Installer.zip'
   workflow_dispatch:
 
 permissions:
@@ -76,3 +77,30 @@ jobs:
           grep -Fxq 'keep-team-france-state' "$legacy/TeamFrance/Widget/data/showcase.json"
           grep -Fxq 'keep-tgp-state' "$legacy/TGP/Widget/data/showcase.json"
           test -d "$legacy/storage/standalone-widget-backups"
+      - name: Check v0.3.6 PubAPI patch on original installed v0.3.5 baseline
+        run: |
+          set -euo pipefail
+          package="P2K_TGP_TeamFrance_Widget_v0.3.6_Live_PubAPI_Fix_SSH_Installer"
+          zip="release-packages/v2.16.1/$package.zip"
+          test -f "$zip"
+          unzip -t "$zip"
+          temp="$(mktemp -d)"
+          unzip -q "$zip" -d "$temp"
+          bash -n "$temp/$package/install.sh"
+          staged="$(mktemp -d)"
+          while IFS=$'\t' read -r rel previous current; do
+            mkdir -p "$staged/$(dirname "$rel")"
+            git show "826bdac55fef79d4d84ddadec69f28c516fd5dac:$rel" > "$staged/$rel"
+          done < "$temp/$package/FILE_CHECKSUMS.tsv"
+          mkdir -p "$staged/TeamFrance/Widget/data" "$staged/TGP/Widget/data"
+          echo 'unchanged TF configuration' > "$staged/TeamFrance/Widget/data/showcase.json"
+          echo 'unchanged TGP configuration' > "$staged/TGP/Widget/data/showcase.json"
+          bash "$temp/$package/install.sh" "$staged" --check
+          bash "$temp/$package/install.sh" "$staged" --apply
+          bash "$temp/$package/install.sh" "$staged" --check
+          while IFS=$'\t' read -r rel previous current; do
+            cmp "$staged/$rel" "$rel"
+          done < "$temp/$package/FILE_CHECKSUMS.tsv"
+          grep -Fxq 'unchanged TF configuration' "$staged/TeamFrance/Widget/data/showcase.json"
+          grep -Fxq 'unchanged TGP configuration' "$staged/TGP/Widget/data/showcase.json"
+          echo 'PASS v0.3.6: exact baseline, installation, idempotency, configurations preserved'
