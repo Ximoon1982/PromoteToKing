@@ -1,0 +1,20 @@
+name: Team France Daily payload diagnostic
+on:
+  push:
+    branches: [release/v2.16.1]
+    paths: ['tests/tf_daily_payload_probe.py', '.github/workflows/tf-daily-payload-probe.yml']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tests/tf_daily_payload_probe.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tf-daily-probe
+          path: tf-daily-probe/
+          if-no-files-found: error
+          retention-days: 7
