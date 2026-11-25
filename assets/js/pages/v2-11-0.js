@@ -185,6 +185,7 @@
   let adminState = { run: null, analyses: null };
   let composing = false, busy = false, listPage = 1, resultPage = 1, resultRequest = 0, listRequest = 0;
   let scanControl = null;
+  let recoveryPollBusy = false;
   const DEFAULT_CRITERIA = { minRating:1300,maxRating:null,maxTimeout:8,maxRd:100,minGames:2,maxGames:25,minCompleted:50,maxOffline:14,maxSpm:null,minAge:null,excludeFormer:false };
   let activeScan = false;
   let scanGeneration = 0;
@@ -305,7 +306,10 @@
     disabled("recruitmentDelete",blocked||locked||!run);
     disabled("recruitmentCsv",!Number(run?.summary?.selected));
     disabled("recruitmentCsvAll",!Number(run?.summary?.checked));
-    if ($("recruitmentStart")) $("recruitmentStart").textContent=draft?"Start analysis":"Resume analysis";
+    if ($("recruitmentStart")) {
+      $("recruitmentStart").textContent=locked&&!activeScan?"Waiting for scan lock…":draft?"Start analysis":"Resume analysis";
+      $("recruitmentStart").title=locked&&!activeScan?"Another page owns this scan. The page checks automatically when it becomes available.":"";
+    }
     document.querySelectorAll("[data-recruitment-open]").forEach(button=>{button.disabled=blocked;});
   }
   function renderRun(run = adminState.run) {
@@ -367,10 +371,40 @@
     if($("recruitmentResultSearch"))$("recruitmentResultSearch").value="";
     renderRun(run);
   }
+  function describeObservedRun(run) {
+    if(run?.status==="running"&&!activeScan)return "Scan ownership is still active. Waiting for its release or expiry; Resume will become available automatically.";
+    return statusLabel(run)+" · "+Number(run?.summary?.pending||0).toLocaleString()+" pending candidates.";
+  }
+  // Observe a potentially abandoned lease only while Recruitment is visible.
+  // Never use the local clock to grant scan ownership: the server is authoritative.
+  async function refreshObservedScan() {
+    if(recoveryPollBusy||busy||activeScan||document.hidden||!isRecruitmentRoute()||!$("p2kRecruitmentNative"))return;
+    const observed=adminState.run;
+    const watchingRun=observed?.status==="running";
+    if(!watchingRun&&!adminState.analyses?.active)return;
+    recoveryPollBusy=true;
+    try{
+      if(watchingRun){
+        const payload=await server("detail",{params:{id:observed.id}});
+        // Do not overwrite another selected analysis, a draft, or a new local scan.
+        if(!busy&&!activeScan&&adminState.run===observed&&isRecruitmentRoute()){
+          const fresh=payload.run;
+          if(fresh?.id===observed.id){
+            renderRun({...observed,...fresh});
+            setStatus(describeObservedRun(fresh));
+            if(fresh.status!==observed.status||fresh.summary?.checked!==observed.summary?.checked)await loadResults();
+          }
+        }
+      }
+      if(!busy&&!activeScan&&isRecruitmentRoute())await loadList();
+    }catch(error){
+      if(!busy&&!activeScan&&adminState.run?.id===observed?.id&&isRecruitmentRoute())setStatus("Unable to refresh scan ownership: "+(error?.message||String(error))+". Retrying automatically; saved checkpoints are unchanged.",true);
+    }finally{recoveryPollBusy=false;}
+  }
   async function openAnalysis(id) {
     const payload=await server("detail",{params:{id,candidates:1}});
     populateAnalysis(payload.run);await loadResults();
-    setStatus(statusLabel(payload.run)+" · "+Number(payload.run.summary.pending||0).toLocaleString()+" pending candidates.");
+    setStatus(describeObservedRun(payload.run));
   }
   function newAnalysis() {
     composing=true;adminState.run=null;clearScanTelemetry();
@@ -613,7 +647,13 @@
     const route=routeState();if(route.isAdmin)document.body?.classList.add("p2k-admin-canonical");
     if(isRecruitmentRoute())ensureRecruitmentDetail();else ensureRecruitmentCard();
   }
-  function mount(){installStyles();window.addEventListener("p2k-admin-shell-route",reconcile);reconcile();}
+  function mount(){
+    installStyles();window.addEventListener("p2k-admin-shell-route",reconcile);reconcile();
+    window.setInterval(()=>void refreshObservedScan(),5000);
+    window.addEventListener("focus",()=>void refreshObservedScan());
+    window.addEventListener("pageshow",()=>void refreshObservedScan());
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden)void refreshObservedScan();});
+  }
 
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",mount,{once:true});else mount();
 })();
