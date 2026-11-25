@@ -16,4 +16,5 @@ if(!$access['ok']){
 }
 header('Content-Type: text/html; charset=utf-8');
 header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
-readfile(__DIR__.'/view.html');
+define('TF_MEDAL_AUTH',true);
+require __DIR__.'/view.php';

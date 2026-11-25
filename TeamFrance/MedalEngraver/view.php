@@ -1,3 +1,4 @@
+<?php if (!defined('TF_MEDAL_AUTH')) { http_response_code(403); exit; } ?>
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>Team France · Medal Engraver</title><link rel="stylesheet" href="style.css?v=010"><script defer src="engraver.js?v=010"></script></head><body>
 <main><header><div><a href="../">← Team France administration</a><h1>Medal Engraver</h1><p>Gold, silver and bronze · 1122 × 1402 transparent PNG</p></div><span class="tag">Team France</span></header>
