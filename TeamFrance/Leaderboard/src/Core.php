@@ -69,7 +69,10 @@ function boardKey(array $p): string {
     }
     return '';
 }
-function matchResult(array $payload,string $id,array $previous=[]): array {
+final class FairPlaySummaryMismatch extends RuntimeException {
+    public function __construct(public readonly array $boards){parent::__construct('Reconstructed points differ from official match score; board verification required.');}
+}
+function matchResult(array $payload,string $id,array $previous=[],array $proof=[]): array {
     if (isset($payload['@id'])&&!preg_match('~/pub/match/'.preg_quote($id,'~').'/?$~D',(string)$payload['@id'])) throw new RuntimeException('Wrong Daily match identity.');
     $ours=$other=null;$teamCount=0;
     foreach (($payload['teams']??[]) as $team) {
@@ -138,11 +141,19 @@ function matchResult(array $payload,string $id,array $previous=[]): array {
         $games[$key]=$g;
     }
     // A verified paired board counts as participation even before its first game finishes.
-    $rows=$participants;$total=0;$doubleRemoved=0;
-    foreach ($games as $g) {
+    $rows=$participants;$total=0;$doubleRemoved=0;$rawTotal=0;$ownDelta=0;$oppDelta=0;$affected=[];
+    foreach ($games as $key=>$g) {
         $ownRemoved=in_array($g['user'],$removedO,true);$oppRemoved=in_array($g['opp'],$removedT,true);
         if ($ownRemoved&&$oppRemoved) $doubleRemoved++;
         $effective=$ownRemoved?0:($oppRemoved?100:$g['raw']);
+        $rawTotal+=$g['raw'];
+        if($ownRemoved||$oppRemoved){
+            $board=explode(':',$key,2)[0];
+            $affected[$board]['games'][$key]=$g;
+            $affected[$board]['ours']=($affected[$board]['ours']??0)+$effective;
+            $affected[$board]['other']=($affected[$board]['other']??0)+100-$effective;
+            if($ownRemoved)$ownDelta+=$effective-$g['raw'];else $oppDelta+=$effective-$g['raw'];
+        }
         $u=$g['user'];$rows[$u]??=['username'=>$g['display'],'points'=>0];$rows[$u]['points']+=$effective;$total+=$effective;
     }
     $score=$ours['score']??null;
@@ -150,9 +161,44 @@ function matchResult(array $payload,string $id,array $previous=[]): array {
     $delta=is_numeric($score)?(int)round((float)$score*100)-$total:null;
     // Chess.com may award half a point per game on a double-removal board.
     // P2K's own-side removal rule still gives the excluded player zero.
-    if ($delta!==null&&$delta!==0&&($doubleRemoved===0||$delta!==50*$doubleRemoved)) throw new RuntimeException('Reconstructed points differ from official match score; previous results retained.');
+    $verifiedBoards=[];
+    if ($delta!==null&&$delta!==0&&($doubleRemoved===0||$delta!==50*$doubleRemoved)) {
+        // A finished match summary may reflect only one of two sides' removals.
+        // Accept this specific explanation only after checking both affected
+        // sides' official board scores AND the original two game identities.
+        $official=(int)round((float)$score*100);
+        $opScore=$other['score']??null;
+        $eligible=$finished&&$doubleRemoved===0&&$ownDelta<0&&$oppDelta>0&&count($affected)<=32&&count($games)===(int)($payload['boards']??0)*2
+            &&is_numeric($opScore)&&$official+(int)round((float)$opScore*100)===count($games)*100
+            &&in_array($official,[$rawTotal+$ownDelta,$rawTotal+$oppDelta,$rawTotal],true);
+        if(!$eligible)throw new RuntimeException('Reconstructed points differ from official match score; previous results retained.');
+        if(!$proof)throw new FairPlaySummaryMismatch(array_keys($affected));
+        foreach($affected as $board=>$a){
+            $bp=$proof[$board]??null;
+            if(!is_array($bp)||count($a['games'])!==2||count($bp['games']??[])!==2||!is_array($bp['board_scores']??null))throw new RuntimeException('Incomplete Fair Play board verification; previous results retained.');
+            $g=reset($a['games']);$u=$g['user'];$op=$g['opp'];$scores=[];
+            foreach($bp['board_scores'] as $name=>$points){
+                $k=userKey($name);
+                if($k===''||!is_numeric($points)||isset($scores[$k]))throw new RuntimeException('Invalid official board score.');
+                $scores[$k]=(int)round((float)$points*100);
+            }
+            if(count($scores)!==2||($scores[$u]??null)!==$a['ours']||($scores[$op]??null)!==$a['other'])throw new RuntimeException('Official Fair Play board scores disagree; previous results retained.');
+            $seenSides=[];
+            foreach($bp['games'] as $game){
+                if(!is_array($game)||rtrim((string)($game['match']??''),'/')!==BASE.'match/'.$id||($game['time_class']??'')!=='daily')throw new RuntimeException('Wrong board game identity.');
+                $white=userKey($game['white']['username']??'');$black=userKey($game['black']['username']??'');
+                $side=$white===$u&&$black===$op?'played_as_white':($black===$u&&$white===$op?'played_as_black':'');
+                if($side===''||isset($seenSides[$side]))throw new RuntimeException('Board game pairing mismatch.');
+                $expected=$a['games'][$board.':'.$side]??null;
+                $result=$game[$side==='played_as_white'?'white':'black']['result']??'';
+                if(!$expected||!is_string($result)||rawPoints($result)!==$expected['raw'])throw new RuntimeException('Board game result mismatch.');
+                $seenSides[$side]=true;
+            }
+            $verifiedBoards[$board]=['board_scores'=>$scores,'source'=>'official_board_api'];
+        }
+    }
     if ($finished&&$games===[]&&(int)($payload['boards']??0)>0) throw new RuntimeException('Finished match has no verified game results.');
-    return ['name'=>$name,'status'=>$finished?'finished':'in_progress','rows'=>$rows,'evidence'=>['games'=>$games,'ours'=>$removedO,'other'=>$removedT,'official_delta_x100'=>$delta,'double_removed_games'=>$doubleRemoved]];
+    return ['name'=>$name,'status'=>$finished?'finished':'in_progress','rows'=>$rows,'evidence'=>['games'=>$games,'ours'=>$removedO,'other'=>$removedT,'official_delta_x100'=>$delta,'double_removed_games'=>$doubleRemoved,'verified_summary_mismatch_boards'=>$verifiedBoards]];
 }
 function arenaResult(string $csv,bool $official=false): array {
     if (strlen($csv)>12000000||str_contains(substr(ltrim($csv),0,100),'<')) throw new RuntimeException('Invalid arena CSV.');

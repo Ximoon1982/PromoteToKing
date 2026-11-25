@@ -45,7 +45,7 @@ final class Transport {
 }
 final class Refresh {
     public function __construct(public Store $s, private ?\Closure $arenaFetch=null) {}
-    public function daily(array $e,array $p): void {
+    public function daily(array $e,array $p,bool $oauth=false): void {
         // Preserve independently validated metadata even if scoring fails.
         if (preg_match('~/pub/match/'.preg_quote($e['event_id'],'~').'/?$~D',(string)($p['@id']??''))) {
             $teams=is_array($p['teams']??null)?$p['teams']:[];
@@ -56,7 +56,18 @@ final class Refresh {
             }
         }
         $prior=json_decode($e['evidence'],true)?:[];
-        $r=matchResult($p,$e['event_id'],$prior);
+        try{$r=matchResult($p,$e['event_id'],$prior);}
+        catch(FairPlaySummaryMismatch $x){
+            if(!$oauth&&count($x->boards)>2)throw new RuntimeException('Fair Play board verification requires an administrator refresh.');
+            $proof=[];
+            if($oauth){
+                $requests=[];foreach($x->boards as $board)$requests[]=['id'=>(string)$board,'url'=>BASE.'match/'.$e['event_id'].'/'.$board,'headers'=>['accept'=>'application/json']];
+                $batch=Transport::oauth($requests);
+                foreach($batch['results']??[] as $row)if((int)($row['status']??0)===200&&is_array($row['json']??null))$proof[(string)$row['id']]=$row['json'];
+            }else foreach($x->boards as $board)$proof[$board]=Transport::json(BASE.'match/'.$e['event_id'].'/'.$board);
+            $r=matchResult($p,$e['event_id'],$prior,$proof);
+            foreach($proof as $board=>$body)$r['evidence']['verified_summary_mismatch_boards'][$board]['source_hash']=$this->s->archive(json_encode($body,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));
+        }
         $this->s->saveEvent($e,$r,json_encode($p,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));
     }
     public function arena(array $e): void {
@@ -207,7 +218,7 @@ final class Refresh {
                         }
                         try{
                             if($status<200||$status>=300||!is_array($r['json']??null))throw new RuntimeException('HTTP '.$status);
-                            if($kind==='daily')$this->daily($e,$r['json']);else $this->s->saveProfile($id,$r['json']);
+                            if($kind==='daily')$this->daily($e,$r['json'],true);else $this->s->saveProfile($id,$r['json']);
                             $this->taskDone($t,'done');
                         }catch(\Throwable $x){$this->s->fail($kind,$id,$x->getMessage());$this->taskDone($t,'error',$x->getMessage());}
                     }

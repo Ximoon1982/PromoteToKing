@@ -37,6 +37,8 @@ jobs:
           php tests/team_france_arena_csv.php --live
           php tests/team_france_arena_csv_repair.php --live
           php tests/team_france_leaderboard_export.php
+          php tests/team_france_match_summary.php
+          php tests/team_france_match_summary.php --live
           bash tests/team_france_leaderboard_export_http.sh
           node tests/team_france_arena_discovery.cjs
           node tests/team_france_player_info.cjs

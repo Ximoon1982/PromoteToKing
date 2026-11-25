@@ -105,7 +105,7 @@ try {
             case 'remove':$s->run('DELETE FROM events WHERE id=?',[(int)($p['event']??0)]);break;
             case 'refresh-event':
                 $e=$s->one('SELECT * FROM events WHERE id=?',[(int)($p['event']??0)]);if(!$e)throw new RuntimeException('Event not found.');
-                if($e['kind']==='arena')$r->arena($e);else{$b=Transport::oauth([['id'=>'event','url'=>BASE.'match/'.$e['event_id'],'headers'=>['accept'=>'application/json']]]);$x=array_values($b['results']??[])[0]??[];if((int)($x['status']??0)!==200||!is_array($x['json']??null))throw new RuntimeException('OAuth match request failed.');$r->daily($e,$x['json']);}break;
+                if($e['kind']==='arena')$r->arena($e);else{$b=Transport::oauth([['id'=>'event','url'=>BASE.'match/'.$e['event_id'],'headers'=>['accept'=>'application/json']]]);$x=array_values($b['results']??[])[0]??[];if((int)($x['status']??0)!==200||!is_array($x['json']??null))throw new RuntimeException('OAuth match request failed.');$r->daily($e,$x['json'],true);}break;
             case 'verify-player':
                 $key=userKey($p['username']??'');if($key==='')throw new RuntimeException('Invalid username.');
                 $b=Transport::oauth([['id'=>'player','url'=>BASE.'player/'.rawurlencode($key),'headers'=>['accept'=>'application/json']]]);$x=array_values($b['results']??[])[0]??[];if((int)($x['status']??0)!==200||!is_array($x['json']??null))throw new RuntimeException('OAuth player request failed.');$s->saveProfile($key,$x['json']);break;
