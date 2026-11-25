@@ -1,0 +1,24 @@
+<?php
+declare(strict_types=1);
+require_once dirname(__DIR__,2).'/MatchAnalyzer/auth.php';
+header('Cache-Control: no-store, private');
+header('X-Frame-Options: SAMEORIGIN');
+header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: same-origin');
+header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'");
+$a=team_france_authorize();
+if(!$a['ok']){
+    http_response_code((int)$a['status']);
+    echo '<!doctype html><html lang="en"><meta charset="utf-8"><title>Team France access</title><body><h1>Team France administrators only</h1><p>'.htmlspecialchars((string)$a['code'],ENT_QUOTES,'UTF-8').'</p><a href="/server/team-points/public/oauth.php?action=login&amp;return=%2FTeamFrance%2FLeaderboard%2Fadmin%2F">Sign in with Chess.com</a></body></html>';exit;
+}
+?>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Team France · Leaderboard administration</title><link rel="stylesheet" href="../assets/style.css?v=010"></head>
+<body class="admin"><main class="shell"><header><div><h1>Seasonal leaderboards</h1><p>Team France · Daily matches and multi-club arenas</p></div><nav><a href="/TeamFrance/">Admin hub</a> · <a href="../" target="_blank" rel="noopener">Open widget</a></nav></header>
+<section class="panel"><h2>Data acquisition</h2><div id="counts"></div><div class="actions"><button id="start">Refresh all · OAuth</button><button id="resume" class="secondary">Resume</button><button id="pause" class="secondary">Pause</button><button id="stop" class="secondary">Stop</button><button id="recalc" class="secondary">Recalculate</button></div><div id="progress" aria-live="polite"></div><p class="hint">Refresh all checks every assigned event and all known players, including historical seasons. The browser drives resumable batches. No CRON.</p><div id="message" role="status"></div></section>
+<section class="panel"><h2>Public widget</h2><label>Embed HTML<textarea id="embed" readonly rows="2"></textarea></label><button id="copy" class="secondary">Copy HTML</button></section>
+<nav class="tabs" aria-label="Administration sections"><button data-tab="seasons">Seasons</button><button data-tab="daily">Daily matches</button><button data-tab="arena">Arenas</button><button data-tab="players">Players</button></nav>
+<section id="season-panel" class="panel"><h2>Seasons</h2><form id="season-form" class="fields"><input name="id" type="hidden"><label>Category<select name="kind"><option value="daily">Daily matches</option><option value="arena">Arenas</option></select></label><label>Season name<input name="name" required maxlength="160" placeholder="Saison 2026–2027"></label><label>Start date (optional)<input type="date" name="start_date"></label><label>End date (optional)<input type="date" name="end_date"></label><label class="check"><input type="checkbox" name="is_default"> Default season</label><label class="check"><input type="checkbox" name="archived"> Archived</label><div class="actions"><button type="submit">Save season</button><button type="reset" class="secondary">New season</button></div></form><div id="seasons"></div></section>
+<section id="events-panel" class="panel" hidden><h2 id="event-title"></h2><form id="assign-form"><label>Assign to season<select name="season_id" required></select></label><label>Chess.com URLs or IDs (one per line)<textarea name="references" rows="4" required></textarea></label><button type="submit">Add events</button><button type="button" id="index-button" class="secondary">Choose from club match index</button></form><div id="index-results" hidden></div><p class="hint">An event belongs to one season of its category. Upcoming Daily games and ongoing arenas do not count; arena CSVs must be final.</p></section>
+<section id="list-panel" class="panel" hidden><h2 id="list-title"></h2><div class="actions"><input id="query" placeholder="Search" aria-label="Search events or players"><select id="season-filter" aria-label="Filter by season"></select><button id="reload" class="secondary">Reload</button></div><div id="records" class="table-wrap"></div><div id="pagination" class="actions"></div></section>
+<dialog id="csv-dialog"><form id="csv-form"><h2>Import final official Results CSV</h2><input type="hidden" name="event"><label>CSV file<input type="file" name="csv" accept=".csv,text/csv" required></label><label class="check"><input type="checkbox" name="confirmed" value="1" required> I confirm this is the final official Results CSV for the selected arena.</label><div class="actions"><button type="submit">Import</button><button type="button" id="close-csv" class="secondary">Cancel</button></div></form></dialog>
+</main><script src="../assets/admin.js?v=010" defer></script></body></html>

@@ -1,0 +1,68 @@
+name: Team France Leaderboard 0.1.0 verification
+on:
+  push:
+    branches: [release/v2.16.1]
+    paths:
+      - 'TeamFrance/Leaderboard/**'
+      - 'TeamFrance/home.html'
+      - 'tests/team_france_leaderboard_v010.php'
+      - 'tools/install-team-france-leaderboard-v010.sh'
+      - 'tools/build-team-france-leaderboard-v010.py'
+      - '.github/workflows/team-france-leaderboard-v010.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, curl
+          coverage: none
+      - name: Syntax and scoring, SQLite and state regression
+        run: |
+          find TeamFrance/Leaderboard -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l tests/team_france_leaderboard_v010.php
+          node --check TeamFrance/Leaderboard/assets/admin.js
+          node --check TeamFrance/Leaderboard/assets/public.js
+          php tests/team_france_leaderboard_v010.php
+          grep -Fq '/TeamFrance/Leaderboard/admin/' TeamFrance/home.html
+      - name: Build exact standalone installer
+        run: |
+          python3 tools/build-team-france-leaderboard-v010.py "$RUNNER_TEMP/installer"
+      - name: Verify installation, idempotency, preservation and refusal
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/installer/P2K_TeamFrance_Leaderboard_v0.1.0_SSH_Installer"
+          stage="$(mktemp -d)"
+          mkdir -p "$stage/TeamFrance/MatchAnalyzer" "$stage/TeamFrance/Widget/data" "$stage/TGP/Widget/data"
+          git show 9a604f768818691fa16fdb63d4dc418d4930d2b4:TeamFrance/home.html > "$stage/TeamFrance/home.html"
+          cp TeamFrance/MatchAnalyzer/auth.php "$stage/TeamFrance/MatchAnalyzer/auth.php"
+          echo 'keep-team-france' > "$stage/TeamFrance/Widget/data/showcase.json"
+          echo 'keep-tgp' > "$stage/TGP/Widget/data/showcase.json"
+          bash -n "$package/install.sh"
+          bash "$package/install.sh" "$stage" --check
+          bash "$package/install.sh" "$stage" --apply
+          php -r 'require $argv[1]."/TeamFrance/Leaderboard/src/Core.php";$s=new \TeamFrance\Leaderboard\Store($argv[1]."/TeamFrance/Leaderboard/data");$s->saveSeason(["kind"=>"arena","name"=>"preserve this season"]);$s->archive("preserve this CSV");' "$stage"
+          bash "$package/install.sh" "$stage" --check
+          bash "$package/install.sh" "$stage" --apply
+          php -r 'require $argv[1]."/TeamFrance/Leaderboard/src/Core.php";$s=new \TeamFrance\Leaderboard\Store($argv[1]."/TeamFrance/Leaderboard/data");if(count($s->seasons())!==1||!is_file($s->dir."/sources/".hash("sha256","preserve this CSV")))exit(1);' "$stage"
+          grep -Fxq 'keep-team-france' "$stage/TeamFrance/Widget/data/showcase.json"
+          grep -Fxq 'keep-tgp' "$stage/TGP/Widget/data/showcase.json"
+          cmp "$stage/TeamFrance/home.html" TeamFrance/home.html
+          echo '<!-- unrelated hub modification -->' >> "$stage/TeamFrance/home.html"
+          if bash "$package/install.sh" "$stage" --check; then echo 'Unexpected overwrite of divergent hub'; exit 1; fi
+          echo 'PASS: standalone install, persistent database, sources, widgets and divergent-hub refusal'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: P2K_TeamFrance_Leaderboard_v0.1.0_SSH_Installer
+          path: ${{ runner.temp }}/installer/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 90

@@ -1,0 +1,35 @@
+(()=>{'use strict';
+const $=id=>document.getElementById(id),kinds=['daily','arena'],titles={daily:'Matchs en différé',arena:'Arènes multiclubs'},state={daily:{id:0,expanded:false,page:1},arena:{id:0,expanded:false,page:1}},fmt=new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2});
+let user='',sequence=0;
+function el(tag,text,cls){const x=document.createElement(tag);if(text!==undefined)x.textContent=text;if(cls)x.className=cls;return x}
+function button(text,fn){const b=el('button',text);b.type='button';b.onclick=fn;return b}
+function choose(name){user=name;$('username').value=name;void load()}
+function renderSection(kind,section){
+ const node=$(kind),select=node.querySelector('select'),rank=node.querySelector('.ranking'),pager=node.querySelector('.pager'),s=state[kind];s.id=section.season?.id||0;s.page=section.page;
+ select.replaceChildren();for(const season of section.seasons){const o=el('option',season.name+(Number(season.archived)?' · archives':''));o.value=season.id;select.append(o)}if(!section.seasons.length){const o=el('option','Aucune saison');o.value='0';select.append(o)}select.value=String(s.id);select.disabled=!section.seasons.length;
+ rank.classList.toggle('expanded',s.expanded);rank.replaceChildren();pager.replaceChildren();
+ for(const row of section.rows){const r=el('div',undefined,'rank-row');r.append(el('span',String(row.rank),'rank medal'+row.rank));const n=button(row.username,()=>choose(row.username));n.className='name';r.append(n,el('span',fmt.format(row.points),'points'));rank.append(r)}
+ if(!section.rows.length)rank.append(el('div',section.season?'Aucun point enregistré.':'Aucune saison disponible.','muted'));
+ if(section.total>5||s.expanded)pager.append(button(s.expanded?'Voir moins':'Voir plus',()=>{s.expanded=!s.expanded;s.page=1;void load()}));
+ if(s.expanded&&section.pages>1){const prev=button('‹',()=>{s.page--;void load()}),next=button('›',()=>{s.page++;void load()});prev.disabled=s.page<=1;next.disabled=s.page>=section.pages;pager.append(prev,el('span',s.page+' / '+section.pages),next)}
+}
+function renderProfile(p){
+ const node=$('profile');node.replaceChildren();node.hidden=false;for(const k of kinds)$(k).hidden=true;
+ const back=button('← Retour aux classements',()=>{user='';$('username').value='';void load()});back.className='back';node.append(back);
+ const profile=p.profile;node.append(el('h2',profile?.daily?.username||profile?.arena?.username||user,'profile-name'));
+ if(!profile){node.append(el('p','Joueur introuvable dans les classements.','muted'));return}
+ for(const k of kinds){const card=el('section',undefined,'panel profile-card');card.append(el('h2',titles[k]),el('div',p.sections[k].season?.name||'Aucune saison','profile-season'));const grid=el('div',undefined,'profile-stat');const row=profile[k];for(const [name,value] of [['Classement',row?'#'+row.rank:'—'],['Points',row?fmt.format(row.points):'0']]){const v=el('div');v.append(el('span',name),el('strong',value));grid.append(v)}card.append(grid);node.append(card)}
+}
+async function load(){
+ const serial=++sequence,q=new URLSearchParams({action:'public',username:user});
+ for(const k of kinds){q.set(k,state[k].id);q.set(k+'_page',state[k].page);if(state[k].expanded)q.set(k+'_expanded','1')}
+ try{const res=await fetch('api.php?'+q,{cache:'no-store'}),p=await res.json();if(!res.ok||!p.ok)throw Error(p.error||'Classement indisponible.');if(serial!==sequence)return;
+ for(const k of kinds)renderSection(k,p.sections[k]);
+ if(user)renderProfile(p);else{$('profile').hidden=true;for(const k of kinds)$(k).hidden=false}
+ $('status').textContent='';
+ }catch(e){if(serial===sequence)$('status').textContent=e.message}
+}
+for(const k of kinds)$(k).querySelector('select').onchange=e=>{state[k].id=Number(e.target.value);state[k].page=1;void load()};
+$('search').onsubmit=e=>{e.preventDefault();choose($('username').value.trim())};
+(async()=>{await load();try{const r=await fetch('api.php?action=public-refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}',cache:'no-store'});const p=await r.json();if(p.ok&&p.processed)await load()}catch{}})();
+})();
