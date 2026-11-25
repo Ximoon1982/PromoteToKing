@@ -11,6 +11,7 @@ async function call(action,p,query={}){
 }
 function options(select,items,first){const previous=select.value;select.replaceChildren();if(first!==null){const o=el('option',first);o.value='0';select.append(o)}for(const s of items){const o=el('option',s.name+(Number(s.archived)?' · archived':''));o.value=s.id;select.append(o)}if([...select.options].some(x=>x.value===previous))select.value=previous}
 function table(headers,rows){const t=el('table'),head=el('thead'),hr=el('tr');for(const h of headers)hr.append(el('th',h));head.append(hr);t.append(head);const body=el('tbody');for(const cells of rows){const tr=el('tr');for(const c of cells){const td=el('td');if(c instanceof Node)td.append(c);else td.textContent=String(c??'—');tr.append(td)}body.append(tr)}t.append(body);return t}
+function seasonExport(s){const a=el('a','Download CSV');a.href='../api.php?'+new URLSearchParams({action:'export-csv',kind:s.kind,season:String(s.id)});a.download='';return a}
 function seasonEdit(s){const form=$('season-form');for(const k of ['id','kind','name','start_date','end_date'])form.elements[k].value=s[k]??'';form.elements.archived.checked=!!Number(s.archived);form.elements.is_default.checked=!!Number(s.is_default);form.elements.kind.disabled=true;form.scrollIntoView({block:'nearest'})}
 function showProgress(p){
  const j=p.job,counts=p.counts||[],area=$('progress');area.replaceChildren();
@@ -25,7 +26,7 @@ function render(){
  const items=data.seasons||[];$('counts').textContent=items.length+' seasons · '+data.counts.events+' events · '+data.counts.players+' players · '+data.counts.excluded+' Fair Play exclusions';showProgress(data.progress);
  $('season-panel').hidden=tab!=='seasons';$('events-panel').hidden=!['daily','arena'].includes(tab);$('list-panel').hidden=tab==='seasons';
  for(const b of document.querySelectorAll('[data-tab]'))b.classList.toggle('active',b.dataset.tab===tab);
- $('seasons').replaceChildren(table(['Season','Category','Dates','Events','Status',''],items.map(s=>[s.name,s.kind,(s.start_date||'—')+' – '+(s.end_date||'—'),s.event_count,Number(s.archived)?'Archived':Number(s.is_default)?'Default':'Active',btn('Edit',()=>seasonEdit(s))])));
+ $('seasons').replaceChildren(table(['Season','Category','Dates','Events','Status','CSV',''],items.map(s=>[s.name,s.kind,(s.start_date||'—')+' – '+(s.end_date||'—'),s.event_count,Number(s.archived)?'Archived':Number(s.is_default)?'Default':'Active',seasonExport(s),btn('Edit',()=>seasonEdit(s))])));
  if(tab==='seasons')return;
  const player=tab==='players',seasons=items.filter(s=>s.kind===tab);$('event-title').textContent=tab==='daily'?'Add Daily matches':'Add arenas';$('list-title').textContent=player?'Player account verification':tab==='daily'?'Assigned Daily matches':'Assigned arenas';
  options($('assign-form').elements.season_id,seasons,null);options($('season-filter'),seasons,'All seasons');$('season-filter').hidden=player;$('index-button').hidden=tab!=='daily';$('arena-discovery-options').hidden=tab!=='arena';if(chooser&&(chooser.season!==String(selectedSeason()?.id)||chooser.kind!==tab||chooser.range!==seasonRange(selectedSeason())))closeChooser();updateArenaRange();

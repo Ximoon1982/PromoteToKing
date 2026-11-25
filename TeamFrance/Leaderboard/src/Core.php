@@ -340,18 +340,25 @@ PRAGMA user_version=1;");
     }
     public function seasons(): array {return $this->rows('SELECT s.*, (SELECT COUNT(*) FROM events e WHERE e.season_id=s.id) AS event_count FROM seasons s ORDER BY kind,is_default DESC,archived,id DESC');}
     public function leaderboard(int $season,bool $includeUnranked=false): array {
+        return $this->rankings('e.season_id=?',[$season],$includeUnranked);
+    }
+    public function categoryLeaderboard(string $kind,bool $includeUnranked=false): array {
+        if(!in_array($kind,['daily','arena'],true))throw new RuntimeException('Unknown leaderboard category.');
+        return $this->rankings('e.kind=?',[$kind],$includeUnranked);
+    }
+    private function rankings(string $scope,array $args,bool $includeUnranked): array {
         // Aggregate aliases only after independent proof of a common stable ID; take
         // at most one contribution per event for that account to prevent alias duplication.
         $sql="WITH attributed AS (
 SELECT r.event_id, COALESCE('id:'||p.stable_id,'name:'||p.username_key) identity,MAX(r.points) points
 FROM results r JOIN players p ON p.username_key=r.username_key JOIN events e ON e.id=r.event_id
-WHERE e.season_id=? AND p.account_status NOT IN ('closed:fair_play_violations','closed:fair_play','closed:cheating')
+WHERE $scope AND p.account_status NOT IN ('closed:fair_play_violations','closed:fair_play','closed:cheating')
 AND NOT EXISTS(SELECT 1 FROM players x WHERE x.stable_id=p.stable_id AND x.account_status IN ('closed:fair_play_violations','closed:fair_play','closed:cheating'))
 GROUP BY r.event_id,identity),
 totals AS (SELECT identity,SUM(points) points,COUNT(*) events FROM attributed GROUP BY identity)
 SELECT t.identity,t.points,t.events,COALESCE((SELECT value FROM meta WHERE key='avatar:'||t.identity),'') avatar,(SELECT p.display FROM players p WHERE COALESCE('id:'||p.stable_id,'name:'||p.username_key)=t.identity ORDER BY p.verified DESC,p.username_key LIMIT 1) username
 FROM totals t ".($includeUnranked?"":"WHERE points>0 ")."ORDER BY points DESC,lower(username),identity";
-        $rows=$this->rows($sql,[$season]);
+        $rows=$this->rows($sql,$args);
         foreach($rows as $i=>&$r){$r['rank']=(int)$r['points']>0?$i+1:null;$r['points']=(int)$r['points']/100;$r['events']=(int)$r['events'];$r['avatar']=avatarUrl($r['avatar']);}unset($r);
         return $rows;
     }

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__.'/src/Refresh.php';
 require_once __DIR__.'/src/ArenaDiscovery.php';
+require_once __DIR__.'/src/LeaderboardExport.php';
 use TeamFrance\Leaderboard\Store;
 use TeamFrance\Leaderboard\Refresh;
 use TeamFrance\Leaderboard\Transport;
@@ -30,13 +31,23 @@ function admin(bool $write): array {
 try {
     $action=(string)($_GET['action']??'public');$method=$_SERVER['REQUEST_METHOD']??'GET';
     $public=in_array($action,['public','public-refresh'],true);
-    $write=$action!=='public'&&$action!=='admin'&&$action!=='club-index';
+    $write=!in_array($action,['public','admin','club-index','export-csv'],true);
     if(($write&&$method!=='POST')||(!$write&&$method!=='GET'))reply(['ok'=>false,'error'=>'Method not allowed.'],405);
     $a=$public?null:admin($write);
     if($action==='public-refresh')sameOrigin();
     $s=new Store(__DIR__.'/data');$r=new Refresh($s);
     $p=$write&&$action!=='import-csv'?json_decode(file_get_contents('php://input')?:'{}',true,512,JSON_THROW_ON_ERROR):[];
     if(!is_array($p))throw new RuntimeException('Invalid request.');
+    if($action==='export-csv'){
+        $kind=$_GET['kind']??'';
+        $season=$_GET['season']??null;
+        if(!is_string($kind)||($season!==null&&(!is_string($season)||!preg_match('/^[1-9][0-9]{0,17}$/D',$season))))reply(['ok'=>false,'error'=>'Invalid export selection.'],400);
+        $export=\TeamFrance\Leaderboard\LeaderboardExport::build($s,$kind,$season===null?null:(int)$season);
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Cache-Control: no-store, private');
+        header('Content-Disposition: attachment; filename="'.$export['filename'].'"');
+        echo $export['csv'];exit;
+    }
     if($action==='public'){
         $seasons=$s->seasons();$out=[];$identity=$s->lookup((string)($_GET['username']??''));$player=$identity!==null?$s->publicPlayer($identity):null;if(!$player)$identity=null;$profile=[];
         foreach(['daily','arena'] as $kind){
