@@ -27,6 +27,41 @@
       const dashboardAssistantUsername = String(dashboardParams.get("username") || "").trim();
       let dashboardPresetFilter = String(dashboardParams.get("dashboardFilter") || "").trim().toLowerCase();
       if (dashboardAssistantMode) document.documentElement.classList.add("p2k-dashboard-assistant-hydrating");
+      // Authorization is independent of the searched/displayed username.
+      let detailedAnalysisAllowed = false;
+      let detailedAnalysisAccessRun = 0;
+      function detailedAnalysisMemberView() {
+        return dashboardParams.get("memberView") === "1" ||
+          dashboardParams.get("oauth") === "1" || dashboardParams.get("simulatedOAuth") === "1";
+      }
+      function setDetailedAnalysisAllowed(allowed) {
+        if (detailedAnalysisAllowed === allowed) return;
+        detailedAnalysisAllowed = allowed;
+        window.P2K_INFO_POPOVER?.close({ immediate: true });
+        if (resultState.matches.length) renderResults();
+        if (!allowed) window.p2kCloseDetailedAnalysis?.();
+      }
+      async function refreshDetailedAnalysisAccess() {
+        const run = ++detailedAnalysisAccessRun;
+        setDetailedAnalysisAllowed(false);
+        if (detailedAnalysisMemberView()) return;
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => controller.abort(), 15000);
+        try {
+          const response = await fetch("/server/team-points/public/detailed-match-analysis.php?access=1", {
+            credentials: "same-origin", cache: "no-store", signal: controller.signal,
+            headers: { Accept: "application/json" }
+          });
+          if (!response.ok) return;
+          const payload = await response.json();
+          const displayed = String(dashboardParams.get("name") || "").trim().toLowerCase();
+          const authorized = String(payload?.username || "").trim().toLowerCase();
+          if (run === detailedAnalysisAccessRun && payload?.allowed === true && authorized && (!displayed || displayed === authorized)) {
+            setDetailedAnalysisAllowed(true);
+          }
+        } catch (_) { /* Fail closed without disrupting ordinary match exploration. */ }
+        finally { window.clearTimeout(timer); }
+      }
       let processedCache = null;
       let dashboardRecommendationWarning = "";
       let dashboardRecommendationFromCache = false;
@@ -265,6 +300,7 @@
       }
 
       window.p2kOpenDetailedAnalysis = function(matchReference) {
+        if (!detailedAnalysisAllowed) return;
         const rawReference = String(matchReference || "").trim();
         if (window.parent !== window) {
           window.parent.postMessage({ type: "p2k-open-detailed-analysis", matchReference: rawReference }, window.location.origin);
@@ -944,8 +980,9 @@
           const recommendationPopoverId = `p2kRecommendationInfo-${String(detailedAnalysisReference || recommendationScore).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
           const recommendationInfoHTML = '<strong>Recommendation</strong><br>' + escapeHTML(recommendationReasonText) +
             '<br><br><strong>Score calculation</strong><br>' + escapeHTML(recommendation?.scoreExplanation || "No score details are available.") +
-            '<button type="button" class="recommendation-analysis-button" data-match-reference="' + escapeHTML(detailedAnalysisReference) + '" ' +
-              '>Detailed match analysis</button>';
+            (detailedAnalysisAllowed
+              ? '<button type="button" class="recommendation-analysis-button" data-match-reference="' + escapeHTML(detailedAnalysisReference) + '">Detailed match analysis</button>'
+              : "");
           const recommendationLine = recommendation
             ? '<div class="recommendation-line">' +
                 '<span class="recommendation-score ' + recommendationScoreClass + '">' + recommendationScore + '/100</span>' +
@@ -1629,6 +1666,9 @@
           hideCancelButton();
         }
       }
+
+      window.addEventListener("p2k-auth-change", () => { void refreshDetailedAnalysisAccess(); });
+      void refreshDetailedAnalysisAccess();
 
       cancelButton.addEventListener("click", () => {
         if (cancelButton.dataset.p2kAction === "retry-failed") {

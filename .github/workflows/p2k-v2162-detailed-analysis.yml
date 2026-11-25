@@ -1,9 +1,13 @@
-name: P2K 2.16.2 detailed match analysis qualification and package
+name: P2K 2.16.2 administrator-only detailed analysis qualification and package
 on:
   push:
     branches: [release/v2.16.2]
     paths:
       - 'AnalyzeMatchModal.html'
+      - 'FindMatch.htm'
+      - 'assets/js/pages/find-match.js'
+      - 'assets/js/pages/analyze-match-modal.js'
+      - 'server/team-points/public/detailed-match-analysis.php'
       - 'AnalyzeMatches.htm'
       - 'assets/js/shared/upcoming-analysis-core.js'
       - 'tests/match_assistant_detailed_analysis_v2162.py'
@@ -24,6 +28,8 @@ jobs:
         run: |
           node --check assets/js/shared/upcoming-analysis-core.js
           node --check assets/js/pages/find-match.js
+          node --check assets/js/pages/analyze-match-modal.js
+          php -l server/team-points/public/detailed-match-analysis.php
           python3 -m py_compile tests/match_assistant_detailed_analysis_v2162.py tools/build-p2k-v2162-detailed-analysis.py
           git diff --stat f22227494062f556b343725d6e4fa3d07b2691f1 HEAD
       - name: Browser regression
@@ -33,12 +39,12 @@ jobs:
       - name: Build and validate Release Control candidate
         run: |
           python3 tools/build-p2k-v2162-detailed-analysis.py
-          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $m=(new \\P2K\\ReleaseControl\\ReleaseCandidatePackage($argv[1]))->validate(); if($m["version"]!=="2.16.2" || $m["overlay_file_count"]!==5)exit(2); echo "PASS ".$m["release_id"].PHP_EOL;' dist/P2K_2.16.2_Detailed_Match_Analysis_RC
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $m=(new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]))->validate(); if($m["version"]!=="2.16.2" || $m["overlay_file_count"]!==9)exit(2); echo "PASS ".$m["release_id"].PHP_EOL;' dist/P2K_2.16.2_Admin_Detailed_Analysis_RC
       - uses: actions/upload-artifact@v4
         with:
-          name: p2k-v2162-detailed-analysis-rc
+          name: p2k-v2162-admin-detailed-analysis-rc
           path: |
-            dist/P2K_2.16.2_Detailed_Match_Analysis_RC_*.zip
+            dist/P2K_2.16.2_Admin_Detailed_Analysis_RC_*.zip
             dist/SHA256SUMS
           if-no-files-found: error
           retention-days: 14
@@ -46,7 +52,7 @@ jobs:
         if: always()
         run: |
           mkdir -p "$RUNNER_TEMP/recovered"
-          git archive HEAD AnalyzeMatchModal.html AnalyzeMatches.htm FindMatch.htm assets/js assets/css config/site-branding.js tests/match_assistant_detailed_analysis_v2162.py tools/build-p2k-v2162-detailed-analysis.py server/release-control/src/ReleaseSlotPolicy.php server/release-control/src/ReleaseCandidatePackage.php release-packages/v2.16.0/P2K_2.16.0_GAB_Verified_Alias_Games_RC.zip | tar -xf - -C "$RUNNER_TEMP/recovered"
+          git archive HEAD AnalyzeMatchModal.html AnalyzeMatches.htm FindMatch.htm assets/js assets/css config/site-branding.js tests/match_assistant_detailed_analysis_v2162.py tools/build-p2k-v2162-detailed-analysis.py server/release-control/src/ReleaseSlotPolicy.php server/release-control/src/ReleaseCandidatePackage.php server/team-points/public/detailed-match-analysis.php server/team-points/src/Auth.php server/team-points/src/PreviewIsolation.php release-packages/v2.16.0/P2K_2.16.0_GAB_Verified_Alias_Games_RC.zip | tar -xf - -C "$RUNNER_TEMP/recovered"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
