@@ -5,6 +5,16 @@ function el(tag,text,cls){const x=document.createElement(tag);if(text!==undefine
 function button(text,fn){const b=el('button',text);b.type='button';b.onclick=fn;return b}
 function choose(name){user=name;$('username').value=name;void load()}
 function profileLink(name){const a=el('a',name,'name');a.href='https://www.chess.com/member/'+encodeURIComponent(name);a.target='_blank';a.rel='noopener noreferrer';return a}
+function toggleExpanded(kind){
+ const expanded=!state[kind].expanded;
+ for(const k of kinds){state[k].expanded=k===kind&&expanded;state[k].page=1}
+ void load()
+}
+function showRankings(){
+ const expanded=kinds.find(k=>state[k].expanded);
+ $('widget').classList.toggle('expanded-view',Boolean(expanded));$('profile').hidden=true;
+ for(const k of kinds)$(k).hidden=Boolean(expanded&&k!==expanded)
+}
 function avatar(row,large=false){
  const wrap=el('span',undefined,'avatar'+(large?' avatar-large':''));
  const fallback=el('span',(row.username||'?').slice(0,1).toUpperCase(),'avatar-fallback');fallback.setAttribute('aria-hidden','true');wrap.append(fallback);
@@ -23,11 +33,11 @@ function renderSection(kind,section){
   r.append(detail,info,el('span',fmt.format(row.points),'points'));rank.append(r)
  }
  if(!section.rows.length)rank.append(el('div',section.season?'Aucun point enregistré.':'Aucune saison disponible.','muted'));
- if(section.total>5||s.expanded)pager.append(button(s.expanded?'Voir moins':'Voir plus',()=>{s.expanded=!s.expanded;s.page=1;void load()}));
+ if(section.total>5||s.expanded)pager.append(button(s.expanded?'Voir moins':'Voir plus',()=>toggleExpanded(kind)));
  if(s.expanded&&section.pages>1){const prev=button('‹',()=>{s.page--;void load()}),next=button('›',()=>{s.page++;void load()});prev.disabled=s.page<=1;next.disabled=s.page>=section.pages;pager.append(prev,el('span',s.page+' / '+section.pages),next)}
 }
 function renderProfile(p){
- const node=$('profile');node.replaceChildren();node.hidden=false;for(const k of kinds)$(k).hidden=true;
+ $('widget').classList.toggle('expanded-view',false);const node=$('profile');node.replaceChildren();node.hidden=false;for(const k of kinds)$(k).hidden=true;
  const back=button('← Retour aux classements',()=>{user='';$('username').value='';void load()});back.className='back';node.append(back);
  const profile=p.profile,player=p.player;
  if(!profile||!player){node.append(el('h2',user,'profile-name'),el('p','Joueur introuvable dans les classements.','muted'));return}
@@ -39,7 +49,7 @@ async function load(){
  for(const k of kinds){q.set(k,state[k].id);q.set(k+'_page',state[k].page);if(state[k].expanded)q.set(k+'_expanded','1')}
  try{const res=await fetch('api.php?'+q,{cache:'no-store'}),p=await res.json();if(!res.ok||!p.ok)throw Error(p.error||'Classement indisponible.');if(serial!==sequence)return;
  for(const k of kinds)renderSection(k,p.sections[k]);
- if(user)renderProfile(p);else{$('profile').hidden=true;for(const k of kinds)$(k).hidden=false}
+ if(user)renderProfile(p);else showRankings()
  $('status').textContent='';
  }catch(e){if(serial===sequence)$('status').textContent=e.message}
 }
