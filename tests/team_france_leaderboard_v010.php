@@ -75,7 +75,7 @@ rejects(fn()=>$s->saveProfile('bob',['username'=>'SomeoneElse','player_id'=>900,
 $s->move((int)$de['id'],$history);check($s->leaderboard($daily)===[]&&$s->leaderboard($history)[0]['points']==1.5,'Move recomputes season');
 $s->saveSeason(['id'=>$history,'kind'=>'daily','name'=>'Historical','archived'=>true]);
 $s->saveProfile('alice',['username'=>'Alice-Renamed','player_id'=>100,'status'=>'closed:fair_play_violations']);
-check($s->leaderboard($history)===[]&&$s->leaderboard($arena)[0]['username']==='Bob'&&$s->lookup('alice')===null,'Global Fair Play exclusion');
+check($s->leaderboard($history)[0]['points']==1.5&&$s->leaderboard($arena)[0]['username']==='Bob'&&$s->lookup('alice')===null,'Frozen history and active Fair Play exclusion');
 $s->saveProfile('alice',['username'=>'Alice-Renamed','player_id'=>100,'status'=>'premium']);
 check($s->leaderboard($history)[0]['points']==1.5,'Reversible account correction');
 $s->fail('daily',(string)$de['id'],'HTTP 500');

@@ -11,3 +11,6 @@ Install via verified standalone SSH package, not P2K Release Control. PHP >=8.1,
 
 ### Leaderboard CSV exports
 The Seasons tab provides a CSV for each season and separate all-season Daily and Arena CSVs, including archived seasons. Exports use stored effective standings and verified alias identities, exclude Fair Play closed accounts, count distinct events, and include zero-point participants with blank rank. Columns are rank, username, points, matches or arenas. UTF-8, comma-separated, decimal point, timestamped UTC filename. Admin-only, no network acquisition or database mutation.
+
+### Frozen seasons
+Archive captures the current effective ranking (including names, points, ranks and event counts) in SQLite metadata; existing archived seasons are captured once when this build first opens their database. Normal public and OAuth refreshes exclude archived events and historical-only players. Explicit Include archived seasons is per-job, off by default, and persists across pause/resume. A successful full opt-in job republishes archived snapshots atomically; errors retain prior published snapshots. Unarchive before editing individual events. Consolidated exports include frozen historical contributions; active seasons retain live Fair Play verification.

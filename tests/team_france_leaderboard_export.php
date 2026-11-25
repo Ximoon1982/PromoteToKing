@@ -11,9 +11,9 @@ function records(array $export):array {
 }
 $s=new Store(sys_get_temp_dir().'/tf-export-'.bin2hex(random_bytes(6)));
 $s->saveSeason(['kind'=>'daily','name'=>'2026']);
-$s->saveSeason(['kind'=>'daily','name'=>'2025','archived'=>true]);
+$s->saveSeason(['kind'=>'daily','name'=>'2025']);
 $s->saveSeason(['kind'=>'arena','name'=>'2026']);
-$s->saveSeason(['kind'=>'arena','name'=>'2025','archived'=>true]);
+$s->saveSeason(['kind'=>'arena','name'=>'2025']);
 $s->saveSeason(['kind'=>'daily','name'=>'Empty']);
 $seasons=$s->rows('SELECT * FROM seasons ORDER BY id');[$d1,$d2,$a1,$a2,$empty]=array_map(fn($r)=>(int)$r['id'],$seasons);
 foreach([[$d1,'1001,1002'],[$d2,'1003'],[$a1,'2001'],[$a2,'2002']] as [$id,$refs])$s->assign(['season_id'=>$id,'references'=>$refs]);
@@ -30,6 +30,8 @@ result($s,'arena','2002',['Alice-Old'=>300,'Bob'=>0,'-safe'=>100]);
 foreach(['alice','alice-old'] as $u)$s->saveProfile($u,['username'=>$u,'player_id'=>100,'status'=>'basic']);
 $s->saveProfile('alice-old',['username'=>'Alice','player_id'=>100,'status'=>'basic']);
 $s->saveProfile('excluded',['username'=>'Excluded','player_id'=>200,'status'=>'closed:fair_play_violations']);
+$s->saveSeason(['id'=>$d2,'kind'=>'daily','name'=>'2025','archived'=>true]);
+$s->saveSeason(['id'=>$a2,'kind'=>'arena','name'=>'2025','archived'=>true]);
 $season=LeaderboardExport::build($s,'daily',$d1);$r=records($season);
 verify($r===[['rank','username','points','matches'],['1','Alice','1.5','2'],['2','Carol','1','1'],['','Bob','0','1']],'Season ranking, aliases, zero points and excluded');
 verify(str_contains($season['filename'],'daily-season-'.$d1.'-2026-')&&str_ends_with($season['filename'],'Z.csv'),'Season filename');

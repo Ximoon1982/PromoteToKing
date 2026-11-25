@@ -285,6 +285,7 @@ PRAGMA user_version=1;");
             } catch (\Throwable $e) {$this->db->exec('ROLLBACK');throw $e;}
             try {$this->db->query('PRAGMA journal_mode=WAL')->fetchColumn();} catch (\Throwable) {}
         }
+        $this->initializeFrozenSeasons();
     }
     public function run(string $sql,array $args=[]): \PDOStatement {$q=$this->db->prepare($sql);$q->execute($args);return $q;}
     public function rows(string $sql,array $args=[]): array {return $this->run($sql,$args)->fetchAll();}
@@ -309,6 +310,30 @@ PRAGMA user_version=1;");
         }
         return $hash;
     }
+    // Capture pre-existing archives once; no schema migration is required.
+    private function initializeFrozenSeasons(): void {
+        $sql="SELECT s.id FROM seasons s WHERE s.archived=1 AND NOT EXISTS(SELECT 1 FROM meta m WHERE m.key='frozen:season:'||s.id)";
+        if(!$this->one($sql))return;
+        $this->tx(function()use($sql){foreach($this->rows($sql) as $s)$this->freezeSeason((int)$s['id']);});
+    }
+    public function freezeSeason(int $id): void {
+        $this->put('frozen:season:'.$id,json_encode(['captured'=>time(),'rows'=>$this->rankings('e.season_id=?',[$id],true)],JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE));
+    }
+    public function frozenRows(int $id): array {
+        $v=json_decode($this->meta('frozen:season:'.$id),true,512,JSON_THROW_ON_ERROR);
+        if(!is_array($v)||!isset($v['rows'])||!is_array($v['rows']))throw new RuntimeException('Archived season snapshot unavailable.');
+        return $v['rows'];
+    }
+    public function assertEditableSeason(int $id): void {
+        $s=$this->one('SELECT archived FROM seasons WHERE id=?',[$id]);
+        if(!$s)throw new RuntimeException('Season not found.');
+        if((int)$s['archived'])throw new RuntimeException('Season is frozen. Unarchive it before editing events.');
+    }
+    public function assertEditableEvent(int $id): void {
+        $e=$this->one('SELECT season_id FROM events WHERE id=?',[$id]);
+        if(!$e)throw new RuntimeException('Event not found.');
+        $this->assertEditableSeason((int)$e['season_id']);
+    }
     public function saveSeason(array $p): void {
         $kind=(string)($p['kind']??'');$name=trim((string)($p['name']??''));$id=(int)($p['id']??0);
         $start=(string)($p['start_date']??'');$end=(string)($p['end_date']??'');
@@ -317,16 +342,24 @@ PRAGMA user_version=1;");
         if($start!==''&&$end!==''&&$start>$end)throw new RuntimeException('Invalid season range.');
         $archived=!empty($p['archived'])?1:0;$default=!empty($p['is_default'])&&!$archived?1:0;
         $this->tx(function()use($kind,$name,$id,$start,$end,$archived,$default){
-            if($id&&(!$this->one('SELECT id FROM seasons WHERE id=? AND kind=?',[$id,$kind])))throw new RuntimeException('Season not found or category cannot change.');
+            $old=$id?$this->one('SELECT * FROM seasons WHERE id=? AND kind=?',[$id,$kind]):null;
+            if($id&&!$old)throw new RuntimeException('Season not found or category cannot change.');
+            if((!$old&&$archived)||($old&&(int)$old['archived']!==$archived)){
+                if($this->one("SELECT 1 FROM jobs WHERE state IN ('running','paused')"))throw new RuntimeException('Stop or complete the refresh before changing archive status.');
+            }
             if(!$archived&&!$id&&!$this->one('SELECT id FROM seasons WHERE kind=? AND archived=0',[$kind]))$default=1;
             if($default)$this->run('UPDATE seasons SET is_default=0 WHERE kind=?',[$kind]);
             if($id)$this->run('UPDATE seasons SET name=?,start_date=?,end_date=?,archived=?,is_default=? WHERE id=?',[$name,$start,$end,$archived,$default,$id]);
             else $this->run('INSERT INTO seasons(kind,name,start_date,end_date,archived,is_default) VALUES(?,?,?,?,?,?)',[$kind,$name,$start,$end,$archived,$default]);
+            $sid=$id?:((int)$this->db->lastInsertId());
+            if($archived&&(!$old||!(int)$old['archived']))$this->freezeSeason($sid);
+            elseif(!$archived&&$old&&(int)$old['archived'])$this->run('DELETE FROM meta WHERE key=?',['frozen:season:'.$sid]);
         });
     }
     public function assign(array $p): void {
         $season=$this->one('SELECT * FROM seasons WHERE id=?',[(int)($p['season_id']??0)]);
         if(!$season)throw new RuntimeException('Select a season.');
+        $this->assertEditableSeason((int)$season['id']);
         $refs=preg_split('/[\r\n,]+/',trim((string)($p['references']??'')),-1,PREG_SPLIT_NO_EMPTY);
         if(!$refs||count($refs)>10000)throw new RuntimeException('Enter 1–10000 event references.');
         $hints=is_array($p['name_hints']??null)?$p['name_hints']:[];
@@ -343,6 +376,7 @@ PRAGMA user_version=1;");
     }
     public function move(int $event,int $season): void {
         $this->tx(function()use($event,$season){
+            $this->assertEditableEvent($event);$this->assertEditableSeason($season);
             $s=$this->one('SELECT kind FROM seasons WHERE id=?',[$season]);$e=$this->one('SELECT kind FROM events WHERE id=?',[$event]);
             if(!$s||!$e||$s['kind']!==$e['kind'])throw new RuntimeException('Invalid target season.');
             $this->run('UPDATE events SET season_id=? WHERE id=?',[$season,$event]);
@@ -386,11 +420,35 @@ PRAGMA user_version=1;");
     }
     public function seasons(): array {return $this->rows('SELECT s.*, (SELECT COUNT(*) FROM events e WHERE e.season_id=s.id) AS event_count FROM seasons s ORDER BY kind,is_default DESC,archived,id DESC');}
     public function leaderboard(int $season,bool $includeUnranked=false): array {
+        $s=$this->one('SELECT archived FROM seasons WHERE id=?',[$season]);
+        if($s&&(int)$s['archived']){
+            $rows=$this->frozenRows($season);
+            return $includeUnranked?$rows:array_values(array_filter($rows,static fn($r)=>$r['rank']!==null));
+        }
         return $this->rankings('e.season_id=?',[$season],$includeUnranked);
     }
     public function categoryLeaderboard(string $kind,bool $includeUnranked=false): array {
         if(!in_array($kind,['daily','arena'],true))throw new RuntimeException('Unknown leaderboard category.');
-        return $this->rankings('e.kind=?',[$kind],$includeUnranked);
+        // Aggregate the stored historical standings, not a new Fair Play
+        // evaluation of their raw rows. Current standings remain live.
+        $totals=[];
+        $merge=static function(array &$totals,array $r):void{
+            $key=$r['identity'];
+            if(!isset($totals[$key]))$totals[$key]=['identity'=>$key,'username'=>$r['username'],'avatar'=>$r['avatar'],'points'=>0,'events'=>0];
+            $totals[$key]['points']+=(int)round((float)$r['points']*100);$totals[$key]['events']+=(int)$r['events'];
+        };
+        foreach($this->rankings('e.kind=? AND EXISTS(SELECT 1 FROM seasons s WHERE s.id=e.season_id AND s.archived=0)',[$kind],true) as $r)$merge($totals,$r);
+        foreach($this->rows('SELECT id FROM seasons WHERE kind=? AND archived=1 ORDER BY id DESC',[$kind]) as $s){
+            foreach($this->frozenRows((int)$s['id']) as $r){
+                if(str_starts_with($r['identity'],'name:'))$r['identity']=$this->identityForUsername(substr($r['identity'],5))??$r['identity'];
+                $merge($totals,$r);
+            }
+        }
+        $rows=array_values($totals);
+        usort($rows,static fn($a,$b)=>($b['points']<=>$a['points'])?:strcmp(strtolower($a['username']),strtolower($b['username']))?:strcmp($a['identity'],$b['identity']));
+        if(!$includeUnranked)$rows=array_values(array_filter($rows,static fn($r)=>$r['points']>0));
+        foreach($rows as $i=>&$r){$r['rank']=$r['points']>0?$i+1:null;$r['points']/=100;}unset($r);
+        return $rows;
     }
     private function rankings(string $scope,array $args,bool $includeUnranked): array {
         // Aggregate aliases only after independent proof of a common stable ID; take
@@ -411,6 +469,18 @@ FROM totals t ".($includeUnranked?"":"WHERE points>0 ")."ORDER BY points DESC,lo
     public function publicPlayer(string $identity): ?array {
         $p=$this->one("SELECT display,stable_id,username_key FROM players p WHERE COALESCE('id:'||p.stable_id,'name:'||p.username_key)=? AND NOT EXISTS(SELECT 1 FROM players x WHERE (x.username_key=p.username_key OR x.stable_id=p.stable_id) AND x.account_status IN ('closed:fair_play_violations','closed:fair_play','closed:cheating')) ORDER BY verified DESC,username_key LIMIT 1",[$identity]);
         return $p?['username'=>$p['display'],'avatar'=>avatarUrl($this->meta('avatar:'.$identity))]:null;
+    }
+    public function identityForUsername(string $username): ?string {
+        $key=userKey($username);if($key==='')return null;
+        $p=$this->one('SELECT * FROM players WHERE username_key=? OR lower(display)=? ORDER BY verified DESC LIMIT 1',[$key,$key]);
+        return $p?($p['stable_id']!==null?'id:'.$p['stable_id']:'name:'.$p['username_key']):null;
+    }
+    public function frozenProfileMatch(array $rows,string $username): ?array {
+        $key=userKey($username);if($key==='')return null;
+        $identity=$this->identityForUsername($key);
+        foreach($rows as $r)if(userKey($r['username'])===$key||($identity!==null&&$r['identity']===$identity))return $r;
+        if($identity!==null)foreach($rows as $r)if(str_starts_with($r['identity'],'name:')&&$this->identityForUsername(substr($r['identity'],5))===$identity)return $r;
+        return null;
     }
     public function lookup(string $username): ?string {
         $key=userKey($username);if($key==='')return null;

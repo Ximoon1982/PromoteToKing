@@ -122,7 +122,7 @@ final class Refresh {
             if((int)$this->s->meta('public_next','0')>$now)return ['deferred'=>true];
             $e=$this->s->one('SELECT e.* FROM events e JOIN seasons s ON s.id=e.season_id WHERE s.archived=0 AND e.due<=? ORDER BY e.due,e.id LIMIT 1',[$now]);
             $day=gmdate('Y-m-d');$count=(int)$this->s->meta('player_count:'.$day,'0');
-            $p=$count<500&&(int)$this->s->meta('player_next','0')<=$now?$this->s->one('SELECT * FROM players WHERE due<=? ORDER BY due,username_key LIMIT 1',[$now]):null;
+            $p=$count<500&&(int)$this->s->meta('player_next','0')<=$now?$this->s->one('SELECT p.* FROM players p WHERE p.due<=? AND EXISTS(SELECT 1 FROM results r JOIN events e ON e.id=r.event_id JOIN seasons s ON s.id=e.season_id WHERE r.username_key=p.username_key AND s.archived=0) ORDER BY p.due,p.username_key LIMIT 1',[$now]):null;
             if(!$e&&!$p)return ['fresh'=>true];
             $player=$p&&(!$e||$this->s->meta('last_kind')!=='player');
             $this->s->put('public_next',(string)($now+2));$this->s->put('last_kind',$player?'player':'event');
@@ -139,13 +139,15 @@ final class Refresh {
             return ['processed'=>1];
         });
     }
-    public function start(string $owner): array {
-        return $this->s->lock(function()use($owner){
+    public function start(string $owner,bool $includeArchived=false): array {
+        return $this->s->lock(function()use($owner,$includeArchived){
             $job=$this->s->one('SELECT * FROM jobs WHERE id=1');
             if($job&&in_array($job['state'],['running','paused'],true))throw new RuntimeException('An unfinished refresh exists. Resume or stop it.');
-            $this->s->tx(function()use($owner){
+            $this->s->tx(function()use($owner,$includeArchived){
                 $this->s->run('DELETE FROM tasks');
-                $this->s->run("INSERT INTO tasks(kind,item) SELECT kind,CAST(id AS TEXT) FROM events");
+                $this->s->put('job_include_archived',$includeArchived?'1':'0');
+                $this->s->put('job_archive_publication','pending');
+                $this->s->run("INSERT INTO tasks(kind,item) SELECT e.kind,CAST(e.id AS TEXT) FROM events e JOIN seasons s ON s.id=e.season_id WHERE s.archived=0 OR ?",[$includeArchived?1:0]);
                 $this->s->run("INSERT INTO jobs(id,state,phase,created,updated,owner) VALUES(1,'running','events',?,?,?) ON CONFLICT(id) DO UPDATE SET state=excluded.state,phase=excluded.phase,created=excluded.created,updated=excluded.updated,owner=excluded.owner",[time(),time(),$owner]);
             });
             return $this->progress();
@@ -161,7 +163,7 @@ final class Refresh {
         });
     }
     public function progress(): array {
-        return ['job'=>$this->s->one('SELECT * FROM jobs WHERE id=1'),'counts'=>$this->s->rows('SELECT kind,state,COUNT(*) n FROM tasks GROUP BY kind,state'),'errors'=>$this->s->rows("SELECT kind,item,error FROM tasks WHERE state='error' ORDER BY kind,item LIMIT 30"),'transport'=>json_decode($this->s->meta('last_transport','{}'),true)];
+        return ['job'=>$this->s->one('SELECT * FROM jobs WHERE id=1'),'counts'=>$this->s->rows('SELECT kind,state,COUNT(*) n FROM tasks GROUP BY kind,state'),'errors'=>$this->s->rows("SELECT kind,item,error FROM tasks WHERE state='error' ORDER BY kind,item LIMIT 30"),'transport'=>json_decode($this->s->meta('last_transport','{}'),true),'include_archived'=>$this->s->meta('job_include_archived','0')==='1','archive_publication'=>$this->s->meta('job_archive_publication','')];
     }
     private function deferTask(array $t,string $error,int $delay): void {
         $attempts=(int)$t['attempts']+1;
@@ -177,6 +179,13 @@ final class Refresh {
             if(!$job||$job['state']!=='running')return $this->progress();
             if($job['owner']!==$owner)throw new RuntimeException('Resume this refresh explicitly before taking ownership.');
             $this->s->run('UPDATE jobs SET updated=? WHERE id=1',[time()]);
+            $includeArchived=$this->s->meta('job_include_archived','0')==='1';
+            // Also protect pending work in legacy refresh jobs created before
+            // the scope option existed. Their missing flag means active only.
+            if(!$includeArchived){
+                $this->s->run("DELETE FROM tasks WHERE state='pending' AND kind IN ('daily','arena') AND EXISTS(SELECT 1 FROM events e JOIN seasons s ON s.id=e.season_id WHERE e.id=CAST(tasks.item AS INTEGER) AND s.archived=1)");
+                $this->s->run("DELETE FROM tasks WHERE state='pending' AND kind='player' AND NOT EXISTS(SELECT 1 FROM results r JOIN events e ON e.id=r.event_id JOIN seasons s ON s.id=e.season_id WHERE r.username_key=tasks.item AND s.archived=0)");
+            }
             $kind=$job['phase']==='players'?'player':'daily';
             $tasks=$this->s->rows("SELECT * FROM tasks WHERE kind=? AND state='pending' AND next_try<=? ORDER BY item LIMIT 48",[$kind,time()]);
             if($tasks){
@@ -233,15 +242,22 @@ final class Refresh {
                         $this->arena($e);$this->taskDone($t,'done');
                     }catch(\Throwable $x){$this->s->fail('arena',$t['item'],$x->getMessage());$this->taskDone($t,'error',$x->getMessage());}
                 }else{
-                    $this->s->tx(function(){
-                        $this->s->run("INSERT OR IGNORE INTO tasks(kind,item) SELECT 'player',username_key FROM players");
+                    $this->s->tx(function()use($includeArchived){
+                        $this->s->run("INSERT OR IGNORE INTO tasks(kind,item) SELECT 'player',p.username_key FROM players p WHERE ? OR EXISTS(SELECT 1 FROM results r JOIN events e ON e.id=r.event_id JOIN seasons s ON s.id=e.season_id WHERE r.username_key=p.username_key AND s.archived=0)",[$includeArchived?1:0]);
                         $this->s->run("UPDATE jobs SET phase='players',updated=? WHERE id=1",[time()]);
                     });
                 }
             }else{
                 $errors=(int)$this->s->run("SELECT COUNT(*) FROM tasks WHERE state='error'")->fetchColumn();
-                $this->s->run('UPDATE jobs SET state=?,updated=? WHERE id=1',[$errors?'completed_with_errors':'completed',time()]);
-                $this->s->put('updated',(string)time());
+                $this->s->tx(function()use($includeArchived,$errors){
+                    if($includeArchived&&!$errors){
+                        foreach($this->s->rows('SELECT id FROM seasons WHERE archived=1') as $s)$this->s->freezeSeason((int)$s['id']);
+                        $this->s->put('job_archive_publication','published');
+                    }elseif($includeArchived)$this->s->put('job_archive_publication','retained_due_to_errors');
+                    else $this->s->put('job_archive_publication','not_requested');
+                    $this->s->run('UPDATE jobs SET state=?,updated=? WHERE id=1',[$errors?'completed_with_errors':'completed',time()]);
+                    $this->s->put('updated',(string)time());
+                });
             }
             $this->s->run('UPDATE jobs SET updated=? WHERE id=1',[time()]);
             return $this->progress();

@@ -49,18 +49,21 @@ try {
         echo $export['csv'];exit;
     }
     if($action==='public'){
-        $seasons=$s->seasons();$out=[];$identity=$s->lookup((string)($_GET['username']??''));$player=$identity!==null?$s->publicPlayer($identity):null;if(!$player)$identity=null;$profile=[];
+        $seasons=$s->seasons();$out=[];$requested=(string)($_GET['username']??'');$identity=$s->lookup($requested);$player=$identity!==null?$s->publicPlayer($identity):null;if(!$player)$identity=null;$profile=[];
         foreach(['daily','arena'] as $kind){
             $options=array_values(array_filter($seasons,static fn($x)=>$x['kind']===$kind));
             $selected=(int)($_GET[$kind]??0);$season=null;
             foreach($options as $x)if((int)$x['id']===$selected){$season=$x;break;}
             $season??=$options[0]??null;$all=$season?$s->leaderboard((int)$season['id'],true):[];$rows=array_values(array_filter($all,static fn($row)=>$row['rank']!==null));
             $total=count($rows);$size=!empty($_GET[$kind.'_expanded'])?25:5;$pages=max(1,(int)ceil($total/$size));$page=max(1,min($pages,(int)($_GET[$kind.'_page']??1)));
-            $found=null;foreach($all as $row)if($identity!==null&&$row['identity']===$identity){$found=$row;break;}
+            $found=null;
+            if($season&&!empty($season['archived']))$found=$s->frozenProfileMatch($all,$requested);
+            else foreach($all as $row)if($identity!==null&&$row['identity']===$identity){$found=$row;break;}
+            if(!$player&&$found)$player=array_intersect_key($found,array_flip(['username','avatar']));
             $profile[$kind]=$found?array_intersect_key($found,array_flip(['username','points','rank','events','avatar'])):null;
             $out[$kind]=['seasons'=>$options,'season'=>$season,'rows'=>array_map(static fn($x)=>array_intersect_key($x,array_flip(['username','points','rank','events','avatar'])),array_slice($rows,($page-1)*$size,$size)),'page'=>$page,'pages'=>$pages,'total'=>$total];
         }
-        reply(['ok'=>true,'sections'=>$out,'profile'=>$identity!==null?$profile:null,'player'=>$player,'updated'=>(int)$s->meta('updated','0')]);
+        reply(['ok'=>true,'sections'=>$out,'profile'=>$player!==null?$profile:null,'player'=>$player,'updated'=>(int)$s->meta('updated','0')]);
     }
     if($action==='public-refresh')reply(['ok'=>true]+$r->publicStep());
     if($action==='admin'){
@@ -93,7 +96,7 @@ try {
         foreach($rows as $id=>&$row)$row['assigned']=$assigned[$id]??null;unset($row);
         reply(['ok'=>true,'matches'=>array_values($rows)]);
     }
-    if($action==='start')reply(['ok'=>true]+$r->start($a['username']));
+    if($action==='start')reply(['ok'=>true]+$r->start($a['username'],($p['include_archived']??false)===true));
     if(in_array($action,['pause','resume','stop'],true))reply(['ok'=>true]+$r->control($action,$a['username']));
     if($action==='step')reply(['ok'=>true]+$r->step($a['username']));
     $result=$s->lock(function()use($action,$s,$r,$p){
@@ -102,14 +105,16 @@ try {
             case 'save-season':$s->saveSeason($p);break;
             case 'assign':$s->assign($p);break;
             case 'move':$s->move((int)($p['event']??0),(int)($p['season']??0));break;
-            case 'remove':$s->run('DELETE FROM events WHERE id=?',[(int)($p['event']??0)]);break;
+            case 'remove':$s->assertEditableEvent((int)($p['event']??0));$s->run('DELETE FROM events WHERE id=?',[(int)($p['event']??0)]);break;
             case 'refresh-event':
+                $s->assertEditableEvent((int)($p['event']??0));
                 $e=$s->one('SELECT * FROM events WHERE id=?',[(int)($p['event']??0)]);if(!$e)throw new RuntimeException('Event not found.');
                 if($e['kind']==='arena')$r->arena($e);else{$b=Transport::oauth([['id'=>'event','url'=>BASE.'match/'.$e['event_id'],'headers'=>['accept'=>'application/json']]]);$x=array_values($b['results']??[])[0]??[];if((int)($x['status']??0)!==200||!is_array($x['json']??null))throw new RuntimeException('OAuth match request failed.');$r->daily($e,$x['json'],true);}break;
             case 'verify-player':
                 $key=userKey($p['username']??'');if($key==='')throw new RuntimeException('Invalid username.');
                 $b=Transport::oauth([['id'=>'player','url'=>BASE.'player/'.rawurlencode($key),'headers'=>['accept'=>'application/json']]]);$x=array_values($b['results']??[])[0]??[];if((int)($x['status']??0)!==200||!is_array($x['json']??null))throw new RuntimeException('OAuth player request failed.');$s->saveProfile($key,$x['json']);break;
             case 'import-csv':
+                $s->assertEditableEvent((int)($_POST['event']??0));
                 if(($_POST['confirmed']??'')!=='1'||!isset($_FILES['csv'])||$_FILES['csv']['error']!==UPLOAD_ERR_OK||$_FILES['csv']['size']>12000000||!is_uploaded_file($_FILES['csv']['tmp_name']))throw new RuntimeException('Confirm completed arena and select a valid official Results CSV.');
                 $r->importCsv((int)($_POST['event']??0),(string)file_get_contents($_FILES['csv']['tmp_name']));break;
             case 'recalculate': // standings are derived directly from durable results; invalidate revision
