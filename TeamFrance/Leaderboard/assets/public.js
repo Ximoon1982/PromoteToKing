@@ -19,7 +19,7 @@ function renderSection(kind,section){
  for(const row of section.rows){
   const r=el('div',undefined,'rank-row');r.append(el('span',String(row.rank),'rank medal'+row.rank));
   const detail=button('',()=>choose(row.username));detail.className='avatar-button';detail.title='Voir les statistiques de '+row.username;detail.setAttribute('aria-label',detail.title);detail.append(avatar(row));
-  const info=el('div',undefined,'player-info');info.append(profileLink(row.username),el('span',eventLabel(kind,row.events),'event-count'));
+  const info=el('div',undefined,'player-info'),name=button(row.username,()=>choose(row.username));name.className='name';name.title='Voir les statistiques de '+row.username;info.append(name,el('span',eventLabel(kind,row.events),'event-count'));
   r.append(detail,info,el('span',fmt.format(row.points),'points'));rank.append(r)
  }
  if(!section.rows.length)rank.append(el('div',section.season?'Aucun point enregistré.':'Aucune saison disponible.','muted'));
