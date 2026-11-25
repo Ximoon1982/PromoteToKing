@@ -69,17 +69,7 @@ jobs:
             bash "$package/install.sh" "$upgrade" --apply
             bash "$package/install.sh" "$upgrade" --check
             test "$before" = "$(sha256sum "$upgrade/TeamFrance/Leaderboard/data/leaderboard.sqlite3" | cut -d' ' -f1)"
-            while IFS= >> "$stage/TeamFrance/home.html"
-          if bash "$package/install.sh" "$stage" --check; then echo 'Unexpected overwrite of divergent hub'; exit 1; fi
-          echo 'PASS: standalone install, persistent database, sources, widgets and divergent-hub refusal'
-      - uses: actions/upload-artifact@v4
-        with:
-          name: P2K_TeamFrance_Leaderboard_v0.1.0_Full_SSH_Installer
-          path: ${{ runner.temp }}/installer/
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 90
-\t' read -r rel allowed new; do cmp "$upgrade/$rel" "$rel"; done < "$package/FILE_CHECKSUMS.tsv"
+            while IFS=$'\t' read -r rel allowed new; do cmp "$upgrade/$rel" "$rel"; done < "$package/FILE_CHECKSUMS.tsv"
             echo '// unexpected modification' >> "$upgrade/TeamFrance/Leaderboard/assets/admin.js"
             if bash "$package/install.sh" "$upgrade" --check; then echo 'Unexpected overwrite allowed'; exit 1; fi
           done
