@@ -1,0 +1,74 @@
+{
+  "source": "User-supplied medal PNGs, unmodified; 2026-11-25",
+  "canvas": [
+    1122,
+    1402
+  ],
+  "mode": "RGBA",
+  "geometry": {
+    "label": "Team France Medal",
+    "plate": {
+      "x": 225,
+      "y": 1015,
+      "w": 642,
+      "h": 189
+    },
+    "safePoly": [
+      [
+        45,
+        26
+      ],
+      [
+        598,
+        26
+      ],
+      [
+        614,
+        42
+      ],
+      [
+        614,
+        148
+      ],
+      [
+        598,
+        164
+      ],
+      [
+        45,
+        164
+      ],
+      [
+        29,
+        148
+      ],
+      [
+        29,
+        42
+      ]
+    ],
+    "flat": true,
+    "centerBias": 0,
+    "defaultSizes": [
+      30,
+      30,
+      20
+    ],
+    "textRect": {
+      "x": 45,
+      "y": 28,
+      "w": 553,
+      "h": 134
+    },
+    "assets": {
+      "gold": "assets/gold.png",
+      "silver": "assets/silver.png",
+      "bronze": "assets/bronze.png"
+    }
+  },
+  "sha256": {
+    "gold": "58bebc10da7780fcd538b3ba2b58a5d8bb6655cd6fefb3c6a1399d2dd09d3f9d",
+    "silver": "8bd41c4b5da60099a1931ce0301bf272773131237d34d412d775770604eecef1",
+    "bronze": "382aac0d7ac39207e77f05c1a70a1dcfda3f867a4c9b2bc03d42016c473366c0"
+  }
+}
