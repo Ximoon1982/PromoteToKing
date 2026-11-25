@@ -167,7 +167,7 @@ function arenaResult(string $csv,bool $official=false): array {
             if(in_array('username',$h,true)&&in_array('club',$h,true)&&in_array('score',$h,true)){$sep=$candidate;break 2;}
         }
     }
-    $map=null;$clubMap=null;$rows=[];$count=0;$clubRows=0;$officialClubs=0;$seenHeader=false;
+    $map=null;$clubMap=null;$rows=[];$count=0;$clubRows=0;$officialClubs=0;$seenHeader=false;$repairedRows=0;
     try {
         while (($r=fgetcsv($fp,0,$sep,'"',''))!==false) {
             if ($r===[null]||trim(implode('',array_map('strval',$r)))==='') continue;
@@ -185,7 +185,21 @@ function arenaResult(string $csv,bool $official=false): array {
                 continue;
             }
             if ($map===null) continue;
-            if (count($r)<=max($map['username'],$map['club'],$map['score'])) throw new RuntimeException('Truncated arena CSV row.');
+            if (count($r)<=max($map['username'],$map['club'],$map['score'])) {
+                // Chess.com sometimes writes an unquoted LF inside the optional
+                // display Name, splitting a real player row in two. Recover only
+                // a structurally proven continuation of that field, never guess
+                // a missing username, club or score, and never skip a broken row.
+                $namePos=$map['name']??-1;$rankPos=$map['rank']??-1;
+                if($namePos<0||$rankPos<0||$rankPos>=$namePos||$map['username']>=$namePos||$map['club']<=$namePos||$map['score']<=$namePos||count($r)!==$namePos+1||!preg_match('/^\d+$/D',trim((string)($r[$rankPos]??'')))||userKey($r[$map['username']]??'')==='')throw new RuntimeException('Truncated arena CSV row.');
+                $tail=fgetcsv($fp,0,$sep,'"','');
+                if($tail===false||$tail===[null]||trim((string)($tail[0]??''))===''||preg_match('/^\d+$/D',trim((string)$tail[0])))throw new RuntimeException('Truncated arena CSV row: no verified display-name continuation.');
+                $r[$namePos]=(string)$r[$namePos]."\n".(string)array_shift($tail);
+                $r=array_merge($r,$tail);$expected=max($map)+1;
+                $candidateScore=str_replace(',','.',trim((string)($r[$map['score']]??'')));
+                if((count($r)!==$expected&&(count($r)!==$expected+1||end($r)!==''))||trim((string)($r[$map['club']]??''))===''||!is_numeric($candidateScore)||!is_finite((float)$candidateScore)||(float)$candidateScore<0)throw new RuntimeException('Truncated arena CSV row: invalid display-name continuation.');
+                $repairedRows++;
+            }
             $u=userKey($r[$map['username']]);$score=str_replace(',','.',trim((string)$r[$map['score']]));
             if ($u===''||!is_numeric($score)||!is_finite((float)$score)||(float)$score<0) throw new RuntimeException('Invalid arena participant row.');
             $count++;
@@ -197,7 +211,7 @@ function arenaResult(string $csv,bool $official=false): array {
     } finally {fclose($fp);}
     if (!$seenHeader||$count===0) throw new RuntimeException('Missing official Player Results table.');
     if ($official&&$officialClubs===0) throw new RuntimeException('Official Results CSV lacks Club Results.');
-    return ['rows'=>$rows,'evidence'=>['player_rows'=>$count,'club_rows'=>$clubRows,'official_club_rows'=>$officialClubs]];
+    return ['rows'=>$rows,'evidence'=>['player_rows'=>$count,'club_rows'=>$clubRows,'official_club_rows'=>$officialClubs,'repaired_player_rows'=>$repairedRows]];
 }
 final class Store {
     public PDO $db;
