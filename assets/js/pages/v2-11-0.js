@@ -211,7 +211,7 @@
   function finishScanTelemetry(){if(scanTelemetry&&!scanTelemetry.finishedAt)scanTelemetry.finishedAt=Date.now();stopTelemetryTimer();renderScanTelemetry();}
   function renderScanTelemetry(){
     const summary=adminState.run?.summary||{};const total=Math.max(0,Number(summary.total??scanTelemetry?.total??0)||0);const storedChecked=Math.max(0,Number(summary.checked??adminState.run?.results?.length??0)||0);
-    const liveChecked=scanTelemetry?Math.min(total,Math.max(storedChecked,scanTelemetry.baseChecked+scanTelemetry.settled)):storedChecked;const remaining=Math.max(0,total-liveChecked);
+    const liveChecked=activeScan&&scanTelemetry?Math.min(total,Math.max(storedChecked,scanTelemetry.baseChecked+scanTelemetry.settled)):storedChecked;const remaining=Math.max(0,total-liveChecked);
     const now=scanTelemetry?.finishedAt||Date.now();const elapsed=scanTelemetry?Math.max(0,(now-scanTelemetry.startedAt)/1000):0;let rolling=0,average=0;
     if(scanTelemetry){const windowSeconds=Math.max(1,Math.min(10,elapsed||1));scanTelemetry.samples=scanTelemetry.samples.filter(at=>now-at<=10000);rolling=scanTelemetry.samples.length/windowSeconds;average=elapsed>0?scanTelemetry.settled/elapsed:0;}
     const rate=rolling>0?rolling:average;const eta=remaining===0&&total>0?"Done":rate>0?durationLabel(remaining/rate):"—";const diag=window.P2K_API_CLIENT?.diagnostics?.()||{};const gatewayRate=Math.max(0,Number(diag.oauthGatewayLastCps||0));const targetRate=Math.max(0,Number(diag.oauthGatewayRateTarget||0));
@@ -577,7 +577,7 @@
     $("recruitmentRetry")?.addEventListener("click",()=>void guarded(async()=>{
       const id=adminState.run?.id;if(!id)return;
       const payload=await server("retry-errors",{method:"POST",body:{id}});
-      renderRun({...adminState.run,...payload.run});await loadList();await loadResults();setStatus("API errors returned to pending. Resume this analysis to retry only pending candidates.");
+      clearScanTelemetry();renderRun({...adminState.run,...payload.run});await loadList();await loadResults();setStatus("API errors returned to pending. Resume this analysis to retry only pending candidates.");
     }));
     $("recruitmentDuplicate")?.addEventListener("click",()=>void guarded(async()=>{
       const run=adminState.run;if(!run)return;
