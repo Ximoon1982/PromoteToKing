@@ -242,13 +242,16 @@ PRAGMA user_version=1;");
         $season=$this->one('SELECT * FROM seasons WHERE id=?',[(int)($p['season_id']??0)]);
         if(!$season)throw new RuntimeException('Select a season.');
         $refs=preg_split('/[\r\n,]+/',trim((string)($p['references']??'')),-1,PREG_SPLIT_NO_EMPTY);
-        if(!$refs||count($refs)>500)throw new RuntimeException('Enter 1–500 event references.');
-        $this->tx(function()use($season,$refs){
+        if(!$refs||count($refs)>10000)throw new RuntimeException('Enter 1–10000 event references.');
+        $hints=is_array($p['name_hints']??null)?$p['name_hints']:[];
+        $this->tx(function()use($season,$refs,$hints){
             foreach($refs as $ref){
                 [$id,$url]=eventRef($season['kind'],$ref);
                 $existing=$this->one('SELECT season_id FROM events WHERE kind=? AND event_id=?',[$season['kind'],$id]);
                 if($existing&&(int)$existing['season_id']!==(int)$season['id'])throw new RuntimeException('Event '.$id.' already belongs to another season. Move it explicitly.');
-                $this->run('INSERT INTO events(kind,event_id,season_id,url) VALUES(?,?,?,?) ON CONFLICT(kind,event_id) DO NOTHING',[$season['kind'],$id,$season['id'],$url]);
+                $hint=is_string($hints[$id]??null)?trim($hints[$id]):'';
+                if(strlen($hint)>500)$hint='';
+                $this->run('INSERT INTO events(kind,event_id,season_id,url,name) VALUES(?,?,?,?,?) ON CONFLICT(kind,event_id) DO UPDATE SET name=CASE WHEN events.name=\'\' THEN excluded.name ELSE events.name END',[$season['kind'],$id,$season['id'],$url,$hint]);
             }
         });
     }

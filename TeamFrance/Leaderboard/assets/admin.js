@@ -28,7 +28,7 @@ function render(){
  $('seasons').replaceChildren(table(['Season','Category','Dates','Events','Status',''],items.map(s=>[s.name,s.kind,(s.start_date||'—')+' – '+(s.end_date||'—'),s.event_count,Number(s.archived)?'Archived':Number(s.is_default)?'Default':'Active',btn('Edit',()=>seasonEdit(s))])));
  if(tab==='seasons')return;
  const player=tab==='players',seasons=items.filter(s=>s.kind===tab);$('event-title').textContent=tab==='daily'?'Add Daily matches':'Add arenas';$('list-title').textContent=player?'Player account verification':tab==='daily'?'Assigned Daily matches':'Assigned arenas';
- options($('assign-form').elements.season_id,seasons,null);options($('season-filter'),seasons,'All seasons');$('season-filter').hidden=player;$('index-button').hidden=tab!=='daily';
+ options($('assign-form').elements.season_id,seasons,null);options($('season-filter'),seasons,'All seasons');$('season-filter').hidden=player;$('index-button').hidden=tab!=='daily';$('arena-discovery-options').hidden=tab!=='arena';if(chooser&&(chooser.season!==String(selectedSeason()?.id)||chooser.kind!==tab||chooser.range!==seasonRange(selectedSeason())))closeChooser();updateArenaRange();
  const rows=data.rows||[];const records=$('records');records.replaceChildren();
  if(player){records.append(table(['Player','Account status','Verified','Error',''],rows.map(x=>[x.display+(x.display.toLowerCase()!==x.username_key?' ('+x.username_key+')':''),x.account_status,date(x.verified),el('span',x.error,'row-error'),btn('Verify',()=>mutate('verify-player',{username:x.username_key}))])))}
  else{records.append(table(['Event','Season','Status','Players / points','Last check','Actions'],rows.map(x=>{
@@ -49,12 +49,72 @@ async function drive(){
 async function control(action){try{if(action==='pause'||action==='stop'){epoch++;while(running)await new Promise(resolve=>setTimeout(resolve,100))}const p=await call(action,{});showProgress(p);msg(action==='start'?'Refresh started.':action==='resume'?'Refresh resumed.':'Refresh '+action+' requested.');if(action==='start'||action==='resume'){if(!running)void drive()}else await load()}catch(e){msg(e.message,true)}}
 for(const id of ['start','pause','resume','stop'])$(id).onclick=()=>void control(id);
 $('recalc').onclick=()=>void mutate('recalculate',{});
-for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>{tab=b.dataset.tab;page=1;$('query').value='';$('season-filter').value='0';$('index-results').hidden=true;void load()};
+for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>{tab=b.dataset.tab;page=1;$('query').value='';$('season-filter').value='0';closeChooser();void load()};
 $('query').onchange=()=>{page=1;void load()};$('season-filter').onchange=()=>{page=1;void load()};$('reload').onclick=()=>void load();
 $('season-form').onreset=()=>{setTimeout(()=>{$('season-form').elements.id.value='';$('season-form').elements.kind.disabled=false},0)};
 $('season-form').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,p=Object.fromEntries(new FormData(form));p.kind=form.elements.kind.value;p.archived=form.elements.archived.checked;p.is_default=form.elements.is_default.checked;if(await mutate('save-season',p))form.reset()};
-$('assign-form').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget;if(await mutate('assign',Object.fromEntries(new FormData(form))))form.elements.references.value=''};
-$('index-button').onclick=async()=>{try{const j=await call('club-index');const box=$('index-results');box.hidden=false;box.replaceChildren();const find=el('input');find.placeholder='Filter match name or ID';box.append(find);const list=el('div'),selected=new Set(),nav=el('div',undefined,'actions');let indexPage=1;box.append(list,nav);const render=()=>{list.replaceChildren();nav.replaceChildren();const q=find.value.toLowerCase(),filtered=j.matches.filter(x=>(x.name+' '+x.id).toLowerCase().includes(q)),pages=Math.max(1,Math.ceil(filtered.length/25));indexPage=Math.min(indexPage,pages);for(const x of filtered.slice((indexPage-1)*25,indexPage*25)){const l=el('label',undefined,'check'),c=el('input');c.type='checkbox';c.checked=selected.has(x.id);c.onchange=()=>{if(c.checked)selected.add(x.id);else selected.delete(x.id);selection.textContent=selected.size+' selected'};l.append(c,el('span',x.name+' · '+x.status));list.append(l)}const prev=btn('Previous',()=>{indexPage--;render()}),next=btn('Next',()=>{indexPage++;render()});prev.disabled=indexPage<=1;next.disabled=indexPage>=pages;nav.append(prev,el('span','Page '+indexPage+' / '+pages+' · '+filtered.length+' matches · 25 per page'),next)};find.oninput=()=>{indexPage=1;render()};const selection=el('span','0 selected','muted');box.append(selection,btn('Use selected matches',()=>{const field=$('assign-form').elements.references;field.value=[field.value,...selected].filter(Boolean).join('\n');box.hidden=true}));render()}catch(e){msg(e.message,true)}};
+$('assign-form').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget;const p=Object.fromEntries(new FormData(form));p.name_hints=namesBySeason.get(String(p.season_id))||{};if(await mutate('assign',p)){namesBySeason.delete(String(p.season_id));form.elements.references.value='';closeChooser()}};
+// Both event choosers share a 25-row filtered, multi-page selection model.
+let chooser=null,discoveryEpoch=0,scanning=false;const namesBySeason=new Map();
+function selectedSeason(){return data?.seasons?.find(s=>String(s.id)===$('assign-form').elements.season_id.value)}
+function seasonRange(s){return (s?.start_date||'')+'|'+(s?.end_date||'')}
+function updateArenaRange(){const s=selectedSeason(),valid=tab==='arena'&&s?.start_date&&s?.end_date;$('arena-season-range').textContent=valid?'Season dates: '+s.start_date+' to '+s.end_date+' (inclusive)':'Set both season dates before searching arenas.';$('arena-scan').disabled=!valid||scanning;$('arena-stop').disabled=!scanning}
+function status(text){$('discovery-status').hidden=!text;$('discovery-status').textContent=text}
+function closeChooser(){discoveryEpoch++;scanning=false;chooser=null;$('index-results').hidden=true;status('');updateArenaRange()}
+$('assign-form').elements.season_id.onchange=()=>{closeChooser();updateArenaRange()};
+function createChooser(kind,season){
+ const box=$('index-results');box.hidden=false;box.replaceChildren();
+ const find=el('input');find.placeholder=kind==='arena'?'Filter arena name, date or ID':'Filter match name or ID';find.setAttribute('aria-label',find.placeholder);
+ const controls=el('div',undefined,'actions'),list=el('div'),nav=el('div',undefined,'actions'),summary=el('p',undefined,'hint');
+ const c={kind,season:String(season.id),range:seasonRange(season),rows:new Map(),selected:new Set(),page:1,find,render:null};
+ const filtered=()=>{const q=find.value.trim().toLocaleLowerCase();return [...c.rows.values()].filter(x=>(x.name+' '+x.id+' '+(x.date||'')+' '+(x.status||'')).toLocaleLowerCase().includes(q)).sort((a,b)=>kind==='arena'?String(b.date).localeCompare(String(a.date))||String(a.name).localeCompare(String(b.name)):0)};
+ const available=x=>!x.assigned;
+ const refreshSummary=()=>{const rows=filtered();summary.textContent=c.selected.size+' selected · '+rows.filter(available).length+' available in current filter';select.disabled=!rows.some(x=>available(x)&&!c.selected.has(x.id));clear.disabled=!rows.some(x=>c.selected.has(x.id));reset.disabled=use.disabled=!c.selected.size};
+ const select=btn('Select all filtered',()=>{for(const x of filtered())if(available(x))c.selected.add(x.id);c.render()});
+ const clear=btn('Deselect all filtered',()=>{for(const x of filtered())c.selected.delete(x.id);c.render()});
+ const reset=btn('Clear selection',()=>{c.selected.clear();c.render()});
+ const use=btn('Use selected '+(kind==='arena'?'arenas':'matches'),()=>{if(c!==chooser||c.season!==String(selectedSeason()?.id)||c.range!==seasonRange(selectedSeason()))return;const field=$('assign-form').elements.references,refs=[...c.selected].map(id=>c.rows.get(id)).filter(x=>x&&available(x)).map(x=>x.url||x.id);field.value=[...new Set([...field.value.split(/[\r\n,]+/).map(x=>x.trim()).filter(Boolean),...refs])].join('\n');const hints=namesBySeason.get(c.season)||{};for(const id of c.selected){const x=c.rows.get(id);if(x&&available(x))hints[id]=x.name}namesBySeason.set(c.season,hints);c.selected.clear();c.render();msg(refs.length+' events copied to the input. Click Add events to assign them.');});
+ controls.append(select,clear,reset,use);box.append(find,controls,summary,list,nav);
+ c.render=()=>{
+  const rows=filtered(),pages=Math.max(1,Math.ceil(rows.length/25));c.page=Math.max(1,Math.min(c.page,pages));list.replaceChildren();nav.replaceChildren();
+  if(!rows.length)list.append(el('p','No matching events.','muted'));
+  for(const x of rows.slice((c.page-1)*25,c.page*25)){
+   const l=el('label',undefined,'check'),check=el('input');check.type='checkbox';check.disabled=!available(x);check.checked=check.disabled||c.selected.has(x.id);
+   check.onchange=()=>{if(check.checked)c.selected.add(x.id);else c.selected.delete(x.id);refreshSummary()};
+   const text=el('span'),link=el('a',x.name||'#'+x.id);link.href=x.url;link.target='_blank';link.rel='noopener noreferrer';text.append(link,document.createTextNode((x.date?' · '+x.date:'')+(x.status?' · '+x.status:'')+(x.assigned?' · Assigned: '+x.assigned.season:'')));l.append(check,text);list.append(l);
+  }
+  const prev=btn('Previous',()=>{c.page--;c.render()}),next=btn('Next',()=>{c.page++;c.render()});prev.disabled=c.page<=1;next.disabled=c.page>=pages;nav.append(prev,el('span','Page '+c.page+' / '+pages+' · '+rows.length+' events · 25 per page'),next);
+  refreshSummary();
+ };
+ find.oninput=()=>{c.page=1;c.render()};chooser=c;c.render();return c
+}
+function addChoices(c,rows){for(const x of rows){const id=String(x.id);c.rows.set(id,{...x,id});if(x.assigned)c.selected.delete(id)}c.render()}
+$('index-button').onclick=async()=>{
+ const season=selectedSeason();if(!season){msg('Create and select a Daily season first.',true);return}
+ closeChooser();const ticket=discoveryEpoch,c=createChooser('daily',season);status('Loading club match index…');
+ try{const j=await call('club-index');if(ticket!==discoveryEpoch||c!==chooser)return;addChoices(c,j.matches);status(j.matches.length+' Daily matches found.')}catch(e){if(ticket===discoveryEpoch)status(e.message)}
+};
+$('arena-stop').onclick=()=>{discoveryEpoch++;scanning=false;status('Search stopped. Previously found arenas remain selectable.');updateArenaRange()};
+$('arena-scan').onclick=async()=>{
+ const season=selectedSeason();if(!season?.start_date||!season?.end_date){msg('Set both arena season dates first.',true);return}
+ const organizer=$('arena-organizer').value.trim();if(!organizer){msg('Enter an organizer club URL or slug.',true);return}
+ const c=chooser?.kind==='arena'&&chooser.season===String(season.id)?chooser:createChooser('arena',season);
+ const ticket=++discoveryEpoch;scanning=true;updateArenaRange();let scanned=0,unknown=0,outside=0,pages=0;const seen=new Set();
+ try{
+  for(let p=1;p<=250;p++){
+   if(ticket!==discoveryEpoch)return;
+   status('Searching '+organizer+' · page '+p+' · '+c.rows.size+' arenas found');
+   const j=await call('arena-index',{season_id:Number(season.id),organizer,page:p,start_date:season.start_date,end_date:season.end_date});
+   if(ticket!==discoveryEpoch||chooser!==c)return;
+   if(seen.has(j.fingerprint)){status('Repeated index page detected; search incomplete. '+c.rows.size+' arenas retained.');return}
+   seen.add(j.fingerprint);pages++;scanned+=Number(j.scanned||0);unknown+=Number(j.unknown_dates||0);outside+=Number(j.outside_range||0);addChoices(c,j.events);
+   if(!j.has_next){status('Search complete · '+pages+' pages · '+scanned+' index rows · '+c.rows.size+' unique arenas available in this season’s search · '+outside+' outside dates · '+unknown+' undated skipped.');return}
+   if(p===Number(j.limit||250)){status('Page limit reached; search incomplete. '+c.rows.size+' arenas retained.');return}
+  }
+ }catch(e){if(ticket===discoveryEpoch)status('Search incomplete: '+e.message+' · '+c.rows.size+' arenas retained.')}
+ finally{if(ticket===discoveryEpoch){scanning=false;updateArenaRange()}}
+};
+
 $('csv-form').onsubmit=async e=>{e.preventDefault();if(await mutate('import-csv',new FormData(e.currentTarget)))$('csv-dialog').close()};$('close-csv').onclick=()=>$('csv-dialog').close();
 $('embed').value='<iframe src="'+new URL('../',location.href).href+'" width="260" height="590" style="border:0" loading="lazy" title="Team France – Classements"></iframe>';
 $('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('embed').value);msg('Embed copied.')}catch{$('embed').select();msg('Select and copy the embed HTML.')}};

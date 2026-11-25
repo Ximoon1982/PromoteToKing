@@ -1,0 +1,72 @@
+name: Team France seasonal arena discovery verification
+on:
+  push:
+    branches: [release/v2.16.1]
+    paths:
+      - 'TeamFrance/Leaderboard/**'
+      - 'tests/team_france_arena_discovery*'
+      - 'tools/*team-france-arena-discovery*'
+      - '.github/workflows/team-france-arena-discovery-v010.yml'
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, curl, dom
+          coverage: none
+      - name: Syntax and regression
+        run: |
+          find TeamFrance/Leaderboard -name '*.php' -print0 | xargs -0 -n1 php -l
+          node --check TeamFrance/Leaderboard/assets/admin.js
+          php tests/team_france_leaderboard_v010.php
+          php tests/team_france_arena_discovery.php
+          node tests/team_france_arena_discovery.cjs
+      - name: Package cumulative patch
+        run: python3 tools/build-team-france-arena-discovery-v010.py "$RUNNER_TEMP/patch"
+      - name: Test all supported baselines and persistent data
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/patch/P2K_TeamFrance_Leaderboard_v0.1.0_Arena_Discovery_SSH_Installer"
+          bash -n "$package/install.sh"
+          for sha in a37e344c185bb17ea5c187687281798e15503760 ef236d06a3eaf22f61ccf355fcf5fef2f7cb82c6 9e5e7db900231600025d00cb3dd6ae4de1707004; do
+            stage="$(mktemp -d)"
+            git archive "$sha" TeamFrance/Leaderboard | tar -x -C "$stage"
+            php -r 'require $argv[1]."/TeamFrance/Leaderboard/src/Core.php";$s=new \TeamFrance\Leaderboard\Store($argv[1]."/TeamFrance/Leaderboard/data");$s->saveSeason(["kind"=>"daily","name"=>"Existing season"]);$s->assign(["season_id"=>1,"references"=>"1982828"]);$s->archive("preserve CSV");' "$stage"
+            before="$(sha256sum "$stage/TeamFrance/Leaderboard/data/leaderboard.sqlite3" | cut -d' ' -f1)"
+            bash "$package/install.sh" "$stage" --check
+            bash "$package/install.sh" "$stage" --apply
+            bash "$package/install.sh" "$stage" --check
+            bash "$package/install.sh" "$stage" --apply
+            test "$before" = "$(sha256sum "$stage/TeamFrance/Leaderboard/data/leaderboard.sqlite3" | cut -d' ' -f1)"
+            while IFS=$'\t' read -r rel allowed new; do cmp "$stage/$rel" "$rel"; done < "$package/FILE_CHECKSUMS.tsv"
+            echo '// unexpected modification' >> "$stage/TeamFrance/Leaderboard/assets/admin.js"
+            if bash "$package/install.sh" "$stage" --check; then echo 'Unexpected overwrite allowed'; exit 1; fi
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: P2K_TeamFrance_Leaderboard_v0.1.0_Arena_Discovery_SSH_Installer
+          path: ${{ runner.temp }}/patch/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 90
+  live-index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: curl, dom
+          coverage: none
+      - name: Read-only actual Team France arena index
+        run: |
+          php -r 'require "TeamFrance/Leaderboard/src/ArenaDiscovery.php";$seen=[];$rows=[];for($p=1;$p<=10;$p++){$r=\TeamFrance\Leaderboard\Transport::get("https://www.chess.com/club/live-tournaments/team-france?type=multi&page=".$p,15);$a=\TeamFrance\Leaderboard\ArenaIndexParser::parse($r["body"],$p);if(!$a["events"])throw new RuntimeException("No parseable arena rows on page ".$p);if(isset($seen[$a["page_fingerprint"]]))throw new RuntimeException("Repeated page ".$p);$seen[$a["page_fingerprint"]]=true;foreach($a["events"] as $e)$rows[]=$e;echo "Page ".$p.": ".count($a["events"])." arenas, next=".($a["has_next"]?"yes":"no")."\n";if(!$a["has_next"])break;sleep(1);} $f=\TeamFrance\Leaderboard\ArenaDiscovery::classify($rows,"2026-01-01","2026-12-31");echo "2026 matches: ".count($f["events"])."; undated: ".$f["unknown_dates"]."; outside: ".$f["outside_range"]."\n";foreach(array_slice($f["events"],0,5) as $e)echo $e["date"]." ".$e["id"]." ".$e["name"]."\n";if(!$f["events"])throw new RuntimeException("No dated 2026 arenas verified in sampled index");'

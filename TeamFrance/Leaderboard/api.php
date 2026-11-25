@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/src/Refresh.php';
+require_once __DIR__.'/src/ArenaDiscovery.php';
 use TeamFrance\Leaderboard\Store;
 use TeamFrance\Leaderboard\Refresh;
 use TeamFrance\Leaderboard\Transport;
@@ -66,6 +67,7 @@ try {
         }
         reply(['ok'=>true,'csrf'=>$a['csrf'],'username'=>$a['username'],'seasons'=>$s->seasons(),'rows'=>$rows,'total'=>$count,'page'=>$page,'pages'=>max(1,(int)ceil($count/$size)),'progress'=>$r->progress(),'counts'=>['events'=>(int)$s->run('SELECT COUNT(*) FROM events')->fetchColumn(),'players'=>(int)$s->run('SELECT COUNT(*) FROM players')->fetchColumn(),'excluded'=>(int)$s->run("SELECT COUNT(*) FROM players WHERE account_status IN ('closed:fair_play_violations','closed:fair_play','closed:cheating')")->fetchColumn()]]);
     }
+    if($action==='arena-index')reply(['ok'=>true]+(new \TeamFrance\Leaderboard\ArenaDiscovery($s))->page((int)($p['season_id']??0),(string)($p['organizer']??''),(int)($p['page']??1),(string)($p['start_date']??''),(string)($p['end_date']??'')));
     if($action==='club-index'){
         $batch=Transport::oauth([['id'=>'index','url'=>BASE.'club/team-france/matches','headers'=>['accept'=>'application/json']]]);
         $result=array_values($batch['results']??[])[0]??null;
@@ -75,6 +77,9 @@ try {
             if(!is_array($row)||($row['time_class']??'')!=='daily')continue;
             try{[$id,$url]=\TeamFrance\Leaderboard\eventRef('daily',(string)($row['@id']??''));$rows[$id]=['id'=>$id,'name'=>$row['name']??$id,'status'=>$status,'url'=>$url];}catch(Throwable){}
         }
+        $assigned=[];
+        foreach($s->rows("SELECT e.event_id,s.name season,e.season_id FROM events e JOIN seasons s ON s.id=e.season_id WHERE e.kind='daily'") as $x)$assigned[$x['event_id']]=['season'=>$x['season'],'season_id'=>(int)$x['season_id']];
+        foreach($rows as $id=>&$row)$row['assigned']=$assigned[$id]??null;unset($row);
         reply(['ok'=>true,'matches'=>array_values($rows)]);
     }
     if($action==='start')reply(['ok'=>true]+$r->start($a['username']));
