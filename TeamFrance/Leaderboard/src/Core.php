@@ -29,7 +29,7 @@ function eventRef(string $kind,string $ref): array {
         $u=parse_url($ref);
         if (!is_array($u)||strtolower($u['scheme']??'')!=='https'||!in_array(strtolower($u['host']??''),['chess.com','www.chess.com','api.chess.com'],true)||isset($u['user'])||isset($u['pass'])||isset($u['port'])) throw new RuntimeException('Enter a Chess.com HTTPS event URL or numeric ID.');
         $p=rawurldecode($u['path']??'');
-        $pattern=$kind==='daily'?'~^/(?:pub/match/|club/matches/[^/]+/)([1-9][0-9]{0,17})/?$~D':'~^/tournament/live/arena/(?:[a-zA-Z0-9_-]+-)?([1-9][0-9]{0,17})(?:/download-results)?/?$~D';
+        $pattern=$kind==='daily'?'~^/(?:pub/match/|club/matches/(?:[^/]+/)?)([1-9][0-9]{0,17})/?$~D':'~^/tournament/live/arena/(?:[a-zA-Z0-9_-]+-)?([1-9][0-9]{0,17})(?:/download-results)?/?$~D';
         if (!preg_match($pattern,$p,$m)||($kind==='daily'&&str_contains($p,'/matches/live/'))) throw new RuntimeException('URL does not match the selected event category.');
         $id=$m[1];
     }

@@ -12,6 +12,14 @@ function check(bool $ok,string $message): void {if(!$ok)throw new RuntimeExcepti
 function rejects(callable $f,string $message): void {try{$f();}catch(Throwable){return;}throw new RuntimeException($message);}
 check(rawPoints('win')===100&&rawPoints('agreed')===50&&rawPoints('resigned')===0&&rawPoints('')===null,'Daily scoring');
 check(eventRef('daily','https://www.chess.com/club/matches/team-france/20201111')[0]==='20201111','Daily URL');
+foreach (['1982828','1969506','1994436','1957232','1929451','1906335','1943109','1892869'] as $id) {
+    check(eventRef('daily','https://www.chess.com/club/matches/'.$id)[0]===$id,'Short Daily match URL '.$id);
+}
+check(eventRef('daily','https://api.chess.com/pub/match/1982828')[0]==='1982828','Daily API URL');
+check(eventRef('daily','1982828')[0]==='1982828','Daily numeric ID');
+rejects(fn()=>eventRef('daily','https://api.chess.com/pub/match/live/1982828'),'Live API URL accepted');
+rejects(fn()=>eventRef('daily','https://www.chess.com/tournament/live/arena/1982828'),'Arena URL accepted as Daily');
+rejects(fn()=>eventRef('daily','https://evil.example/club/matches/1982828'),'Foreign match URL accepted');
 check(eventRef('arena','https://www.chess.com/tournament/live/arena/french-arena-31195524')[0]==='31195524','Arena URL');
 rejects(fn()=>eventRef('daily','https://www.chess.com/club/matches/live/31195524'),'Live match accepted');
 rejects(fn()=>eventRef('arena','https://evil.example/tournament/live/arena/31195524'),'External URL accepted');
