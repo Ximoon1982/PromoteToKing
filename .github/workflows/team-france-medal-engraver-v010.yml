@@ -1,4 +1,4 @@
-name: Team France Medal Engraver source verification
+name: Team France Medal Engraver complete verification
 on:
   push:
     branches: [release/v2.16.1]
@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - run: |
           php -l TeamFrance/MedalEngraver/index.php
           php -l TeamFrance/MedalEngraver/view.php
@@ -17,12 +19,38 @@ jobs:
           bash -n tools/install-team-france-medal-engraver-v010.sh
           python3 -m py_compile tools/build-team-france-medal-engraver-v010.py
           grep -Fq '/TeamFrance/MedalEngraver/' TeamFrance/home.html
-          mkdir -p "$RUNNER_TEMP/source/TeamFrance" "$RUNNER_TEMP/source/tools"
-          cp -a TeamFrance/MedalEngraver TeamFrance/home.html "$RUNNER_TEMP/source/TeamFrance/"
-          cp tools/*team-france-medal-engraver* "$RUNNER_TEMP/source/tools/"
+          python3 - <<'PY'
+          import hashlib,json,struct
+          from pathlib import Path
+          p=Path('TeamFrance/MedalEngraver')
+          m=json.loads((p/'artwork.json').read_text())
+          for tier,sha in m['sha256'].items():
+              b=(p/'assets'/(tier+'.png')).read_bytes()
+              assert hashlib.sha256(b).hexdigest()==sha,tier
+              assert b[:8]==b'\x89PNG\r\n\x1a\n' and b[12:16]==b'IHDR',tier
+              assert struct.unpack('>IIBB',b[16:26])==(1122,1402,8,6),tier
+              print(tier, len(b), sha, 'verified')
+          PY
+          mkdir -p "$RUNNER_TEMP/installer"
+          python3 tools/build-team-france-medal-engraver-v010.py "$RUNNER_TEMP/installer"
+          package="$RUNNER_TEMP/installer/P2K_TeamFrance_Medal_Engraver_v0.1.0_Expanded_Zone_SSH_Installer"
+          (cd "$package/payload" && sha256sum -c ../SHA256SUMS)
+          root="$(mktemp -d)"
+          mkdir -p "$root/TeamFrance/MatchAnalyzer"
+          touch "$root/TeamFrance/MatchAnalyzer/auth.php"
+          cp "$package/hub-baseline.html" "$root/TeamFrance/home.html"
+          bash "$package/install.sh" "$root" --check
+          bash "$package/install.sh" "$root" --apply
+          bash "$package/install.sh" "$root" --check
+          git show 92766889c52f59311b47fb269cf76b87cdc8cfc9:TeamFrance/MedalEngraver/README.md > "$root/TeamFrance/MedalEngraver/README.md"
+          bash "$package/install.sh" "$root" --apply
+          bash "$package/install.sh" "$root" --check
+          printf '\nlocal modification\n' >> "$root/TeamFrance/MedalEngraver/README.md"
+          if bash "$package/install.sh" "$root" --check; then echo "Unexpected overwrite accepted"; exit 1; fi
+          rm -rf "$root"
       - uses: actions/upload-artifact@v4
         with:
-          name: TeamFrance-Medal-Engraver-source
-          path: ${{ runner.temp }}/source/
+          name: P2K_TeamFrance_Medal_Engraver_v0.1.0_Expanded_Zone_SSH_Installer
+          path: ${{ runner.temp }}/installer/P2K_TeamFrance_Medal_Engraver_v0.1.0_Expanded_Zone_SSH_Installer/
           include-hidden-files: true
           if-no-files-found: error
