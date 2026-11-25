@@ -2007,7 +2007,7 @@
   }
 
   function renderRecruitmentRecap() {
-    if (!state.processed) {
+    if (MODE.embeddedSingleMatch || !state.processed) {
       recruitmentRecap.hidden = true;
       recruitmentRecap.innerHTML = "";
       return;
@@ -3320,8 +3320,8 @@ ${MODE.includeCopy ? `            <button
 
   document.addEventListener("keydown", event => {
     if (event.key !== "Escape") return;
-    if (!copyChoiceModal.hidden) closeCopyChoice();
-    else if (!copyModal.hidden) closeManualCopyModal();
+    if (copyChoiceModal && !copyChoiceModal.hidden) closeCopyChoice();
+    else if (copyModal && !copyModal.hidden) closeManualCopyModal();
     else if (!chartModal.hidden) closeChartModal();
   });
 
@@ -3336,20 +3336,23 @@ ${MODE.includeCopy ? `            <button
     activeAnalysis.abort();
   });
 
-  copyChoiceClose.addEventListener("click", closeCopyChoice);
-  copyFormattedButton.addEventListener("click", () => performPendingCopy("formatted"));
-  copyPlainTextButton.addEventListener("click", () => performPendingCopy("plain"));
-  copyHTMLSourceButton.addEventListener("click", () => performPendingCopy("html"));
-  copyChoiceModal.addEventListener("click", event => {
-    if (event.target === copyChoiceModal) closeCopyChoice();
-  });
+  // The single-match modal deliberately has no copy dialogs.
+  if (MODE.includeCopy) {
+    copyChoiceClose.addEventListener("click", closeCopyChoice);
+    copyFormattedButton.addEventListener("click", () => performPendingCopy("formatted"));
+    copyPlainTextButton.addEventListener("click", () => performPendingCopy("plain"));
+    copyHTMLSourceButton.addEventListener("click", () => performPendingCopy("html"));
+    copyChoiceModal.addEventListener("click", event => {
+      if (event.target === copyChoiceModal) closeCopyChoice();
+    });
 
-  copyModalClose.addEventListener("click", closeManualCopyModal);
-  copyModalCloseBottom.addEventListener("click", closeManualCopyModal);
-  copySelectAll.addEventListener("click", selectManualCopyText);
-  copyModal.addEventListener("click", event => {
-    if (event.target === copyModal) closeManualCopyModal();
-  });
+    copyModalClose.addEventListener("click", closeManualCopyModal);
+    copyModalCloseBottom.addEventListener("click", closeManualCopyModal);
+    copySelectAll.addEventListener("click", selectManualCopyText);
+    copyModal.addEventListener("click", event => {
+      if (event.target === copyModal) closeManualCopyModal();
+    });
+  }
 
 
   function normalizeEmbeddedMatchReference(value) {
