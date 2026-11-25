@@ -38,18 +38,18 @@ try {
     $p=$write&&$action!=='import-csv'?json_decode(file_get_contents('php://input')?:'{}',true,512,JSON_THROW_ON_ERROR):[];
     if(!is_array($p))throw new RuntimeException('Invalid request.');
     if($action==='public'){
-        $seasons=$s->seasons();$out=[];$identity=$s->lookup((string)($_GET['username']??''));$profile=[];
+        $seasons=$s->seasons();$out=[];$identity=$s->lookup((string)($_GET['username']??''));$player=$identity!==null?$s->publicPlayer($identity):null;if(!$player)$identity=null;$profile=[];
         foreach(['daily','arena'] as $kind){
             $options=array_values(array_filter($seasons,static fn($x)=>$x['kind']===$kind));
             $selected=(int)($_GET[$kind]??0);$season=null;
             foreach($options as $x)if((int)$x['id']===$selected){$season=$x;break;}
-            $season??=$options[0]??null;$rows=$season?$s->leaderboard((int)$season['id']):[];
+            $season??=$options[0]??null;$all=$season?$s->leaderboard((int)$season['id'],true):[];$rows=array_values(array_filter($all,static fn($row)=>$row['rank']!==null));
             $total=count($rows);$size=!empty($_GET[$kind.'_expanded'])?25:5;$pages=max(1,(int)ceil($total/$size));$page=max(1,min($pages,(int)($_GET[$kind.'_page']??1)));
-            $found=null;foreach($rows as $row)if($identity!==null&&$row['identity']===$identity){$found=$row;break;}
-            $profile[$kind]=$found?['username'=>$found['username'],'points'=>$found['points'],'rank'=>$found['rank']]:null;
-            $out[$kind]=['seasons'=>$options,'season'=>$season,'rows'=>array_map(static fn($x)=>array_intersect_key($x,array_flip(['username','points','rank'])),array_slice($rows,($page-1)*$size,$size)),'page'=>$page,'pages'=>$pages,'total'=>$total];
+            $found=null;foreach($all as $row)if($identity!==null&&$row['identity']===$identity){$found=$row;break;}
+            $profile[$kind]=$found?array_intersect_key($found,array_flip(['username','points','rank','events','avatar'])):null;
+            $out[$kind]=['seasons'=>$options,'season'=>$season,'rows'=>array_map(static fn($x)=>array_intersect_key($x,array_flip(['username','points','rank','events','avatar'])),array_slice($rows,($page-1)*$size,$size)),'page'=>$page,'pages'=>$pages,'total'=>$total];
         }
-        reply(['ok'=>true,'sections'=>$out,'profile'=>$identity!==null?$profile:null,'updated'=>(int)$s->meta('updated','0')]);
+        reply(['ok'=>true,'sections'=>$out,'profile'=>$identity!==null?$profile:null,'player'=>$player,'updated'=>(int)$s->meta('updated','0')]);
     }
     if($action==='public-refresh')reply(['ok'=>true]+$r->publicStep());
     if($action==='admin'){

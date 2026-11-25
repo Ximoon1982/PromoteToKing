@@ -15,6 +15,12 @@ function userKey(mixed $v): string {
     $v=strtolower($v);
     return preg_match('/^[a-z0-9_-]{1,80}$/D',$v)?$v:'';
 }
+function avatarUrl(mixed $v): string {
+    if (!is_string($v)||strlen($v)>2000||preg_match('/[\x00-\x20\x7f]/',$v)) return '';
+    $url=parse_url($v);
+    if (!is_array($url)||strtolower($url['scheme']??'')!=='https'||strtolower($url['host']??'')!=='images.chesscomfiles.com'||isset($url['user'])||isset($url['pass'])||isset($url['port'])||empty($url['path'])) return '';
+    return $v;
+}
 function clubKey(mixed $v): string {
     if (!is_string($v)) return '';
     $v=trim($v);
@@ -93,7 +99,7 @@ function matchResult(array $payload,string $id,array $previous=[]): array {
     }
     $removedO=array_values(array_unique(array_merge($previous['ours']??[],removalKeys((array)($ours['fair_play_removals']??[])))));
     $removedT=array_values(array_unique(array_merge($previous['other']??[],removalKeys((array)($other['fair_play_removals']??[])))));
-    $opp=[];$seen=[];$games=[];$prior=$previous['games']??[];
+    $opp=[];$seen=[];$games=[];$participants=[];$prior=$previous['games']??[];
     foreach ($other['players'] as $p) {
         if (!is_array($p)) throw new RuntimeException('Malformed opponent lineup.');
         $b=boardKey($p);$u=userKey($p['username']??'');
@@ -108,6 +114,7 @@ function matchResult(array $payload,string $id,array $previous=[]): array {
         if ($u===''||$b==='') throw new RuntimeException('Missing player or board identity.');
         if (isset($seen[$b])) throw new RuntimeException('Duplicate club board.');
         $seen[$b]=true;
+        if(isset($opp[$b]))$participants[$u]=['username'=>(string)$p['username'],'points'=>0];
         foreach (['played_as_white','played_as_black'] as $side) {
             $key=$b.':'.$side;$old=$prior[$key]??null;
             if ($old&&$old['user']!==$u) throw new RuntimeException('Board identity changed; review required.');
@@ -130,7 +137,8 @@ function matchResult(array $payload,string $id,array $previous=[]): array {
         if (!in_array($g['user'],$removedO,true)&&!in_array($g['opp'],$removedT,true)) throw new RuntimeException('Previously observed game missing; previous results retained.');
         $games[$key]=$g;
     }
-    $rows=[];$total=0;$doubleRemoved=0;
+    // A verified paired board counts as participation even before its first game finishes.
+    $rows=$participants;$total=0;$doubleRemoved=0;
     foreach ($games as $g) {
         $ownRemoved=in_array($g['user'],$removedO,true);$oppRemoved=in_array($g['opp'],$removedT,true);
         if ($ownRemoved&&$oppRemoved) $doubleRemoved++;
@@ -287,6 +295,8 @@ PRAGMA user_version=1;");
         $this->tx(function()use($key,$name,$id,$status,$p){
             $now=time();$display=(string)$p['username'];
             $this->run('UPDATE players SET stable_id=?,account_status=?,verified=?,due=?,error=?,display=? WHERE username_key=? OR stable_id=?',[$id,$status,$now,$now+2592000,'',$display,$key,$id]);
+            // Cached avatar is keyed by verified stable account identity, shared across aliases.
+            $this->put('avatar:id:'.$id,avatarUrl($p['avatar']??null));
             // An already known canonical name can be linked only with its own verified ID.
             $this->put('updated',(string)$now);
         });
@@ -297,7 +307,7 @@ PRAGMA user_version=1;");
         else $this->run('UPDATE events SET error=?,due=? WHERE id=?',[$message,time()+$delay,(int)$item]);
     }
     public function seasons(): array {return $this->rows('SELECT s.*, (SELECT COUNT(*) FROM events e WHERE e.season_id=s.id) AS event_count FROM seasons s ORDER BY kind,is_default DESC,archived,id DESC');}
-    public function leaderboard(int $season): array {
+    public function leaderboard(int $season,bool $includeUnranked=false): array {
         // Aggregate aliases only after independent proof of a common stable ID; take
         // at most one contribution per event for that account to prevent alias duplication.
         $sql="WITH attributed AS (
@@ -306,12 +316,16 @@ FROM results r JOIN players p ON p.username_key=r.username_key JOIN events e ON 
 WHERE e.season_id=? AND p.account_status NOT IN ('closed:fair_play_violations','closed:fair_play','closed:cheating')
 AND NOT EXISTS(SELECT 1 FROM players x WHERE x.stable_id=p.stable_id AND x.account_status IN ('closed:fair_play_violations','closed:fair_play','closed:cheating'))
 GROUP BY r.event_id,identity),
-totals AS (SELECT identity,SUM(points) points FROM attributed GROUP BY identity)
-SELECT t.identity,t.points,(SELECT p.display FROM players p WHERE COALESCE('id:'||p.stable_id,'name:'||p.username_key)=t.identity ORDER BY p.verified DESC,p.username_key LIMIT 1) username
-FROM totals t WHERE points>0 ORDER BY points DESC,lower(username),identity";
+totals AS (SELECT identity,SUM(points) points,COUNT(*) events FROM attributed GROUP BY identity)
+SELECT t.identity,t.points,t.events,COALESCE((SELECT value FROM meta WHERE key='avatar:'||t.identity),'') avatar,(SELECT p.display FROM players p WHERE COALESCE('id:'||p.stable_id,'name:'||p.username_key)=t.identity ORDER BY p.verified DESC,p.username_key LIMIT 1) username
+FROM totals t ".($includeUnranked?"":"WHERE points>0 ")."ORDER BY points DESC,lower(username),identity";
         $rows=$this->rows($sql,[$season]);
-        foreach($rows as $i=>&$r){$r['rank']=$i+1;$r['points']=(int)$r['points']/100;}unset($r);
+        foreach($rows as $i=>&$r){$r['rank']=(int)$r['points']>0?$i+1:null;$r['points']=(int)$r['points']/100;$r['events']=(int)$r['events'];$r['avatar']=avatarUrl($r['avatar']);}unset($r);
         return $rows;
+    }
+    public function publicPlayer(string $identity): ?array {
+        $p=$this->one("SELECT display,stable_id,username_key FROM players p WHERE COALESCE('id:'||p.stable_id,'name:'||p.username_key)=? AND NOT EXISTS(SELECT 1 FROM players x WHERE (x.username_key=p.username_key OR x.stable_id=p.stable_id) AND x.account_status IN ('closed:fair_play_violations','closed:fair_play','closed:cheating')) ORDER BY verified DESC,username_key LIMIT 1",[$identity]);
+        return $p?['username'=>$p['display'],'avatar'=>avatarUrl($this->meta('avatar:'.$identity))]:null;
     }
     public function lookup(string $username): ?string {
         $key=userKey($username);if($key==='')return null;

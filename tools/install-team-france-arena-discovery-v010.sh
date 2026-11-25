@@ -27,8 +27,8 @@ while IFS=$'\t' read -r rel allowed new; do
  fi
  if [[ "$source" = *.php ]]; then "$PHP_BIN" -l "$source"; fi
 done < "$HERE/FILE_CHECKSUMS.tsv"
-if [[ "$MODE" = --check || "$changed" = 0 ]]; then echo "PASS: Arena Discovery cumulative patch verified ($changed files to update)."; exit 0; fi
-BACKUP="$ROOT/storage/standalone-widget-backups/team-france-leaderboard-arena-discovery-$(date -u +%Y%m%dT%H%M%S)-$$"
+if [[ "$MODE" = --check || "$changed" = 0 ]]; then echo "PASS: Leaderboard cumulative patch verified ($changed files to update)."; exit 0; fi
+BACKUP="$ROOT/storage/standalone-widget-backups/team-france-leaderboard-player-info-$(date -u +%Y%m%dT%H%M%S)-$$"
 mkdir -p "$BACKUP"
 while IFS=$'\t' read -r rel allowed new; do
  target="$ROOT/$rel"
@@ -44,4 +44,4 @@ while IFS=$'\t' read -r rel allowed new; do
  mv -f "$tmp" "$target"
  [[ "$(hash "$target")" = "$new" ]]
 done < "$HERE/FILE_CHECKSUMS.tsv"
-echo "PASS: Arena Discovery cumulative patch installed. Backup: $BACKUP"
+echo "PASS: Leaderboard cumulative patch installed. Backup: $BACKUP"

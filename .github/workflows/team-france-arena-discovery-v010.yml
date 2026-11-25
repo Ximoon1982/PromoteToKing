@@ -1,10 +1,11 @@
-name: Team France seasonal arena discovery verification
+name: Team France seasonal leaderboard cumulative verification
 on:
   push:
     branches: [release/v2.16.1]
     paths:
       - 'TeamFrance/Leaderboard/**'
       - 'tests/team_france_arena_discovery*'
+      - 'tests/team_france_player_info*'
       - 'tools/*team-france-arena-discovery*'
       - '.github/workflows/team-france-arena-discovery-v010.yml'
 permissions:
@@ -29,14 +30,17 @@ jobs:
           php tests/team_france_leaderboard_v010.php
           php tests/team_france_arena_discovery.php
           node tests/team_france_arena_discovery.cjs
+          php tests/team_france_player_info.php
+          node tests/team_france_player_info.cjs
+          node --check TeamFrance/Leaderboard/assets/public.js
       - name: Package cumulative patch
         run: python3 tools/build-team-france-arena-discovery-v010.py "$RUNNER_TEMP/patch"
       - name: Test all supported baselines and persistent data
         run: |
           set -euo pipefail
-          package="$RUNNER_TEMP/patch/P2K_TeamFrance_Leaderboard_v0.1.0_Arena_Discovery_SSH_Installer"
+          package="$RUNNER_TEMP/patch/P2K_TeamFrance_Leaderboard_v0.1.0_Player_Info_SSH_Installer"
           bash -n "$package/install.sh"
-          for sha in a37e344c185bb17ea5c187687281798e15503760 ef236d06a3eaf22f61ccf355fcf5fef2f7cb82c6 9e5e7db900231600025d00cb3dd6ae4de1707004; do
+          for sha in a37e344c185bb17ea5c187687281798e15503760 ef236d06a3eaf22f61ccf355fcf5fef2f7cb82c6 9e5e7db900231600025d00cb3dd6ae4de1707004 2c3a508eba36d4199d9893c10399c834a0d11a18; do
             stage="$(mktemp -d)"
             git archive "$sha" TeamFrance/Leaderboard | tar -x -C "$stage"
             php -r 'require $argv[1]."/TeamFrance/Leaderboard/src/Core.php";$s=new \TeamFrance\Leaderboard\Store($argv[1]."/TeamFrance/Leaderboard/data");$s->saveSeason(["kind"=>"daily","name"=>"Existing season"]);$s->assign(["season_id"=>1,"references"=>"1982828"]);$s->archive("preserve CSV");' "$stage"
@@ -52,7 +56,7 @@ jobs:
           done
       - uses: actions/upload-artifact@v4
         with:
-          name: P2K_TeamFrance_Leaderboard_v0.1.0_Arena_Discovery_SSH_Installer
+          name: P2K_TeamFrance_Leaderboard_v0.1.0_Player_Info_SSH_Installer
           path: ${{ runner.temp }}/patch/
           include-hidden-files: true
           if-no-files-found: error
