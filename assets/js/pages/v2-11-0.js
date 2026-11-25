@@ -4,8 +4,8 @@
 
   const VERSION = "2.11.0";
   const MEMBERSHIP_BATCH = 2000;
-  const CHECKPOINT_BATCH = 500;
-  const RESULT_RENDER_LIMIT = 500;
+  const CHECKPOINT_BATCH = 100;
+  const RESULT_PAGE_SIZE = 25;
   const $ = id => document.getElementById(id);
   const text = value => String(value ?? "");
   const number = value => {
@@ -61,7 +61,7 @@
     return url;
   }
 
-  async function server(action, { method = "GET", body = null } = {}) {
+  async function server(action, { method = "GET", body = null, params = {} } = {}) {
     const verb = String(method || "GET").toUpperCase();
     if (!["GET", "HEAD", "OPTIONS"].includes(verb)) {
       const client = window.P2K_TEAM_POINTS_CLIENT;
@@ -74,7 +74,9 @@
         serverTrafficClass: "foreground"
       });
     }
-    const response = await fetch(recruitmentEndpoint(action), {
+    const url = recruitmentEndpoint(action);
+    for (const [key,value] of Object.entries(params)) url.searchParams.set(key,String(value));
+    const response = await fetch(url, {
       method: verb,
       credentials: "same-origin",
       headers: { Accept: "application/json" },
@@ -152,11 +154,11 @@
       card.dataset.adminShellCard = "recruitment";
       card.innerHTML = `
         <header class="dashboard-admin-shell-card-head"><div><span class="dashboard-admin-shell-eyebrow">Members</span><h3>Recruitment</h3></div><span class="dashboard-admin-shell-status is-loading" id="adminShellStatus_recruitment">Loading</span></header>
-        <p>Maintain the candidate pool and evaluate prospective members against Daily activity, reliability and membership criteria.</p>
+        <p>Create and resume independent recruitment analyses against Daily activity, reliability and membership criteria.</p>
         <div class="dashboard-admin-shell-metrics">
-          <div class="dashboard-admin-shell-metric"><span>Candidates</span><strong id="adminRecruitmentCandidates">—</strong><small>Saved pool</small></div>
-          <div class="dashboard-admin-shell-metric"><span>Checked</span><strong id="adminRecruitmentChecked">—</strong><small>Current checkpoint</small></div>
-          <div class="dashboard-admin-shell-metric"><span>Selected</span><strong id="adminRecruitmentSelected">—</strong><small>Current checkpoint</small></div>
+          <div class="dashboard-admin-shell-metric"><span>Candidates</span><strong id="adminRecruitmentCandidates">—</strong><small>Across saved analyses</small></div>
+          <div class="dashboard-admin-shell-metric"><span>Checked</span><strong id="adminRecruitmentChecked">—</strong><small>Across saved analyses</small></div>
+          <div class="dashboard-admin-shell-metric"><span>Selected</span><strong id="adminRecruitmentSelected">—</strong><small>Across saved analyses</small></div>
         </div>
         <div class="dashboard-admin-shell-meta"><span><b>Freshness</b><em id="adminShellFresh_recruitment">Checking…</em></span><span><b>Source</b><em>Green Core + Chess.com</em></span></div>
         <footer class="dashboard-admin-shell-actions"><a class="dashboard-button" href="${escapeHTML(adminHref("members", "recruitment"))}">Open Recruitment</a></footer>`;
@@ -165,13 +167,13 @@
     if (cardLoading) return;
     cardLoading = true;
     server("state").then(payload => {
-      const poolCount = Array.isArray(payload?.pool?.candidates) ? payload.pool.candidates.length : 0;
-      const summary = payload?.run?.summary || {};
+      const summary = payload?.analyses?.aggregate || {};
+      const poolCount = Number(summary.total || 0);
       if ($("adminRecruitmentCandidates")) $("adminRecruitmentCandidates").textContent = String(poolCount);
       if ($("adminRecruitmentChecked")) $("adminRecruitmentChecked").textContent = String(Number(summary.checked || 0));
       if ($("adminRecruitmentSelected")) $("adminRecruitmentSelected").textContent = String(Number(summary.selected || 0));
       const badge = $("adminShellStatus_recruitment");
-      if (badge) { badge.textContent = payload?.run?.status ? text(payload.run.status).replace(/^./, c => c.toUpperCase()) : "Ready"; badge.className = "dashboard-admin-shell-status is-good"; }
+      if (badge) { badge.textContent = payload?.analyses?.active ? "Running" : `${Number(summary.analyses || 0)} saved`; badge.className = "dashboard-admin-shell-status is-good"; }
       if ($("adminShellFresh_recruitment")) $("adminShellFresh_recruitment").textContent = "Server state · live";
     }).catch(error => {
       const badge = $("adminShellStatus_recruitment");
@@ -180,7 +182,10 @@
     }).finally(() => { cardLoading = false; });
   }
 
-  let adminState = { pool: null, run: null };
+  let adminState = { run: null, analyses: null };
+  let composing = false, busy = false, listPage = 1, resultPage = 1, resultRequest = 0, listRequest = 0;
+  let scanControl = null;
+  const DEFAULT_CRITERIA = { minRating:1300,maxRating:null,maxTimeout:8,maxRd:100,minGames:2,maxGames:25,minCompleted:50,maxOffline:14,maxSpm:null,minAge:null,excludeFormer:false };
   let activeScan = false;
   let scanGeneration = 0;
   let detailMounted = false;
@@ -240,17 +245,28 @@
   }
 
   function recruitmentMarkup() {
-    return `<section class="p2k-recruitment-native" id="p2kRecruitmentNative" data-release="${VERSION}">
+    return `<section class="p2k-recruitment-native" id="p2kRecruitmentNative" data-release="2.16.2">
+      <div class="p2k-recruitment-native-head"><div><h3>Recruitment analyses</h3><p>Each analysis has its own candidate list, eligibility criteria and checkpointed results. Only one scan can run at a time.</p></div><button class="dashboard-button" id="recruitmentNew" type="button">+ New analysis</button></div>
+      <div class="p2k-recruitment-actions"><input class="p2k-recruitment-input" style="max-width:300px" id="recruitmentAnalysisSearch" type="search" placeholder="Search analyses" aria-label="Search analyses"><button class="dashboard-button is-secondary" id="recruitmentRefresh" type="button">Refresh list</button><span id="recruitmentActiveNote" class="p2k-recruitment-help"></span></div>
+      <div class="p2k-recruitment-table-wrap"><table class="p2k-recruitment-table"><thead><tr><th>Analysis</th><th>Created</th><th>Administrator</th><th>Status</th><th>Candidates</th><th>Checked</th><th>Selected</th><th>Errors</th><th></th></tr></thead><tbody id="recruitmentAnalysisRows"><tr><td colspan="9">Loading analyses…</td></tr></tbody></table></div>
+      <div class="p2k-recruitment-actions"><button id="recruitmentListPrev" class="dashboard-button is-secondary" type="button">Previous</button><span id="recruitmentListPage"></span><button id="recruitmentListNext" class="dashboard-button is-secondary" type="button">Next</button></div>
+      <div class="p2k-recruitment-status" id="recruitmentStatus" role="status" aria-live="polite">Choose an analysis or create a new one.</div>
+      <section id="recruitmentDetailPanel" hidden>
+      <div class="p2k-recruitment-native">
+      <div class="p2k-recruitment-native-head"><div><h3 id="recruitmentDetailTitle">New analysis</h3><p id="recruitmentDetailMeta"></p></div><button id="recruitmentClose" class="dashboard-button is-secondary" type="button">Close analysis</button></div>
+      <div class="p2k-recruitment-field"><label for="recruitmentName">Analysis name</label><input class="p2k-recruitment-input" id="recruitmentName" maxlength="120" placeholder="e.g. December Daily recruitment"></div>
       <div class="p2k-recruitment-native-grid">
-        <fieldset><legend>Candidate pool</legend><div class="p2k-recruitment-field"><label for="recruitmentCandidates">Usernames or Chess.com player URLs</label><textarea class="p2k-recruitment-textarea" id="recruitmentCandidates" spellcheck="false" placeholder="candidate_alpha&#10;https://www.chess.com/member/candidate_beta"></textarea></div><div id="recruitmentSavedStatus" class="p2k-recruitment-help">No saved list loaded.</div><div class="p2k-recruitment-actions"><button class="dashboard-button" id="recruitmentSavePool" type="button">Save candidate list</button><button class="dashboard-button is-secondary" id="recruitmentLoadPool" type="button">Load saved list</button><button class="dashboard-button is-secondary" id="recruitmentClearEditor" type="button">Clear editor</button></div><div class="p2k-recruitment-help">Up to 100,000 normalized unique usernames can be stored. Duplicate names and supported Chess.com profile URLs are normalized server-side.</div></fieldset>
-        <fieldset><legend>Eligibility settings</legend><div class="p2k-recruitment-criteria">${criteriaMarkup()}</div><div class="p2k-recruitment-checks"><label><input type="checkbox" checked disabled> Exclude current P2K members.</label><label><input id="recruitmentExcludeFormer" type="checkbox"> Exclude former P2K members as well.</label><label><input type="checkbox" checked disabled> Reject closed / unavailable accounts automatically.</label></div><div class="p2k-recruitment-help">Empty numeric fields mean “doesn’t matter”. A resumed run keeps its original criteria snapshot.</div></fieldset>
+        <fieldset><legend>Candidate list</legend><div class="p2k-recruitment-field"><label for="recruitmentCandidates">Usernames or Chess.com player URLs</label><textarea class="p2k-recruitment-textarea" id="recruitmentCandidates" spellcheck="false" placeholder="candidate_alpha&#10;https://www.chess.com/member/candidate_beta"></textarea></div><div id="recruitmentSavedStatus" class="p2k-recruitment-help"></div><div class="p2k-recruitment-help">Up to 100,000 unique usernames per analysis. Existing analyses are never merged automatically.</div></fieldset>
+        <fieldset><legend>Eligibility settings</legend><div class="p2k-recruitment-criteria">${criteriaMarkup()}</div><div class="p2k-recruitment-checks"><label><input type="checkbox" checked disabled> Exclude current P2K members.</label><label><input id="recruitmentExcludeFormer" type="checkbox"> Exclude former P2K members as well.</label><label><input type="checkbox" checked disabled> Reject closed / unavailable accounts automatically.</label></div><div class="p2k-recruitment-help">Empty numeric fields mean “doesn’t matter”. Criteria and candidates are immutable once a scan has started. Duplicate to change them.</div></fieldset>
       </div>
-      <div class="p2k-recruitment-actions"><button class="dashboard-button" id="recruitmentStart" type="button">Start / resume scan</button><button class="dashboard-button is-secondary" id="recruitmentPause" type="button" disabled>Pause</button><button class="dashboard-button is-secondary" id="recruitmentRestart" type="button">Restart scan</button><button class="dashboard-button is-secondary" id="recruitmentCsv" type="button" disabled>Download selected CSV</button></div>
+      <div class="p2k-recruitment-actions"><button class="dashboard-button" id="recruitmentSaveDraft" type="button">Save draft</button><button class="dashboard-button" id="recruitmentStart" type="button">Start analysis</button><button class="dashboard-button is-secondary" id="recruitmentPause" type="button" disabled>Pause</button><button class="dashboard-button is-secondary" id="recruitmentRetry" type="button">Retry API errors</button><button class="dashboard-button is-secondary" id="recruitmentDuplicate" type="button">Duplicate</button><button class="dashboard-button is-secondary" id="recruitmentDelete" type="button">Delete analysis</button></div>
       <div class="p2k-recruitment-summary"><div><span>Candidates</span><strong id="recruitmentMetricTotal">0</strong></div><div><span>Checked</span><strong id="recruitmentMetricChecked">0</strong></div><div><span>Selected</span><strong id="recruitmentMetricSelected">0</strong></div><div><span>Errors / unavailable</span><strong id="recruitmentMetricErrors">0</strong></div><div><span>Remaining</span><strong id="recruitmentMetricRemaining">0</strong></div><div><span>Candidates / second</span><strong id="recruitmentMetricRate">—</strong><small id="recruitmentMetricRateNote">Rolling 10 s</small></div><div><span>ETA</span><strong id="recruitmentMetricEta">—</strong><small id="recruitmentMetricEtaNote">Elapsed —</small></div><div><span>OAuth gateway</span><strong id="recruitmentMetricOauth">—</strong><small id="recruitmentMetricOauthNote">Shared full-throttle transport</small></div></div>
-      <div class="p2k-recruitment-progress"><span id="recruitmentProgressBar"></span></div><div class="p2k-recruitment-status" id="recruitmentStatus">Ready. Save the candidate pool, then start a scan.</div>
-      <div class="p2k-recruitment-table-wrap"><table class="p2k-recruitment-table"><thead><tr><th>Candidate</th><th>Decision</th><th>Daily rating</th><th>Timeout %</th><th>Current games</th><th>Completed games</th><th>Last online</th><th>Account age</th><th>P2K state</th><th>Reason</th></tr></thead><tbody id="recruitmentRows"><tr><td colspan="10">No scan results yet.</td></tr></tbody></table></div>
-      <div id="recruitmentRowsNote" class="p2k-recruitment-help"></div>
-      <p class="p2k-recruitment-help"><strong>Data path:</strong> P2K membership is resolved in Green Core in large batches before Chess.com scanning and revalidated at every server checkpoint. Chess.com profile supplies account state, joined and last-online timestamps; Daily stats supply rating, RD, completed record, timeout percentage and average move time when available; current Daily games supply ongoing-game count.</p>
+      
+      <div class="p2k-recruitment-progress"><span id="recruitmentProgressBar"></span></div>
+      <div class="p2k-recruitment-actions"><input class="p2k-recruitment-input" id="recruitmentResultSearch" type="search" style="max-width:240px" placeholder="Find username" aria-label="Find username"><select class="p2k-recruitment-input" style="max-width:180px" id="recruitmentResultFilter" aria-label="Result decision"><option value="all">All evaluated</option><option value="selected">Selected</option><option value="rejected">Rejected</option><option value="error">API errors</option><option value="pending">Pending</option></select><button class="dashboard-button is-secondary" id="recruitmentCsv" type="button">Selected CSV</button><button class="dashboard-button is-secondary" id="recruitmentCsvAll" type="button">All evaluated CSV</button></div>
+      <div class="p2k-recruitment-table-wrap"><table class="p2k-recruitment-table"><thead><tr><th>Candidate</th><th>Decision</th><th>Daily rating</th><th>RD</th><th>Timeout %</th><th>Current games</th><th>Completed games</th><th>Move time (s)</th><th>Last online</th><th>Account age</th><th>P2K state</th><th>Reason</th></tr></thead><tbody id="recruitmentRows"><tr><td colspan="12">No scan results yet.</td></tr></tbody></table></div>
+      <div class="p2k-recruitment-actions"><button id="recruitmentResultPrev" class="dashboard-button is-secondary" type="button">Previous</button><span id="recruitmentRowsNote" class="p2k-recruitment-help"></span><button id="recruitmentResultNext" class="dashboard-button is-secondary" type="button">Next</button></div>
+      <p class="p2k-recruitment-help"><strong>Data path:</strong> Green Core membership and aliases, Chess.com OAuth player profile, Daily stats and current games. Results are checkpointed independently per analysis. Keep this page open while scanning.</p></div></section>
     </section>`;
   }
 
@@ -266,59 +282,115 @@
     if (bar) bar.style.width = `${total ? Math.min(100, 100 * done / total) : 0}%`;
   }
 
-  function setPoolStatus(pool) {
-    const host = $("recruitmentSavedStatus");
-    if (!host) return;
-    const count = Array.isArray(pool?.candidates) ? pool.candidates.length : 0;
-    const max = Number(pool?.maximumCandidates || 100000);
-    host.textContent = count ? `${count.toLocaleString("en-GB")} normalized unique username${count === 1 ? "" : "s"} · revision ${Number(pool?.revision || 0)} · maximum ${max.toLocaleString("en-GB")}` : `No saved candidate list · maximum ${max.toLocaleString("en-GB")}.`;
+  function localDate(value) {
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? date.toLocaleString(undefined,{dateStyle:"medium",timeStyle:"short"}) : "—";
   }
-
-  function mergeCheckpoint(meta, accepted = []) {
-    const current = adminState.run || { results: [], candidates: [] };
-    const byKey = new Map((current.results || []).map((row, index) => [text(row?.username).toLowerCase(), index]));
-    for (const row of accepted || []) {
-      const key = text(row?.username).toLowerCase();
-      if (!key) continue;
-      if (byKey.has(key)) current.results[byKey.get(key)] = row;
-      else { byKey.set(key, current.results.length); current.results.push(row); }
-    }
-    const previousChecked = Number(current.summary?.checked || current.results.length || 0);
-    const nextChecked = Number(meta?.summary?.checked || 0);
-    if (nextChecked >= previousChecked) {
-      Object.assign(current, meta || {});
-      current.summary = meta?.summary || current.summary;
-    }
-    adminState.run = current;
-    renderRun(current);
+  const statusLabel = run => run?.status === "completed" ? "Completed" : run?.status === "running" ? "Running" : run?.status === "paused" ? "Paused" : "Draft";
+  function syncControls() {
+    const run = adminState.run;
+    const blocked = busy || activeScan;
+    const locked = run?.status === "running";
+    const draft = composing || run?.status === "draft";
+    const allowEdit = draft && !blocked;
+    const disabled = (id,value) => { if ($(id)) $(id).disabled=Boolean(value); };
+    for (const id of ["recruitmentName","recruitmentCandidates","recruitmentMinRating","recruitmentMaxRating","recruitmentMaxTimeout","recruitmentMaxRd","recruitmentMinGames","recruitmentMaxGames","recruitmentMinCompleted","recruitmentMaxOffline","recruitmentMaxSpm","recruitmentMinAge","recruitmentExcludeFormer"]) disabled(id,!allowEdit);
+    disabled("recruitmentNew",blocked);
+    disabled("recruitmentClose",blocked);
+    disabled("recruitmentSaveDraft",!allowEdit);
+    disabled("recruitmentStart",blocked||locked||(!draft&&!Number(run?.summary?.pending)));
+    disabled("recruitmentPause",!activeScan||Boolean(scanControl?.pauseRequested));
+    disabled("recruitmentRetry",blocked||locked||!Number(run?.summary?.errors));
+    disabled("recruitmentDuplicate",blocked||!run);
+    disabled("recruitmentDelete",blocked||locked||!run);
+    disabled("recruitmentCsv",!Number(run?.summary?.selected));
+    disabled("recruitmentCsvAll",!Number(run?.summary?.checked));
+    if ($("recruitmentStart")) $("recruitmentStart").textContent=draft?"Start analysis":"Resume analysis";
+    document.querySelectorAll("[data-recruitment-open]").forEach(button=>{button.disabled=blocked;});
   }
-
   function renderRun(run = adminState.run) {
-    adminState.run = run && Object.keys(run).length ? run : null;
-    const summary = adminState.run?.summary || {};
-    const total = Number(summary.total ?? adminState.run?.candidates?.length ?? 0);
-    const checked = Number(summary.checked ?? adminState.run?.results?.length ?? 0);
-    const selected = Number(summary.selected || 0), errors = Number(summary.errors || 0);
-    if ($("recruitmentMetricTotal")) $("recruitmentMetricTotal").textContent = total.toLocaleString("en-GB");
-    if ($("recruitmentMetricChecked")) $("recruitmentMetricChecked").textContent = checked.toLocaleString("en-GB");
-    if ($("recruitmentMetricSelected")) $("recruitmentMetricSelected").textContent = selected.toLocaleString("en-GB");
-    if ($("recruitmentMetricErrors")) $("recruitmentMetricErrors").textContent = errors.toLocaleString("en-GB");
-    if ($("recruitmentProgressBar")) $("recruitmentProgressBar").style.width = `${total ? Math.min(100, checked * 100 / total) : 0}%`;
-    if ($("recruitmentCsv")) $("recruitmentCsv").disabled = selected < 1;
-    if ($("recruitmentPause")) $("recruitmentPause").disabled = !activeScan;
-    if ($("recruitmentStart")) $("recruitmentStart").disabled = activeScan;
-    renderScanTelemetry();
-    const tbody = $("recruitmentRows");
-    if (!tbody) return;
-    const rows = Array.isArray(adminState.run?.results) ? adminState.run.results : [];
-    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="10">No scan results yet.</td></tr>'; if ($("recruitmentRowsNote")) $("recruitmentRowsNote").textContent = ""; return; }
-    const visible = rows.length > RESULT_RENDER_LIMIT ? rows.slice(-RESULT_RENDER_LIMIT) : rows;
-    tbody.innerHTML = visible.map(row => {
-      const data = row?.data || {};
-      const decision = row?.selected ? "Selected" : "Rejected";
-      return `<tr><td>${escapeHTML(row?.username)}</td><td><span class="p2k-recruitment-decision ${row?.selected ? "is-selected" : "is-rejected"}">${decision}</span></td><td>${data.daily_rating ?? "—"}</td><td>${data.timeout_percent ?? "—"}</td><td>${data.current_daily_games ?? "—"}</td><td>${data.completed_daily_games ?? "—"}</td><td>${displayDays(data.last_online_days)}</td><td>${displayDays(data.account_age_days)}</td><td>${escapeHTML(data.p2k_state || "none")}</td><td>${escapeHTML(row?.reason || "—")}</td></tr>`;
-    }).join("");
-    if ($("recruitmentRowsNote")) $("recruitmentRowsNote").textContent = rows.length > visible.length ? `Showing the most recent ${visible.length.toLocaleString("en-GB")} of ${rows.length.toLocaleString("en-GB")} checkpointed results. The CSV export remains complete.` : `${rows.length.toLocaleString("en-GB")} checkpointed result${rows.length === 1 ? "" : "s"}.`;
+    adminState.run=run||null;
+    const summary=run?.summary||{};
+    for(const [id,key] of [["Total","total"],["Checked","checked"],["Selected","selected"],["Errors","errors"]]){
+      if($("recruitmentMetric"+id))$("recruitmentMetric"+id).textContent=Number(summary[key]||0).toLocaleString();
+    }
+    if($("recruitmentProgressBar"))$("recruitmentProgressBar").style.width=(summary.total?Math.min(100,summary.checked*100/summary.total):0)+"%";
+    if($("recruitmentDetailPanel"))$("recruitmentDetailPanel").hidden=!run&&!composing;
+    if($("recruitmentDetailTitle"))$("recruitmentDetailTitle").textContent=run?.name||"New analysis";
+    if($("recruitmentDetailMeta"))$("recruitmentDetailMeta").textContent=run?statusLabel(run)+" · Created "+localDate(run.createdAt)+" · "+run.createdBy+(run.leaseUntil&&!activeScan?" · Scan owned by another page until "+localDate(run.leaseUntil*1000):""):"Create a separate campaign.";
+    if($("recruitmentSavedStatus"))$("recruitmentSavedStatus").textContent=run?Number(summary.total||0).toLocaleString()+" saved unique candidates":"Candidate list not yet saved.";
+    syncControls();renderScanTelemetry();
+  }
+  function renderList(list=adminState.analyses) {
+    if(!list||!$("recruitmentAnalysisRows"))return;
+    const rows=list.items||[];
+    $("recruitmentAnalysisRows").innerHTML=rows.length?rows.map(a=>{
+      const s=a.summary||{};return '<tr><td><strong>'+escapeHTML(a.name)+'</strong></td><td>'+escapeHTML(localDate(a.createdAt))+'</td><td>'+escapeHTML(a.createdBy)+'</td><td>'+statusLabel(a)+'</td><td>'+Number(s.total||0).toLocaleString()+'</td><td>'+Number(s.checked||0).toLocaleString()+'</td><td>'+Number(s.selected||0).toLocaleString()+'</td><td>'+Number(s.errors||0).toLocaleString()+'</td><td><button class="dashboard-button is-secondary" data-recruitment-open="'+escapeHTML(a.id)+'" type="button">Open</button></td></tr>';
+    }).join(""):'<tr><td colspan="9">No saved analyses found.</td></tr>';
+    $("recruitmentListPage").textContent="Page "+list.page+" / "+list.pages+" · "+list.total+" analyses";
+    $("recruitmentListPrev").disabled=list.page<=1;
+    $("recruitmentListNext").disabled=list.page>=list.pages;
+    $("recruitmentActiveNote").textContent=list.active?"Active: "+list.active.name+" · lease until "+localDate(Number(list.active.lease_until)*1000):"No active scan";
+    $("recruitmentAnalysisRows").querySelectorAll("[data-recruitment-open]").forEach(button=>button.addEventListener("click",()=>void guarded(()=>openAnalysis(button.dataset.recruitmentOpen))));
+    syncControls();
+  }
+  async function loadList() {
+    const request=++listRequest;
+    const payload=await server("state",{params:{page:listPage,search:$("recruitmentAnalysisSearch")?.value||""}});
+    if(request!==listRequest)return;
+    adminState.analyses=payload.analyses;listPage=payload.analyses.page;renderList();
+  }
+  function renderResultsPage(page) {
+    const tbody=$("recruitmentRows");if(!tbody)return;
+    const rows=page?.items||[];
+    tbody.innerHTML=rows.length?rows.map(row=>{
+      const d=row.data||{},decision=row.decision==="error"?"API error":row.decision==="pending"?"Pending":row.selected?"Selected":"Rejected";
+      return '<tr><td><a target="_blank" rel="noopener noreferrer" href="https://www.chess.com/member/'+encodeURIComponent(row.username)+'">'+escapeHTML(row.username)+'</a></td><td><span class="p2k-recruitment-decision '+(row.selected?"is-selected":row.decision==="rejected"?"is-rejected":"")+'">'+decision+'</span></td>'+[d.daily_rating,d.daily_rd,d.timeout_percent,d.current_daily_games,d.completed_daily_games,d.avg_seconds_per_move,displayDays(d.last_online_days),displayDays(d.account_age_days),d.p2k_state,row.reason].map(v=>'<td>'+escapeHTML(v??"—")+'</td>').join("")+'</tr>';
+    }).join(""):'<tr><td colspan="12">No matching results.</td></tr>';
+    $("recruitmentRowsNote").textContent=page?"Page "+page.page+" / "+page.pages+" · "+Number(page.total).toLocaleString()+" matching candidates":"No results";
+    $("recruitmentResultPrev").disabled=!page||page.page<=1;
+    $("recruitmentResultNext").disabled=!page||page.page>=page.pages;
+  }
+  async function loadResults() {
+    const id=adminState.run?.id,request=++resultRequest;
+    if(!id){renderResultsPage(null);return;}
+    const payload=await server("results",{params:{id,page:resultPage,size:RESULT_PAGE_SIZE,filter:$("recruitmentResultFilter")?.value||"all",search:$("recruitmentResultSearch")?.value||""}});
+    if(request!==resultRequest||adminState.run?.id!==id)return;
+    resultPage=payload.results.page;renderResultsPage(payload.results);
+  }
+  function populateAnalysis(run) {
+    composing=false;clearScanTelemetry();adminState.run=run;
+    if($("recruitmentName"))$("recruitmentName").value=run.name;
+    if($("recruitmentCandidates"))$("recruitmentCandidates").value=(run.candidates||[]).join("\n");
+    applyCriteria(run.criteria||{});resultPage=1;
+    if($("recruitmentResultFilter"))$("recruitmentResultFilter").value="all";
+    if($("recruitmentResultSearch"))$("recruitmentResultSearch").value="";
+    renderRun(run);
+  }
+  async function openAnalysis(id) {
+    const payload=await server("detail",{params:{id,candidates:1}});
+    populateAnalysis(payload.run);await loadResults();
+    setStatus(statusLabel(payload.run)+" · "+Number(payload.run.summary.pending||0).toLocaleString()+" pending candidates.");
+  }
+  function newAnalysis() {
+    composing=true;adminState.run=null;clearScanTelemetry();
+    $("recruitmentName").value="";$("recruitmentCandidates").value="";
+    applyCriteria(DEFAULT_CRITERIA);resultPage=1;$("recruitmentResultFilter").value="all";$("recruitmentResultSearch").value="";
+    renderRun(null);renderResultsPage(null);setStatus("Enter a name and candidate list, then save or start this independent analysis.");
+    $("recruitmentName").focus();
+  }
+  async function guarded(work) {
+    if(busy||activeScan)return;
+    busy=true;syncControls();
+    try{await work();}catch(error){setStatus(error?.message||String(error),true);}
+    finally{busy=false;syncControls();}
+  }
+  async function saveDraft() {
+    const run=adminState.run;
+    if(!composing&&run?.status!=="draft")return run;
+    const payload=await server(run?"update-draft":"create",{method:"POST",body:{id:run?.id,name:$("recruitmentName").value,candidates:$("recruitmentCandidates").value,criteria:criteriaFromForm()}});
+    populateAnalysis(payload.run);await loadList();await loadResults();
+    setStatus("Draft saved · "+Number(payload.run.summary.total).toLocaleString()+" unique candidates.");return payload.run;
   }
 
   function applyCriteria(criteria = {}) {
@@ -330,21 +402,6 @@
   function criteriaFromForm() {
     const numeric = id => { const raw = $(id)?.value?.trim() ?? ""; return raw === "" ? null : Number(raw); };
     return { minRating:numeric("recruitmentMinRating"), maxRating:numeric("recruitmentMaxRating"), maxTimeout:numeric("recruitmentMaxTimeout"), maxRd:numeric("recruitmentMaxRd"), minGames:numeric("recruitmentMinGames"), maxGames:numeric("recruitmentMaxGames"), minCompleted:numeric("recruitmentMinCompleted"), maxOffline:numeric("recruitmentMaxOffline"), maxSpm:numeric("recruitmentMaxSpm"), minAge:numeric("recruitmentMinAge"), excludeFormer:Boolean($("recruitmentExcludeFormer")?.checked) };
-  }
-
-  async function loadState({ populateEditor = true } = {}) {
-    const payload = await server("state");
-    adminState.pool = payload.pool || { candidates: [], maximumCandidates: 100000 };
-    adminState.run = payload.run && Object.keys(payload.run).length ? payload.run : null;
-    setPoolStatus(adminState.pool);
-    if (populateEditor && $("recruitmentCandidates")) $("recruitmentCandidates").value = (adminState.pool.candidates || []).join("\n");
-    if (adminState.run?.criteria) applyCriteria(adminState.run.criteria);
-    renderRun();
-    const status = adminState.run?.status;
-    if (status === "completed") setStatus(`Completed · ${Number(adminState.run.summary?.checked || 0).toLocaleString("en-GB")} candidates checked · ${Number(adminState.run.summary?.selected || 0).toLocaleString("en-GB")} selected.`);
-    else if (status === "paused") setStatus(`Paused · ${Number(adminState.run.summary?.pending || 0).toLocaleString("en-GB")} candidates remain. Start / resume continues only pending candidates.`);
-    else if (status === "running") setStatus(`Checkpoint recovered · ${Number(adminState.run.summary?.pending || 0).toLocaleString("en-GB")} candidates remain. Start / resume continues the run.`);
-    return payload;
   }
 
   async function chessJSON(url, attempts = 3, signal = null) {
@@ -370,7 +427,7 @@
     const map = new Map();
     let prepared = 0;
     for (let index = 0; index < usernames.length; index += MEMBERSHIP_BATCH) {
-      if (!activeScan || generation !== scanGeneration) break;
+      if (!activeScan || generation !== scanGeneration || scanControl?.pauseRequested) break;
       const chunk = usernames.slice(index, index + MEMBERSHIP_BATCH);
       setStatus(`Preparing Green membership · ${prepared.toLocaleString("en-GB")} / ${usernames.length.toLocaleString("en-GB")} candidates…`);
       setPreparationProgress(prepared, usernames.length);
@@ -406,75 +463,140 @@
     return {username,data:{...common,daily_rating:number(daily?.last?.rating??daily?.best?.rating),timeout_percent:number(record?.timeout_percent),current_daily_games:Array.isArray(games?.games)?games.games.length:null,daily_rd:number(daily?.last?.rd),completed_daily_games:completed,avg_seconds_per_move:number(record?.time_per_move),closed:false,error:""}};
   }
 
-  async function checkpoint(runId, batch) {
-    if (!batch.length) return;
-    const payload = await server("checkpoint", { method:"POST", body:{ runId, results:batch } });
-    mergeCheckpoint(payload?.run || {}, payload?.results || []);
-  }
-
-  async function runScan(run) {
-    const generation=++scanGeneration;activeScan=true;renderRun(run);
-    const checked=new Set((run?.results||[]).map(row=>text(row.username).toLowerCase()));
-    const pending=(run?.candidates||[]).filter(username=>!checked.has(text(username).toLowerCase()));
-    if(!pending.length){activeScan=false;finishScanTelemetry();await loadState({populateEditor:false});return;}
-
-    setStatus(`Preparing Green membership · 0 / ${pending.length.toLocaleString("en-GB")} candidates…`);
-    setPreparationProgress(0,pending.length);
-    let membership;
-    try{membership=await loadMembershipStates(pending,generation);}catch(error){activeScan=false;renderRun();setStatus(`Unable to prepare Green membership: ${error?.message||error}`,true);return;}
-    if(!activeScan||generation!==scanGeneration)return;
-
-    if(window.P2K_REAL_OAUTH_READY){try{await window.P2K_REAL_OAUTH_READY;}catch(_){ }}
-    const api=window.P2K_API_CLIENT;
-    const diagnostics=api?.diagnostics?.()||{};
-    if(!api?.processPriority||!api?.json||diagnostics.oauthBearerMode!==true){activeScan=false;renderRun();setStatus("Recruitment requires the authenticated OAuth Bearer API scheduler. Log in with Chess.com and retry.",true);return;}
-
-    const controller=new AbortController();scanAbortController=controller;
-    beginScanTelemetry(run?.id,Number(run?.summary?.total??run?.candidates?.length??0),Number(run?.summary?.checked??run?.results?.length??0));
-    const checkpointBuffer=[];let checkpointChain=Promise.resolve();let checkpointError=null;let queuedCheckpointBatches=0;let completedCheckpointBatches=0;
-    const updateCheckpointNote=()=>{const node=$("recruitmentRowsNote");if(node&&activeScan){const backlog=Math.max(0,queuedCheckpointBatches-completedCheckpointBatches);node.textContent=backlog?`${backlog.toLocaleString("en-GB")} secured checkpoint batch${backlog===1?"":"es"} queued for persistence.`:"Checkpoints caught up with live evaluation.";}};
-    const scheduleCheckpoint=(force=false)=>{
-      while(checkpointBuffer.length>=CHECKPOINT_BATCH||(force&&checkpointBuffer.length)){
-        const batch=checkpointBuffer.splice(0,Math.min(CHECKPOINT_BATCH,checkpointBuffer.length));queuedCheckpointBatches+=1;updateCheckpointNote();
-        checkpointChain=checkpointChain.then(async()=>{
-          if(checkpointError)return;
-          try{await checkpoint(run.id,batch);completedCheckpointBatches+=1;updateCheckpointNote();}catch(error){checkpointError=error;activeScan=false;controller.abort();}
+  async function runScan(claim) {
+    const run=claim.run,pending=claim.pending||[],generation=++scanGeneration;
+    activeScan=true;adminState.run=run;
+    const controller=new AbortController();
+    const control={id:run.id,lease:claim.lease,pauseRequested:false,controller,failure:null};
+    scanControl=control;scanAbortController=controller;
+    const buffer=[];let chain=Promise.resolve(),inFlight=0,stopped=false,heartbeatBusy=false;
+    const fail=error=>{if(!control.failure)control.failure=error;controller.abort();};
+    const leaseBody={id:control.id,lease:control.lease};
+    function updateRun(meta){if(adminState.run?.id===meta?.id){adminState.run={...adminState.run,...meta};renderRun();}}
+    const flush=(force=false)=>{
+      while(buffer.length>=CHECKPOINT_BATCH||(force&&buffer.length)){
+        const batch=buffer.splice(0,Math.min(CHECKPOINT_BATCH,buffer.length));inFlight++;
+        chain=chain.then(async()=>{
+          try{
+            if(control.failure)return;
+            const payload=await server("checkpoint",{method:"POST",body:{...leaseBody,results:batch}});
+            updateRun(payload.run);
+            void loadResults().catch(()=>{});
+          }catch(error){fail(error);}
+          finally{inFlight--;}
         });
       }
-      return checkpointChain;
+      return chain;
     };
-    const feeder=Number(diagnostics.recommendedBatchConcurrency||diagnostics.oauthLogicalFeederConcurrency||0);
-    setStatus(`Scan running · OAuth Bearer full throttle · ${feeder?`${feeder} logical candidate feeders · `:""}gateway rate/concurrency are controlled automatically · checkpoints up to ${CHECKPOINT_BATCH}.`);
-    renderRun();
-
+    const heartbeat=setInterval(async()=>{
+      if(stopped||heartbeatBusy||control.failure||adminState.run?.status==="completed")return;
+      heartbeatBusy=true;
+      try{const payload=await server("heartbeat",{method:"POST",body:leaseBody});if(!stopped&&adminState.run?.status!=="completed")updateRun(payload.run);}
+      catch(error){if(!stopped&&adminState.run?.status!=="completed")fail(error);}
+      finally{heartbeatBusy=false;}
+    },30000);
+    const periodic=setInterval(()=>{if(!control.failure)flush(true);},8000);
+    beginScanTelemetry(run.id,Number(run.summary.total),Number(run.summary.checked));renderRun();
     try{
-      await api.processPriority(pending,async username=>{
-        if(!activeScan||generation!==scanGeneration||controller.signal.aborted){const error=new Error("Recruitment scan cancelled.");error.name="AbortError";throw error;}
-        const result=await scanCandidate(username,membership.get(text(username).toLowerCase())||"none",run?.criteria||{},controller.signal);
-        if(!activeScan||generation!==scanGeneration||controller.signal.aborted){const error=new Error("Recruitment scan cancelled.");error.name="AbortError";throw error;}
-        noteCandidateSettled();checkpointBuffer.push(result);scheduleCheckpoint(false);return result;
-      },{signal:controller.signal,getKey:username=>text(username).toLowerCase(),getPriority:()=>60});
-    }catch(error){if(!controller.signal.aborted&&!checkpointError)checkpointError=error;}
-
-    if(generation!==scanGeneration)return;
-    if(!controller.signal.aborted&&!checkpointError){setStatus("API evaluation complete · finalizing secured Recruitment checkpoints…");scheduleCheckpoint(true);}
-    await checkpointChain;
-    scanAbortController=null;
-    if(checkpointError){finishScanTelemetry();renderRun();if(["RUN_CHANGED","RUN_COMPLETED","RUN_PAUSED"].includes(String(checkpointError?.code||""))){await loadState({populateEditor:false}).catch(()=>{});if(checkpointError.code==="RUN_PAUSED")setStatus("Paused on the server. Start / resume continues pending candidates.");return;}setStatus(`Checkpoint failed: ${checkpointError.message||checkpointError}`,true);return;}
-    if(controller.signal.aborted||!activeScan){finishScanTelemetry();renderRun();return;}
-    activeScan=false;finishScanTelemetry();renderRun();await loadState({populateEditor:false}).catch(error=>setStatus(error.message||String(error),true));
+      setStatus("Preparing Green membership · 0 / "+pending.length.toLocaleString()+" candidates…");
+      const membership=await loadMembershipStates(pending,generation);
+      if(!control.pauseRequested&&!control.failure){
+        if(window.P2K_REAL_OAUTH_READY)await window.P2K_REAL_OAUTH_READY;
+        const api=window.P2K_API_CLIENT,diag=api?.diagnostics?.()||{};
+        if(!api?.processPriority||!api?.json||diag.oauthBearerMode!==true)throw Error("Recruitment requires the authenticated OAuth Bearer API scheduler. Log in with Chess.com and retry.");
+        setStatus("Scanning · OAuth Bearer scheduler · incremental secured checkpoints.");
+        await api.processPriority(pending,async username=>{
+          if(controller.signal.aborted)throw new DOMException("Scan paused","AbortError");
+          const row=await scanCandidate(username,membership.get(text(username).toLowerCase())||"none",run.criteria||{},controller.signal);
+          // A fully evaluated candidate must survive a concurrent Pause click.
+          if(control.failure||generation!==scanGeneration)throw new DOMException("Scan interrupted","AbortError");
+          buffer.push(row);noteCandidateSettled();flush(false);
+          // Bound queued batches if SQLite/Green is temporarily slower than acquisition.
+          if(inFlight>=5)await chain;
+          return row;
+        },{signal:controller.signal,getKey:username=>text(username).toLowerCase(),getPriority:()=>60});
+      }
+    }catch(error){if(!controller.signal.aborted)fail(error);}
+    finally{
+      clearInterval(periodic);
+      if(!control.failure)await flush(true);
+      else await chain;
+      stopped=true;clearInterval(heartbeat);
+      try{
+        if(adminState.run?.status!=="completed"){
+          const payload=await server("pause",{method:"POST",body:leaseBody});
+          updateRun(payload.run);
+        }
+      }catch(error){if(!control.failure)control.failure=error;}
+      activeScan=false;scanAbortController=null;scanControl=null;finishScanTelemetry();
+      try{
+        const payload=await server("detail",{params:{id:run.id}});
+        updateRun(payload.run);await loadList();await loadResults();
+      }catch(error){if(!control.failure)control.failure=error;}
+      renderRun();
+      if(control.failure)setStatus("Scan interrupted: "+(control.failure.message||control.failure)+". Saved checkpoints are retained; resume pending candidates.",true);
+      else setStatus(statusLabel(adminState.run)+" · "+Number(adminState.run?.summary?.checked||0).toLocaleString()+" checked · "+Number(adminState.run?.summary?.pending||0).toLocaleString()+" pending.");
+    }
   }
 
-  async function startScan(){if(activeScan)return;try{setStatus("Starting or resuming the server checkpoint…");const payload=await server("start",{method:"POST",body:{criteria:criteriaFromForm()}});adminState.run=payload.run;if(payload.run?.criteria)applyCriteria(payload.run.criteria);renderRun(payload.run);await runScan(payload.run);}catch(error){activeScan=false;renderRun();setStatus(error.message||String(error),true);}}
-  async function pauseScan(){scanGeneration+=1;activeScan=false;scanAbortController?.abort();scanAbortController=null;finishScanTelemetry();renderRun();try{const payload=await server("pause",{method:"POST",body:{}});if(adminState.run&&payload.run){Object.assign(adminState.run,payload.run);adminState.run.summary=payload.run.summary||adminState.run.summary;}renderRun();setStatus(`Paused · ${Number(payload.run?.summary?.pending||0).toLocaleString("en-GB")} candidates remain. Start / resume continues only pending candidates.`);}catch(error){setStatus(error.message||String(error),true);}}
-
+  async function startScan() {
+    if(busy||activeScan)return;
+    busy=true;syncControls();let claim=null;
+    try{
+      const run=await saveDraft();
+      if(!run)throw Error("Create or open an analysis first.");
+      claim=await server("resume",{method:"POST",body:{id:run.id}});
+      activeScan=true;adminState.run={...adminState.run,...claim.run};
+    }catch(error){setStatus(error?.message||String(error),true);}
+    finally{busy=false;syncControls();}
+    if(claim)await runScan(claim);
+  }
+  function pauseScan(){
+    if(!scanControl||scanControl.pauseRequested)return;
+    scanControl.pauseRequested=true;setStatus("Pausing… saving all completed candidate evaluations.");
+    syncControls();scanControl.controller.abort();
+  }
+  function downloadCsv(scope) {
+    const id=adminState.run?.id;if(!id)return;
+    const url=recruitmentEndpoint("csv");url.searchParams.set("id",id);url.searchParams.set("scope",scope);
+    const anchor=document.createElement("a");anchor.href=url.href;anchor.download="";document.body.appendChild(anchor);anchor.click();anchor.remove();
+  }
   function bindRecruitment(){
-    $("recruitmentLoadPool")?.addEventListener("click",()=>loadState({populateEditor:true}).catch(error=>setStatus(error.message||String(error),true)));
-    $("recruitmentClearEditor")?.addEventListener("click",()=>{if($("recruitmentCandidates"))$("recruitmentCandidates").value="";});
-    $("recruitmentSavePool")?.addEventListener("click",async()=>{try{setStatus("Normalizing and saving candidate pool…");const payload=await server("save-pool",{method:"POST",body:{candidates:$("recruitmentCandidates")?.value||""}});adminState.pool=payload.pool;setPoolStatus(payload.pool);if($("recruitmentCandidates"))$("recruitmentCandidates").value=(payload.pool?.candidates||[]).join("\n");setStatus(`Candidate pool saved · ${Number(payload.pool?.candidates?.length||0).toLocaleString("en-GB")} normalized unique usernames.`);}catch(error){setStatus(error.message||String(error),true);}});
-    $("recruitmentStart")?.addEventListener("click",startScan);$("recruitmentPause")?.addEventListener("click",pauseScan);
-    $("recruitmentRestart")?.addEventListener("click",async()=>{if(!window.confirm("Clear the current Recruitment run checkpoint? The saved candidate pool will be kept."))return;scanGeneration+=1;activeScan=false;scanAbortController?.abort();scanAbortController=null;clearScanTelemetry();try{await server("restart",{method:"POST",body:{}});adminState.run=null;renderRun(null);setStatus("Run checkpoint cleared. The saved candidate pool is unchanged.");}catch(error){setStatus(error.message||String(error),true);}});
-    $("recruitmentCsv")?.addEventListener("click",()=>{const anchor=document.createElement("a");anchor.href=recruitmentEndpoint("csv").href;anchor.download="p2k-recruitment-selected.csv";document.body.appendChild(anchor);anchor.click();anchor.remove();});
+    let listTimer=0,resultTimer=0;
+    const refreshList=()=>loadList().catch(error=>setStatus(error?.message||String(error),true));
+    const refreshResults=()=>loadResults().catch(error=>setStatus(error?.message||String(error),true));
+    $("recruitmentNew")?.addEventListener("click",()=>{if(!busy&&!activeScan)newAnalysis();});
+    $("recruitmentClose")?.addEventListener("click",()=>{if(busy||activeScan)return;composing=false;adminState.run=null;clearScanTelemetry();renderRun(null);setStatus("Choose an analysis or create a new one.");});
+    $("recruitmentRefresh")?.addEventListener("click",()=>{void refreshList();if(adminState.run&&!activeScan&&!busy)void guarded(()=>openAnalysis(adminState.run.id));});
+    $("recruitmentAnalysisSearch")?.addEventListener("input",()=>{clearTimeout(listTimer);listPage=1;listTimer=setTimeout(refreshList,250);});
+    $("recruitmentListPrev")?.addEventListener("click",()=>{listPage=Math.max(1,listPage-1);void refreshList();});
+    $("recruitmentListNext")?.addEventListener("click",()=>{listPage++;void refreshList();});
+    $("recruitmentSaveDraft")?.addEventListener("click",()=>void guarded(saveDraft));
+    $("recruitmentStart")?.addEventListener("click",()=>void startScan());
+    $("recruitmentPause")?.addEventListener("click",pauseScan);
+    $("recruitmentRetry")?.addEventListener("click",()=>void guarded(async()=>{
+      const id=adminState.run?.id;if(!id)return;
+      const payload=await server("retry-errors",{method:"POST",body:{id}});
+      renderRun({...adminState.run,...payload.run});await loadList();await loadResults();setStatus("API errors returned to pending. Resume this analysis to retry only pending candidates.");
+    }));
+    $("recruitmentDuplicate")?.addEventListener("click",()=>void guarded(async()=>{
+      const run=adminState.run;if(!run)return;
+      const name=window.prompt("Name of the new analysis",("Copy of "+run.name).slice(0,120));if(name===null)return;
+      const payload=await server("duplicate",{method:"POST",body:{id:run.id,name}});
+      populateAnalysis(payload.run);await loadList();await loadResults();setStatus("Independent draft created. Edit candidates or criteria before starting.");
+    }));
+    $("recruitmentDelete")?.addEventListener("click",()=>void guarded(async()=>{
+      const run=adminState.run;if(!run||!window.confirm('Permanently delete analysis "'+run.name+'" and its results? Other analyses are unaffected.'))return;
+      await server("delete",{method:"POST",body:{id:run.id,confirm:true}});
+      composing=false;adminState.run=null;clearScanTelemetry();renderRun(null);await loadList();setStatus("Analysis deleted.");
+    }));
+    $("recruitmentResultFilter")?.addEventListener("change",()=>{resultPage=1;void refreshResults();});
+    $("recruitmentResultSearch")?.addEventListener("input",()=>{clearTimeout(resultTimer);resultPage=1;resultTimer=setTimeout(refreshResults,250);});
+    $("recruitmentResultPrev")?.addEventListener("click",()=>{resultPage=Math.max(1,resultPage-1);void refreshResults();});
+    $("recruitmentResultNext")?.addEventListener("click",()=>{resultPage++;void refreshResults();});
+    $("recruitmentCsv")?.addEventListener("click",()=>downloadCsv("selected"));
+    $("recruitmentCsvAll")?.addEventListener("click",()=>downloadCsv("all"));
+    renderRun();
   }
 
   function ensureRecruitmentDetail() {
@@ -483,7 +605,7 @@
     if(!host||host.hidden)return;
     let mount=$("p2kRecruitmentNativeHost");
     if(!mount||mount.parentElement!==host){mount?.remove();mount=document.createElement("div");mount.id="p2kRecruitmentNativeHost";mount.className="dashboard-admin-native-detail-host";host.replaceChildren(mount);detailMounted=false;}
-    if(!detailMounted||!$("p2kRecruitmentNative")){detailMounted=true;mount.innerHTML=recruitmentMarkup();bindRecruitment();loadState().catch(error=>setStatus(`Unable to load Recruitment state: ${error.message||error}`,true));}
+    if(!detailMounted||!$("p2kRecruitmentNative")){detailMounted=true;mount.innerHTML=recruitmentMarkup();bindRecruitment();loadList().catch(error=>setStatus(`Unable to load Recruitment analyses: ${error.message||error}`,true));if(adminState.run){if(!activeScan)void guarded(()=>openAnalysis(adminState.run.id));else{renderRun();void loadResults().catch(()=>{});}}}
   }
 
   function reconcile(){

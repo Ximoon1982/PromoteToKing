@@ -173,7 +173,7 @@
 // v2.11.0 canonical toggle Administration + Recruitment native detail.
 (() => {
   if (document.querySelector('script[data-p2k-v2110]')) return;
-  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0.js?v=2.11.5-bf6a828490f57';script.async=false;script.dataset.p2kV2110='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+  const script=document.createElement('script');script.src='assets/js/pages/v2-11-0.js?v=p2k-2.16.2-recruitment-1';script.async=false;script.dataset.p2kV2110='1';const mount=()=>document.head.appendChild(script);if(document.head)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
 })();
 
 // Green-primary/retired migration cleanup.
