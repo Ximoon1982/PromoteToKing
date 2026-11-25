@@ -18,7 +18,11 @@ while IFS= read -r -d '' f; do
     rel="$(realpath --relative-to="$DIR/payload/TeamFrance/MedalEngraver" "$f")"
     p="$APP/$rel"
     test ! -L "$p"
-    if [[ -e "$p" ]] && ! cmp -s "$f" "$p"; then echo "Unexpected existing file: $p" >&2; exit 1; fi
+    if [[ -e "$p" ]] && ! cmp -s "$f" "$p"; then
+        prior="$(awk -v path="TeamFrance/MedalEngraver/$rel" '$2==path {print $1}' "$DIR/PRIOR_SHA256SUMS")"
+        actual="$(sha256sum "$p" | cut -d ' ' -f1)"
+        if [[ -z "$prior" || "$actual" != "$prior" ]]; then echo "Unexpected existing file: $p" >&2; exit 1; fi
+    fi
     parent="$(dirname "$p")"
     while [[ "$parent" != "$ROOT/TeamFrance" ]]; do test ! -L "$parent"; parent="$(dirname "$parent")"; done
 done < <(find "$DIR/payload/TeamFrance/MedalEngraver" -type f -print0)
