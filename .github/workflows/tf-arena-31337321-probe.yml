@@ -1,0 +1,25 @@
+name: Team France arena 31337321 CSV diagnostic
+on:
+  push:
+    branches: [release/v2.16.1]
+    paths: ['tests/tf_arena_31337321_probe.php', '.github/workflows/tf-arena-31337321-probe.yml']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: curl
+          coverage: none
+      - run: php tests/tf_arena_31337321_probe.php
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tf-arena-31337321
+          path: tf-arena-31337321.csv
+          if-no-files-found: error
+          retention-days: 7
