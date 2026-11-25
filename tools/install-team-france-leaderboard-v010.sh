@@ -20,15 +20,19 @@ CURRENT="$(sha256sum "$ROOT/TeamFrance/home.html" | cut -d' ' -f1)"
 for d in "$ROOT/TeamFrance" "$ROOT/TeamFrance/Leaderboard" "$ROOT/TeamFrance/Leaderboard/data" "$ROOT/TeamFrance/Leaderboard/src" "$ROOT/TeamFrance/Leaderboard/assets" "$ROOT/TeamFrance/Leaderboard/admin"; do
  [[ ! -L "$d" ]] || { echo "Refusing symlink directory $d" >&2; exit 1; }
 done
-while IFS= read -r -d '' source; do
- rel="$(realpath --relative-to="$HERE/payload" "$source")"
+hash(){ sha256sum "$1" | cut -d' ' -f1; }
+while IFS=$'\t' read -r rel allowed new; do
+ source="$HERE/payload/$rel"
  target="$ROOT/$rel"
- if [[ -L "$target" ]]; then echo "Refusing symlink $rel" >&2; exit 1; fi
- if [[ "$rel" != TeamFrance/home.html && -e "$target" ]] && ! cmp -s "$source" "$target"; then
-  echo "Existing file differs: $rel. Refusing overwrite." >&2; exit 1
+ [[ -f "$source" && ! -L "$target" ]] || { echo "Unsafe path: $rel" >&2; exit 1; }
+ [[ "$(hash "$source")" = "$new" ]] || { echo "Payload checksum mismatch: $rel" >&2; exit 1; }
+ current=MISSING
+ if [[ -e "$target" ]]; then [[ -f "$target" ]] || exit 1; current="$(hash "$target")"; fi
+ if [[ "$current" != "$new" && " $allowed " != *" $current "* ]]; then
+  echo "Unexpected installed checksum: $rel. Refusing overwrite." >&2; exit 1
  fi
  if [[ "$source" = *.php ]]; then "$PHP_BIN" -l "$source"; fi
-done < <(find "$HERE/payload" -type f -print0)
+done < "$HERE/FILE_CHECKSUMS.tsv"
 if [[ "$MODE" = --check ]]; then echo "PASS: preflight or installed state verified."; exit 0; fi
 backup="$ROOT/storage/standalone-widget-backups/team-france-leaderboard-$(date -u +%Y%m%dT%H%M%S)-$$"
 mkdir -p "$backup"
@@ -42,9 +46,10 @@ while IFS= read -r -d '' source; do
  rel="$(realpath --relative-to="$HERE/payload" "$source")"
  [[ "$rel" != TeamFrance/home.html ]] || continue
  target="$ROOT/$rel"
+ if [[ -f "$target" ]] && cmp -s "$source" "$target"; then continue; fi
  mkdir -p "$(dirname "$target")"
  tmp="$(mktemp "$(dirname "$target")/.tf-install.XXXXXX")"
- cp "$source" "$tmp"; chmod 0644 "$tmp"; mv -f "$tmp" "$target"
+ cp "$source" "$tmp"; if [[ -f "$target" ]]; then chmod --reference="$target" "$tmp"; else chmod 0644 "$tmp"; fi; mv -f "$tmp" "$target"
 done < <(find "$HERE/payload" -type f -print0)
 "$PHP_BIN" -r 'require $argv[1]."/src/Core.php"; $s=new \TeamFrance\Leaderboard\Store($argv[1]."/data"); echo "SQLite storage initialized or preserved.\n";' "$ROOT/TeamFrance/Leaderboard"
 tmp="$(mktemp "$ROOT/TeamFrance/.tf-hub.XXXXXX")"; cp "$HERE/payload/TeamFrance/home.html" "$tmp"; chmod 0644 "$tmp"; mv -f "$tmp" "$ROOT/TeamFrance/home.html"
