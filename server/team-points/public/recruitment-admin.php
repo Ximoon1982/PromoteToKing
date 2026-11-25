@@ -1,76 +1,12 @@
 <?php
 declare(strict_types=1);
-
 require_once __DIR__ . '/../src/bootstrap.php';
 
-use P2K\TeamPoints\ApiException;
-use P2K\TeamPoints\Auth;
-use P2K\TeamPoints\Http;
-use P2K\TeamPoints\PublicReadDatabase;
-use P2K\TeamPoints\AdminJob\JobRunner;
-use P2K\TeamPoints\AdminJob\RecruitmentRunStateReader;
+use P2K\TeamPoints\{ApiException,Auth,Http,PublicReadDatabase,PreviewIsolation,RecruitmentAnalysisStore};
 
-const P2K_RECRUITMENT_SCHEMA = 2;
-const P2K_RECRUITMENT_MAX_CANDIDATES = 100000;
-const P2K_RECRUITMENT_MEMBERSHIP_BATCH_MAX = 2000;
-const P2K_RECRUITMENT_CHECKPOINT_MAX = 500;
-
-function p2k_recruitment_dir(): string
-{
-    $config = p2k_tp_config();
-    $configured = trim((string)($config['storage']['runtime_dir'] ?? ''));
-    $base = $configured !== ''
-        ? rtrim($configured, '/\\')
-        : dirname(__DIR__, 3) . '/data/runtime-v280';
-    $dir = $base . '/recruitment-admin';
-    if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
-        throw new RuntimeException('Unable to create the recruitment runtime directory.');
-    }
-    return $dir;
-}
-
-function p2k_recruitment_path(string $name): string
-{
-    return p2k_recruitment_dir() . '/' . $name . '.json';
-}
-
-function p2k_recruitment_read(string $name, array $default = []): array
-{
-    $path = p2k_recruitment_path($name);
-    if (!is_file($path)) return $default;
-    $raw = @file_get_contents($path);
-    if (!is_string($raw) || trim($raw) === '') return $default;
-    $decoded = json_decode($raw, true);
-    return is_array($decoded) ? $decoded : $default;
-}
-
-function p2k_recruitment_write(string $name, array $payload): void
-{
-    $path = p2k_recruitment_path($name);
-    $tmp = $path . '.tmp-' . bin2hex(random_bytes(4));
-    $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
-    if (!is_string($json) || @file_put_contents($tmp, $json . "\n", LOCK_EX) === false || !@rename($tmp, $path)) {
-        @unlink($tmp);
-        throw new RuntimeException('Unable to persist recruitment state.');
-    }
-}
-
-function p2k_recruitment_locked_run(callable $callback): array
-{
-    $lockPath = p2k_recruitment_dir() . '/run.lock';
-    $handle = @fopen($lockPath, 'c+');
-    if (!$handle || !flock($handle, LOCK_EX)) throw new RuntimeException('Unable to lock recruitment state.');
-    try {
-        $run = p2k_recruitment_read('run', []);
-        $next = $callback($run);
-        if (!is_array($next)) throw new RuntimeException('Invalid recruitment state update.');
-        p2k_recruitment_write('run', $next);
-        return $next;
-    } finally {
-        flock($handle, LOCK_UN);
-        fclose($handle);
-    }
-}
+const P2K_RECRUITMENT_MAX_CANDIDATES=100000;
+const P2K_RECRUITMENT_MEMBERSHIP_BATCH_MAX=2000;
+const P2K_RECRUITMENT_CHECKPOINT_MAX=500;
 
 function p2k_recruitment_username(string $raw): string
 {
@@ -239,186 +175,87 @@ function p2k_recruitment_evaluate(array $data, array $criteria): array
     ];
 }
 
-function p2k_recruitment_public_run(array $run, bool $includeCandidates = true, bool $includeResults = true): array
-{
-    if ($run === []) return [];
-    $candidates = array_values((array)($run['candidates'] ?? []));
-    $order = [];
-    foreach ($candidates as $index => $candidate) $order[strtolower((string)$candidate)] = $index;
-    $results = array_values(array_filter((array)($run['results'] ?? []), 'is_array'));
-    usort($results, static function(array $left, array $right) use ($order): int {
-        $a = $order[strtolower((string)($left['username'] ?? ''))] ?? PHP_INT_MAX;
-        $b = $order[strtolower((string)($right['username'] ?? ''))] ?? PHP_INT_MAX;
-        return $a <=> $b;
-    });
-    $selected = count(array_filter($results, static fn(array $row): bool => !empty($row['selected'])));
-    $errors = count(array_filter($results, static fn(array $row): bool => trim((string)($row['data']['error'] ?? '')) !== ''));
-    $job = (new JobRunner(new RecruitmentRunStateReader(static fn(): array => $run)))
-        ->observe((string)($run['id'] ?? ''));
-    $run['summary'] = [
-        'total' => (int)($job['total'] ?? count($candidates)),
-        'checked' => (int)($job['completed'] ?? count($results)),
-        'pending' => (int)($job['checkpoint_backlog'] ?? max(0, count($candidates) - count($results))),
-        'selected' => $selected,
-        'errors' => $errors,
-    ];
-    if ($includeCandidates) $run['candidates'] = $candidates; else unset($run['candidates']);
-    if ($includeResults) $run['results'] = $results; else unset($run['results']);
-    return $run;
-}
 
 try {
     Auth::requireAdmin();
-    $action = strtolower(trim((string)($_GET['action'] ?? 'state')));
-
-    if ($action === 'state') {
-        Http::method('GET');
-        $pool = p2k_recruitment_read('pool', [
-            'schemaVersion'=>P2K_RECRUITMENT_SCHEMA,
-            'revision'=>0,
-            'updatedAt'=>null,
-            'candidates'=>[],
-        ]);
-        $pool['maximumCandidates'] = P2K_RECRUITMENT_MAX_CANDIDATES;
-        Http::json(['ok'=>true,'pool'=>$pool,'run'=>p2k_recruitment_public_run(p2k_recruitment_read('run', []))]);
-    }
-
-    if ($action === 'save-pool') {
-        Http::method('POST');
-        $body = Http::body();
-        $candidates = p2k_recruitment_normalize_pool($body['candidates'] ?? '');
-        $current = p2k_recruitment_read('pool', ['revision'=>0]);
-        $pool = [
-            'schemaVersion'=>P2K_RECRUITMENT_SCHEMA,
-            'revision'=>(int)($current['revision']??0)+1,
-            'updatedAt'=>gmdate(DATE_ATOM),
-            'maximumCandidates'=>P2K_RECRUITMENT_MAX_CANDIDATES,
-            'candidates'=>$candidates,
-        ];
-        p2k_recruitment_write('pool', $pool);
-        Http::json(['ok'=>true,'pool'=>$pool]);
-    }
-
-    if ($action === 'membership-batch') {
-        Http::method('POST');
-        $body = Http::body();
-        $raw = is_array($body['usernames'] ?? null) ? $body['usernames'] : [];
-        if (count($raw) > P2K_RECRUITMENT_MEMBERSHIP_BATCH_MAX) {
-            throw new ApiException('Membership batch exceeds the supported size.', 400, 'MEMBERSHIP_BATCH_TOO_LARGE');
-        }
-        $usernames = [];
-        foreach ($raw as $value) {
-            $username = p2k_recruitment_username((string)$value);
-            if ($username !== '') $usernames[] = $username;
-        }
-        $states = p2k_recruitment_membership_states(PublicReadDatabase::core(), $usernames);
+    $actor=PreviewIsolation::active()?PreviewIsolation::username():(string)($_SESSION['p2k_tp_admin_username']??'administrator');
+    // Do not hold the PHP session lock across SQLite or membership queries.
+    if (session_status()===PHP_SESSION_ACTIVE) session_write_close();
+    $action=strtolower(trim((string)($_GET['action']??'state')));
+    $read=in_array($action,['state','detail','results','csv'],true);
+    Http::method($read?'GET':'POST');
+    if (!$read && PreviewIsolation::active()) throw new ApiException('Candidate preview is read-only.',403,'PREVIEW_READ_ONLY');
+    $body=$read?[]:Http::body();
+    $id=(string)($read?($_GET['id']??''):($body['id']??''));
+    $token=(string)($body['lease']??'');
+    if ($action==='membership-batch') {
+        $raw=is_array($body['usernames']??null)?$body['usernames']:[];
+        if (count($raw)>P2K_RECRUITMENT_MEMBERSHIP_BATCH_MAX) throw new ApiException('Membership batch too large.',400,'MEMBERSHIP_BATCH_TOO_LARGE');
+        $states=p2k_recruitment_membership_states(PublicReadDatabase::core(),$raw);
         Http::json(['ok'=>true,'states'=>$states,'count'=>count($states),'source'=>'green_native_core']);
     }
-
-    if ($action === 'start') {
-        Http::method('POST');
-        $body = Http::body();
-        $pool = p2k_recruitment_read('pool', []);
-        $candidates = array_values((array)($pool['candidates'] ?? []));
-        if ($candidates === []) throw new ApiException('Save at least one candidate before starting a scan.', 400, 'EMPTY_POOL');
-        $requestedCriteria = p2k_recruitment_criteria(is_array($body['criteria'] ?? null) ? $body['criteria'] : []);
-        $run = p2k_recruitment_locked_run(static function(array $existing) use ($candidates, $pool, $requestedCriteria): array {
-            $poolHash = hash('sha256', json_encode(array_map('strtolower', $candidates), JSON_UNESCAPED_SLASHES));
-            $resumable = $existing !== [] && ($existing['poolHash'] ?? '') === $poolHash && !in_array((string)($existing['status'] ?? ''), ['completed','stopped'], true);
-            if ($resumable) { $existing['status'] = 'running'; $existing['updatedAt'] = gmdate(DATE_ATOM); return $existing; }
-            return [
-                'schemaVersion'=>P2K_RECRUITMENT_SCHEMA,
-                'id'=>gmdate('Ymd\THis\Z') . '-' . bin2hex(random_bytes(3)),
-                'status'=>'running','createdAt'=>gmdate(DATE_ATOM),'updatedAt'=>gmdate(DATE_ATOM),
-                'poolRevision'=>(int)($pool['revision']??0),'poolHash'=>$poolHash,'criteria'=>$requestedCriteria,'candidates'=>$candidates,'results'=>[],
-            ];
-        });
-        Http::json(['ok'=>true,'run'=>p2k_recruitment_public_run($run)]);
+    $config=p2k_tp_config();
+    $runtime=rtrim(trim((string)($config['storage']['runtime_dir']??'')),'/\\');
+    if ($runtime==='') $runtime=dirname(__DIR__,3).'/data/runtime-v280';
+    $store=new RecruitmentAnalysisStore($runtime.'/recruitment-admin');
+    $store->migrate('p2k_recruitment_normalize_pool','p2k_recruitment_criteria');
+    if ($action==='state') Http::json(['ok'=>true,'analyses'=>$store->page((string)($_GET['search']??''),(int)($_GET['page']??1))]);
+    if ($action==='detail') Http::json(['ok'=>true,'run'=>$store->detail($id,($_GET['candidates']??'')==='1')]);
+    if ($action==='results') Http::json(['ok'=>true,'results'=>$store->results($id,(string)($_GET['filter']??'all'),(string)($_GET['search']??''),(int)($_GET['page']??1),(int)($_GET['size']??25))]);
+    if (in_array($action,['create','update-draft'],true)) {
+        $criteria=p2k_recruitment_criteria((array)($body['criteria']??[]));
+        $candidates=p2k_recruitment_normalize_pool($body['candidates']??'');
+        $name=(string)($body['name']??'');
+        Http::json(['ok'=>true,'run'=>$action==='create'?$store->create($name,$actor,$criteria,$candidates):$store->updateDraft($id,$name,$criteria,$candidates)]);
     }
-
-    if ($action === 'pause') {
-        Http::method('POST');
-        $run = p2k_recruitment_locked_run(static function(array $run): array {
-            if ($run === []) throw new ApiException('No recruitment run exists.', 404, 'NO_RUN');
-            if (($run['status'] ?? '') !== 'completed') $run['status'] = 'paused';
-            $run['updatedAt'] = gmdate(DATE_ATOM); return $run;
-        });
-        Http::json(['ok'=>true,'run'=>p2k_recruitment_public_run($run, false, false)]);
+    if ($action==='duplicate') Http::json(['ok'=>true,'run'=>$store->duplicate($id,$actor,(string)($body['name']??''))]);
+    if ($action==='resume') Http::json(['ok'=>true]+$store->resume($id));
+    if ($action==='heartbeat') Http::json(['ok'=>true,'run'=>$store->heartbeat($id,$token)]);
+    if ($action==='pause') Http::json(['ok'=>true,'run'=>$store->pause($id,$token)]);
+    if ($action==='retry-errors') Http::json(['ok'=>true,'run'=>$store->retryErrors($id)]);
+    if ($action==='delete') {
+        if (($body['confirm']??false)!==true) throw new ApiException('Explicit deletion confirmation required.',400,'CONFIRM_REQUIRED');
+        $store->delete($id);Http::json(['ok'=>true]);
     }
-
-    if ($action === 'restart') {
-        Http::method('POST'); p2k_recruitment_locked_run(static fn(array $run): array => []); Http::json(['ok'=>true,'run'=>[]]);
-    }
-
-    if ($action === 'checkpoint') {
-        Http::method('POST');
-        $body = Http::body();
-        $runId = trim((string)($body['runId'] ?? ''));
-        if ($runId === '') throw new ApiException('Recruitment run ID is required.', 400, 'RUN_ID_REQUIRED');
-        $incoming = is_array($body['results'] ?? null) ? array_slice($body['results'], 0, P2K_RECRUITMENT_CHECKPOINT_MAX) : [];
-        if ($incoming === []) throw new ApiException('No recruitment results supplied.', 400, 'EMPTY_CHECKPOINT');
-
-        $core = PublicReadDatabase::core();
-        $incomingNames = [];
-        foreach ($incoming as $row) if (is_array($row)) $incomingNames[] = (string)($row['username'] ?? '');
-        $membership = p2k_recruitment_membership_states($core, $incomingNames);
-        $accepted = [];
-
-        $run = p2k_recruitment_locked_run(static function(array $run) use ($incoming, $runId, $membership, &$accepted): array {
-            if ($run === []) throw new ApiException('No recruitment run exists.', 404, 'NO_RUN');
-            if (!hash_equals((string)($run['id'] ?? ''), $runId)) throw new ApiException('The recruitment run changed. Reload before checkpointing more results.', 409, 'RUN_CHANGED');
-            if (($run['status'] ?? '') === 'paused') throw new ApiException('The recruitment run is paused.', 409, 'RUN_PAUSED');
-            if (($run['status'] ?? '') === 'completed') throw new ApiException('The recruitment run is already complete.', 409, 'RUN_COMPLETED');
-
-            $candidateKeys = [];
-            foreach ((array)($run['candidates'] ?? []) as $candidate) $candidateKeys[strtolower((string)$candidate)] = (string)$candidate;
-            $results = is_array($run['results'] ?? null) ? array_values($run['results']) : [];
-            $byKey = [];
-            foreach ($results as $index => $row) if (is_array($row)) $byKey[strtolower((string)($row['username'] ?? ''))] = $index;
-
-            foreach ($incoming as $row) {
-                if (!is_array($row)) continue;
-                $username = p2k_recruitment_username((string)($row['username'] ?? ''));
-                $key = strtolower($username);
-                if ($username === '' || !isset($candidateKeys[$key])) continue;
-                $data = is_array($row['data'] ?? null) ? $row['data'] : [];
-                $safe = [
-                    'daily_rating'=>p2k_recruitment_metric($data,'daily_rating'),'timeout_percent'=>p2k_recruitment_metric($data,'timeout_percent'),
-                    'current_daily_games'=>p2k_recruitment_metric($data,'current_daily_games'),'daily_rd'=>p2k_recruitment_metric($data,'daily_rd'),
-                    'completed_daily_games'=>p2k_recruitment_metric($data,'completed_daily_games'),'avg_seconds_per_move'=>p2k_recruitment_metric($data,'avg_seconds_per_move'),
-                    'last_online_days'=>p2k_recruitment_metric($data,'last_online_days'),'account_age_days'=>p2k_recruitment_metric($data,'account_age_days'),
-                    'p2k_state'=>$membership[$key] ?? 'none','closed'=>!empty($data['closed']),'error'=>trim(substr((string)($data['error']??''),0,500)),
-                ];
-                $evaluation = p2k_recruitment_evaluate($safe, (array)($run['criteria'] ?? []));
-                $record = ['username'=>$candidateKeys[$key],'checkedAt'=>gmdate(DATE_ATOM),'data'=>$safe] + $evaluation;
-                if (isset($byKey[$key])) $results[$byKey[$key]] = $record; else { $byKey[$key] = count($results); $results[] = $record; }
-                $accepted[] = $record;
-            }
-            $run['results'] = $results;
-            if (count($results) >= count((array)($run['candidates'] ?? []))) $run['status'] = 'completed';
-            $run['updatedAt'] = gmdate(DATE_ATOM); return $run;
-        });
-        Http::json(['ok'=>true,'run'=>p2k_recruitment_public_run($run, false, false),'results'=>$accepted]);
-    }
-
-    if ($action === 'csv') {
-        Http::method('GET');
-        $run = p2k_recruitment_read('run', []);
-        if ($run === []) throw new ApiException('No recruitment run exists.', 404, 'NO_RUN');
-        header('Content-Type: text/csv; charset=utf-8'); header('Content-Disposition: attachment; filename="p2k-recruitment-selected.csv"'); header('Cache-Control: no-store');
-        $out = fopen('php://output', 'wb'); if ($out === false) throw new RuntimeException('Unable to open CSV output.');
-        fputcsv($out, ['username','daily_rating','timeout_percent','current_daily_games','daily_rd','completed_daily_games','avg_seconds_per_move','last_online_days','account_age_days','p2k_state','decision_reason'], ',', '"', '');
-        foreach ((array)($run['results'] ?? []) as $row) {
-            if (!is_array($row) || empty($row['selected'])) continue; $d = is_array($row['data'] ?? null) ? $row['data'] : [];
-            fputcsv($out, [$row['username']??'',$d['daily_rating']??'',$d['timeout_percent']??'',$d['current_daily_games']??'',$d['daily_rd']??'',$d['completed_daily_games']??'',$d['avg_seconds_per_move']??'',$d['last_online_days']??'',$d['account_age_days']??'',$d['p2k_state']??'',$row['reason']??''], ',', '"', '');
+    if ($action==='checkpoint') {
+        $incoming=is_array($body['results']??null)?$body['results']:[];
+        if ($incoming===[]||count($incoming)>P2K_RECRUITMENT_CHECKPOINT_MAX) throw new ApiException('Invalid checkpoint batch size.',400,'INVALID_CHECKPOINT');
+        // Reject stale IDs before querying Green, then validate the lease again transactionally.
+        $store->heartbeat($id,$token);
+        $names=[];
+        foreach ($incoming as $row) if(is_array($row)) $names[]=p2k_recruitment_username((string)($row['username']??''));
+        $membership=p2k_recruitment_membership_states(PublicReadDatabase::core(),$names);
+        $accepted=[];
+        foreach ($incoming as $row) {
+            if(!is_array($row)) continue;
+            $username=p2k_recruitment_username((string)($row['username']??''));
+            if($username==='') continue;
+            $data=is_array($row['data']??null)?$row['data']:[];
+            $safe=[];
+            foreach (['daily_rating','timeout_percent','current_daily_games','daily_rd','completed_daily_games','avg_seconds_per_move','last_online_days','account_age_days'] as $field) $safe[$field]=p2k_recruitment_metric($data,$field);
+            $safe+=['p2k_state'=>$membership[strtolower($username)]??'none','closed'=>!empty($data['closed']),'error'=>trim(substr((string)($data['error']??''),0,500))];
+            $accepted[]=['username'=>$username,'data'=>$safe];
         }
-        fclose($out); exit;
+        Http::json(['ok'=>true,'run'=>$store->checkpoint($id,$token,$accepted,'p2k_recruitment_evaluate')]);
     }
-
-    throw new ApiException('Unknown recruitment action.', 404, 'UNKNOWN_ACTION');
+    if ($action==='csv') {
+        $run=$store->detail($id);$selected=($_GET['scope']??'selected')!=='all';
+        $filename='p2k-recruitment-'.substr($run['id'],0,12).'-'.($selected?'selected':'all').'-'.gmdate('Ymd\THis\Z').'.csv';
+        header('Content-Type: text/csv; charset=utf-8');header('Content-Disposition: attachment; filename="'.$filename.'"');header('Cache-Control: private, no-store');
+        $out=fopen('php://output','wb');
+        $fields=['daily_rating','timeout_percent','current_daily_games','daily_rd','completed_daily_games','avg_seconds_per_move','last_online_days','account_age_days','p2k_state','closed','error'];
+        fputcsv($out,array_merge(['analysis_id','username','decision','checked_at_utc'],$fields,['decision_reason']),',','"','');
+        foreach ($store->export($id,$selected) as $row) {
+            $data=$row['data'];$values=[$id,$row['username'],$row['decision'],$row['checkedAt']];
+            foreach($fields as $field) $values[]=$data[$field]??'';
+            $values[]=$row['reason'];fputcsv($out,$values,',','"','');
+        }
+        fclose($out);exit;
+    }
+    throw new ApiException('Unknown recruitment action. Reload the current application.',404,'UNKNOWN_ACTION');
 } catch(ApiException $e) {
-    Http::json(['ok'=>false,'error'=>['code'=>$e->errorCode,'message'=>$e->getMessage()]], $e->httpStatus);
+    Http::json(['ok'=>false,'error'=>['code'=>$e->errorCode,'message'=>$e->getMessage()]],$e->httpStatus);
 } catch(Throwable $e) {
-    error_log('P2K recruitment admin: ' . $e);
-    Http::json(['ok'=>false,'error'=>['code'=>'SERVER_ERROR','message'=>$e->getMessage()]], 500);
+    error_log('P2K recruitment analyses: '.$e);
+    Http::json(['ok'=>false,'error'=>['code'=>'RECRUITMENT_STORAGE_ERROR','message'=>'Recruitment operation failed safely. Check server storage and logs.']],503);
 }
