@@ -44,7 +44,7 @@ final class Transport {
     }
 }
 final class Refresh {
-    public function __construct(public Store $s) {}
+    public function __construct(public Store $s, private ?\Closure $arenaFetch=null) {}
     public function daily(array $e,array $p): void {
         // Preserve independently validated metadata even if scoring fails.
         if (preg_match('~/pub/match/'.preg_quote($e['event_id'],'~').'/?$~D',(string)($p['@id']??''))) {
@@ -60,26 +60,40 @@ final class Refresh {
         $this->s->saveEvent($e,$r,json_encode($p,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));
     }
     public function arena(array $e): void {
-        $page=Transport::get($e['url']);
+        $fetch=$this->arenaFetch??static fn(string $url,int $timeout)=>Transport::get($url,$timeout);
+        $page=$fetch($e['url'],12);
         [$id,$url]=eventRef('arena',$page['url']);
         if($id!==$e['event_id'])throw new RuntimeException('Arena redirect identity mismatch.');
         $html=$page['body'];
-        if(!preg_match('~href=["\x27]([^"\x27]+/download-results)(?:\?[^"\x27]*)?["\x27]~i',$html,$m)){
-            // No confirmed final results link means no scoring, not an empty result.
-            if($e['status']==='finished')throw new RuntimeException('Previously imported arena results unavailable.');
-            $this->s->run('UPDATE events SET status=?,checked=?,due=?,error=? WHERE id=?',['awaiting_results',time(),time()+1800,'No final Results CSV link yet.',$e['id']]);
+        // CWL 0.2.10 uses the canonical /download-results route even when
+        // Chess.com does not render an anchor. Never follow arbitrary HTML links.
+        $csvUrl=rtrim($url,'/').'/download-results';
+        // An explicit, recognized non-final tournament status prevents scoring.
+        // Missing HTML state alone is not proof of an ongoing event.
+        $pending=preg_match('~\bdata-tournament-status=["\x27](?:upcoming|registration|registered|scheduled|in_progress|in-progress|ongoing|started|running)["\x27]~i',$html)===1;
+        if($pending){
+            if($e['status']==='finished')throw new RuntimeException('Previously imported arena now reports non-final status; prior results retained.');
+            $this->s->run('UPDATE events SET status=?,checked=?,due=?,error=? WHERE id=?',['awaiting_results',time(),time()+1800,'Arena is not finished yet.',$e['id']]);
             return;
         }
-        $csvUrl=html_entity_decode($m[1],ENT_QUOTES|ENT_HTML5,'UTF-8');
-        if(str_starts_with($csvUrl,'/'))$csvUrl='https://www.chess.com'.$csvUrl;
-        [$csvId]=eventRef('arena',$csvUrl);
-        if($csvId!==$e['event_id'])throw new RuntimeException('Results CSV belongs to another arena.');
-        $r=Transport::get($csvUrl,12);$parsed=arenaResult($r['body']);
+        // The public results endpoint is the final CSV source of record.
+        // Do not use live HTML scores, HTML error bodies or player-only exports.
+        // Honor the same conservative inter-request spacing as the CWL scraper.
+        if($this->arenaFetch===null)usleep(1000000);
+        try{
+            $r=$fetch($csvUrl,18);
+        }catch(\Throwable $x){
+            throw new RuntimeException('Official Results CSV download failed: '.$x->getMessage(),(int)$x->getCode(),$x);
+        }
+        [$csvId,$csvArena]=eventRef('arena',$r['url']);
+        if($csvId!==$id||$csvArena!==$url||!str_ends_with(rtrim((string)parse_url($r['url'],PHP_URL_PATH),'/'),'/download-results'))throw new RuntimeException('Official Results CSV redirected outside the validated arena endpoint.');
+        try{$parsed=arenaResult($r['body'],true);}catch(\Throwable $x){throw new RuntimeException('Official Results CSV validation failed: '.$x->getMessage(),0,$x);}
         // An empty Team France attribution after a previously nonempty import
         // is ambiguous; do not silently wipe the season contribution.
         if($parsed['rows']===[]&&$this->s->one('SELECT 1 FROM results WHERE event_id=? LIMIT 1',[$e['id']]))throw new RuntimeException('Team France rows disappeared; review CSV.');
         $name=$e['name']?:'Arena #'.$id;
         if(preg_match('~<title[^>]*>(.*?)</title>~is',$html,$title))$name=trim(html_entity_decode(strip_tags($title[1]),ENT_QUOTES|ENT_HTML5,'UTF-8'))?:$name;
+        $parsed['evidence']['source_url']=$csvUrl;
         $this->s->saveEvent($e,$parsed+['name'=>$name,'status'=>'finished'],$r['body']);
         $this->s->run('UPDATE events SET url=? WHERE id=?',[$url,$e['id']]);
     }

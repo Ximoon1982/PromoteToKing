@@ -154,32 +154,50 @@ function matchResult(array $payload,string $id,array $previous=[]): array {
     if ($finished&&$games===[]&&(int)($payload['boards']??0)>0) throw new RuntimeException('Finished match has no verified game results.');
     return ['name'=>$name,'status'=>$finished?'finished':'in_progress','rows'=>$rows,'evidence'=>['games'=>$games,'ours'=>$removedO,'other'=>$removedT,'official_delta_x100'=>$delta,'double_removed_games'=>$doubleRemoved]];
 }
-function arenaResult(string $csv): array {
+function arenaResult(string $csv,bool $official=false): array {
     if (strlen($csv)>12000000||str_contains(substr(ltrim($csv),0,100),'<')) throw new RuntimeException('Invalid arena CSV.');
     $csv=preg_replace('/^\xEF\xBB\xBF/','',$csv)??$csv;
     $fp=fopen('php://temp','r+');fwrite($fp,$csv);rewind($fp);
-    $first=fgets($fp);rewind($fp);
-    $counts=[','=>substr_count((string)$first,','),';'=>substr_count((string)$first,';'),"\t"=>substr_count((string)$first,"\t")];arsort($counts);$sep=(string)key($counts);
-    $map=null;$rows=[];$count=0;$clubRows=0;
+    // Official MCA exports contain two tables, in either order. Determine the
+    // delimiter from the player header, not a title or first one-cell row.
+    $sep=',';
+    foreach(preg_split('/\r\n|\n|\r/',$csv) as $line){
+        foreach([',',';',"\t"] as $candidate){
+            $h=array_map(static fn($v)=>strtolower(trim((string)$v)),str_getcsv($line,$candidate,'"',''));
+            if(in_array('username',$h,true)&&in_array('club',$h,true)&&in_array('score',$h,true)){$sep=$candidate;break 2;}
+        }
+    }
+    $map=null;$clubMap=null;$rows=[];$count=0;$clubRows=0;$officialClubs=0;$seenHeader=false;
     try {
         while (($r=fgetcsv($fp,0,$sep,'"',''))!==false) {
             if ($r===[null]||trim(implode('',array_map('strval',$r)))==='') continue;
             $h=array_map(static fn($s)=>strtolower(trim((string)$s)),$r);
-            if (in_array('username',$h,true)&&in_array('club',$h,true)&&in_array('score',$h,true)) {$map=array_flip($h);continue;}
+            if (in_array('username',$h,true)&&in_array('club',$h,true)&&in_array('score',$h,true)) {$map=array_flip($h);$clubMap=null;$seenHeader=true;continue;}
+            if (in_array('club',$h,true)&&!in_array('username',$h,true)&&(in_array('points',$h,true)||in_array('score',$h,true))) {
+                $clubMap=array_flip($h);$map=null;continue;
+            }
+            // Section labels are not data.
+            if(count(array_filter($h,static fn($v)=>$v!==''))===1&&in_array($h[0],['player results','club results'],true)){$map=null;$clubMap=null;continue;}
+            if($clubMap!==null){
+                $club=trim((string)($r[$clubMap['club']]??''));$score=trim((string)($r[$clubMap['points']??$clubMap['score']]??''));
+                if($club!==''&&is_numeric($score)&&(float)$score>=0)$officialClubs++;
+                else throw new RuntimeException('Invalid official Club Results row.');
+                continue;
+            }
             if ($map===null) continue;
-            if (in_array('club',$h,true)&&in_array('score',$h,true)&&!in_array('username',$h,true)) break;
             if (count($r)<=max($map['username'],$map['club'],$map['score'])) throw new RuntimeException('Truncated arena CSV row.');
             $u=userKey($r[$map['username']]);$score=str_replace(',','.',trim((string)$r[$map['score']]));
             if ($u===''||!is_numeric($score)||!is_finite((float)$score)||(float)$score<0) throw new RuntimeException('Invalid arena participant row.');
             $count++;
             if (clubKey($r[$map['club']])!==CLUB) continue;
-                        $clubRows++;
+            $clubRows++;
             $rows[$u]??=['username'=>trim((string)$r[$map['username']]),'points'=>0];
             $rows[$u]['points']+=(int)round((float)$score*100);
         }
     } finally {fclose($fp);}
-    if ($map===null||$count===0) throw new RuntimeException('Missing official Player Results table.');
-    return ['rows'=>$rows,'evidence'=>['player_rows'=>$count,'club_rows'=>$clubRows]];
+    if (!$seenHeader||$count===0) throw new RuntimeException('Missing official Player Results table.');
+    if ($official&&$officialClubs===0) throw new RuntimeException('Official Results CSV lacks Club Results.');
+    return ['rows'=>$rows,'evidence'=>['player_rows'=>$count,'club_rows'=>$clubRows,'official_club_rows'=>$officialClubs]];
 }
 final class Store {
     public PDO $db;
