@@ -1,0 +1,25 @@
+name: Team France match 1809308 diagnostic
+on:
+  push:
+    branches: [release/v2.16.1]
+    paths: ['tests/tf_match_1809308_probe.php', '.github/workflows/tf-match-1809308-probe.yml']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: curl
+          coverage: none
+      - run: php tests/tf_match_1809308_probe.php
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tf-match-1809308
+          path: tf-match-1809308*.json
+          if-no-files-found: error
+          retention-days: 7
