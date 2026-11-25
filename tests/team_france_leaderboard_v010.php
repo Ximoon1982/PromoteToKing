@@ -31,6 +31,15 @@ $match=['@id'=>'https://api.chess.com/pub/match/20201111','name'=>'Team France t
 'team2'=>['@id'=>'https://api.chess.com/pub/club/other','players'=>[
 ['username'=>'OpponentA','board'=>'https://api.chess.com/pub/match/20201111/board/1'],['username'=>'OpponentB','board'=>2]]]
 ]];
+
+$flat=$match;
+foreach($flat['teams']['team1']['players'] as &$p){foreach($p['results'] as $k=>$v)$p[$k]=$v;unset($p['results']);}unset($p);
+check(matchResult($flat,'20201111')['rows']['alice']['points']===150,'Real match flat result fields');
+$void=$flat;$void['status']='finished';$void['teams']['team1']['score']=0;$void['teams']['team2']['score']=0;$void['teams']['team1']['players']=[['username'=>'Registered']];$void['teams']['team2']['players']=[['username'=>'Other']];
+check(matchResult($void,'20201111')['evidence']['void']===true,'Void zero-zero registration-only match');
+$double=$flat;$double['teams']['team1']['fair_play_removals']=['Alice'];$double['teams']['team2']['fair_play_removals']=['OpponentA'];$double['teams']['team1']['score']=1;
+$d=matchResult($double,'20201111');check($d['rows']['alice']['points']===0&&$d['evidence']['official_delta_x100']===100&&$d['evidence']['double_removed_games']===2,'Double Fair Play removal reconciled without awarding excluded player points');
+$double['teams']['team1']['score']=2;rejects(fn()=>matchResult($double,'20201111'),'Unexplained discrepancy rejected');
 $m=matchResult($match,'20201111');
 check($m['rows']['alice']['points']===150&&$m['rows']['bob']['points']===0,'Raw match points');
 $corrected=$match;$corrected['teams']['team2']['fair_play_removals']=['OpponentA'];$corrected['teams']['team1']['score']=2;

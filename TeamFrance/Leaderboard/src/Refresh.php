@@ -46,6 +46,15 @@ final class Transport {
 final class Refresh {
     public function __construct(public Store $s) {}
     public function daily(array $e,array $p): void {
+        // Preserve independently validated metadata even if scoring fails.
+        if (preg_match('~/pub/match/'.preg_quote($e['event_id'],'~').'/?$~D',(string)($p['@id']??''))) {
+            $teams=is_array($p['teams']??null)?$p['teams']:[];
+            foreach ($teams as $t) if (is_array($t)&&clubKey($t['@id']??$t['url']??'')===CLUB) {
+                $name=trim((string)($p['name']??''));
+                if ($name!=='') $this->s->run('UPDATE events SET name=? WHERE id=?',[$name,$e['id']]);
+                break;
+            }
+        }
         $prior=json_decode($e['evidence'],true)?:[];
         $r=matchResult($p,$e['event_id'],$prior);
         $this->s->saveEvent($e,$r,json_encode($p,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));

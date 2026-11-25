@@ -55,13 +55,13 @@ try {
         $kind=(string)($_GET['kind']??'daily');$season=(int)($_GET['season']??0);$q=trim((string)($_GET['q']??''));$page=max(1,(int)($_GET['page']??1));$size=25;
         if($kind==='players'){
             $args=['%'.$q.'%','%'.$q.'%'];$where=' WHERE (username_key LIKE ? OR display LIKE ?)';
-            $count=(int)$s->run('SELECT COUNT(*) FROM players'.$where,$args)->fetchColumn();
+            $count=(int)$s->run('SELECT COUNT(*) FROM players'.$where,$args)->fetchColumn();$page=min($page,max(1,(int)ceil($count/$size)));
             $rows=$s->rows('SELECT username_key,display,stable_id,account_status,verified,due,error FROM players'.$where.' ORDER BY username_key LIMIT 25 OFFSET '.(($page-1)*$size),$args);
         }else{
             if(!in_array($kind,['daily','arena'],true))$kind='daily';
             $where=' WHERE e.kind=? AND (e.name LIKE ? OR e.event_id LIKE ?)';$args=[$kind,'%'.$q.'%','%'.$q.'%'];
             if($season){$where.=' AND e.season_id=?';$args[]=$season;}
-            $count=(int)$s->run('SELECT COUNT(*) FROM events e'.$where,$args)->fetchColumn();
+            $count=(int)$s->run('SELECT COUNT(*) FROM events e'.$where,$args)->fetchColumn();$page=min($page,max(1,(int)ceil($count/$size)));
             $rows=$s->rows('SELECT e.id,e.event_id,e.name,e.kind,e.season_id,e.url,e.status,e.checked,e.due,e.error,e.source_hash,s.name season,(SELECT COUNT(*) FROM results r WHERE r.event_id=e.id) participants,(SELECT COALESCE(SUM(points),0)/100.0 FROM results r WHERE r.event_id=e.id) points FROM events e JOIN seasons s ON s.id=e.season_id'.$where.' ORDER BY e.id DESC LIMIT 25 OFFSET '.(($page-1)*$size),$args);
         }
         reply(['ok'=>true,'csrf'=>$a['csrf'],'username'=>$a['username'],'seasons'=>$s->seasons(),'rows'=>$rows,'total'=>$count,'page'=>$page,'pages'=>max(1,(int)ceil($count/$size)),'progress'=>$r->progress(),'counts'=>['events'=>(int)$s->run('SELECT COUNT(*) FROM events')->fetchColumn(),'players'=>(int)$s->run('SELECT COUNT(*) FROM players')->fetchColumn(),'excluded'=>(int)$s->run("SELECT COUNT(*) FROM players WHERE account_status IN ('closed:fair_play_violations','closed:fair_play','closed:cheating')")->fetchColumn()]]);

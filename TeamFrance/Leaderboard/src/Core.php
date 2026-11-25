@@ -83,6 +83,14 @@ function matchResult(array $payload,string $id,array $previous=[]): array {
     $finished=in_array($status,['finished','complete','completed'],true);
     if (!$finished&&!in_array($status,['in_progress','ongoing','started'],true)) throw new RuntimeException('Unrecognized match status.');
     if (!is_array($ours['players']??null)||!is_array($other['players']??null)) throw new RuntimeException('Incomplete match lineups.');
+    // A finished 0–0 without physical boards is void, even when the API retains registration rows.
+    if ($finished&&is_numeric($ours['score']??null)&&is_numeric($other['score']??null)&&(float)$ours['score']===0.0&&(float)$other['score']===0.0&&empty($previous['games'])) {
+        $assigned=false;
+        foreach (array_merge($ours['players'],$other['players']) as $p) {
+            if (!is_array($p)||boardKey($p)!==''||!empty($p['played_as_white'])||!empty($p['played_as_black'])||!empty($p['results'])) {$assigned=true;break;}
+        }
+        if (!$assigned) return ['name'=>$name,'status'=>'finished','rows'=>[],'evidence'=>['games'=>[],'ours'=>[],'other'=>[],'void'=>true]];
+    }
     $removedO=array_values(array_unique(array_merge($previous['ours']??[],removalKeys((array)($ours['fair_play_removals']??[])))));
     $removedT=array_values(array_unique(array_merge($previous['other']??[],removalKeys((array)($other['fair_play_removals']??[])))));
     $opp=[];$seen=[];$games=[];$prior=$previous['games']??[];
@@ -103,7 +111,7 @@ function matchResult(array $payload,string $id,array $previous=[]): array {
         foreach (['played_as_white','played_as_black'] as $side) {
             $key=$b.':'.$side;$old=$prior[$key]??null;
             if ($old&&$old['user']!==$u) throw new RuntimeException('Board identity changed; review required.');
-            $v=$p['results'][$side]??'';
+            $v=$p[$side]??$p['results'][$side]??'';
             if (!is_string($v)) throw new RuntimeException('Malformed game result.');
             $raw=rawPoints($v);
             $op=$opp[$b]??($old['opp']??'');
@@ -122,16 +130,21 @@ function matchResult(array $payload,string $id,array $previous=[]): array {
         if (!in_array($g['user'],$removedO,true)&&!in_array($g['opp'],$removedT,true)) throw new RuntimeException('Previously observed game missing; previous results retained.');
         $games[$key]=$g;
     }
-    $rows=[];$total=0;
+    $rows=[];$total=0;$doubleRemoved=0;
     foreach ($games as $g) {
-        $effective=in_array($g['user'],$removedO,true)?0:(in_array($g['opp'],$removedT,true)?100:$g['raw']);
+        $ownRemoved=in_array($g['user'],$removedO,true);$oppRemoved=in_array($g['opp'],$removedT,true);
+        if ($ownRemoved&&$oppRemoved) $doubleRemoved++;
+        $effective=$ownRemoved?0:($oppRemoved?100:$g['raw']);
         $u=$g['user'];$rows[$u]??=['username'=>$g['display'],'points'=>0];$rows[$u]['points']+=$effective;$total+=$effective;
     }
     $score=$ours['score']??null;
     if (!is_numeric($score)&&$finished) throw new RuntimeException('Official finished match score is missing.');
-    if (is_numeric($score)&&abs($total-(int)round((float)$score*100))>0) throw new RuntimeException('Reconstructed points differ from official match score; previous results retained.');
+    $delta=is_numeric($score)?(int)round((float)$score*100)-$total:null;
+    // Chess.com may award half a point per game on a double-removal board.
+    // P2K's own-side removal rule still gives the excluded player zero.
+    if ($delta!==null&&$delta!==0&&($doubleRemoved===0||$delta!==50*$doubleRemoved)) throw new RuntimeException('Reconstructed points differ from official match score; previous results retained.');
     if ($finished&&$games===[]&&(int)($payload['boards']??0)>0) throw new RuntimeException('Finished match has no verified game results.');
-    return ['name'=>$name,'status'=>$finished?'finished':'in_progress','rows'=>$rows,'evidence'=>['games'=>$games,'ours'=>$removedO,'other'=>$removedT]];
+    return ['name'=>$name,'status'=>$finished?'finished':'in_progress','rows'=>$rows,'evidence'=>['games'=>$games,'ours'=>$removedO,'other'=>$removedT,'official_delta_x100'=>$delta,'double_removed_games'=>$doubleRemoved]];
 }
 function arenaResult(string $csv): array {
     if (strlen($csv)>12000000||str_contains(substr(ltrim($csv),0,100),'<')) throw new RuntimeException('Invalid arena CSV.');
