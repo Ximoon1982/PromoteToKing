@@ -43,3 +43,12 @@ for(const [kind,other] of [['daily','arena'],['arena','daily']]){
  assert.equal(ctx.state[kind].expanded,false);assert.equal(ctx.state[kind].page,1);
 }
 console.log('PASS: exclusive expansion, retained season and page, internal profile return, collapse.');
+
+for(const kind of ['daily','arena']){
+ const seasons=[{id:1,name:'2026',archived:0},{id:2,name:'2025',archived:1}];
+ ctx.ui.renderSection(kind,{season:seasons[1],seasons,rows:[],page:1,total:0,pages:1});
+ const options=document.getElementById(kind).querySelector('select').children;
+ assert.deepEqual(Array.from(options,x=>x.textContent),['2026','2025']);
+ assert.equal(document.getElementById(kind).querySelector('select').value,'2');
+}
+console.log('PASS: archived season names remain unmodified in both public selectors.');

@@ -15,10 +15,11 @@ if(in_array('--live',$argv,true)){
  $s->saveSeason(['kind'=>'daily','name'=>'Test']);$s->assign(['season_id'=>1,'references'=>$id]);
  (new Refresh($s))->daily($s->one('SELECT * FROM events'),$p);
  $e=$s->one('SELECT * FROM events');$v=json_decode($e['evidence'],true);
- verify($e['status']==='finished'&&count($v['verified_summary_mismatch_boards'])===2&&$v['official_delta_x100']===200,'Actual board-proven summary mismatch');
+ verify($e['status']==='finished'&&in_array($v['official_delta_x100'],[0,200],true),'Actual summary either corrected or board-verifiable');
+ verify(count($v['verified_summary_mismatch_boards'])===($v['official_delta_x100']===200?2:0),'Proof required exactly when discrepancy persists');
  verify((float)$s->run('SELECT SUM(points)/100.0 FROM results')->fetchColumn()===107.5,'Actual score 107.5');
  foreach($v['verified_summary_mismatch_boards'] as $b)verify(is_file($s->dir.'/sources/'.$b['source_hash']),'Board evidence archived');
- echo "PASS: actual 1809308, 97 boards, 107.5 points, official summary delta +2, board evidence archived.\n";
+ echo "PASS: actual 1809308, 97 boards, 107.5 points, official summary delta ".($v['official_delta_x100']/100).", proof archived if needed.\n";
 }else{
  $p=['@id'=>'https://api.chess.com/pub/match/'.$id,'status'=>'finished','boards'=>2,'teams'=>[
  ['@id'=>'https://api.chess.com/pub/club/team-france','score'=>4,'fair_play_removals'=>['Own'],'players'=>[['username'=>'Own','board'=>1,'played_as_white'=>'win','played_as_black'=>'win'],['username'=>'Alice','board'=>2,'played_as_white'=>'resigned','played_as_black'=>'checkmated']]],

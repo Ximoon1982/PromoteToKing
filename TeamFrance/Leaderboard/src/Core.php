@@ -418,7 +418,7 @@ PRAGMA user_version=1;");
         if($kind==='player')$this->run('UPDATE players SET error=?,due=? WHERE username_key=?',[$message,time()+$delay,$item]);
         else $this->run('UPDATE events SET error=?,due=? WHERE id=?',[$message,time()+$delay,(int)$item]);
     }
-    public function seasons(): array {return $this->rows('SELECT s.*, (SELECT COUNT(*) FROM events e WHERE e.season_id=s.id) AS event_count FROM seasons s ORDER BY kind,is_default DESC,archived,id DESC');}
+    public function seasons(): array {return $this->rows("SELECT s.*, (SELECT COUNT(*) FROM events e WHERE e.season_id=s.id) AS event_count, CASE WHEN s.kind='daily' THEN (SELECT COUNT(*) FROM events e WHERE e.season_id=s.id AND e.kind='daily' AND e.status='in_progress') ELSE NULL END AS ongoing_count FROM seasons s ORDER BY kind,is_default DESC,archived,id DESC");}
     public function leaderboard(int $season,bool $includeUnranked=false): array {
         $s=$this->one('SELECT archived FROM seasons WHERE id=?',[$season]);
         if($s&&(int)$s['archived']){

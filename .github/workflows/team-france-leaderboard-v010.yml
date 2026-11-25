@@ -40,6 +40,7 @@ jobs:
           php tests/team_france_match_summary.php
           php tests/team_france_match_summary.php --live
           php tests/team_france_frozen_seasons.php
+          php tests/team_france_season_recap.php
           bash tests/team_france_leaderboard_export_http.sh
           node tests/team_france_arena_discovery.cjs
           node tests/team_france_player_info.cjs
@@ -50,7 +51,7 @@ jobs:
       - name: Verify installation, idempotency, preservation and refusal
         run: |
           set -euo pipefail
-          package="$RUNNER_TEMP/installer/P2K_TeamFrance_Leaderboard_v0.1.0_Full_Frozen_Seasons_SSH_Installer"
+          package="$RUNNER_TEMP/installer/P2K_TeamFrance_Leaderboard_v0.1.0_Full_Season_Recap_SSH_Installer"
           stage="$(mktemp -d)"
           mkdir -p "$stage/TeamFrance/MatchAnalyzer" "$stage/TeamFrance/Widget/data" "$stage/TGP/Widget/data"
           git show 9a604f768818691fa16fdb63d4dc418d4930d2b4:TeamFrance/home.html > "$stage/TeamFrance/home.html"
@@ -67,7 +68,7 @@ jobs:
           grep -Fxq 'keep-team-france' "$stage/TeamFrance/Widget/data/showcase.json"
           grep -Fxq 'keep-tgp' "$stage/TGP/Widget/data/showcase.json"
           cmp "$stage/TeamFrance/home.html" TeamFrance/home.html
-          for sha in a37e344c185bb17ea5c187687281798e15503760 ef236d06a3eaf22f61ccf355fcf5fef2f7cb82c6 9e5e7db900231600025d00cb3dd6ae4de1707004 2c3a508eba36d4199d9893c10399c834a0d11a18 b38247b0737c72ffe576c6ab68be523d19795f57 41e4890805a84168d9a304fbed819c9b48462c1d b03147c0aa46c96d5f50565844b05e41fd968fbe bd80b4d37ee835c4b194bfa2089d00dcd8a76b86 9e7a691b1f577ba83e5b1d4ac820a6df321ae6bd f9fd011c4adabe6f36794aacf0e0890a6f78d62f 28776713f4377c012a15cba4e0de9815cfb349a3; do
+          for sha in a37e344c185bb17ea5c187687281798e15503760 ef236d06a3eaf22f61ccf355fcf5fef2f7cb82c6 9e5e7db900231600025d00cb3dd6ae4de1707004 2c3a508eba36d4199d9893c10399c834a0d11a18 b38247b0737c72ffe576c6ab68be523d19795f57 41e4890805a84168d9a304fbed819c9b48462c1d b03147c0aa46c96d5f50565844b05e41fd968fbe bd80b4d37ee835c4b194bfa2089d00dcd8a76b86 9e7a691b1f577ba83e5b1d4ac820a6df321ae6bd f9fd011c4adabe6f36794aacf0e0890a6f78d62f 28776713f4377c012a15cba4e0de9815cfb349a3 8fd7eae439212d006069c29432472f85dc96d455; do
             upgrade="$(mktemp -d)"
             git archive "$sha" TeamFrance/Leaderboard TeamFrance/home.html TeamFrance/MatchAnalyzer/auth.php | tar -x -C "$upgrade"
             php -r 'require $argv[1]."/TeamFrance/Leaderboard/src/Core.php";$s=new \TeamFrance\Leaderboard\Store($argv[1]."/TeamFrance/Leaderboard/data");$s->saveSeason(["kind"=>"daily","name"=>"Existing season"]);$s->assign(["season_id"=>1,"references"=>"1982828"]);$s->archive("preserve CSV");' "$upgrade"
@@ -85,7 +86,7 @@ jobs:
           echo 'PASS: standalone install, persistent database, sources, widgets and divergent-hub refusal'
       - uses: actions/upload-artifact@v4
         with:
-          name: P2K_TeamFrance_Leaderboard_v0.1.0_Full_Frozen_Seasons_SSH_Installer
+          name: P2K_TeamFrance_Leaderboard_v0.1.0_Full_Season_Recap_SSH_Installer
           path: ${{ runner.temp }}/installer/
           include-hidden-files: true
           if-no-files-found: error

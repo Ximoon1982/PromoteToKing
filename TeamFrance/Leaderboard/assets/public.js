@@ -24,7 +24,7 @@ function avatar(row,large=false){
 function eventLabel(kind,n){n=Number(n)||0;return fmt.format(n)+(kind==='daily'?(n===1?' match':' matchs'):(n===1?' arène':' arènes'))}
 function renderSection(kind,section){
  const node=$(kind),select=node.querySelector('select'),rank=node.querySelector('.ranking'),pager=node.querySelector('.pager'),s=state[kind];s.id=section.season?.id||0;s.page=section.page;
- select.replaceChildren();for(const season of section.seasons){const o=el('option',season.name+(Number(season.archived)?' · archives':''));o.value=season.id;select.append(o)}if(!section.seasons.length){const o=el('option','Aucune saison');o.value='0';select.append(o)}select.value=String(s.id);select.disabled=!section.seasons.length;
+ select.replaceChildren();for(const season of section.seasons){const o=el('option',season.name);o.value=season.id;select.append(o)}if(!section.seasons.length){const o=el('option','Aucune saison');o.value='0';select.append(o)}select.value=String(s.id);select.disabled=!section.seasons.length;
  rank.classList.toggle('expanded',s.expanded);rank.replaceChildren();pager.replaceChildren();
  for(const row of section.rows){
   const r=el('div',undefined,'rank-row');r.append(el('span',String(row.rank),'rank medal'+row.rank));
