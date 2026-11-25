@@ -465,14 +465,14 @@
 
   async function runScan(claim) {
     const run=claim.run,pending=claim.pending||[],generation=++scanGeneration;
-    activeScan=true;adminState.run=run;
+    activeScan=true;adminState.run={...adminState.run,...run};
     const controller=new AbortController();
     const control={id:run.id,lease:claim.lease,pauseRequested:false,controller,failure:null};
     scanControl=control;scanAbortController=controller;
     const buffer=[];let chain=Promise.resolve(),inFlight=0,stopped=false,heartbeatBusy=false;
     const fail=error=>{if(!control.failure)control.failure=error;controller.abort();};
     const leaseBody={id:control.id,lease:control.lease};
-    function updateRun(meta){if(adminState.run?.id===meta?.id){adminState.run={...adminState.run,...meta};renderRun();}}
+    function updateRun(meta){if(adminState.run?.id===meta?.id&&Number(meta?.summary?.checked||0)>=Number(adminState.run?.summary?.checked||0)&&!(adminState.run?.status==="completed"&&meta.status!=="completed")){adminState.run={...adminState.run,...meta};renderRun();}}
     const flush=(force=false)=>{
       while(buffer.length>=CHECKPOINT_BATCH||(force&&buffer.length)){
         const batch=buffer.splice(0,Math.min(CHECKPOINT_BATCH,buffer.length));inFlight++;
@@ -492,7 +492,7 @@
       if(stopped||heartbeatBusy||control.failure||adminState.run?.status==="completed")return;
       heartbeatBusy=true;
       try{const payload=await server("heartbeat",{method:"POST",body:leaseBody});if(!stopped&&adminState.run?.status!=="completed")updateRun(payload.run);}
-      catch(error){if(!stopped&&adminState.run?.status!=="completed")fail(error);}
+      catch(error){if(!stopped&&adminState.run?.status!=="completed"){try{const fresh=await server("detail",{params:{id:run.id}});if(fresh.run?.status==="completed")updateRun(fresh.run);else fail(error);}catch(_){fail(error);}}}
       finally{heartbeatBusy=false;}
     },30000);
     const periodic=setInterval(()=>{if(!control.failure)flush(true);},8000);
@@ -605,7 +605,7 @@
     if(!host||host.hidden)return;
     let mount=$("p2kRecruitmentNativeHost");
     if(!mount||mount.parentElement!==host){mount?.remove();mount=document.createElement("div");mount.id="p2kRecruitmentNativeHost";mount.className="dashboard-admin-native-detail-host";host.replaceChildren(mount);detailMounted=false;}
-    if(!detailMounted||!$("p2kRecruitmentNative")){detailMounted=true;mount.innerHTML=recruitmentMarkup();bindRecruitment();loadList().catch(error=>setStatus(`Unable to load Recruitment analyses: ${error.message||error}`,true));if(adminState.run){if(!activeScan)void guarded(()=>openAnalysis(adminState.run.id));else{renderRun();void loadResults().catch(()=>{});}}}
+    if(!detailMounted||!$("p2kRecruitmentNative")){detailMounted=true;mount.innerHTML=recruitmentMarkup();bindRecruitment();loadList().catch(error=>setStatus(`Unable to load Recruitment analyses: ${error.message||error}`,true));if(adminState.run){if(!activeScan)void guarded(()=>openAnalysis(adminState.run.id));else{const run=adminState.run;if($("recruitmentName"))$("recruitmentName").value=run.name;if($("recruitmentCandidates"))$("recruitmentCandidates").value=(run.candidates||[]).join("\n");applyCriteria(run.criteria);renderRun();void loadResults().catch(()=>{});}}}
   }
 
   function reconcile(){

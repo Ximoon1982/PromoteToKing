@@ -1,0 +1,67 @@
+name: P2K 2.16.2 recruitment analyses qualification and package
+on:
+  push:
+    branches: [release/v2.16.2]
+    paths:
+      - 'assets/js/pages/v2-11-0.js'
+      - 'assets/js/site-config.js'
+      - 'ui-v2.html'
+      - 'server/team-points/public/recruitment-admin.php'
+      - 'server/team-points/src/RecruitmentAnalysisStore.php'
+      - 'tests/recruitment_analyses_v2162.py'
+      - 'tools/build-p2k-v2162-recruitment-analyses.py'
+      - '.github/workflows/p2k-v2162-recruitment-analyses.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, curl
+          coverage: none
+      - name: Syntax and exact scope
+        run: |
+          node --check assets/js/pages/v2-11-0.js
+          node --check assets/js/site-config.js
+          php -l server/team-points/public/recruitment-admin.php
+          php -l server/team-points/src/RecruitmentAnalysisStore.php
+          python3 -m py_compile tests/recruitment_analyses_v2162.py tools/build-p2k-v2162-recruitment-analyses.py
+          git diff --stat 5b66f1aa3ac86e6e57c6cc350bd676ece8bca37b HEAD
+      - name: Recruitment real PHP SQLite and browser regression
+        run: |
+          python3 -m pip install --user --break-system-packages playwright
+          python3 tests/recruitment_analyses_v2162.py
+      - name: Retest detailed match analysis security and rendering
+        run: python3 tests/match_assistant_detailed_analysis_v2162.py
+      - name: Build and validate Release Control candidate
+        run: |
+          python3 tools/build-p2k-v2162-recruitment-analyses.py
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $m=(new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]))->validate(); if($m["version"]!=="2.16.2" || $m["overlay_file_count"]!==13)exit(2); echo "PASS ".$m["release_id"].PHP_EOL;' dist/P2K_2.16.2_Recruitment_Analyses_RC
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-v2162-recruitment-analyses-rc
+          path: |
+            dist/P2K_2.16.2_Recruitment_Analyses_RC_*.zip
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
+      - name: Recover exact tested source
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/recovered"
+          git archive HEAD assets/js/pages/v2-11-0.js assets/js/site-config.js ui-v2.html server/team-points/public/recruitment-admin.php server/team-points/src/RecruitmentAnalysisStore.php server/team-points/src/ApiException.php server/team-points/src/Http.php tests/recruitment_analyses_v2162.py tools/build-p2k-v2162-recruitment-analyses.py | tar -xf - -C "$RUNNER_TEMP/recovered"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p2k-v2162-recruitment-source
+          path: ${{ runner.temp }}/recovered/
+          if-no-files-found: error
+          retention-days: 7
