@@ -1,6 +1,6 @@
 "use strict";
 const assert=require("node:assert/strict");
-const {Bench,PLAN,parseNames,connectionCap,MAX_MS,POST_TIMEOUT,MAX_OUTSTANDING,MAX_POSTS,curlPeak,throttleDiagnostics}=require("../assets/js/pages/oauth-performance-lab.js");
+const {Bench,PLAN,DIAGNOSTIC_PLAN,concurrencyExposure,diagnosticSummary,parseNames,connectionCap,MAX_MS,POST_TIMEOUT,MAX_OUTSTANDING,MAX_POSTS,curlPeak,throttleDiagnostics}=require("../assets/js/pages/oauth-performance-lab.js");
 const names=Array.from({length:12000},(_,i)=>"fixture-"+i);
 const plan=(name,settings={})=>({name,batch:8,posts:2,workers:24,headroom:1.35,admissionMs:90,drainMs:100,...settings});
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
@@ -23,7 +23,7 @@ function fixture({status=200,omit=false,hang=false,delay=5}={}){
   const f=fixture(),b=new Bench({names,seed:123,post:f.post,plan:[plan("A"),plan("B",{posts:3})],maxMs:1000,postTimeout:200});
   const result=await b.run();assert.equal(result.stop_reason,null);assert(result.scenarios.every(s=>s.status==="completed"&&s.successful>0&&s.submitted===s.received+s.deferred));
   assert.equal(result.scenarios[0].controller_end.target,40);assert.equal(result.scenarios[1].controller_start.target,40);assert(f.peak<=3);
-  assert(!JSON.stringify(result).includes("fixture-"));assert(result.scenarios[0].successful_cps>0);assert.equal(result.benchmark_revision,7);
+  assert(!JSON.stringify(result).includes("fixture-"));assert(result.scenarios[0].successful_cps>0);assert.equal(result.benchmark_revision,8);
   assert(result.scenarios.every(s=>s.admission_received+s.drain_received===s.received&&s.admission_successful+s.drain_successful===s.successful&&s.server_p95_ms===5&&s.outside_server_p95_ms>=0));
   // Reproduce the old premature drain abort: a valid POST ends well after the former drain deadline.
   const slow=fixture({delay:140}),fast=fixture({delay:5});let late;
@@ -132,5 +132,30 @@ function fixture({status=200,omit=false,hang=false,delay=5}={}){
   const pressured=await new Bench({names,seed:55,post:pressurePost,plan:[plan("Pressure",{role:"probe",batch:8,posts:3,maxOutstanding:32,admissionMs:500,sampleMs:70,maxOutsideMs:1})],maxMs:1000,postTimeout:200}).run();
   assert.equal(pressured.boundary.kind,"gateway-pressure");assert.equal(pressured.scenarios[0].status,"limited");assert.equal(pressured.scenarios[0].rate429,0);assert(pressured.scenarios[0].admission_elapsed_ms<500);
   console.log("PASS adaptive saturation, distinct endpoint concurrency, fixed-rate validation, no inferred API boundary, measured cross-POST cURL peak, first-429 probe termination and cooldown recovery");
+  // Diagnostic exposure: 12 overlapping intervals, completion-before-start ties,
+  // and a known area/time denominator. Incomplete interval coverage is not qualified.
+  const intervals=Array.from({length:12},(_,i)=>[1000+i*10,2000+i*10]);
+  const exposure=concurrencyExposure([{curl_intervals_ms:intervals}],2000);
+  assert.equal(exposure.peak,12);assert.equal(exposure.admissions_above_10,2);assert.equal(exposure.above_10_ms,910);assert.equal(exposure.phase_admission_cps,6);assert.equal(exposure.mean_active,12000/1110);
+  assert.equal(concurrencyExposure([{curl_intervals_ms:[[0,100],[100,200]]}],200).peak,1);
+  const row=(cap,pairs,received=12)=>({config:{role:"diagnostic",name:String(cap),endpoint:"stats",fixedRate:10,maxOutstanding:cap,minAdmissionMs:20},status:"completed",elapsed_ms:1200,admission_elapsed_ms:1000,received,successful:received,batches:[{curl_intervals_ms:pairs}],rate429:0,deferred:0,transient:0,missing:0,throttle_episodes:0});
+  const lowIntervals=Array.from({length:12},(_,i)=>[1000+i*100,1050+i*100]);
+  const matched=diagnosticSummary([row(8,lowIntervals),row(32,intervals)]);assert(matched.stats_pair_rates_matched&&matched.matched_stats_pair&&matched.clean_above_10);
+  assert.equal(diagnosticSummary([row(32,intervals,13)]).phases[0].status,"not-qualified");assert.equal(diagnosticSummary([row(8,lowIntervals),{...row(32,intervals),elapsed_ms:4000}]).matched_stats_pair,false);
+  assert.deepEqual(DIAGNOSTIC_PLAN.map(c=>[c.endpoint,c.fixedRate,c.maxOutstanding]),[["profile",10,32],["stats",10,8],["stats",10,32],["profile",20,48],["stats",20,60],["mixed",23,64]]);
+  assert(DIAGNOSTIC_PLAN.reduce((n,c)=>n+c.admissionMs,0)+POST_TIMEOUT<MAX_MS);
+  let diagnosticBench,diagnosticActive=0,diagnosticPeak=0;const diagnosticUrls=new Set(),roles=new Map();
+  const diagnosticPlan=DIAGNOSTIC_PLAN.map(c=>({...c,admissionMs:100,minAdmissionMs:70,drainMs:100,sampleMs:40}));
+  const diagnosticPost=async body=>{
+    const cfg=diagnosticBench.phase.m.config;assert.equal(body.rate_cps,cfg.fixedRate);assert.equal(body.traffic_class,"foreground");diagnosticActive+=body.requests.length;diagnosticPeak=Math.max(diagnosticActive,diagnosticPeak);assert(diagnosticActive<=cfg.maxOutstanding);
+    for(const req of body.requests){const kind=req.url.endsWith("/stats")?"stats":req.url.endsWith("/games")?"games":"profile";assert(cfg.endpoint==="mixed"||kind===cfg.endpoint);assert(!diagnosticUrls.has(req.url));diagnosticUrls.add(req.url);const name=req.url.split("/player/")[1].split("/")[0];assert(!roles.has(name)||roles.get(name)===cfg.name);roles.set(name,cfg.name);}
+    const t=Date.now();try{await wait(10);return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:18,observed_launch_cps:10,observed_clean_cps:10},median_latency_ms:200,p95_latency_ms:400,gateway_timing:{curl_intervals_ms:body.requests.map((r,i)=>[t+i/100,t+10+i/100])},results:body.requests.map(r=>({id:r.id,status:200,elapsed_ms:200,json:{status:"basic"}}))};}finally{diagnosticActive-=body.requests.length;}
+  };
+  diagnosticBench=new Bench({names,seed:55,post:diagnosticPost,plan:diagnosticPlan,maxMs:2200,postTimeout:100});
+  const diagnostic=await diagnosticBench.run();assert.equal(diagnostic.mode,"rate-concurrency");assert.equal(diagnostic.stop_reason,null);assert(diagnostic.scenarios.every(s=>s.status==="completed"&&s.received>0&&s.peak_outstanding_requests<=s.config.maxOutstanding));assert(diagnostic.diagnostic.phases.every(x=>x.interval_coverage===1));assert.equal(diagnosticActive,0);assert(diagnosticPeak>10);assert(!JSON.stringify(diagnostic).includes("fixture-"));
+  // Any 429 ends the diagnostic, including later phases. All active POSTs drain.
+  let stoppedBench,started=0,returned=0;const stopPost=async body=>{const n=++started;await wait(n===1?5:25);returned++;return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:18,cooldown_remaining_ms:n===1?2000:0},results:body.requests.map((r,i)=>({id:r.id,status:n===1&&i===0?429:200,json:{status:"basic"},elapsed_ms:100}))};};
+  stoppedBench=new Bench({names,seed:98,post:stopPost,plan:diagnosticPlan,maxMs:2200,postTimeout:100});const diagnosticStopped=await stoppedBench.run();assert.match(diagnosticStopped.stop_reason,/Diagnostic stopped/);assert.equal(diagnosticStopped.scenarios[0].rate429,1);assert(diagnosticStopped.scenarios.slice(1).every(s=>s.submitted===0));assert.equal(started,returned);assert.equal(diagnosticStopped.active_posts,0);
+  console.log("PASS diagnostic fixed ceilings, endpoint isolation, cap protection, cohort isolation, measured exposure, qualified matched pair and first-throttle drain");
   console.log("PASS plan deadline, parsing, concurrency, aggregate metrics, no repeated URLs, controller carry-over, 429 coalescing, isolated recovery, repeated episode stop, deferred response accounting, omitted result stop, late valid POST drain without overlap, adaptive admission budget, actual POST timeout, pending diagnostics, manual stop, early timer callbacks, shared paced gateway with slow POST, global request caps, fair endpoint service, low-rate admission, timing metrics, no credentials or usernames in export");
 })().catch(e=>{console.error(e);process.exit(1)});

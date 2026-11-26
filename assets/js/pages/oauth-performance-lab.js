@@ -11,6 +11,15 @@
     ["Adaptive saturation probe","probe",16,6,192,1.35,140000,85000,96],
     ["Fixed-rate validation","validate",16,6,192,1.35,90000,45000,96]
   ].map(([name,role,batch,posts,workers,headroom,admissionMs,minAdmissionMs,maxOutstanding])=>Object.freeze({name,role,batch,posts,workers,headroom,admissionMs,minAdmissionMs,maxOutstanding,drainMs:DRAIN_RESERVE_MS,sampleMs:8000,minValidationMs:30000,recoveryMs:role==="probe"?60000:0})));
+  // Same endpoint/rate with two workload caps isolates concurrency better than endpoint mix alone.
+  const DIAGNOSTIC_PLAN=Object.freeze([
+    ["A · Profile 10/s","profile",10,32,8,4],
+    ["B · Statistics 10/s · cap 8","stats",10,8,2,4],
+    ["C · Statistics 10/s · cap 32","stats",10,32,8,4],
+    ["D · Profile 20/s","profile",20,48,8,6],
+    ["E · Statistics 20/s","stats",20,60,8,6],
+    ["F · Mixed 23/s","mixed",23,64,8,6]
+  ].map(([name,endpoint,fixedRate,maxOutstanding,batch,posts])=>Object.freeze({name,role:"diagnostic",endpoint,fixedRate,maxOutstanding,batch,posts,workers:192,headroom:1.35,admissionMs:30000,minAdmissionMs:20000,drainMs:DRAIN_RESERVE_MS,sampleMs:8000})));
   const $=id=>document.getElementById(id);
   const finite=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
   const q=(values,p)=>{const a=values.slice().sort((x,y)=>x-y);return a.length?a[Math.floor((a.length-1)*p)]:null;};
@@ -43,13 +52,35 @@
     events.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);let active=0,peak=0;for(const e of events){active+=e[1];peak=Math.max(peak,active);}
     return {peak:measured?peak:null,measured};
   }
+  function concurrencyExposure(batches,elapsedMs){
+    const intervals=batches.flatMap(b=>b.curl_intervals_ms||[]).filter(x=>Array.isArray(x)&&x.length===2&&x.every(Number.isFinite)&&x[1]>x[0]);
+    const starts=intervals.map(x=>x[0]).sort((a,b)=>a-b),events=intervals.flatMap(([a,b])=>[[a,1],[b,-1]]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+    let active=0,peak=0,above=0,area=0,highLaunches=0,previous=events[0]?.[0]??0,max5=0,left=0;
+    const histogram={};
+    for(const [t,delta] of events){const dt=t-previous;area+=active*dt;if(active>10)above+=dt;previous=t;active+=delta;peak=Math.max(peak,active);if(delta===1){increment(histogram,active);if(active>10)highLaunches++;}}
+    for(let i=0;i<starts.length;i++){while(starts[i]-starts[left]>=5000)left++;max5=Math.max(max5,i-left+1);}
+    const span=events.length?events.at(-1)[0]-events[0][0]:0;
+    return {measured:intervals.length,peak:intervals.length?peak:null,mean_active:span?area/span:null,measured_span_ms:span,above_10_ms:above,above_10_fraction:span?above/span:null,admissions_above_10:highLaunches,admissions_by_active_handles:histogram,phase_admission_cps:elapsedMs>0?intervals.length/(elapsedMs/1000):null,max_rolling_5s_admission_cps:span>=5000?max5/5:null};
+  }
+  function diagnosticSummary(rows){
+    const phases=rows.filter(m=>m.config.role==="diagnostic").map(m=>{
+      const x=concurrencyExposure(m.batches,m.elapsed_ms),coverage=m.received>0?x.measured/m.received:null,rate=x.phase_admission_cps,utilization=rate===null?null:rate/m.config.fixedRate;
+      const clean=m.status==="completed"&&!m.rate429&&!m.deferred&&!m.transient&&!m.missing&&!m.throttle_episodes&&coverage===1&&m.admission_elapsed_ms>=(m.config.minAdmissionMs??20000);
+      return {name:m.config.name,endpoint:m.config.endpoint,caller_ceiling_cps:m.config.fixedRate,outstanding_cap:m.config.maxOutstanding,admission_seconds:m.admission_elapsed_ms/1000,received:m.received,successful:m.successful,rate429:m.rate429,deferred:m.deferred,interval_coverage:coverage,rate_utilization:utilization,status:clean?(utilization>=.8?"clean":"clean-underfed"):m.status==="completed"?"not-qualified":m.status,...x};
+    });
+    const low=phases.find(x=>x.endpoint==="stats"&&x.outstanding_cap===8),high=phases.find(x=>x.endpoint==="stats"&&x.caller_ceiling_cps===10&&x.outstanding_cap===32);
+    const clean=x=>x&&["clean","clean-underfed"].includes(x.status);
+    const ratesMatched=clean(low)&&clean(high)&&Math.abs(low.phase_admission_cps-high.phase_admission_cps)<=Math.max(low.phase_admission_cps,high.phase_admission_cps)*.1;
+    const matched=ratesMatched&&low.peak<=8&&high.admissions_above_10>0;
+    return {phases,stats_pair_rates_matched:!!ratesMatched,matched_stats_pair:!!matched,clean_above_10:phases.some(x=>clean(x)&&x.admissions_above_10>0),interpretation:"A clean run above ten admitted cURL handles argues against a strict client-side handle cap, not an upstream processing limit. Compare actual rates and exposures; unmatched or underfed phases do not establish an upstream boundary."};
+  }
   function throttleDiagnostics(rows){
     const batches=rows.flatMap(m=>m.batches),intervals=batches.flatMap(b=>b.curl_intervals_ms.map(x=>({start:x[0],end:x[1],endpoint:b.endpoint})));
     const first=intervals.reduce((n,x)=>Math.min(n,x.start),Infinity);
     return batches.flatMap(b=>b.throttle_events||[]).map(e=>({...e,observed_history_ms:Math.max(0,e.response_ms-first),windows:[1,5,10,30,60].map(seconds=>{
       const a=intervals.filter(x=>x.start>e.response_ms-seconds*1000&&x.start<=e.response_ms);
       return {seconds,admissions:a.length,by_endpoint:Object.fromEntries(["profile","stats","games"].map(k=>[k,a.filter(x=>x.endpoint===k).length])),complete_benchmark_window:first<=e.response_ms-seconds*1000};
-    }),active_handles_at_response:intervals.filter(x=>x.start<=e.response_ms&&x.end>e.response_ms).length}));
+    }),active_handles_at_launch:intervals.filter(x=>x.start<=e.launch_ms&&x.end>e.launch_ms).length,active_handles_at_response:intervals.filter(x=>x.start<=e.response_ms&&x.end>e.response_ms).length}));
   }
   function newMetrics(config){
     return {config:{...config},status:"not run",elapsed_ms:0,admission_elapsed_ms:0,drain_elapsed_ms:0,submitted:0,received:0,successful:0,admission_received:0,admission_successful:0,rate429:0,throttle_episodes:0,deferred:0,transient:0,permanent:0,missing:0,
@@ -104,7 +135,7 @@
         const elapsedMs=phase.elapsed(),admissionMs=Math.min(phase.admissionClosedAt??m.config.admissionMs,elapsedMs);
         return summary({...m,elapsed_ms:elapsedMs,admission_elapsed_ms:admissionMs,drain_elapsed_ms:Math.max(0,elapsedMs-admissionMs),controller_end:this.controller});
       });
-      return {format:"p2k-oauth-lab-v1",benchmark_revision:7,boundary:this.boundary??{kind:"not-observed",detail:"No limiting signal established yet"},validation:this.validationSummary(scenarios),throttle_events:this.running?[]:throttleDiagnostics(scenarios),throttle_episodes:this.totalEpisodes,cooldown_remaining_ms:Math.max(0,Math.ceil(this.cooldownUntil-this.now())),post_timeout_ms:this.postTimeout,max_outstanding_requests:MAX_OUTSTANDING,started_at:this.wallStarted?new Date(this.wallStarted).toISOString():null,elapsed_ms:Math.min(ms,this.maxMs),actual_elapsed_ms:ms,limit_ms:this.maxMs,sample_count:this.names.length,sample_seed:this.seed,unique_candidates_used:this.cursor,stop_reason:this.reason||null,controller:this.controller,active_posts:pending.length,active_requests:pending.reduce((n,r)=>n+r.requests,0),oldest_active_post_ms:pending[0]?.age_ms??null,active_post_details:pending,current_phase:this.phase?.m.config.name||null,phase_stage:this.phase?(this.phase.admitting?(this.throttleActive?"cooldown":"admitting"):"draining"):null,running:this.running,scenarios,notes:["Direct gateway comparison with normal server canonical cache ingestion; no browser cache lookups, Green checks, automatic retries or recruitment persistence.","Probe adapts queued workload and endpoint-specific concurrency; it does not override the shared launch clock. After an isolated 429, optional controlled recovery lets the shared controller converge below its unsafe boundary; rate increases are held for 60 seconds after upstream cooldown, and final validation fixes its caller ceiling after recovery. A clean validation does not prove a maximum.","Server cURL intervals measure admitted handles across returned batches, not TCP sockets or on-wire concurrency. A stopped batch may be missing from the peak.","Controller state is shared and not reset between scenarios; observed rate counts confirmed cURL admissions over a sustained fixed window, not reserved slots.","Isolated rate-limit episodes drain already-admitted POSTs and honor cooldown; a second distinct episode or eight real 429s ends admission and drains safely. Deferred (not launched) results are separate from API completions and are never retried by this lab.","Overall success/completion rates use total scenario wall time including drain; admission rates count only results delivered before admission closes.","Gateway timings separate cURL acquisition (including rate-slot coordination) from canonical cache ingestion. Reservation call duration includes all work in the coordinator call, not just lock waiting. Browser POST wall time minus reported multiGet time is unaccounted overhead, not a direct queue measurement.","At most six PHP POSTs and 96 outstanding requests; lower learned rates further shrink workload. Independent endpoint latency models and lane balancing prevent slow statistics batches from starving fast work. Phases use distinct candidate cohorts.","Drain reserve is a planning budget, not an independent timeout. Every admitted POST retains its own timeout, subject to the overall deadline; phases never overlap.","Unreturned results are not counted as completed; upstream requests may continue after client abort.","Throttle diagnostics count only returned benchmark cURL intervals, not other token users or upstream sliding windows; partial windows are flagged. Only request metadata and aggregate counts exported; no tokens, CSRF, candidate usernames or response bodies."]};
+      return {format:"p2k-oauth-lab-v1",benchmark_revision:8,mode:this.plan.some(c=>c.role==="diagnostic")?"rate-concurrency":"saturation",diagnostic:this.running?null:(this.plan.some(c=>c.role==="diagnostic")?diagnosticSummary(scenarios):null),boundary:this.boundary??{kind:"not-observed",detail:"No limiting signal established yet"},validation:this.validationSummary(scenarios),throttle_events:this.running?[]:throttleDiagnostics(scenarios),throttle_episodes:this.totalEpisodes,cooldown_remaining_ms:Math.max(0,Math.ceil(this.cooldownUntil-this.now())),post_timeout_ms:this.postTimeout,max_outstanding_requests:MAX_OUTSTANDING,started_at:this.wallStarted?new Date(this.wallStarted).toISOString():null,elapsed_ms:Math.min(ms,this.maxMs),actual_elapsed_ms:ms,limit_ms:this.maxMs,sample_count:this.names.length,sample_seed:this.seed,unique_candidates_used:this.cursor,stop_reason:this.reason||null,controller:this.controller,active_posts:pending.length,active_requests:pending.reduce((n,r)=>n+r.requests,0),oldest_active_post_ms:pending[0]?.age_ms??null,active_post_details:pending,current_phase:this.phase?.m.config.name||null,phase_stage:this.phase?(this.phase.admitting?(this.throttleActive?"cooldown":"admitting"):"draining"):null,running:this.running,scenarios,notes:["Direct gateway comparison with normal server canonical cache ingestion; no browser cache lookups, Green checks, automatic retries or recruitment persistence.","Probe adapts queued workload and endpoint-specific concurrency; it does not override the shared launch clock. After an isolated 429, optional controlled recovery lets the shared controller converge below its unsafe boundary; rate increases are held for 60 seconds after upstream cooldown, and final validation fixes its caller ceiling after recovery. A clean validation does not prove a maximum.","Server cURL intervals measure admitted handles across returned batches, not TCP sockets or on-wire concurrency. A stopped batch may be missing from the peak.","Controller state is shared and not reset between scenarios; observed rate counts confirmed cURL admissions over a sustained fixed window, not reserved slots.","Isolated rate-limit episodes drain already-admitted POSTs and honor cooldown; a second distinct episode or eight real 429s ends admission and drains safely. Deferred (not launched) results are separate from API completions and are never retried by this lab.","Overall success/completion rates use total scenario wall time including drain; admission rates count only results delivered before admission closes.","Gateway timings separate cURL acquisition (including rate-slot coordination) from canonical cache ingestion. Reservation call duration includes all work in the coordinator call, not just lock waiting. Browser POST wall time minus reported multiGet time is unaccounted overhead, not a direct queue measurement.","At most six PHP POSTs and 96 outstanding requests; lower learned rates further shrink workload. Independent endpoint latency models and lane balancing prevent slow statistics batches from starving fast work. Phases use distinct candidate cohorts.","Drain reserve is a planning budget, not an independent timeout. Every admitted POST retains its own timeout, subject to the overall deadline; phases never overlap.","Unreturned results are not counted as completed; upstream requests may continue after client abort.","Throttle diagnostics count only returned benchmark cURL intervals, not other token users or upstream sliding windows; partial windows are flagged. Only request metadata and aggregate counts exported; no tokens, CSRF, candidate usernames or response bodies.","Diagnostic mode uses fixed caller ceilings and fixed outstanding caps; the shared coordinator may admit less. Single-endpoint phases query only their endpoint. Stop and drain on the first actual 429 or shared cooldown; no subsequent diagnostic load. Matched statistics pair requires clean interval coverage, observed rates within 10%, and distinct low/high handle exposure."]};
     }
     recordBoundary(event){
       if(!this.boundary||["not-observed","workload-or-transport-limited","interrupted"].includes(this.boundary.kind))this.boundary=event;
@@ -135,7 +166,7 @@
           if(cfg.role==="probe"&&this.boundary){this.metrics[i].status="skipped";this.metrics[i].limit_reason="Limit signal during warm-up";continue;}
           const remaining=Math.floor(this.maxMs-this.elapsed()-reserve(cfg));
           if(remaining<minimum(cfg)){this.reason="Remaining time insufficient for another scenario and its POST timeout reserve";break;}
-          const futureMinimum=this.plan.slice(i+1).reduce((n,c)=>n+minimum(c)+reserve(c),0);
+          const futureMinimum=this.plan.slice(i+1).reduce((n,c)=>n+minimum(c)+(cfg.role==="diagnostic"?0:reserve(c)),0);
           cfg.plannedAdmissionMs=cfg.admissionMs;cfg.admissionMs=Math.min(cfg.admissionMs,Math.max(minimum(cfg),remaining-futureMinimum));cfg.drainMs=reserve(cfg);
           await this.runPhase(this.metrics[i]);
           if(cfg.role==="probe"&&!this.boundary){const last=this.metrics[i].windows.at(-1);this.boundary={kind:this.reason?"interrupted":last&&last.observed_cps<last.target_cps*.8?"workload-or-transport-limited":"not-observed",detail:this.reason?"Probe interrupted before establishing a limiting signal: "+this.reason:"Probe budget ended without an upstream limit signal; the maximum sustainable rate is not established."};}
@@ -164,6 +195,7 @@
         const postLimit=()=>Math.min(MAX_POSTS,cfg.posts,adaptive?LEVELS[p.level][0]:cfg.posts);
         const hardCap=()=>Math.min(MAX_OUTSTANDING,cfg.maxOutstanding??cfg.batch*cfg.posts,adaptive?LEVELS[p.level][1]:MAX_OUTSTANDING);
         if(cfg.role==="validate")m.offered_rate_cps=Math.max(1,Math.min(this.controller?.target??30,this.boundary?.kind==="upstream-throttling"?(this.controller?.target??30):(this.bestClean||this.controller?.target||30)));
+        if(cfg.role==="diagnostic")m.offered_rate_cps=cfg.fixedRate;
         const ceiling=()=>m.offered_rate_cps??RATE_CEILING;
         const target=()=>Math.min(ceiling(),this.controller?.target??30);
         // Bound queued launch work to three seconds even during saturation or backoff.
@@ -185,7 +217,7 @@
         const put=enqueue.bind(this);
         const feed=()=>{
           while(open()&&p.candidates.size<cfg.workers&&this.cursor<this.names.length){
-            const candidate={name:this.names[this.cursor++],remaining:0};p.candidates.set(candidate.name,candidate);m.candidates_started++;put(candidate,"profile");
+            const candidate={name:this.names[this.cursor++],remaining:0};p.candidates.set(candidate.name,candidate);m.candidates_started++;put(candidate,cfg.role==="diagnostic"&&cfg.endpoint!=="mixed"?cfg.endpoint:"profile");
           }
           m.peak_queued=Math.max(m.peak_queued,queued());
         };
@@ -226,7 +258,7 @@
             const status=finite(row.status),latency=finite(row.elapsed_ms),ep=m.by_endpoint[e.kind];
             if(row.deferred===true){
               m.deferred++;ep.deferred++;batch.deferred++;retryDelay=Math.max(retryDelay,retryMs(row.headers?.["retry-after"]));
-              if(e.kind==="profile")complete(e.candidate);else if(--e.candidate.remaining===0)complete(e.candidate);
+              if(e.kind==="profile"||(cfg.role==="diagnostic"&&cfg.endpoint!=="mixed"))complete(e.candidate);else if(--e.candidate.remaining===0)complete(e.candidate);
               continue;
             }
             m.received++;batch.received++;if(deliveredDuringAdmission)m.admission_received++;ep.received++;increment(m.statuses,status);increment(ep.statuses,status);increment(batch.statuses,status);
@@ -238,7 +270,8 @@
             else m.permanent++;
             if(status===401||status===403)unauthorized=true;
             const candidate=e.candidate;
-            if(e.kind==="profile"){
+            if(cfg.role==="diagnostic"&&cfg.endpoint!=="mixed")complete(candidate);
+            else if(e.kind==="profile"){
               if(ok){
                 let profile=row.json;
                 if(!profile&&typeof row.body==="string"){try{profile=JSON.parse(row.body);}catch(_){}}
@@ -255,7 +288,9 @@
             if(!this.throttleActive){this.throttleActive=true;this.totalEpisodes++;m.throttle_episodes++;}
             this.cooldownUntil=Math.max(this.cooldownUntil,this.now()+Math.max(2000,retryDelay,c.cooldown_remaining_ms,finite(payload.retry_after_seconds)*1000));
             if(batch429&&cfg.role)this.recordBoundary({kind:"upstream-throttling",detail:"Actual HTTP 429 observed; shared controller backed off. No exact API limit inferred.",phase:cfg.role,at_ms:Math.round(this.elapsed()),controller:c});
-            if(this.totalEpisodes>=2||this.total429>=8){
+            if(cfg.role==="diagnostic"){
+              p.stopAfterDrain="Diagnostic stopped on HTTP 429 or shared cooldown; no further load applied";m.limit_reason=p.stopAfterDrain;closeAdmission(true);
+            }else if(this.totalEpisodes>=2||this.total429>=8){
               p.stopAfterDrain="Persistent HTTP 429 / shared rate cooldown; admission stopped to protect the API";
               closeAdmission(true);
             }else if(batch429&&cfg.role&&cfg.role!=="validate"){
@@ -282,9 +317,9 @@
           m.windows.push({start_ms:lastSample,end_ms:Math.round(now),completed,successful:success,completed_cps:completed/(span/1000),target_cps:target(),observed_cps:observed,clean_cps:clean,proven_cps:proven,posts:postLimit(),outstanding_cap:requestCap(),outside_p95_ms:outside,post_p95_ms:post95,slow_endpoint:slowEndpoint,pressure,throttled:bad||this.throttleActive});
           lastSample=now;
           if(!bad&&!pressure&&!this.throttleActive&&recent.length&&proven>0)this.bestClean=Math.max(this.bestClean,proven);
-          if(adaptive&&p.pressureWindows>=2){
+          if((adaptive||cfg.role==="diagnostic")&&p.pressureWindows>=2){
             this.recordBoundary({kind:"gateway-pressure",detail:"Repeated endpoint or gateway latency pressure; stopped expanding workload rather than forcing API throttling.",phase:cfg.role,at_ms:Math.round(this.elapsed())});
-            this.loadLevel=Math.max(0,p.level-1);m.limit_reason="Persistent gateway latency pressure";closeAdmission(true);return;
+            this.loadLevel=Math.max(0,p.level-1);m.limit_reason="Persistent gateway latency pressure";if(cfg.role==="diagnostic")p.stopAfterDrain=m.limit_reason;closeAdmission(true);return;
           }
           if((cfg.role==="probe"||cfg.role==="recover")&&!this.throttleActive&&!bad&&!pressure&&recent.length&&queued()>0&&p.level<LEVELS.length-1&&observed<target()*.9){p.level++;this.loadLevel=p.level;recordLevel();schedule();}
           p.sampleTimer=setTimeout(sample,cfg.sampleMs??8000);
@@ -353,7 +388,7 @@
     }
   }
   // Export only deterministic engine pieces for local regression tests.
-  const engine=Object.freeze({Bench,PLAN,parseNames,connectionCap,summary,curlPeak,throttleDiagnostics,MAX_MS,POST_TIMEOUT,MAX_OUTSTANDING,MAX_POSTS});
+  const engine=Object.freeze({Bench,PLAN,DIAGNOSTIC_PLAN,concurrencyExposure,diagnosticSummary,parseNames,connectionCap,summary,curlPeak,throttleDiagnostics,MAX_MS,POST_TIMEOUT,MAX_OUTSTANDING,MAX_POSTS});
   if(typeof module!=="undefined"&&module.exports){module.exports=engine;return;}
   if(typeof document==="undefined")return;
   let auth=null,bench=null,verifying=false,starting=false,displayTimer=null,report=null;
@@ -382,7 +417,13 @@
     return auth;
   }
   function render(){
-    const snap=bench?bench.snapshot():report;const rows=snap?.scenarios||PLAN.map(c=>summary(newMetrics(c)));
+    const snap=bench?bench.snapshot():report;const rows=snap?.scenarios||($("mode").value==="rate-concurrency"?DIAGNOSTIC_PLAN:PLAN).map(c=>summary(newMetrics(c)));
+    $("saturation-description").hidden=(snap?.mode??$("mode").value)==="rate-concurrency";
+    $("diagnostic-results").hidden=snap?.mode!=="rate-concurrency";
+    if(snap?.mode==="rate-concurrency"&&snap.diagnostic){
+      $("diagnostic-note").textContent=snap.diagnostic.interpretation+" Matched statistics pair: "+(snap.diagnostic.matched_stats_pair?"yes":"no")+". Clean exposure above ten handles: "+(snap.diagnostic.clean_above_10?"yes":"not demonstrated")+".";
+      $("diagnostic-rows").replaceChildren();for(const d of snap.diagnostic.phases){const tr=document.createElement("tr");for(const v of [d.name,fmt(d.caller_ceiling_cps),d.outstanding_cap,fmt(d.phase_admission_cps),d.peak??"—",fmt(d.mean_active),fmt(d.above_10_ms/1000),d.admissions_above_10,d.rate429,d.status]){const td=document.createElement("td");td.textContent=v;tr.appendChild(td);}$("diagnostic-rows").appendChild(tr);}
+    }else if(snap?.mode==="rate-concurrency"){$("diagnostic-rows").replaceChildren();$("diagnostic-note").textContent="Detailed concurrency exposure will be calculated after drain.";}
     $("rows").replaceChildren();
     for(const m of rows){
       const tr=document.createElement("tr"),c=m.config,values=[c.name,c.batch,c.posts,c.maxOutstanding??MAX_OUTSTANDING,c.workers,c.headroom,m.elapsed_ms?fmt(m.admission_elapsed_ms/1000):"—",m.elapsed_ms?fmt(m.drain_elapsed_ms/1000):"—",m.elapsed_ms?fmt(m.admission_successful_cps):"—",m.elapsed_ms?fmt(m.successful_cps):"—",m.elapsed_ms?fmt(m.completed_cps):"—",m.rate429,m.deferred,m.throttle_episodes,fmt(m.median_ms,0),fmt(m.p95_ms,0),fmt(m.post_median_ms,0)+" / "+fmt(m.post_p95_ms,0),fmt(m.server_p95_ms,0),fmt(m.acquisition_p95_ms,0),fmt(m.cache_ingest_p95_ms,0),fmt(m.reservation_call_p95_ms,0),fmt(m.outside_server_p95_ms,0),fmt(m.controller_end?.target),fmt(m.controller_end?.observed_launch_cps),fmt(m.controller_end?.safe),m.peak_posts,m.peak_outstanding_requests,m.peak_curl_across_posts??"—",m.offered_rate_cps===null?"adaptive":fmt(m.offered_rate_cps),m.status];
@@ -391,7 +432,7 @@
     $("bars").replaceChildren();const ranked=rows.filter(m=>m.status==="completed"&&m.config.name!=="Warm-up"&&!m.rate429&&!m.deferred&&!m.throttle_episodes),max=Math.max(1,...ranked.map(m=>m.successful_cps));
     for(const m of ranked){const row=document.createElement("div");row.className="barrow";const name=document.createElement("span");name.textContent=m.config.name;const bar=document.createElement("div");bar.className="bar";bar.style.width=(100*m.successful_cps/max)+"%";const rate=document.createElement("span");rate.textContent=fmt(m.successful_cps)+" req/s";row.append(name,bar,rate);$("bars").append(row);}
     if(snap){
-      $("boundary").textContent=snap.boundary.detail;$("validation").textContent=["clean-window","clean-underfed"].includes(snap.validation?.status)?fmt(snap.validation.successful_cps)+" success/s over "+fmt(snap.validation.clean_admission_seconds,0)+" s clean admission ("+(snap.validation.status==="clean-underfed"?"underfed; ":"")+"not a proven maximum)":snap.validation?.status??"Not run";
+      $("boundary").textContent=snap.boundary.detail;$("validation").textContent=snap.mode==="rate-concurrency"?"Not applicable to this mode":["clean-window","clean-underfed"].includes(snap.validation?.status)?fmt(snap.validation.successful_cps)+" success/s over "+fmt(snap.validation.clean_admission_seconds,0)+" s clean admission ("+(snap.validation.status==="clean-underfed"?"underfed; ":"")+"not a proven maximum)":snap.validation?.status??"Not run";
       const phaseRow=rows.find(m=>m.config.name===snap.current_phase);const load=phaseRow?.workload_steps.at(-1);$("workload").textContent=load?load.posts+" POSTs / "+load.outstanding_cap+" requests":"—";$("curlpeak").textContent=Math.max(0,...rows.map(m=>m.peak_curl_across_posts??0))||"—";
       const sec=Math.min(300,Math.floor(snap.elapsed_ms/1000));$("elapsed").textContent=sec+" / 300 s";$("progress").value=sec;
       $("phase").textContent=snap.current_phase||"—";$("success").textContent=rows.reduce((n,m)=>n+m.successful,0).toLocaleString();$("limits").textContent=rows.reduce((n,m)=>n+m.rate429,0);$("rate").textContent=snap.controller?fmt(snap.controller.target)+" /s":"—";$("observed").textContent=snap.controller?fmt(snap.controller.observed_launch_cps)+" /s":"—";$("safe").textContent=snap.controller?fmt(snap.controller.safe)+" /s":"—";$("episodes").textContent=snap.throttle_episodes;$("posts").textContent=snap.active_posts;
@@ -418,24 +459,26 @@
       const execute=async lock=>{
         if(lock===null)throw Error("Another benchmark is running in this browser.");
         const seed=crypto.getRandomValues(new Uint32Array(1))[0]||1;
-        bench=new Bench({names:parsed.names,seed,post,transport:auth.transport,onUpdate:()=>{}});
-        $("names").disabled=$("confirm").disabled=true;report=null;
+        bench=new Bench({names:parsed.names,seed,post,transport:auth.transport,plan:$("mode").value==="rate-concurrency"?DIAGNOSTIC_PLAN:PLAN,onUpdate:()=>{}});
+        $("names").disabled=$("confirm").disabled=$("mode").disabled=true;report=null;
         displayTimer=setInterval(render,500);
         const promise=bench.run();render();report=await promise;render();
       };
       if(navigator.locks?.request)await navigator.locks.request("p2k-oauth-performance-lab",{ifAvailable:true},execute);
       else await execute(undefined);
     }catch(error){$("status").textContent=error.message||"Benchmark failed.";}
-    finally{clearInterval(displayTimer);starting=false;$("names").disabled=$("confirm").disabled=$("verify").disabled=false;refreshInput();render();}
+    finally{clearInterval(displayTimer);starting=false;$("names").disabled=$("confirm").disabled=$("verify").disabled=$("mode").disabled=false;refreshInput();render();}
   }
   function download(kind){
     const snap=report||bench?.snapshot();if(!snap||bench?.running)return;
     const fields=["name","batch","posts","maxOutstanding","workers","headroom","status","plannedAdmissionMs","admissionMs","drainMs","elapsed_ms","admission_elapsed_ms","drain_elapsed_ms","submitted","received","successful","admission_received","admission_successful","admission_successful_cps","admission_completed_cps","drain_received","drain_successful","successful_cps","completed_cps","candidates_completed","candidates_cps","rate429","deferred","throttle_episodes","transient","permanent","missing","median_ms","p95_ms","post_median_ms","post_p95_ms","server_median_ms","server_p95_ms","acquisition_p95_ms","cache_ingest_p95_ms","reservation_call_p95_ms","reservation_attempts","reservation_misses","coordinator_lock_wait_p95_ms","coordinator_write_p95_ms","coordinator_calls","coordinator_state_writes","coordinator_no_write","outside_server_median_ms","outside_server_p95_ms","active_at_admission_close","requests_at_admission_close","oldest_at_admission_close_ms","pending_posts_at_stop","pending_requests_at_stop","oldest_pending_at_stop_ms","target_start","target_end","safe_end","unsafe_end","observed_end","observed_clean_end","peak_posts","peak_outstanding_requests","peak_curl_per_post","peak_curl_across_posts","curl_intervals_measured","offered_rate_cps","limit_reason"];
+    if(snap.mode==="rate-concurrency")fields.push("endpoint","fixedRate","measured_admission_cps","mean_active_handles","above_10_ms","admissions_above_10","interval_coverage","diagnostic_status");
     const csvCell=v=>'"'+String(v??"").replaceAll('"','""')+'"';
-    const body=kind==="json"?JSON.stringify(snap,null,2):[fields.join(","),...snap.scenarios.map(m=>fields.map(k=>csvCell(({target_start:m.controller_start?.target,target_end:m.controller_end?.target,safe_end:m.controller_end?.safe,unsafe_end:m.controller_end?.unsafe,observed_end:m.controller_end?.observed_launch_cps,observed_clean_end:m.controller_end?.observed_clean_cps})[k]??m.config[k]??m[k])).join(","))].join("\r\n");
+    const body=kind==="json"?JSON.stringify(snap,null,2):[fields.join(","),...snap.scenarios.map(m=>fields.map(k=>csvCell(({target_start:m.controller_start?.target,target_end:m.controller_end?.target,safe_end:m.controller_end?.safe,unsafe_end:m.controller_end?.unsafe,observed_end:m.controller_end?.observed_launch_cps,observed_clean_end:m.controller_end?.observed_clean_cps,...(()=>{const d=snap.diagnostic?.phases.find(x=>x.name===m.config.name);return d?{measured_admission_cps:d.phase_admission_cps,mean_active_handles:d.mean_active,above_10_ms:d.above_10_ms,admissions_above_10:d.admissions_above_10,interval_coverage:d.interval_coverage,diagnostic_status:d.status}:{};})()})[k]??m.config[k]??m[k])).join(","))].join("\r\n");
     const url=URL.createObjectURL(new Blob([body],{type:kind==="json"?"application/json":"text/csv;charset=utf-8"}));
     const a=document.createElement("a");a.href=url;a.download="p2k-oauth-lab-"+new Date().toISOString().replace(/[:.]/g,"-")+"."+kind;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
+  $("mode").addEventListener("change",()=>{if(!bench?.running)render();});
   $("names").addEventListener("input",refreshInput);$("confirm").addEventListener("change",refreshInput);$("verify").addEventListener("click",()=>void checkAuth());
   $("start").addEventListener("click",()=>void launch());$("stop").addEventListener("click",()=>{bench?.stop();render();});
   $("json").addEventListener("click",()=>download("json"));$("csv").addEventListener("click",()=>download("csv"));
