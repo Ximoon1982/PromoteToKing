@@ -5,6 +5,9 @@ on:
     paths:
       - 'server/team-points/src/OAuthSession.php'
       - 'tests/oauth_performance_lab_gateway_v2162.php'
+      - 'server/shared/FilesystemCache.php'
+      - 'server/team-points/src/Housekeeping.php'
+      - 'tests/cache_maintenance_v2162.php'
       - 'OAuthPerformanceLab.html'
       - 'assets/js/pages/oauth-performance-lab.js'
       - 'tests/oauth_performance_lab_v2162.js'
@@ -34,6 +37,11 @@ jobs:
         run: |
           php -l server/team-points/src/OAuthSession.php
           php tests/oauth_performance_lab_gateway_v2162.php
+      - name: Cache maintenance regression
+        run: |
+          php -l server/shared/FilesystemCache.php
+          php -l server/team-points/src/Housekeeping.php
+          php tests/cache_maintenance_v2162.php
       - name: Browser fixture tests
         run: |
           python3 -m pip install --user --break-system-packages playwright
@@ -41,7 +49,7 @@ jobs:
       - name: Build and validate cumulative Release Control package
         run: |
           python3 tools/build-p2k-v2162-oauth-performance-lab.py
-          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $m=(new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]))->validate(); if($m["version"]!=="2.16.2" || $m["overlay_file_count"]!==16)exit(2); echo "PASS ".$m["release_id"].PHP_EOL;' dist/P2K_2.16.2_OAuth_Performance_Lab_RC
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $m=(new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]))->validate(); if($m["version"]!=="2.16.2" || $m["overlay_file_count"]!==18)exit(2); echo "PASS ".$m["release_id"].PHP_EOL;' dist/P2K_2.16.2_OAuth_Performance_Lab_RC
       - uses: actions/upload-artifact@v4
         with:
           name: p2k-v2162-oauth-performance-lab-rc

@@ -7,7 +7,6 @@ final class FilesystemCache
 {
     private string $root;
     private int $maxBytes;
-    private int $cleanupProbability;
     private int $expiredGrace;
     private int $maxEntries;
     private int $shardDepth;
@@ -16,7 +15,6 @@ final class FilesystemCache
     {
         $this->root = self::resolveCacheDir($config);
         $this->maxBytes = max(16 * 1024 * 1024, (int)($config['cache_max_bytes'] ?? 512 * 1024 * 1024));
-        $this->cleanupProbability = max(0, min(100, (int)($config['cache_cleanup_probability_percent'] ?? 3)));
         $this->expiredGrace = max(0, (int)($config['cache_expired_grace_seconds'] ?? 86400));
         $this->maxEntries = max(1000, (int)($config['cache_max_entries'] ?? 30000));
         $this->shardDepth = max(0, min(2, (int)($config['cache_shard_depth'] ?? 1)));
@@ -126,20 +124,30 @@ final class FilesystemCache
         }
         foreach($this->pathCandidates($url) as $candidate){if($candidate!==$path&&is_file($candidate))@unlink($candidate);}
         @unlink($this->root . '/.stats-cache.json');
-        if ($this->cleanupProbability > 0 && random_int(1, 100) <= $this->cleanupProbability) {
-            $this->purge(250);
-        }
+        // Retention is owned by scheduled maintenance, never by a foreground write.
     }
 
     /** @return array{removed_files:int,removed_bytes:int,remaining_bytes:int,remaining_files:int} */
-    public function purge(int $maxFiles = 1000): array
+    public function purge(int $maxFiles = 1000, ?float $deadlineAt = null): array
+    {
+        $lock = @fopen($this->root . '/.purge.lock', 'c+');
+        if (!$lock) throw new \RuntimeException('Unable to open cache maintenance lock.');
+        try {
+            if (!flock($lock, LOCK_EX | LOCK_NB)) return ['busy'=>true,'removed_files'=>0,'removed_bytes'=>0];
+            return $this->purgeLocked($maxFiles, $deadlineAt);
+        } finally { fclose($lock); }
+    }
+
+    private function purgeLocked(int $maxFiles, ?float $deadlineAt): array
     {
         $maxFiles = max(1, min(100000, $maxFiles));
         $now = time();
-        $files = $this->cacheFiles();
+        $files = $this->cacheFiles($deadlineAt);
+        if ($deadlineAt !== null && microtime(true) >= $deadlineAt) return ['deadline_reached'=>true,'removed_files'=>0,'removed_bytes'=>0];
         $removed = 0; $removedBytes = 0; $total = 0; $count = 0;
         $survivors = [];
         foreach ($files as $path) {
+            if ($deadlineAt !== null && microtime(true) >= $deadlineAt) return ['deadline_reached'=>true,'removed_files'=>$removed,'removed_bytes'=>$removedBytes];
             $size = (int)@filesize($path);
             $total += max(0, $size); $count++;
             $expired = false;
@@ -162,13 +170,14 @@ final class FilesystemCache
         if (($total > $this->maxBytes || $count > $this->maxEntries) && $removed < $maxFiles) {
             usort($survivors, static fn(array $a,array $b): int => $a['mtime'] <=> $b['mtime']);
             foreach ($survivors as $file) {
+                if ($deadlineAt !== null && microtime(true) >= $deadlineAt) return ['deadline_reached'=>true,'removed_files'=>$removed,'removed_bytes'=>$removedBytes];
                 if (($total <= $this->maxBytes && $count <= $this->maxEntries) || $removed >= $maxFiles) break;
                 if (@unlink($file['path'])) {
                     $removed++; $removedBytes += $file['size']; $total -= $file['size']; $count--;
                 }
             }
         }
-        $this->pruneEmptyShardDirectories();
+        // Leave shard directories in place: concurrent writers may be using them.
         @unlink($this->root . '/.stats-cache.json');
         return ['removed_files'=>$removed,'removed_bytes'=>$removedBytes,'remaining_bytes'=>max(0,$total),'remaining_files'=>max(0,$count),'max_entries'=>$this->maxEntries];
     }
@@ -219,7 +228,7 @@ final class FilesystemCache
     }
 
     /** @return list<string> */
-    private function cacheFiles(): array
+    private function cacheFiles(?float $deadlineAt = null): array
     {
         if (!is_dir($this->root)) return [];
         $paths = [];
@@ -228,6 +237,7 @@ final class FilesystemCache
                 new \RecursiveDirectoryIterator($this->root, \FilesystemIterator::SKIP_DOTS)
             );
             foreach ($iterator as $file) {
+                if ($deadlineAt !== null && microtime(true) >= $deadlineAt) break;
                 if ($file->isFile() && str_ends_with($file->getFilename(), '.json.gz')) $paths[] = $file->getPathname();
             }
         } catch (\Throwable) { return $paths; }

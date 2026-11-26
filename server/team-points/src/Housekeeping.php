@@ -55,7 +55,8 @@ final class Housekeeping
             if($repo->schemaVersion()>=13){$result=$repo->compactOutstandingQueue(null,1000000);$dedupe=['ran'=>(int)($result['legacy_before']??0)>0]+$result;}
         }catch(\Throwable $e){$dedupe=['ran'=>false,'error'=>$e->getMessage()];}
         if(!$this->canContinue(0.75))return ['deleted'=>$deleted,'queue_deduplication'=>$dedupe,'deadline_reached'=>true,'stopped_before'=>'cache'];
-        $cache=(new FilesystemCache($storage))->purge(50000);
+        $cache=(new FilesystemCache($storage))->purge(50000,$deadlineAt===null?null:$deadlineAt-0.5);
+        if(!empty($cache['deadline_reached'])||!empty($cache['busy']))return ['deleted'=>$deleted,'queue_deduplication'=>$dedupe,'cache'=>$cache,'deadline_reached'=>true,'stopped_before'=>'public_response_cache'];
         if(!$this->canContinue(0.5))return ['deleted'=>$deleted,'queue_deduplication'=>$dedupe,'cache'=>$cache,'deadline_reached'=>true,'stopped_before'=>'public_response_cache'];
         $publicCache=(new ResponseCache($storage))->purge(14*86400,(int)($storage['public_response_cache_max_bytes']??134217728),(int)($storage['public_response_cache_max_entries']??2000));
         if(!$this->canContinue(0.75))return ['deleted'=>$deleted,'queue_deduplication'=>$dedupe,'cache'=>$cache,'public_response_cache'=>$publicCache,'deadline_reached'=>true,'stopped_before'=>'filesystem_logs'];
