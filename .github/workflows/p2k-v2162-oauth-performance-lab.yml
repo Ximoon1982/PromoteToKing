@@ -1,0 +1,57 @@
+name: P2K 2.16.2 client OAuth performance laboratory
+on:
+  push:
+    branches: [release/v2.16.2]
+    paths:
+      - 'OAuthPerformanceLab.html'
+      - 'assets/js/pages/oauth-performance-lab.js'
+      - 'tests/oauth_performance_lab_v2162.js'
+      - 'tests/oauth_performance_lab_browser_v2162.py'
+      - 'tools/build-p2k-v2162-oauth-performance-lab.py'
+      - '.github/workflows/p2k-v2162-oauth-performance-lab.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - name: Client engine tests
+        run: |
+          node --check assets/js/pages/oauth-performance-lab.js
+          node tests/oauth_performance_lab_v2162.js
+      - name: Browser fixture tests
+        run: |
+          python3 -m pip install --user --break-system-packages playwright
+          python3 tests/oauth_performance_lab_browser_v2162.py
+      - name: Build and validate cumulative Release Control package
+        run: |
+          python3 tools/build-p2k-v2162-oauth-performance-lab.py
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $m=(new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]))->validate(); if($m["version"]!=="2.16.2" || $m["overlay_file_count"]!==15)exit(2); echo "PASS ".$m["release_id"].PHP_EOL;' dist/P2K_2.16.2_OAuth_Performance_Lab_RC
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2k-v2162-oauth-performance-lab-rc
+          path: |
+            dist/P2K_2.16.2_OAuth_Performance_Lab_RC_*.zip
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p2k-v2162-oauth-performance-lab-source
+          path: |
+            OAuthPerformanceLab.html
+            assets/js/pages/oauth-performance-lab.js
+            tests/oauth_performance_lab_v2162.js
+            tests/oauth_performance_lab_browser_v2162.py
+            tools/build-p2k-v2162-oauth-performance-lab.py
+          retention-days: 7
