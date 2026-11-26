@@ -34,7 +34,8 @@ try:
             if mode!='valid':
                 expect(page.locator('#auth')).to_contain_text('HTTP 403' if mode=='denied' else 'read-only');expect(page.locator('#start')).to_be_disabled();assert not batches
             else:
-                expect(page.locator('#start')).to_be_enabled();page.locator('#start').click();expect(page.locator('#stop')).to_be_enabled();try:expect(page.locator('#success')).not_to_have_text('0',timeout=5000)
+                expect(page.locator('#start')).to_be_enabled();page.locator('#start').click();expect(page.locator('#stop')).to_be_enabled()
+                try:expect(page.locator('#success')).not_to_have_text('0',timeout=5000)
                 except Exception:
                     print('Fixture status:',page.locator('#status').inner_text(),'auth:',page.locator('#auth').inner_text(),'batches:',len(batches),'errors:',errors,flush=True)
                     raise
