@@ -4,6 +4,8 @@ on:
     branches: [release/v2.16.2]
     paths:
       - 'server/team-points/src/OAuthSession.php'
+      - 'server/team-points/src/OAuthRateCoordinator.php'
+      - 'tests/oauth_rate_coordinator_v2162.php'
       - 'tests/oauth_performance_lab_gateway_v2162.php'
       - 'server/shared/FilesystemCache.php'
       - 'server/team-points/src/Housekeeping.php'
@@ -33,6 +35,10 @@ jobs:
         run: |
           node --check assets/js/pages/oauth-performance-lab.js
           node tests/oauth_performance_lab_v2162.js
+      - name: Shared rate controller regression
+        run: |
+          php -l server/team-points/src/OAuthRateCoordinator.php
+          php tests/oauth_rate_coordinator_v2162.php
       - name: Actual PHP gateway fixture
         run: |
           php -l server/team-points/src/OAuthSession.php
@@ -49,7 +55,7 @@ jobs:
       - name: Build and validate cumulative Release Control package
         run: |
           python3 tools/build-p2k-v2162-oauth-performance-lab.py
-          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $m=(new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]))->validate(); if($m["version"]!=="2.16.2" || $m["overlay_file_count"]!==18)exit(2); echo "PASS ".$m["release_id"].PHP_EOL;' dist/P2K_2.16.2_OAuth_Performance_Lab_RC
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $m=(new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]))->validate(); if($m["version"]!=="2.16.2" || $m["overlay_file_count"]!==19)exit(2); echo "PASS ".$m["release_id"].PHP_EOL;' dist/P2K_2.16.2_OAuth_Performance_Lab_RC
       - uses: actions/upload-artifact@v4
         with:
           name: p2k-v2162-oauth-performance-lab-rc
@@ -67,5 +73,9 @@ jobs:
             assets/js/pages/oauth-performance-lab.js
             tests/oauth_performance_lab_v2162.js
             tests/oauth_performance_lab_browser_v2162.py
+            tests/oauth_rate_coordinator_v2162.php
+            tests/oauth_performance_lab_gateway_v2162.php
+            server/team-points/src/OAuthRateCoordinator.php
+            server/team-points/src/OAuthSession.php
             tools/build-p2k-v2162-oauth-performance-lab.py
           retention-days: 7

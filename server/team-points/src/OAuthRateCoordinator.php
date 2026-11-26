@@ -3,328 +3,220 @@ declare(strict_types=1);
 
 namespace P2K\TeamPoints;
 
-/**
- * Cross-request OAuth PubAPI launch-rate coordinator.
- *
- * One state file is keyed by the opaque Bearer token hash, so all browser frames
- * and same-origin admin bridges using the same OAuth session share one launch
- * clock and one learned safe/unsafe boundary. The token itself is never stored.
- */
+/** Shared, token-scoped launch clock and evidence-based adaptive rate control. */
 final class OAuthRateCoordinator
 {
-    private const STATE_VERSION = 2;
+    private const STATE_VERSION = 3;
     private const INITIAL_RATE = 30.0;
     private const MIN_RATE = 1.0;
     private const MAX_RATE = 120.0;
     private const STATE_TTL_SECONDS = 1800.0;
     private const FOREGROUND_HOLD_SECONDS = 1.5;
-    private const MAX_COOLDOWN_SECONDS = 30.0;
-    private const MAX_RESERVATION_AHEAD_SECONDS = 0.025;
-
+    private const WINDOW_SECONDS = 5.0;
+    private const MIN_SPAN_SECONDS = 3.5;
+    private const ADJUST_INTERVAL_SECONDS = 5.0;
+    private const BOUNDARY_TTL_SECONDS = 900.0;
     private string $path;
+    private ?\Closure $clock;
 
-    public function __construct(string $token)
+    public function __construct(string $token, ?callable $clock = null)
     {
+        $this->clock = $clock === null ? null : \Closure::fromCallable($clock);
         $dir = trim((string)(getenv('P2K_OAUTH_RATE_STATE_DIR') ?: ''));
         if ($dir === '') $dir = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'p2k-oauth-rate';
-        if (!is_dir($dir)) @mkdir($dir, 0700, true);
+        if (!is_dir($dir) && !@mkdir($dir, 0700, true) && !is_dir($dir)) throw new \RuntimeException('OAuth rate coordinator storage unavailable.');
         @chmod($dir, 0700);
+        // Keep the existing token-specific path so promotion preserves active cooldowns.
         $this->path = $dir . DIRECTORY_SEPARATOR . hash('sha256', 'p2k-oauth-rate-v2:' . $token) . '.json';
     }
+
+    private function now(): float { return $this->clock === null ? microtime(true) : (float)($this->clock)(); }
+    private function clampRate(float $rate): float { return max(self::MIN_RATE, min(self::MAX_RATE, is_finite($rate) ? $rate : self::INITIAL_RATE)); }
+    private function trafficClass(string $value): string { return strtolower(trim($value)) === 'background' ? 'background' : 'foreground'; }
 
     public function announceTraffic(string $trafficClass): void
     {
         if ($this->trafficClass($trafficClass) !== 'foreground') return;
-        $this->mutate(function (array &$state, float $now): void {
-            $state['foreground_until'] = max((float)($state['foreground_until'] ?? 0), $now + self::FOREGROUND_HOLD_SECONDS);
-        });
+        $this->mutate(static function (array &$s, float $now): void { $s['foreground_until'] = max((float)$s['foreground_until'], $now + self::FOREGROUND_HOLD_SECONDS); });
     }
 
-    /**
-     * Reserve one globally paced launch slot. The returned delay has already been
-     * slept before this method returns.
-     */
-    public function reserveLaunch(string $trafficClass = 'foreground'): array
+    /** Reserve only a currently eligible launch; a future slot is NOT a reservation. */
+    public function reserveLaunch(string $trafficClass = 'foreground', float $requestedRateCps = 120.0): array
     {
         $trafficClass = $this->trafficClass($trafficClass);
-        $reservation = $this->mutate(function (array &$state, float $now) use ($trafficClass): array {
-            $rate = $this->clampRate((float)($state['target_rate_cps'] ?? self::INITIAL_RATE));
-            $notBefore = max(
-                $now,
-                (float)($state['next_launch_at'] ?? 0),
-                (float)($state['cooldown_until'] ?? 0)
-            );
+        $requestedRateCps = $requestedRateCps > 0 ? max(0.5, min(self::MAX_RATE, $requestedRateCps)) : self::MAX_RATE;
+        $r = $this->mutate(function (array &$s, float $now) use ($trafficClass, $requestedRateCps): array {
+            $rate = min($this->clampRate((float)$s['target_rate_cps']), $requestedRateCps);
+            $slot = max($now, (float)$s['next_launch_at'], (float)$s['cooldown_until']);
             if ($trafficClass === 'background') {
-                $foregroundUntil = (float)($state['foreground_until'] ?? 0);
-                if ($foregroundUntil > $notBefore) $state['background_suppressions'] = (int)($state['background_suppressions'] ?? 0) + 1;
-                $notBefore = max($notBefore, $foregroundUntil);
-            } else {
-                $state['foreground_until'] = max((float)($state['foreground_until'] ?? 0), $now + self::FOREGROUND_HOLD_SECONDS);
+                if ((float)$s['foreground_until'] > $slot) $s['background_suppressions']++;
+                $slot = max($slot, (float)$s['foreground_until']);
+            } else $s['foreground_until'] = max((float)$s['foreground_until'], $now + self::FOREGROUND_HOLD_SECONDS);
+            $reserved = $slot <= $now;
+            if ($reserved) {
+                $s['next_launch_at'] = $now + 1.0 / $rate;
+                $s['reservations']++;
             }
-            $slot = $notBefore;
-            if($slot-$now>self::MAX_RESERVATION_AHEAD_SECONDS){
-                return ['slot'=>$slot,'reserved'=>false,'rate_target_cps'=>$rate,'safe_rate_cps'=>(float)($state['safe_rate_cps']??0),'unsafe_rate_cps'=>(float)($state['unsafe_rate_cps']??0)];
-            }
-            $state['next_launch_at'] = $slot + (1.0 / max(self::MIN_RATE, $rate));
-            $state['launches'] = (int)($state['launches'] ?? 0) + 1;
-            $recent=is_array($state['recent_launch_slots']??null)?$state['recent_launch_slots']:[];
-            $recent[]=$slot;$cutoff=$slot-2.5;$recent=array_values(array_filter($recent,static fn($value):bool=>(float)$value>=$cutoff));
-            if(count($recent)>256)$recent=array_slice($recent,-256);$state['recent_launch_slots']=$recent;
-            return [
-                'slot' => $slot,
-                'reserved' => true,
-                'rate_target_cps' => $rate,
-                'safe_rate_cps' => (float)($state['safe_rate_cps'] ?? 0),
-                'unsafe_rate_cps' => (float)($state['unsafe_rate_cps'] ?? 0),
-            ];
+            return ['slot'=>$slot,'reserved'=>$reserved,'rate_target_cps'=>$rate,'safe_rate_cps'=>(float)$s['safe_rate_cps'],'unsafe_rate_cps'=>(float)$s['unsafe_rate_cps'],'cooldown_remaining_ms'=>max(0,(int)ceil(((float)$s['cooldown_until']-$now)*1000))];
         });
-        $reservation['wait_ms'] = max(0.0, ((float)$reservation['slot'] - microtime(true)) * 1000.0);
-        return $reservation;
+        $r['wait_ms'] = max(0.0, ((float)$r['slot'] - $this->now()) * 1000.0);
+        return $r;
+    }
+
+    /** Count a real cURL admission only AFTER curl_multi_add_handle succeeds. */
+    public function recordLaunch(): float
+    {
+        return $this->mutate(function (array &$s, float $now): float {
+            $s['launches']++;
+            $s['recent_actual_launches'][] = $now;
+            $this->trimEvidence($s, $now);
+            return $this->observedRate($s['recent_actual_launches'], $now);
+        });
     }
 
     public function waitForLaunch(string $trafficClass = 'foreground'): array
     {
-        do{
+        do {
             $reservation = $this->reserveLaunch($trafficClass);
-            $delay = max(0.0, (float)$reservation['slot'] - microtime(true));
-            if ($delay > 0) usleep((int)min(5000000, max(0, round($delay * 1000000))));
-        }while(empty($reservation['reserved']));
-        $reservation['wait_ms'] = $delay * 1000.0;
+            if (!empty($reservation['reserved'])) break;
+            $delay = max(0.0, (float)$reservation['slot'] - $this->now());
+            if ($delay > 0) usleep((int)min(5000000, max(1, ceil($delay * 1000000))));
+        } while (true);
+        // This compatibility API returns a dispatch permit, not a confirmed cURL admission.
         unset($reservation['slot']);
         return $reservation;
     }
 
-    /**
-     * Hybrid controller: endpoint-normalized latency is the continuous PI/D
-     * pressure signal; 429/Retry-After is a hard anti-windup boundary event.
-     * Permanent 4xx responses are application results and never reduce rate.
-     */
-    public function feedback(
-        array $statuses,
-        array $latenciesMs,
-        string $endpointClass,
-        float $attemptedRateCps,
-        int $retryAfterSeconds = 0
-    ): array {
+    public function feedback(array $statuses, array $latenciesMs, string $endpointClass, float $attemptedRateCps, int $retryAfterSeconds = 0, float $observedAtLaunch = 0.0, float $requestLaunchedAt = 0.0): array
+    {
         $endpointClass = preg_replace('/[^a-z0-9_-]+/i', '-', strtolower(trim($endpointClass))) ?: 'other';
-        $allLatencies=[];$successLatencies=[];
-        $rate429 = 0; $transient = 0; $permanent4xx = 0; $success = 0;
-        foreach ($statuses as $index=>$raw) {
-            $status = (int)$raw;$latency=max(0.0,(float)($latenciesMs[$index]??0));if($latency>0)$allLatencies[]=$latency;
-            if ($status === 429) $rate429++;
-            elseif ($status === 0 || $status >= 500) $transient++;
-            elseif ($status >= 400) $permanent4xx++;
-            else {$success++;if($latency>0)$successLatencies[]=$latency;}
+        $latencies=[];$successLatencies=[];$rate429=0;$transient=0;$permanent4xx=0;$success=0;$authFailures=0;
+        foreach ($statuses as $i=>$raw) {
+            $status=(int)$raw;$latency=max(0.0,(float)($latenciesMs[$i]??0));if($latency>0)$latencies[]=$latency;
+            if($status===429)$rate429++;
+            elseif($status===0||$status===408||$status>=500)$transient++;
+            elseif($status===401||$status===403){$authFailures++;$permanent4xx++;}
+            elseif($status>=400)$permanent4xx++;
+            elseif($status>=200){$success++;if($latency>0)$successLatencies[]=$latency;}
         }
-        $latencies=$successLatencies!==[]?$successLatencies:$allLatencies;sort($latencies,SORT_NUMERIC);
-        $median = $this->percentile($latencies, 0.5);$p95 = $this->percentile($latencies, 0.95);
-        $attemptedRateCps = $this->clampRate($attemptedRateCps > 0 ? $attemptedRateCps : self::INITIAL_RATE);
-        return $this->mutate(function (array &$state, float $now) use (
-            $endpointClass, $median, $p95, $attemptedRateCps, $rate429, $transient,
-            $permanent4xx, $success, $retryAfterSeconds
-        ): array {
-            $current = $this->clampRate((float)($state['target_rate_cps'] ?? self::INITIAL_RATE));
-            $safe = max(0.0, (float)($state['safe_rate_cps'] ?? 0));
-            $unsafe = max(0.0, (float)($state['unsafe_rate_cps'] ?? 0));
-            $observedRate=$this->observedLaunchRate($state,$now);
-            $testedRate=$observedRate>0?min($attemptedRateCps,max(self::MIN_RATE,$observedRate*1.04)):$attemptedRateCps;
-            $baselines = is_array($state['latency_baseline_ms'] ?? null) ? $state['latency_baseline_ms'] : [];
-            $baseline = max(0.0, (float)($baselines[$endpointClass] ?? 0));
-            if ($success > 0 && $rate429 === 0 && $median > 0 && ($baseline <= 0 || $median < $baseline)) {
-                $baseline = $median;
-                $baselines[$endpointClass] = round($baseline, 3);
-            }
-
-            $total = max(1, $success + $rate429 + $transient + $permanent4xx);
-            $transientRatio = $transient / $total;
-            $pressure = ($baseline > 0 && $median > 0) ? max(0.0, ($median / $baseline) - 1.0) : 0.0;
-            $state['last_pressure'] = (float)($state['last_pressure'] ?? 0);
-            $state['integral_error'] = (float)($state['integral_error'] ?? 0);
-
-            $reason = 'steady';
-            if ($rate429 > 0) {
-                // A 429 proves the current launch target was unsafe even if the
-                // caller itself was under-fed. Use the attempted target for the
-                // upper boundary; clean samples use observed launch rate instead.
-                $unsafe = $unsafe > 0 ? min($unsafe, $attemptedRateCps) : $attemptedRateCps;
-                $sameEpisode=(float)($state['cooldown_until']??0)>$now;
+        $latencies=$successLatencies!==[]?$successLatencies:$latencies;sort($latencies,SORT_NUMERIC);
+        $median=$this->percentile($latencies,0.5);$p95=$this->percentile($latencies,0.95);
+        $attempted=$this->clampRate($attemptedRateCps>0?$attemptedRateCps:self::INITIAL_RATE);
+        return $this->mutate(function(array &$s,float $now)use($endpointClass,$median,$p95,$attempted,$rate429,$transient,$permanent4xx,$success,$authFailures,$retryAfterSeconds,$observedAtLaunch,$requestLaunchedAt):array{
+            $current=$this->clampRate((float)$s['target_rate_cps']);$safe=(float)$s['safe_rate_cps'];$unsafe=(float)$s['unsafe_rate_cps'];
+            if($unsafe>0 && $now >= (float)$s['unsafe_until']){$unsafe=0.0;$s['unsafe_evidence']='';}
+            $observed=$this->observedRate($s['recent_actual_launches'],$now);
+            $baseline=(float)($s['latency_baseline_ms'][$endpointClass]??0);
+            if($success>0&&$rate429===0&&$median>0&&($baseline<=0||$median<$baseline)){$baseline=$median;$s['latency_baseline_ms'][$endpointClass]=round($median,3);}
+            $pressure=$baseline>0&&$median>0?max(0.0,$median/$baseline-1.0):0.0;
+            $total=max(1,$success+$permanent4xx+$rate429+$transient);
+            $reason='steady';
+            if($rate429>0){
+                // A late response from a pre-backoff request belongs to that episode even after the timer expires.
+                $sameEpisode=(float)$s['cooldown_until']>$now||($requestLaunchedAt>0&&(float)$s['last_throttle_at']>0&&$requestLaunchedAt<=(float)$s['last_throttle_at']);
                 if(!$sameEpisode){
-                    $state['backlashes'] = (int)($state['backlashes'] ?? 0) + 1;
-                    // Hard anti-windup: retreat once per backlash episode. Other
-                    // in-flight 429s update the same boundary but do not compound it.
-                    $next = $safe > 0 ? min($safe * 0.97, $attemptedRateCps * 0.78) : $attemptedRateCps * 0.58;
-                    $state['target_rate_cps'] = $this->clampRate($next);
-                    $state['integral_error'] = 0.0;$state['last_pressure'] = 0.0;$state['clean_samples'] = 0;
+                    $evidence=$observedAtLaunch>0?$observedAtLaunch:$observed;
+                    $boundary=$this->clampRate(min($current,$attempted,$evidence>0?$evidence:$current));
+                    if($unsafe<=0||$boundary<$unsafe){$unsafe=$boundary;$s['unsafe_evidence']=$evidence>0?'observed-admission':'conservative-ceiling';}
+                    $s['unsafe_until']=$now+self::BOUNDARY_TTL_SECONDS;
+                    $s['target_rate_cps']=$this->clampRate(min($current*0.70,$boundary*0.70));
+                    $safe=0.0;$s['backlashes']++;$s['last_throttle_at']=$now;$s['last_adjustment_at']=$now;
+                    $s['clean_samples']=0;$s['recent_clean_completions']=[];$s['recent_actual_launches']=[];
                 }
-                $cooldown = max(1, min((int)self::MAX_COOLDOWN_SECONDS, $retryAfterSeconds > 0 ? $retryAfterSeconds : 1));
-                $state['cooldown_until'] = max((float)($state['cooldown_until'] ?? 0), $now + $cooldown);
-                $reason = $sameEpisode?'rate-limit-coalesced':'rate-limit-boundary';
-            } elseif ($transientRatio > 0.15) {
-                // 5xx/network errors are a soft reliability signal. Do not confuse
-                // them with 404/410 and do not create an unsafe rate boundary.
-                $state['target_rate_cps'] = $this->clampRate($current * 0.90);
-                $state['integral_error'] = max(-1.0, (float)$state['integral_error'] - 0.15);
-                $state['clean_samples'] = 0;
-                $reason = 'transient-pressure';
-            } else {
-                // Clean application results (including permanent 4xx) prove that
-                // transport at the attempted rate was not rate-limited.
-                if ($unsafe <= 0 || $testedRate < $unsafe * 0.985) {
-                    $safe = max($safe, $testedRate);
+                // Honor the supplied Retry-After (OAuthSession bounds parsed values to one day).
+                $s['cooldown_until']=max((float)$s['cooldown_until'],$now+max(2,$retryAfterSeconds));
+                $reason=$sameEpisode?'rate-limit-coalesced':'rate-limit-boundary';
+            }elseif($transient/$total>0.15){
+                if($now-(float)$s['last_adjustment_at']>=self::ADJUST_INTERVAL_SECONDS){$s['target_rate_cps']=$this->clampRate($current*0.90);$s['last_adjustment_at']=$now;}
+                $s['recent_clean_completions']=[];$s['clean_samples']=0;$reason='transient-pressure';
+            }elseif($transient>0||$authFailures>0){
+                // These samples are not proof of safe sustained throughput.
+                $s['recent_clean_completions']=[];$s['clean_samples']=0;$reason='unclean-sample-hold';
+            }elseif((float)$s['cooldown_until']>$now||($requestLaunchedAt>0&&$requestLaunchedAt<=(float)$s['last_throttle_at'])){
+                $reason='cooldown-hold';
+            }else{
+                $clean=$success+$permanent4xx;
+                for($i=0;$i<$clean;$i++)$s['recent_clean_completions'][]=$now;
+                $this->trimEvidence($s,$now);
+                $cleanRate=count($s['recent_clean_completions'])/self::WINDOW_SECONDS;
+                $tested=min($attempted,$observed,$cleanRate);
+                // No fallback to configured or attempted rate. A full fixed window includes idle gaps.
+                if($observed>0&&$tested>0){
+                    if($unsafe<=0||$tested<$unsafe*0.95)$safe=max($safe,$tested);
+                    $s['clean_samples']++;
                 }
-                $state['clean_samples'] = (int)($state['clean_samples'] ?? 0) + 1;
-
-                $desiredPressure = 0.20;
-                $error = $desiredPressure - $pressure;
-                $integral = max(-1.5, min(1.5, (float)$state['integral_error'] + $error));
-                $derivative = $pressure - (float)$state['last_pressure'];
-                $state['integral_error'] = $integral;
-                $state['last_pressure'] = $pressure;
-
-                // Continuous PID-like correction. It is intentionally bounded; the
-                // boundary search below remains authoritative after an actual 429.
-                $pidFraction = (0.16 * $error) + (0.025 * $integral) - (0.08 * $derivative);
-                $pidFraction = max(-0.12, min(0.16, $pidFraction));
-
-                if ($unsafe > 0) {
-                    $ceiling = max(self::MIN_RATE, $unsafe * 0.92);
-                    $anchor = max(self::MIN_RATE, min($safe > 0 ? $safe : $current, $ceiling));
-                    $gap = max(0.0, $ceiling - $anchor);
-                    // Geometric convergence from below. Once the gap is small we
-                    // hold the proven-safe point instead of repeatedly touching the cliff.
-                    $probe = $gap > 0.35 ? $anchor + max(0.20, $gap * 0.35) : $anchor;
-                    $next = min($ceiling, max($anchor, $probe * (1.0 + min(0.03, max(-0.03, $pidFraction)))));
-                    $state['target_rate_cps'] = $this->clampRate($next);
-                    $reason = $gap > 0.35 ? 'boundary-converge' : 'boundary-hold';
-                } else {
-                    // Before a boundary exists, probe quickly enough to exploit a
-                    // healthy OAuth connection but only after a clean sample.
-                    $growth = max(0.10, min(0.30, 0.20 + $pidFraction));
-                    if($testedRate >= $current*0.78){$state['target_rate_cps']=$this->clampRate($current*(1.0+$growth));$reason='clean-probe';}
-                    else{$state['target_rate_cps']=$current;$reason='demand-limited-hold';}
-                }
+                $ceiling=$unsafe>0?max(self::MIN_RATE,$unsafe*0.90):self::MAX_RATE;
+                $ready=$tested >= $current*0.80 && $s['clean_samples']>=2 && $now-(float)$s['last_adjustment_at']>=self::ADJUST_INTERVAL_SECONDS;
+                if($ready&&$pressure>1.0){
+                    $s['target_rate_cps']=$this->clampRate($current*0.90);$s['last_adjustment_at']=$now;$s['clean_samples']=0;$reason='latency-pressure';
+                }elseif($ready&&$pressure<=0.50&&$current<$ceiling-0.01){
+                    $next=min($ceiling,$current+max(0.2,min(3.0,$current*0.10)));
+                    $s['target_rate_cps']=$this->clampRate($next);$s['last_adjustment_at']=$now;$s['clean_samples']=0;
+                    $reason=$unsafe>0?'boundary-converge':'clean-probe';
+                }else $reason=$observed<=0?'insufficient-evidence':($ready?'boundary-or-latency-hold':'demand-limited-hold');
             }
-
-            if ($unsafe > 0 && $safe >= $unsafe) $safe = max(0.0, $unsafe * 0.90);
-            $state['safe_rate_cps'] = round($safe, 4);
-            $state['unsafe_rate_cps'] = round($unsafe, 4);
-            $state['latency_baseline_ms'] = $baselines;
-            $state['last_endpoint_class'] = $endpointClass;
-            $state['last_median_ms'] = round($median, 3);
-            $state['last_p95_ms'] = round($p95, 3);
-            $state['last_feedback_at'] = $now;
-            $state['last_reason'] = $reason;
-            $state['permanent_4xx_seen'] = (int)($state['permanent_4xx_seen'] ?? 0) + $permanent4xx;
-            return $this->publicState($state, $reason);
+            if($unsafe>0)$safe=min($safe,$unsafe*0.90);
+            $s['safe_rate_cps']=round(max(0.0,$safe),4);$s['unsafe_rate_cps']=round(max(0.0,$unsafe),4);
+            $s['last_endpoint_class']=$endpointClass;$s['last_median_ms']=round($median,3);$s['last_p95_ms']=round($p95,3);$s['last_reason']=$reason;$s['permanent_4xx_seen']+=$permanent4xx;
+            return $this->publicState($s,$now,$reason);
         });
     }
 
-    public function snapshot(): array
-    {
-        return $this->mutate(fn(array &$state, float $now): array => $this->publicState($state, 'snapshot'));
-    }
-
-    private function trafficClass(string $value): string
-    {
-        return strtolower(trim($value)) === 'background' ? 'background' : 'foreground';
-    }
-
-    private function clampRate(float $rate): float
-    {
-        if (!is_finite($rate)) $rate = self::INITIAL_RATE;
-        return max(self::MIN_RATE, min(self::MAX_RATE, $rate));
-    }
+    public function snapshot(): array { return $this->mutate(fn(array &$s,float $now):array=>$this->publicState($s,$now,'snapshot')); }
 
     private function defaultState(float $now): array
     {
-        return [
-            'version' => self::STATE_VERSION,
-            'updated_at' => $now,
-            'target_rate_cps' => self::INITIAL_RATE,
-            'safe_rate_cps' => 0.0,
-            'unsafe_rate_cps' => 0.0,
-            'next_launch_at' => 0.0,
-            'cooldown_until' => 0.0,
-            'foreground_until' => 0.0,
-            'integral_error' => 0.0,
-            'last_pressure' => 0.0,
-            'latency_baseline_ms' => [],
-            'clean_samples' => 0,
-            'backlashes' => 0,
-            'launches' => 0,
-            'recent_launch_slots' => [],
-            'permanent_4xx_seen' => 0,
-            'background_suppressions' => 0,
-        ];
+        return ['version'=>self::STATE_VERSION,'updated_at'=>$now,'target_rate_cps'=>self::INITIAL_RATE,'safe_rate_cps'=>0.0,'unsafe_rate_cps'=>0.0,'unsafe_until'=>0.0,'unsafe_evidence'=>'','next_launch_at'=>0.0,'cooldown_until'=>0.0,'foreground_until'=>0.0,'last_throttle_at'=>0.0,'last_adjustment_at'=>$now,'latency_baseline_ms'=>[],'clean_samples'=>0,'backlashes'=>0,'launches'=>0,'reservations'=>0,'recent_actual_launches'=>[],'recent_clean_completions'=>[],'permanent_4xx_seen'=>0,'background_suppressions'=>0];
+    }
+
+    private function trimEvidence(array &$s,float $now): void
+    {
+        foreach(['recent_actual_launches','recent_clean_completions'] as $key){
+            $s[$key]=array_values(array_filter($s[$key],static fn($v):bool=>(float)$v>$now-self::WINDOW_SECONDS&&(float)$v<=$now));
+            if(count($s[$key])>1024)$s[$key]=array_slice($s[$key],-1024);
+        }
+    }
+
+    private function observedRate(array $events,float $now): float
+    {
+        $events=array_values(array_filter($events,static fn($v):bool=>(float)$v>$now-self::WINDOW_SECONDS&&(float)$v<=$now));
+        if(count($events)<4||max($events)-min($events)<self::MIN_SPAN_SECONDS)return 0.0;
+        return count($events)/self::WINDOW_SECONDS;
     }
 
     private function mutate(callable $callback): mixed
     {
-        $handle = @fopen($this->path, 'c+');
-        if ($handle === false) {
-            $state = $this->defaultState(microtime(true));
-            return $callback($state, microtime(true));
-        }
-        @chmod($this->path, 0600);
-        try {
-            if (!flock($handle, LOCK_EX)) {
-                $state = $this->defaultState(microtime(true));
-                return $callback($state, microtime(true));
-            }
-            rewind($handle);
-            $raw = stream_get_contents($handle);
-            $decoded = is_string($raw) && trim($raw) !== '' ? json_decode($raw, true) : null;
-            $now = microtime(true);
-            $state = is_array($decoded) ? $decoded : $this->defaultState($now);
-            if ((int)($state['version'] ?? 0) !== self::STATE_VERSION || $now - (float)($state['updated_at'] ?? 0) > self::STATE_TTL_SECONDS) {
-                $state = $this->defaultState($now);
-            }
-            $result = $callback($state, $now);
-            $state['version'] = self::STATE_VERSION;
-            $state['updated_at'] = microtime(true);
-            rewind($handle);
-            ftruncate($handle, 0);
-            fwrite($handle, json_encode($state, JSON_UNESCAPED_SLASHES));
-            fflush($handle);
-            flock($handle, LOCK_UN);
-            return $result;
-        } finally {
-            fclose($handle);
-        }
+        $handle=@fopen($this->path,'c+');
+        if($handle===false)throw new \RuntimeException('OAuth rate coordinator unavailable.');
+        @chmod($this->path,0600);
+        try{
+            if(!flock($handle,LOCK_EX))throw new \RuntimeException('OAuth rate coordinator lock unavailable.');
+            rewind($handle);$raw=stream_get_contents($handle);$old=is_string($raw)&&trim($raw)!==''?json_decode($raw,true):null;$now=$this->now();
+            $s=$this->defaultState($now);
+            if(is_array($old)){
+                $fresh=$now-(float)($old['updated_at']??0)<=self::STATE_TTL_SECONDS||((float)($old['cooldown_until']??0)>0&&$now<=(float)$old['cooldown_until']+self::STATE_TTL_SECONDS);
+                if($fresh&&(int)($old['version']??0)===self::STATE_VERSION)$s=array_replace($s,$old);
+                elseif($fresh&&(int)($old['version']??0)===2){
+                    // Legacy reservation-derived safe rates are not valid evidence. Preserve safety deadlines and conservative ceilings.
+                    $s['target_rate_cps']=min(self::INITIAL_RATE,$this->clampRate((float)($old['target_rate_cps']??self::INITIAL_RATE)));
+                    $s['backlashes']=max(0,(int)($old['backlashes']??0));$s['unsafe_rate_cps']=max(0.0,(float)($old['unsafe_rate_cps']??0));
+                    if($s['unsafe_rate_cps']>0){$s['unsafe_until']=$now+self::BOUNDARY_TTL_SECONDS;$s['unsafe_evidence']='legacy-ceiling';$s['target_rate_cps']=min($s['target_rate_cps'],max(self::MIN_RATE,$s['unsafe_rate_cps']*0.90));}
+                }
+                // Even a long Retry-After survives state age or a v2-to-v3 migration.
+                foreach(['cooldown_until','next_launch_at','foreground_until'] as $key)$s[$key]=max((float)$s[$key],(float)($old[$key]??0));
+            }elseif(is_string($raw)&&trim($raw)!=='')throw new \RuntimeException('OAuth rate coordinator state is invalid.');
+            $this->trimEvidence($s,$now);
+            $result=$callback($s,$now);$s['version']=self::STATE_VERSION;$s['updated_at']=$this->now();
+            $encoded=json_encode($s,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
+            rewind($handle);if(!ftruncate($handle,0)||fwrite($handle,$encoded)!==strlen($encoded)||!fflush($handle))throw new \RuntimeException('OAuth rate coordinator state write failed.');
+            flock($handle,LOCK_UN);return $result;
+        }finally{fclose($handle);}
     }
 
-    private function publicState(array $state, string $reason): array
+    private function publicState(array $s,float $now,string $reason): array
     {
-        return [
-            'rate_target_cps' => round($this->clampRate((float)($state['target_rate_cps'] ?? self::INITIAL_RATE)), 4),
-            'safe_rate_cps' => round(max(0.0, (float)($state['safe_rate_cps'] ?? 0)), 4),
-            'unsafe_rate_cps' => round(max(0.0, (float)($state['unsafe_rate_cps'] ?? 0)), 4),
-            'clean_samples' => (int)($state['clean_samples'] ?? 0),
-            'backlashes' => (int)($state['backlashes'] ?? 0),
-            'launches' => (int)($state['launches'] ?? 0),
-            'observed_launch_cps' => round($this->observedLaunchRate($state,microtime(true)),4),
-            'permanent_4xx_seen' => (int)($state['permanent_4xx_seen'] ?? 0),
-            'background_suppressions' => (int)($state['background_suppressions'] ?? 0),
-            'foreground_hold_ms' => (int)round(self::FOREGROUND_HOLD_SECONDS * 1000),
-            'latency_baseline_ms' => is_array($state['latency_baseline_ms'] ?? null) ? $state['latency_baseline_ms'] : [],
-            'last_endpoint_class' => (string)($state['last_endpoint_class'] ?? ''),
-            'last_median_ms' => (float)($state['last_median_ms'] ?? 0),
-            'last_p95_ms' => (float)($state['last_p95_ms'] ?? 0),
-            'reason' => $reason,
-        ];
+        return ['rate_learning_revision'=>self::STATE_VERSION,'observed_at_ms'=>(int)floor($now*1000),'rate_target_cps'=>round($this->clampRate((float)$s['target_rate_cps']),4),'safe_rate_cps'=>round((float)$s['safe_rate_cps'],4),'unsafe_rate_cps'=>round((float)$s['unsafe_rate_cps'],4),'unsafe_evidence'=>(string)$s['unsafe_evidence'],'clean_samples'=>(int)$s['clean_samples'],'backlashes'=>(int)$s['backlashes'],'launches'=>(int)$s['launches'],'reservations'=>(int)$s['reservations'],'observed_launch_cps'=>round($this->observedRate($s['recent_actual_launches'],$now),4),'observed_clean_cps'=>round(count($s['recent_clean_completions'])/self::WINDOW_SECONDS,4),'cooldown_remaining_ms'=>max(0,(int)ceil(((float)$s['cooldown_until']-$now)*1000)),'permanent_4xx_seen'=>(int)$s['permanent_4xx_seen'],'background_suppressions'=>(int)$s['background_suppressions'],'foreground_hold_ms'=>(int)round(self::FOREGROUND_HOLD_SECONDS*1000),'latency_baseline_ms'=>$s['latency_baseline_ms'],'last_endpoint_class'=>(string)($s['last_endpoint_class']??''),'last_median_ms'=>(float)($s['last_median_ms']??0),'last_p95_ms'=>(float)($s['last_p95_ms']??0),'reason'=>$reason];
     }
 
-    private function observedLaunchRate(array $state,float $now): float
-    {
-        $slots=is_array($state['recent_launch_slots']??null)?array_values(array_map('floatval',$state['recent_launch_slots'])):[];
-        $cutoff=$now-2.0;$slots=array_values(array_filter($slots,static fn(float $v):bool=>$v>=$cutoff&&$v<=$now+0.05));
-        $count=count($slots);if($count<4)return 0.0;sort($slots,SORT_NUMERIC);$span=max(0.001,end($slots)-$slots[0]);return ($count-1)/$span;
-    }
-
-    private function percentile(array $values, float $p): float
-    {
-        if ($values === []) return 0.0;
-        $index = (int)floor((count($values) - 1) * max(0.0, min(1.0, $p)));
-        return (float)$values[$index];
-    }
+    private function percentile(array $values,float $p):float { return $values===[]?0.0:(float)$values[(int)floor((count($values)-1)*max(0,min(1,$p)))]; }
 }
