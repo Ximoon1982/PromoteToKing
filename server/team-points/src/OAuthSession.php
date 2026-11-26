@@ -543,7 +543,7 @@ final class OAuthSession
         if(defined('CURLMOPT_MAX_HOST_CONNECTIONS'))@curl_multi_setopt($mh,CURLMOPT_MAX_HOST_CONNECTIONS,$requested);
         if(defined('CURLMOPT_PIPELINING')&&defined('CURLPIPE_MULTIPLEX'))@curl_multi_setopt($mh,CURLMOPT_PIPELINING,CURLPIPE_MULTIPLEX);
 
-        $next=0;$active=[];$results=[];$latencies=[];$statuses=[];$peak=0;$http2=false;$completionCounts=[];
+        $next=0;$active=[];$results=[];$latencies=[];$statuses=[];$peak=0;$http2=false;$completionCounts=[];$curlIntervals=[];
         $started=microtime(true);$retryAfterMax=0;$rate429Seen=0;$launched=0;$reservation=null;$launchTimes=[];$launchRates=[];$controller=$controllerBefore;$feedbackStatuses=[];$feedbackLatencies=[];$feedbackRates=[];$feedbackTimes=[];$deferred=0;$reservationAttempts=0;$reservationMisses=0;$reservationCallMs=0.0;
 
         $add=static function(array $req,array $slot)use($mh,$token,&$active,&$launchTimes,&$launchRates,$coordinator,&$reservationCallMs):void{
@@ -555,7 +555,7 @@ final class OAuthSession
             $launchedAt=microtime(true);$launchTimes[]=$launchedAt;$launchRates[]=(float)($slot['rate_target_cps']??0);
             $id=spl_object_id($ch);$active[$id]=['handle'=>$ch,'req'=>$req,'started'=>$launchedAt,'headers'=>&$responseHeaders,'launch_rate_cps'=>(float)($slot['rate_target_cps']??0)];
             $rc=curl_multi_add_handle($mh,$ch);if($rc!==CURLM_OK){unset($active[$id]);curl_close($ch);throw new \RuntimeException('Unable to add Chess.com request to cURL multi.');}
-            $recordStarted=microtime(true);$active[$id]['observed_launch_cps']=$coordinator->recordLaunch();$reservationCallMs+=(microtime(true)-$recordStarted)*1000;
+            $recordStarted=microtime(true);$active[$id]['admitted_at']=$recordStarted;$active[$id]['observed_launch_cps']=$coordinator->recordLaunch();$reservationCallMs+=(microtime(true)-$recordStarted)*1000;
         };
         $fill=static function()use(&$next,$requests,&$active,&$currentLimit,$add,&$peak,&$launched,&$reservation,$coordinator,$trafficClass,$requestedRate,&$reservationAttempts,&$reservationMisses,&$reservationCallMs,&$results,&$deferred,&$retryAfterMax):void{
             while($next<count($requests)&&count($active)<$currentLimit){
@@ -589,7 +589,7 @@ final class OAuthSession
                     if(defined('CURLINFO_HTTP_VERSION')){$hv=(int)curl_getinfo($ch,CURLINFO_HTTP_VERSION);if((defined('CURL_HTTP_VERSION_2_0')&&$hv===CURL_HTTP_VERSION_2_0)||(defined('CURL_HTTP_VERSION_2TLS')&&$hv===CURL_HTTP_VERSION_2TLS))$http2=true;}
                     $json=json_decode($body,true);$headers=$meta['headers'];$retryAfter=self::retryAfterSeconds((string)($headers['retry-after']??''));
                     $results[]=['id'=>$meta['req']['id'],'url'=>$meta['req']['url'],'status'=>$status,'status_text'=>'','headers'=>['content-type'=>(string)($headers['content-type']??'application/json'),'etag'=>(string)($headers['etag']??''),'last-modified'=>(string)($headers['last-modified']??''),'retry-after'=>(string)($headers['retry-after']??'')],'body'=>$body,'json'=>is_array($json)?$json:null,'elapsed_ms'=>(int)round($elapsed)];
-                    curl_multi_remove_handle($mh,$ch);curl_close($ch);unset($active[$id]);
+                    curl_multi_remove_handle($mh,$ch);$curlIntervals[]=[round((float)$meta['admitted_at']*1000,3),round(microtime(true)*1000,3)];curl_close($ch);unset($active[$id]);
                     $launchRate=max(1.0,(float)($meta['launch_rate_cps']??$controller['rate_target_cps']??30));
                     if($status===429){
                         $rate429Seen++;$retryAfterMax=max($retryAfterMax,max(1,$retryAfter?:1));
@@ -624,7 +624,7 @@ final class OAuthSession
             foreach($results as $attested){$status=(int)($attested['status']??0);if($status<200||$status>=300)continue;$body=(string)($attested['body']??'');if($body==='')continue;$attestedGateway->ingestAttestedOAuth((string)($attested['url']??''),$status,$body,is_array($attested['headers']??null)?$attested['headers']:[],120);}
         }catch(\Throwable){}
         $cacheIngestMs=(microtime(true)-$cacheStarted)*1000;
-        $timing=['acquisition_ms'=>round($acquisitionMs,3),'cache_ingest_ms'=>round($cacheIngestMs,3),'reservation_call_ms'=>round($reservationCallMs,3),'reservation_attempts'=>$reservationAttempts,'reservation_misses'=>$reservationMisses,'first_launch_delay_ms'=>$launchTimes?round(($launchTimes[0]-$started)*1000,3):0,'launch_span_ms'=>count($launchTimes)>1?round((end($launchTimes)-$launchTimes[0])*1000,3):0];
+        $timing=['curl_intervals_ms'=>$curlIntervals,'acquisition_ms'=>round($acquisitionMs,3),'cache_ingest_ms'=>round($cacheIngestMs,3),'reservation_call_ms'=>round($reservationCallMs,3),'reservation_attempts'=>$reservationAttempts,'reservation_misses'=>$reservationMisses,'first_launch_delay_ms'=>$launchTimes?round(($launchTimes[0]-$started)*1000,3):0,'launch_span_ms'=>count($launchTimes)>1?round((end($launchTimes)-$launchTimes[0])*1000,3):0];
         $elapsedMs=max(1,(int)round((microtime(true)-$started)*1000));$processed=count($results);$ok=0;$r429=0;$errors=0;
         foreach($results as $r){$s=(int)$r['status'];if($s>=200&&$s<400)$ok++;elseif($s===429)$r429++;else$errors++;}
         $cps=$launched/($elapsedMs/1000);

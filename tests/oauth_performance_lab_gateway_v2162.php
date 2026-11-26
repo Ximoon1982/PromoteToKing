@@ -68,6 +68,8 @@ FIXTURE
         foreach (['acquisition_ms','cache_ingest_ms','reservation_call_ms','reservation_attempts','reservation_misses','first_launch_delay_ms','launch_span_ms'] as $key) {
             verify(isset($timing[$key]) && is_numeric($timing[$key]) && $timing[$key]>=0, 'Missing/invalid timing: '.$key);
         }
+        verify(count($timing['curl_intervals_ms'])===8,'Missing cURL admission/completion intervals');
+        foreach($timing['curl_intervals_ms'] as $pair)verify(count($pair)===2&&$pair[1]>$pair[0],'Invalid cURL interval');
         verify($timing['acquisition_ms']>0 && $timing['cache_ingest_ms']>=130, 'Timing phases are not measured');
         verify($timing['reservation_attempts']>=8 && $timing['reservation_misses']<=$timing['reservation_attempts'], 'Reservation counts invalid');
         verify($timing['reservation_call_ms']<=$timing['acquisition_ms']+2, 'Reservation duration inconsistent');
