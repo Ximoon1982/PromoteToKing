@@ -3,17 +3,16 @@
   "use strict";
   const GATEWAY="/server/team-points/public/oauth.php";
   const ACCESS="/server/team-points/public/detailed-match-analysis.php?access=1";
-  const RATE_CEILING=120, MAX_MS=300000, POST_TIMEOUT=20000, DRAIN_RESERVE_MS=POST_TIMEOUT+1000;
+  const RATE_CEILING=120, MAX_MS=300000, POST_TIMEOUT=45000, DRAIN_RESERVE_MS=POST_TIMEOUT+1000, MAX_OUTSTANDING=32;
+  // At most 32 upstream requests may be queued or executing across all PHP POSTs.
+  // Five phases leave enough budget for a genuine 45-second batch deadline.
   const PLAN=Object.freeze([
-    ["Warm-up",32,6,256,1.35,12000,12000],
-    ["Baseline",32,6,256,1.35,25000,16000],
-    ["Smaller batches",16,6,256,1.35,25000,16000],
-    ["Larger batches",64,6,256,1.35,25000,16000],
-    ["Fewer POSTs",64,3,256,1.35,25000,16000],
-    ["Deeper feeder",32,6,512,1.35,25000,16000],
-    ["More headroom",32,6,256,2,25000,16000],
-    ["Baseline repeat",32,6,256,1.35,25000,16000]
-  ].map(([name,batch,posts,workers,headroom,admissionMs,minAdmissionMs])=>Object.freeze({name,batch,posts,workers,headroom,admissionMs,minAdmissionMs,drainMs:DRAIN_RESERVE_MS})));
+    ["Warm-up",8,2,64,1.35,15000,12000,16],
+    ["Single POST",16,1,64,1.35,25000,12000,16],
+    ["Dual POST",16,2,64,1.35,25000,12000,32],
+    ["Four small POSTs",8,4,64,1.35,25000,12000,32],
+    ["Dual POST repeat",16,2,64,1.35,25000,12000,32]
+  ].map(([name,batch,posts,workers,headroom,admissionMs,minAdmissionMs,maxOutstanding])=>Object.freeze({name,batch,posts,workers,headroom,admissionMs,minAdmissionMs,maxOutstanding,drainMs:DRAIN_RESERVE_MS})));
   const $=id=>document.getElementById(id);
   const finite=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
   const q=(values,p)=>{const a=values.slice().sort((x,y)=>x-y);return a.length?a[Math.floor((a.length-1)*p)]:null;};
@@ -41,13 +40,14 @@
   function newMetrics(config){
     return {config:{...config},status:"not run",elapsed_ms:0,admission_elapsed_ms:0,drain_elapsed_ms:0,submitted:0,received:0,successful:0,admission_received:0,admission_successful:0,rate429:0,transient:0,permanent:0,missing:0,
       active_at_admission_close:0,requests_at_admission_close:0,oldest_at_admission_close_ms:null,pending_at_stop:[],
-      candidates_started:0,candidates_completed:0,partial_candidates:0,peak_posts:0,peak_curl_per_post:0,peak_queued:0,controller_start:null,controller_end:null,
+      candidates_started:0,candidates_completed:0,partial_candidates:0,peak_posts:0,peak_outstanding_requests:0,peak_curl_per_post:0,peak_queued:0,controller_start:null,controller_end:null,
       latencies:[],post_latencies:[],by_endpoint:{profile:{received:0,successful:0,statuses:{},latencies:[]},stats:{received:0,successful:0,statuses:{},latencies:[]},games:{received:0,successful:0,statuses:{},latencies:[]}},statuses:{},completion_counts:{},batches:[]};
   }
   const increment=(obj,key,n=1)=>{obj[key]=(obj[key]||0)+n;};
   function summary(m){
     const sec=m.elapsed_ms/1000,admissionSec=m.admission_elapsed_ms/1000;
-    const serverTimes=m.batches.map(b=>b.server_ms).filter(Number.isFinite),outsideTimes=m.batches.map(b=>b.outside_server_ms).filter(Number.isFinite);
+    const values=key=>m.batches.map(b=>b[key]).filter(Number.isFinite);
+    const serverTimes=values("server_ms"),outsideTimes=values("outside_server_ms"),acquisitionTimes=values("acquisition_ms"),cacheTimes=values("cache_ingest_ms"),reservationTimes=values("reservation_call_ms");
     const endpoint={};
     for(const [name,e] of Object.entries(m.by_endpoint))endpoint[name]={received:e.received,successful:e.successful,statuses:e.statuses,median_ms:q(e.latencies,.5),p95_ms:q(e.latencies,.95)};
     const {latencies,post_latencies,by_endpoint,...rest}=m;
@@ -56,6 +56,8 @@
       drain_received:m.received-m.admission_received,drain_successful:m.successful-m.admission_successful,
       median_ms:q(latencies,.5),p95_ms:q(latencies,.95),post_median_ms:q(post_latencies,.5),post_p95_ms:q(post_latencies,.95),
       server_median_ms:q(serverTimes,.5),server_p95_ms:q(serverTimes,.95),outside_server_median_ms:q(outsideTimes,.5),outside_server_p95_ms:q(outsideTimes,.95),
+      acquisition_p95_ms:q(acquisitionTimes,.95),cache_ingest_p95_ms:q(cacheTimes,.95),reservation_call_p95_ms:q(reservationTimes,.95),
+      reservation_attempts:m.batches.reduce((n,b)=>n+(b.reservation_attempts??0),0),reservation_misses:m.batches.reduce((n,b)=>n+(b.reservation_misses??0),0),
       pending_posts_at_stop:m.pending_at_stop.length,pending_requests_at_stop:m.pending_at_stop.reduce((n,r)=>n+r.requests,0),oldest_pending_at_stop_ms:m.pending_at_stop[0]?.age_ms??null,by_endpoint:endpoint};
   }
   function publicController(c){
@@ -88,7 +90,7 @@
         const elapsedMs=phase.elapsed(),admissionMs=Math.min(m.config.admissionMs,elapsedMs);
         return summary({...m,elapsed_ms:elapsedMs,admission_elapsed_ms:admissionMs,drain_elapsed_ms:Math.max(0,elapsedMs-admissionMs),controller_end:this.controller});
       });
-      return {format:"p2k-oauth-lab-v1",benchmark_revision:2,post_timeout_ms:this.postTimeout,started_at:this.wallStarted?new Date(this.wallStarted).toISOString():null,elapsed_ms:Math.min(ms,this.maxMs),actual_elapsed_ms:ms,limit_ms:this.maxMs,sample_count:this.names.length,sample_seed:this.seed,unique_candidates_used:this.cursor,stop_reason:this.reason||null,controller:this.controller,active_posts:pending.length,active_requests:pending.reduce((n,r)=>n+r.requests,0),oldest_active_post_ms:pending[0]?.age_ms??null,active_post_details:pending,current_phase:this.phase?.m.config.name||null,phase_stage:this.phase?(this.phase.admitting?"admitting":"draining"):null,running:this.running,scenarios,notes:["Direct gateway comparison; no browser cache, Green checks, automatic retries or recruitment persistence.","Controller state is shared and not reset between scenarios.","Overall success/completion rates use total scenario wall time including drain; admission rates count only results delivered before admission closes.","Gateway POST wall time minus reported multiGet elapsed time is nonnegative unaccounted overhead (browser, network, PHP startup/queue or serialization), not a direct queue measurement.","Drain reserve is a planning budget, not an independent timeout. Every admitted POST retains its own timeout, subject to the overall deadline; phases never overlap.","Unreturned results are not counted as completed; upstream requests may continue after client abort.","Only request metadata and aggregate counts exported; no tokens, CSRF, candidate usernames or response bodies."]};
+      return {format:"p2k-oauth-lab-v1",benchmark_revision:3,post_timeout_ms:this.postTimeout,max_outstanding_requests:MAX_OUTSTANDING,started_at:this.wallStarted?new Date(this.wallStarted).toISOString():null,elapsed_ms:Math.min(ms,this.maxMs),actual_elapsed_ms:ms,limit_ms:this.maxMs,sample_count:this.names.length,sample_seed:this.seed,unique_candidates_used:this.cursor,stop_reason:this.reason||null,controller:this.controller,active_posts:pending.length,active_requests:pending.reduce((n,r)=>n+r.requests,0),oldest_active_post_ms:pending[0]?.age_ms??null,active_post_details:pending,current_phase:this.phase?.m.config.name||null,phase_stage:this.phase?(this.phase.admitting?"admitting":"draining"):null,running:this.running,scenarios,notes:["Direct gateway comparison with normal server canonical cache ingestion; no browser cache lookups, Green checks, automatic retries or recruitment persistence.","Controller state is shared and not reset between scenarios.","Overall success/completion rates use total scenario wall time including drain; admission rates count only results delivered before admission closes.","Gateway timings separate cURL acquisition (including rate-slot coordination) from canonical cache ingestion. Reservation call duration includes all work in the coordinator call, not just lock waiting. Browser POST wall time minus reported multiGet time is unaccounted overhead, not a direct queue measurement.","Bounded outstanding requests across all POSTs; lower learned rates can further shrink batches. Endpoint queues rotate fairly among available work. Comparisons are sequential and use distinct candidate cohorts.","Drain reserve is a planning budget, not an independent timeout. Every admitted POST retains its own timeout, subject to the overall deadline; phases never overlap.","Unreturned results are not counted as completed; upstream requests may continue after client abort.","Only request metadata and aggregate counts exported; no tokens, CSRF, candidate usernames or response bodies."]};
     }
     async run(){
       if(this.running)throw Error("Benchmark already running.");
@@ -118,7 +120,13 @@
     runPhase(m){
       return new Promise(resolve=>{
         const cfg=m.config,t0=this.now(),wall0=Date.now(),phaseElapsed=()=>Math.max(this.now()-t0,Date.now()-wall0);
-        const p={m,elapsed:phaseElapsed,active:new Map(),queues:{profile:[],stats:[],games:[]},candidates:new Map(),admitting:true,finished:false,cap:Math.min(8,cfg.batch,this.transport),wake:null,pumpTimer:null,admissionTimer:null,finish:null};
+        const p={m,elapsed:phaseElapsed,active:new Map(),queues:{profile:[],stats:[],games:[]},candidates:new Map(),admitting:true,finished:false,cap:Math.min(8,cfg.batch,this.transport),nextKind:0,wake:null,pumpTimer:null,admissionTimer:null,finish:null};
+        const kinds=["profile","stats","games"];
+        const outstanding=()=>[...p.active.values()].reduce((n,r)=>n+r.count,0);
+        const hardCap=Math.min(MAX_OUTSTANDING,cfg.maxOutstanding??cfg.batch*cfg.posts);
+        // If the shared controller retreats, do not enqueue more than about three seconds
+        // of launch work. Already-admitted requests are allowed to finish normally.
+        const requestCap=()=>Math.min(hardCap,Math.max(1,Math.floor((this.controller?.target??30)*3)));
         this.phase=p;m.status="running";m.controller_start=this.controller?{...this.controller}:null;
         const queued=()=>Object.values(p.queues).reduce((s,a)=>s+a.length,0);
         const open=()=>p.admitting&&!p.finished&&!this.reason&&phaseElapsed()<cfg.admissionMs&&this.elapsed()<this.maxMs;
@@ -159,7 +167,9 @@
           const c=publicController(payload.controller||{rate_target_cps:payload.rate_cps});
           this.controller=c;p.cap=connectionCap(cfg,this.transport,c.target,payload.median_latency_ms,payload.p95_latency_ms);
           const deliveredDuringAdmission=open(),wallMs=Math.round(this.now()-start),serverMs=payload.elapsed_ms!=null&&Number.isFinite(Number(payload.elapsed_ms))?Math.max(0,Number(payload.elapsed_ms)):null;
+          const timing=payload.gateway_timing??{},numberOrNull=v=>v!=null&&Number.isFinite(Number(v))?Math.max(0,Number(v)):null;
           const batch={at_ms:Math.round(this.elapsed()),phase_elapsed_ms:Math.round(phaseElapsed()),delivered_during_admission:deliveredDuringAdmission,endpoint:entries[0].kind,submitted:entries.length,received:payload.results.length,wall_ms:wallMs,server_ms:serverMs,outside_server_ms:serverMs===null?null:Math.max(0,wallMs-serverMs),
+            acquisition_ms:numberOrNull(timing.acquisition_ms),cache_ingest_ms:numberOrNull(timing.cache_ingest_ms),reservation_call_ms:numberOrNull(timing.reservation_call_ms),reservation_attempts:numberOrNull(timing.reservation_attempts),reservation_misses:numberOrNull(timing.reservation_misses),first_launch_delay_ms:numberOrNull(timing.first_launch_delay_ms),launch_span_ms:numberOrNull(timing.launch_span_ms),
             launch_cps:finite(payload.launch_cps),cps:finite(payload.cps),peak_curl:finite(payload.peak_in_flight),requested_concurrency:finite(payload.requested_concurrency),median_ms:finite(payload.median_latency_ms),p95_ms:finite(payload.p95_latency_ms),http2:payload.http2_seen===true,controller:c,statuses:{}};
           m.batches.push(batch);m.post_latencies.push(batch.wall_ms);m.peak_curl_per_post=Math.max(m.peak_curl_per_post,batch.peak_curl);
           for(const [sec,n] of Object.entries(payload.completion_counts||{}))if(/^\d+$/.test(sec))increment(m.completion_counts,sec,finite(n));
@@ -203,14 +213,18 @@
           if(this.cursor>=this.names.length&&!p.candidates.size&&!p.active.size&&!queued()){
             this.stop("Candidate sample exhausted before all scenarios completed");return;
           }
-          while(open()&&p.active.size<cfg.posts&&queued()){
-            // Profile priority matches production; stats and games alternate by oldest queued ID.
-            let kind=p.queues.profile.length?"profile":!p.queues.stats.length?"games":!p.queues.games.length?"stats":Number(p.queues.stats[0].id.slice(3))<=Number(p.queues.games[0].id.slice(3))?"stats":"games";
-            const entries=p.queues[kind].splice(0,cfg.batch);
+          while(open()&&p.active.size<cfg.posts&&queued()&&outstanding()<requestCap()){
+            // Rotate among homogeneous endpoint queues; ready follow-ups cannot be
+            // starved by the continuously replenished profile queue.
+            let kind=null;
+            for(let i=0;i<kinds.length;i++){const k=(p.nextKind+i)%kinds.length;if(p.queues[kinds[k]].length){kind=kinds[k];p.nextKind=(k+1)%kinds.length;break;}}
+            if(kind===null)break;
+            const slots=requestCap()-outstanding();
+            const entries=p.queues[kind].splice(0,Math.min(cfg.batch,slots));
             const controller=new AbortController(),key=++this.sequence,start=this.now(),wallStart=Date.now();
             const timeoutMs=Math.min(this.postTimeout,Math.max(1,this.maxMs-this.elapsed()));
             const pending={controller,kind,count:entries.length,start,wallStart,timeoutMs,timer:null};
-            p.active.set(key,pending);m.submitted+=entries.length;m.peak_posts=Math.max(m.peak_posts,p.active.size);
+            p.active.set(key,pending);m.submitted+=entries.length;m.peak_posts=Math.max(m.peak_posts,p.active.size);m.peak_outstanding_requests=Math.max(m.peak_outstanding_requests,outstanding());
             const requests=entries.map(e=>({id:e.id,url:"https://api.chess.com/pub/player/"+encodeURIComponent(e.candidate.name)+(e.kind==="profile"?"":"/"+e.kind),headers:{accept:"application/json"}}));
             const age=()=>Math.max(this.now()-start,Date.now()-wallStart);
             const timedOut=()=>{
@@ -234,7 +248,7 @@
     }
   }
   // Export only deterministic engine pieces for local regression tests.
-  const engine=Object.freeze({Bench,PLAN,parseNames,connectionCap,summary,MAX_MS,POST_TIMEOUT});
+  const engine=Object.freeze({Bench,PLAN,parseNames,connectionCap,summary,MAX_MS,POST_TIMEOUT,MAX_OUTSTANDING});
   if(typeof module!=="undefined"&&module.exports){module.exports=engine;return;}
   if(typeof document==="undefined")return;
   let auth=null,bench=null,verifying=false,starting=false,displayTimer=null,report=null;
@@ -266,7 +280,7 @@
     const snap=bench?bench.snapshot():report;const rows=snap?.scenarios||PLAN.map(c=>summary(newMetrics(c)));
     $("rows").replaceChildren();
     for(const m of rows){
-      const tr=document.createElement("tr"),c=m.config,values=[c.name,c.batch,c.posts,c.workers,c.headroom,m.elapsed_ms?fmt(m.admission_elapsed_ms/1000):"—",m.elapsed_ms?fmt(m.drain_elapsed_ms/1000):"—",m.elapsed_ms?fmt(m.admission_successful_cps):"—",m.elapsed_ms?fmt(m.successful_cps):"—",m.elapsed_ms?fmt(m.completed_cps):"—",m.rate429,fmt(m.median_ms,0),fmt(m.p95_ms,0),fmt(m.post_median_ms,0)+" / "+fmt(m.post_p95_ms,0),fmt(m.server_p95_ms,0),fmt(m.outside_server_p95_ms,0),fmt(m.controller_end?.target),m.status];
+      const tr=document.createElement("tr"),c=m.config,values=[c.name,c.batch,c.posts,c.maxOutstanding??MAX_OUTSTANDING,c.workers,c.headroom,m.elapsed_ms?fmt(m.admission_elapsed_ms/1000):"—",m.elapsed_ms?fmt(m.drain_elapsed_ms/1000):"—",m.elapsed_ms?fmt(m.admission_successful_cps):"—",m.elapsed_ms?fmt(m.successful_cps):"—",m.elapsed_ms?fmt(m.completed_cps):"—",m.rate429,fmt(m.median_ms,0),fmt(m.p95_ms,0),fmt(m.post_median_ms,0)+" / "+fmt(m.post_p95_ms,0),fmt(m.server_p95_ms,0),fmt(m.acquisition_p95_ms,0),fmt(m.cache_ingest_p95_ms,0),fmt(m.reservation_call_p95_ms,0),fmt(m.outside_server_p95_ms,0),fmt(m.controller_end?.target),m.status];
       for(const value of values){const td=document.createElement("td");td.textContent=value;tr.appendChild(td);}$("rows").appendChild(tr);
     }
     $("bars").replaceChildren();const ranked=rows.filter(m=>m.status==="completed"&&m.config.name!=="Warm-up"),max=Math.max(1,...ranked.map(m=>m.successful_cps));
@@ -309,7 +323,7 @@
   }
   function download(kind){
     const snap=report||bench?.snapshot();if(!snap||bench?.running)return;
-    const fields=["name","batch","posts","workers","headroom","status","plannedAdmissionMs","admissionMs","drainMs","elapsed_ms","admission_elapsed_ms","drain_elapsed_ms","submitted","received","successful","admission_received","admission_successful","admission_successful_cps","admission_completed_cps","drain_received","drain_successful","successful_cps","completed_cps","candidates_completed","candidates_cps","rate429","transient","permanent","missing","median_ms","p95_ms","post_median_ms","post_p95_ms","server_median_ms","server_p95_ms","outside_server_median_ms","outside_server_p95_ms","active_at_admission_close","requests_at_admission_close","oldest_at_admission_close_ms","pending_posts_at_stop","pending_requests_at_stop","oldest_pending_at_stop_ms","target_start","target_end","safe_end","unsafe_end","peak_posts","peak_curl_per_post"];
+    const fields=["name","batch","posts","maxOutstanding","workers","headroom","status","plannedAdmissionMs","admissionMs","drainMs","elapsed_ms","admission_elapsed_ms","drain_elapsed_ms","submitted","received","successful","admission_received","admission_successful","admission_successful_cps","admission_completed_cps","drain_received","drain_successful","successful_cps","completed_cps","candidates_completed","candidates_cps","rate429","transient","permanent","missing","median_ms","p95_ms","post_median_ms","post_p95_ms","server_median_ms","server_p95_ms","acquisition_p95_ms","cache_ingest_p95_ms","reservation_call_p95_ms","reservation_attempts","reservation_misses","outside_server_median_ms","outside_server_p95_ms","active_at_admission_close","requests_at_admission_close","oldest_at_admission_close_ms","pending_posts_at_stop","pending_requests_at_stop","oldest_pending_at_stop_ms","target_start","target_end","safe_end","unsafe_end","peak_posts","peak_outstanding_requests","peak_curl_per_post"];
     const csvCell=v=>'"'+String(v??"").replaceAll('"','""')+'"';
     const body=kind==="json"?JSON.stringify(snap,null,2):[fields.join(","),...snap.scenarios.map(m=>fields.map(k=>csvCell(({target_start:m.controller_start?.target,target_end:m.controller_end?.target,safe_end:m.controller_end?.safe,unsafe_end:m.controller_end?.unsafe})[k]??m.config[k]??m[k])).join(","))].join("\r\n");
     const url=URL.createObjectURL(new Blob([body],{type:kind==="json"?"application/json":"text/csv;charset=utf-8"}));

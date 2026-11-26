@@ -544,7 +544,7 @@ final class OAuthSession
         if(defined('CURLMOPT_PIPELINING')&&defined('CURLPIPE_MULTIPLEX'))@curl_multi_setopt($mh,CURLMOPT_PIPELINING,CURLPIPE_MULTIPLEX);
 
         $next=0;$active=[];$results=[];$latencies=[];$statuses=[];$peak=0;$http2=false;$completionCounts=[];
-        $started=microtime(true);$retryAfterMax=0;$rate429Seen=0;$launched=0;$reservation=null;$launchTimes=[];$launchRates=[];$controller=$controllerBefore;$feedbackStatuses=[];$feedbackLatencies=[];$feedbackRates=[];
+        $started=microtime(true);$retryAfterMax=0;$rate429Seen=0;$launched=0;$reservation=null;$launchTimes=[];$launchRates=[];$controller=$controllerBefore;$feedbackStatuses=[];$feedbackLatencies=[];$feedbackRates=[];$reservationAttempts=0;$reservationMisses=0;$reservationCallMs=0.0;
 
         $add=static function(array $req,array $slot)use($mh,$token,&$active,&$launchTimes,&$launchRates):void{
             $headers=['Accept: application/json','Accept-Encoding: gzip','Authorization: Bearer '.$token,'User-Agent: PromoteToKing-OAuth/'.self::VERSION.' (https://www.promotetoking.org)'];
@@ -556,9 +556,9 @@ final class OAuthSession
             $id=spl_object_id($ch);$active[$id]=['handle'=>$ch,'req'=>$req,'started'=>$launchedAt,'headers'=>&$responseHeaders,'launch_rate_cps'=>(float)($slot['rate_target_cps']??0)];
             $rc=curl_multi_add_handle($mh,$ch);if($rc!==CURLM_OK){unset($active[$id]);curl_close($ch);throw new \RuntimeException('Unable to add Chess.com request to cURL multi.');}
         };
-        $fill=static function()use(&$next,$requests,&$active,&$currentLimit,$add,&$peak,&$launched,&$reservation,$coordinator,$trafficClass,$requestedRate):void{
+        $fill=static function()use(&$next,$requests,&$active,&$currentLimit,$add,&$peak,&$launched,&$reservation,$coordinator,$trafficClass,$requestedRate,&$reservationAttempts,&$reservationMisses,&$reservationCallMs):void{
             while($next<count($requests)&&count($active)<$currentLimit){
-                if($reservation===null){$reservation=$coordinator->reserveLaunch($trafficClass);if((float)($reservation['rate_target_cps']??0)>$requestedRate){$reservation['rate_target_cps']=$requestedRate;}}
+                if($reservation===null){$reservationStarted=microtime(true);$reservation=$coordinator->reserveLaunch($trafficClass);$reservationCallMs+=(microtime(true)-$reservationStarted)*1000;$reservationAttempts++;if(empty($reservation['reserved']))$reservationMisses++;if((float)($reservation['rate_target_cps']??0)>$requestedRate){$reservation['rate_target_cps']=$requestedRate;}}
                 $now=microtime(true);$slot=(float)($reservation['slot']??$now);
                 if($now+0.0005<$slot)break;
                 if(empty($reservation['reserved'])){$reservation=null;continue;}
@@ -606,6 +606,7 @@ final class OAuthSession
         }finally{
             foreach($active as $m){@curl_multi_remove_handle($mh,$m['handle']);@curl_close($m['handle']);}curl_multi_close($mh);
         }
+        $acquisitionMs=(microtime(true)-$started)*1000;$cacheStarted=microtime(true);
         // CTAR: a successful response already acquired by P2K's own server OAuth
         // transport is server-attested. Seed the shared canonical cache so an
         // immediately-following authoritative worker can reuse it once instead of
@@ -614,6 +615,8 @@ final class OAuthSession
             $attestedGateway=new SharedChessGateway(null,\p2k_tp_config()['app']??[]);
             foreach($results as $attested){$status=(int)($attested['status']??0);if($status<200||$status>=300)continue;$body=(string)($attested['body']??'');if($body==='')continue;$attestedGateway->ingestAttestedOAuth((string)($attested['url']??''),$status,$body,is_array($attested['headers']??null)?$attested['headers']:[],120);}
         }catch(\Throwable){}
+        $cacheIngestMs=(microtime(true)-$cacheStarted)*1000;
+        $timing=['acquisition_ms'=>round($acquisitionMs,3),'cache_ingest_ms'=>round($cacheIngestMs,3),'reservation_call_ms'=>round($reservationCallMs,3),'reservation_attempts'=>$reservationAttempts,'reservation_misses'=>$reservationMisses,'first_launch_delay_ms'=>$launchTimes?round(($launchTimes[0]-$started)*1000,3):0,'launch_span_ms'=>count($launchTimes)>1?round((end($launchTimes)-$launchTimes[0])*1000,3):0];
         $elapsedMs=max(1,(int)round((microtime(true)-$started)*1000));$processed=count($results);$ok=0;$r429=0;$errors=0;
         foreach($results as $r){$s=(int)$r['status'];if($s>=200&&$s<400)$ok++;elseif($s===429)$r429++;else$errors++;}
         $cps=$processed/($elapsedMs/1000);
@@ -621,7 +624,7 @@ final class OAuthSession
         $attemptedRate=$launchRates!==[]?self::percentile($launchRates,.5):(float)($controllerBefore['rate_target_cps']??30);
         if($feedbackStatuses!==[]){sort($feedbackRates,SORT_NUMERIC);$attempt=$feedbackRates[(int)floor((count($feedbackRates)-1)*.5)]??$attemptedRate;$controller=$coordinator->feedback($feedbackStatuses,$feedbackLatencies,$endpointClass,(float)$attempt,0);}else{$controller=$coordinator->snapshot();}
         RuntimeTelemetry::record('chess_api_batch',['mode'=>'oauth-bearer','calls'=>$processed,'successes'=>$ok,'rate_429'=>$r429,'errors'=>$errors,'elapsed_ms'=>$elapsedMs,'cps'=>round($cps,3),'launch_cps'=>round($launchCps,3),'requested_rate_cps'=>$requestedRate,'rate_cps'=>(float)($controller['rate_target_cps']??$attemptedRate),'requested_concurrency'=>$requested,'concurrency'=>$currentLimit,'peak_in_flight'=>$peak,'retry_after_seconds'=>$retryAfterMax,'completion_counts'=>$completionCounts,'endpoint_class'=>$endpointClass,'traffic_class'=>$trafficClass,'controller'=>$controller]);
-        return ['ok'=>true,'mode'=>'oauth-bearer','results'=>$results,'processed'=>$processed,'successes'=>$ok,'rate_429'=>$r429,'errors'=>$errors,'elapsed_ms'=>$elapsedMs,'cps'=>$cps,'launch_cps'=>$launchCps,'requested_rate_cps'=>$requestedRate,'rate_cps'=>(float)($controller['rate_target_cps']??$attemptedRate),'requested_concurrency'=>$requested,'concurrency'=>$currentLimit,'peak_in_flight'=>$peak,'transport_cap'=>$transportCap,'transport_capacity'=>$transportCap,'batch_size'=>count($requests),'retry_after_seconds'=>$retryAfterMax,'median_latency_ms'=>self::percentile($latencies,.5),'p95_latency_ms'=>self::percentile($latencies,.95),'http2_seen'=>$http2,'curl_http2_capable'=>self::curlHttp2Capable(),'endpoint_class'=>$endpointClass,'traffic_class'=>$trafficClass,'controller'=>$controller];
+        return ['ok'=>true,'mode'=>'oauth-bearer','results'=>$results,'processed'=>$processed,'successes'=>$ok,'rate_429'=>$r429,'errors'=>$errors,'elapsed_ms'=>$elapsedMs,'cps'=>$cps,'launch_cps'=>$launchCps,'requested_rate_cps'=>$requestedRate,'rate_cps'=>(float)($controller['rate_target_cps']??$attemptedRate),'requested_concurrency'=>$requested,'concurrency'=>$currentLimit,'peak_in_flight'=>$peak,'transport_cap'=>$transportCap,'transport_capacity'=>$transportCap,'batch_size'=>count($requests),'retry_after_seconds'=>$retryAfterMax,'median_latency_ms'=>self::percentile($latencies,.5),'p95_latency_ms'=>self::percentile($latencies,.95),'http2_seen'=>$http2,'gateway_timing'=>$timing,'curl_http2_capable'=>self::curlHttp2Capable(),'endpoint_class'=>$endpointClass,'traffic_class'=>$trafficClass,'controller'=>$controller];
     }
 
     private static function safeReturn(string $value): string

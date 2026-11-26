@@ -1,6 +1,6 @@
 "use strict";
 const assert=require("node:assert/strict");
-const {Bench,PLAN,parseNames,connectionCap,MAX_MS,POST_TIMEOUT}=require("../assets/js/pages/oauth-performance-lab.js");
+const {Bench,PLAN,parseNames,connectionCap,MAX_MS,POST_TIMEOUT,MAX_OUTSTANDING}=require("../assets/js/pages/oauth-performance-lab.js");
 const names=Array.from({length:3000},(_,i)=>"fixture-"+i);
 const plan=(name,settings={})=>({name,batch:8,posts:2,workers:24,headroom:1.35,admissionMs:90,drainMs:100,...settings});
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
@@ -16,14 +16,14 @@ function fixture({status=200,omit=false,hang=false,delay=5}={}){
   }};
 }
 (async()=>{
-  assert.equal(PLAN.reduce((s,p)=>s+p.minAdmissionMs+p.drainMs,0),292000);assert(PLAN.every(p=>p.drainMs>POST_TIMEOUT));assert.equal(POST_TIMEOUT,20000);
-  assert(MAX_MS===300000);assert(PLAN[1].batch===32&&PLAN[1].posts===6&&PLAN[1].workers===256);
+  assert.equal(PLAN.reduce((s,p)=>s+p.minAdmissionMs+p.drainMs,0),290000);assert(PLAN.every(p=>p.drainMs>POST_TIMEOUT&&p.maxOutstanding<=MAX_OUTSTANDING));assert.equal(POST_TIMEOUT,45000);
+  assert(MAX_MS===300000);assert.equal(PLAN.length,5);assert.equal(PLAN[0].maxOutstanding,16);assert.equal(MAX_OUTSTANDING,32);
   assert.deepEqual(parseNames("ABC\nabc\nhttps://www.chess.com/member/DEF\nbad name"),{names:["abc","def"],invalid:1,duplicates:1});
   assert.equal(connectionCap({batch:32,headroom:1.35},256,40,100,100),7);
   const f=fixture(),b=new Bench({names,seed:123,post:f.post,plan:[plan("A"),plan("B",{posts:3})],maxMs:1000,postTimeout:200});
   const result=await b.run();assert.equal(result.stop_reason,null);assert(result.scenarios.every(s=>s.status==="completed"&&s.successful>0&&s.submitted===s.received));
   assert.equal(result.scenarios[0].controller_end.target,40);assert.equal(result.scenarios[1].controller_start.target,40);assert(f.peak<=3);
-  assert(!JSON.stringify(result).includes("fixture-"));assert(result.scenarios[0].successful_cps>0);assert.equal(result.benchmark_revision,2);
+  assert(!JSON.stringify(result).includes("fixture-"));assert(result.scenarios[0].successful_cps>0);assert.equal(result.benchmark_revision,3);
   assert(result.scenarios.every(s=>s.admission_received+s.drain_received===s.received&&s.admission_successful+s.drain_successful===s.successful&&s.server_p95_ms===5&&s.outside_server_p95_ms>=0));
   // Reproduce the old premature drain abort: a valid POST ends well after the former drain deadline.
   const slow=fixture({delay:140}),fast=fixture({delay:5});let late;
@@ -49,5 +49,33 @@ function fixture({status=200,omit=false,hang=false,delay=5}={}){
     const earlyHang=fixture({hang:true}),earlyTimeout=await new Bench({names,seed:9,post:earlyHang.post,plan:[plan("Early timeout",{admissionMs:20,drainMs:120})],maxMs:400,postTimeout:100}).run();
     assert.match(earlyTimeout.stop_reason,/Gateway POST exceeded/);assert(earlyTimeout.scenarios[0].oldest_pending_at_stop_ms>=100);assert(earlyTimeout.actual_elapsed_ms>=100);
   }finally{global.setTimeout=realSetTimeout;}
-  console.log("PASS plan deadline, parsing, concurrency, aggregate metrics, no repeated URLs, controller carry-over, 429 stop, omitted result stop, late valid POST drain without overlap, adaptive admission budget, actual POST timeout, pending diagnostics, manual stop, early timer callbacks, no credentials or usernames in export");
+  // Exercise the real revision-3 scenario plan with a shared paced gateway,
+  // heterogeneous cache overhead, and one legitimate POST beyond the old timeout.
+  // Wall clock is scaled 100x (20 s -> 200 ms, 45 s -> 450 ms).
+  const scaledPlan=PLAN.map(c=>({...c,admissionMs:c.admissionMs/100,minAdmissionMs:c.minAdmissionMs/100,drainMs:c.drainMs/100}));
+  let pacedBench,sharedNext=0,pacedCalls=0,outstanding=0,peakOutstanding=0,activePhase=null,oldTimeoutExceeded=false,fairFollowups=false;
+  const pacedUrls=new Set();
+  async function pacedPost(body,signal){
+    const cfg=pacedBench.phase.m.config,kind=body.requests[0].url.endsWith("/stats")?"stats":body.requests[0].url.endsWith("/games")?"games":"profile";
+    if(outstanding)assert.equal(activePhase,cfg.name,"scenarios overlapped");
+    activePhase=cfg.name;outstanding+=body.requests.length;peakOutstanding=Math.max(peakOutstanding,outstanding);
+    assert(outstanding<=cfg.maxOutstanding&&outstanding<=MAX_OUTSTANDING);assert(body.requests.length<=cfg.batch);
+    assert(body.requests.every(r=>!pacedUrls.has(r.url)));body.requests.forEach(r=>pacedUrls.add(r.url));
+    if(kind!=="profile"&&pacedBench.phase.queues.profile.length>0)fairFollowups=true;
+    const call=++pacedCalls,now=Date.now(),first=Math.max(now,sharedNext);sharedNext=first+2*body.requests.length;
+    const acquisition=Math.max(0,sharedNext-now)+3+(call%4)*2,cache=call===1?220:8+(call%5)*4,delay=acquisition+cache;
+    if(delay>200)oldTimeoutExceeded=true;
+    try{
+      await new Promise((resolve,reject)=>{const t=setTimeout(resolve,delay);signal.addEventListener("abort",()=>{clearTimeout(t);reject(Error("aborted"));},{once:true});});
+      return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:21.7,safe_rate_cps:21,unsafe_rate_cps:24,observed_launch_cps:20.9},median_latency_ms:180,p95_latency_ms:267,peak_in_flight:3,elapsed_ms:delay,gateway_timing:{acquisition_ms:acquisition,cache_ingest_ms:cache,reservation_call_ms:3,reservation_attempts:body.requests.length*3,reservation_misses:body.requests.length*2},results:body.requests.map(r=>({id:r.id,status:200,elapsed_ms:180,json:{status:"basic"}}))};
+    }finally{outstanding-=body.requests.length;}
+  }
+  pacedBench=new Bench({names,seed:42,post:pacedPost,plan:scaledPlan,maxMs:3000,postTimeout:450});
+  const paced=await pacedBench.run();assert.equal(paced.stop_reason,null,JSON.stringify(paced.scenarios.map(s=>({name:s.config.name,status:s.status,elapsed:s.elapsed_ms}))));
+  assert.equal(paced.scenarios.length,5);assert(paced.scenarios.every(s=>s.status==="completed"&&s.received===s.submitted&&s.successful>0));assert(paced.scenarios[0].peak_outstanding_requests<=16);assert(peakOutstanding<=32);assert(oldTimeoutExceeded&&fairFollowups);assert.equal(outstanding,0);assert(paced.scenarios.slice(1).every(s=>["profile","stats","games"].every(k=>s.by_endpoint[k].received>0)));assert(paced.scenarios.every(s=>s.acquisition_p95_ms>0&&s.cache_ingest_p95_ms>0&&s.reservation_attempts>0));assert(paced.actual_elapsed_ms<3000);
+  // A low learned rate further bounds subsequent admission without changing the gateway controller.
+  let lowBench,lowOutstanding=0,lowLearned=false,lowCalls=0;
+  const lowPost=async body=>{const before=lowOutstanding;lowOutstanding+=body.requests.length;lowCalls++;if(lowLearned)assert(lowOutstanding<=Math.max(6,before));try{await wait(5);lowLearned=true;return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:2},median_latency_ms:100,p95_latency_ms:200,results:body.requests.map(r=>({id:r.id,status:200,elapsed_ms:100,json:{status:"basic"}}))};}finally{lowOutstanding-=body.requests.length;}};
+  lowBench=new Bench({names,seed:99,post:lowPost,plan:[plan("Low rate",{batch:8,posts:4,workers:64,maxOutstanding:32,admissionMs:90})],maxMs:1000,postTimeout:200});const low=await lowBench.run();assert.equal(low.stop_reason,null);assert(lowCalls>4);assert(low.scenarios[0].peak_outstanding_requests<=32);
+  console.log("PASS plan deadline, parsing, concurrency, aggregate metrics, no repeated URLs, controller carry-over, 429 stop, omitted result stop, late valid POST drain without overlap, adaptive admission budget, actual POST timeout, pending diagnostics, manual stop, early timer callbacks, shared paced gateway with slow POST, global request caps, fair endpoint service, low-rate admission, timing metrics, no credentials or usernames in export");
 })().catch(e=>{console.error(e);process.exit(1)});
