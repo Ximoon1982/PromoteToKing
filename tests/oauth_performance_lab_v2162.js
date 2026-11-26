@@ -23,7 +23,7 @@ function fixture({status=200,omit=false,hang=false,delay=5}={}){
   const f=fixture(),b=new Bench({names,seed:123,post:f.post,plan:[plan("A"),plan("B",{posts:3})],maxMs:1000,postTimeout:200});
   const result=await b.run();assert.equal(result.stop_reason,null);assert(result.scenarios.every(s=>s.status==="completed"&&s.successful>0&&s.submitted===s.received+s.deferred));
   assert.equal(result.scenarios[0].controller_end.target,40);assert.equal(result.scenarios[1].controller_start.target,40);assert(f.peak<=3);
-  assert(!JSON.stringify(result).includes("fixture-"));assert(result.scenarios[0].successful_cps>0);assert.equal(result.benchmark_revision,5);
+  assert(!JSON.stringify(result).includes("fixture-"));assert(result.scenarios[0].successful_cps>0);assert.equal(result.benchmark_revision,6);
   assert(result.scenarios.every(s=>s.admission_received+s.drain_received===s.received&&s.admission_successful+s.drain_successful===s.successful&&s.server_p95_ms===5&&s.outside_server_p95_ms>=0));
   // Reproduce the old premature drain abort: a valid POST ends well after the former drain deadline.
   const slow=fixture({delay:140}),fast=fixture({delay:5});let late;
@@ -63,7 +63,7 @@ function fixture({status=200,omit=false,hang=false,delay=5}={}){
   // Exercise the real revision-3 scenario plan with a shared paced gateway,
   // heterogeneous cache overhead, and one legitimate POST beyond the old timeout.
   // Wall clock is scaled 100x (20 s -> 200 ms, 45 s -> 450 ms).
-  const scaledPlan=PLAN.map(c=>({...c,admissionMs:c.admissionMs/100,minAdmissionMs:c.minAdmissionMs/100,drainMs:c.drainMs/100,sampleMs:c.sampleMs/100,minValidationMs:c.minValidationMs/100}));
+  const scaledPlan=PLAN.map(c=>({...c,admissionMs:c.admissionMs/100,minAdmissionMs:c.minAdmissionMs/100,drainMs:c.drainMs/100,sampleMs:c.sampleMs/100,minValidationMs:c.minValidationMs/100,recoveryMs:c.recoveryMs/100}));
   let pacedBench,sharedNext=0,pacedCalls=0,outstanding=0,peakOutstanding=0,activePhase=null,oldTimeoutExceeded=false,fairFollowups=false;
   const pacedUrls=new Set();
   async function pacedPost(body,signal){
@@ -108,6 +108,22 @@ function fixture({status=200,omit=false,hang=false,delay=5}={}){
   const boundaryPost=async body=>{const n=++limitedCalls,role=limitedBench.phase.m.config.role;assert(body.requests.every(r=>!limitUrls.has(r.url)));body.requests.forEach(r=>limitUrls.add(r.url));await wait(5);if(n===1){limitAt=Date.now();return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:18,cooldown_remaining_ms:1000,backlashes:1},results:body.requests.map((r,i)=>({id:r.id,status:i===0?429:200,json:{status:"basic"},headers:{"retry-after":"1"},elapsed_ms:100}))};}if(role==="validate"){validationAt||=Date.now();assert.equal(body.rate_cps,18);}return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:18,observed_launch_cps:17,observed_clean_cps:17},results:body.requests.map(r=>({id:r.id,status:200,json:{status:"basic"},elapsed_ms:100}))};};
   limitedBench=new Bench({names,seed:321,post:boundaryPost,plan:[plan("Probe",{role:"probe",admissionMs:3000,sampleMs:100,posts:2}),plan("Validate",{role:"validate",admissionMs:2450,minValidationMs:300,sampleMs:100,posts:2})],maxMs:6500,postTimeout:200});
   const limitedBoundary=await limitedBench.run();assert.equal(limitedBoundary.stop_reason,null);assert.equal(limitedBoundary.boundary.kind,"upstream-throttling");assert.equal(limitedBoundary.scenarios[0].status,"limited");assert(validationAt>=limitAt+1950);assert.equal(limitedBoundary.validation.status,"clean-window");assert.equal(limitedBoundary.validation.ceiling_cps,18);
+  // An early throttle must use remaining budget to recover under shared control,
+  // then choose the fixed validation ceiling from the recovered target.
+  let recoverBench,recoverCalls=0,recoverFirst=0,validateFirst=0,throttledAt=0;const recoverUrls=new Set();
+  const recoverPost=async body=>{
+    const role=recoverBench.phase.m.config.role;
+    assert(body.requests.every(r=>!recoverUrls.has(r.url)));body.requests.forEach(r=>recoverUrls.add(r.url));
+    await wait(5);
+    if(role==="probe"&&!throttledAt){throttledAt=Date.now();return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:18,unsafe_rate_cps:28,cooldown_remaining_ms:1000,backlashes:1},results:body.requests.map((r,i)=>({id:r.id,status:i===0?429:200,json:{status:"basic"},headers:{"retry-after":"1"},elapsed_ms:100}))};}
+    if(role==="recover"){recoverFirst||=Date.now();assert.equal(body.rate_cps,120);recoverCalls++;}
+    if(role==="validate"){validateFirst||=Date.now();assert.equal(body.rate_cps,25.2);}
+    const target=recoverCalls>4?25.2:18;
+    return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:target,unsafe_rate_cps:28,observed_launch_cps:target,observed_clean_cps:target},results:body.requests.map(r=>({id:r.id,status:200,json:{status:"basic"},elapsed_ms:100}))};
+  };
+  recoverBench=new Bench({names,seed:901,post:recoverPost,plan:[plan("Probe",{role:"probe",admissionMs:3000,recoveryMs:2800,sampleMs:100,posts:2}),plan("Validate",{role:"validate",admissionMs:500,minValidationMs:300,sampleMs:100,posts:2})],maxMs:8000,postTimeout:200});
+  const recoveryResult=await recoverBench.run();assert.equal(recoveryResult.stop_reason,null);assert.deepEqual(recoveryResult.scenarios.map(s=>s.config.role),["probe","recover","validate"]);assert(recoverFirst>=throttledAt+1950&&validateFirst>recoverFirst);assert(recoverCalls>4);assert.equal(recoveryResult.validation.ceiling_cps,25.2);assert.equal(recoveryResult.validation.status,"clean-window");
+  console.log("PASS early-throttle controlled recovery and recovered validation ceiling");
   // Sustained latency pressure is a limiting signal even with zero 429s.
   const pressurePost=async body=>{await wait(6);return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:30,observed_launch_cps:12,observed_clean_cps:12},elapsed_ms:1,median_latency_ms:200,p95_latency_ms:300,results:body.requests.map(r=>({id:r.id,status:200,elapsed_ms:200,json:{status:"basic"}}))};};
   const pressured=await new Bench({names,seed:55,post:pressurePost,plan:[plan("Pressure",{role:"probe",batch:8,posts:3,maxOutstanding:32,admissionMs:500,sampleMs:70,maxOutsideMs:1})],maxMs:1000,postTimeout:200}).run();

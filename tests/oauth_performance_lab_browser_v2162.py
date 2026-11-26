@@ -30,7 +30,7 @@ try:
                     return r.fulfill(json={'ok':True,'mode':'oauth-bearer','controller':{'rate_target_cps':40,'safe_rate_cps':39,'unsafe_rate_cps':45},'median_latency_ms':100,'p95_latency_ms':150,'peak_in_flight':4,'elapsed_ms':5,'gateway_timing':{'acquisition_ms':3,'cache_ingest_ms':2,'reservation_call_ms':1,'reservation_attempts':8,'reservation_misses':2},'results':[{'id':x['id'],'status':200,'elapsed_ms':100,'json':{'status':'basic'}} for x in b['requests']]})
                 return r.continue_()
             page.route('**/*',route);page.goto(origin+'/OAuthPerformanceLab.html')
-            assert page.locator('script[src]').get_attribute('src').endswith('v=2162-lab5')
+            assert page.locator('script[src]').get_attribute('src').endswith('v=2162-lab6')
             expect(page.locator('thead')).to_contain_text('POST median / P95 ms')
             page.locator('#names').evaluate("(el,value)=>{el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));}", '\n'.join('fixture-'+str(i) for i in range(1200)));page.locator('#confirm').check()
             if mode!='valid':
@@ -45,7 +45,7 @@ try:
                 print('Before manual stop:',page.locator('#status').inner_text(),len(batches),'POSTs',flush=True)
                 page.locator('#stop').click(timeout=5000);expect(page.locator('#json')).to_be_enabled()
                 with page.expect_download() as download:page.locator('#json').click()
-                data=json.loads(download.value.path().read_text());assert data['stop_reason']=='Stopped by administrator' and data['sample_count']==1200 and data['benchmark_revision']==5 and data['post_timeout_ms']==45000 and data['scenarios'][0]['pending_posts_at_stop']>0 and data['scenarios'][0]['server_p95_ms']==5 and data['scenarios'][0]['cache_ingest_p95_ms']==2 and data['scenarios'][0]['peak_outstanding_requests']<=16 and 'fixture-secret' not in json.dumps(data) and 'fixture-0' not in json.dumps(data)
+                data=json.loads(download.value.path().read_text());assert data['stop_reason']=='Stopped by administrator' and data['sample_count']==1200 and data['benchmark_revision']==6 and data['post_timeout_ms']==45000 and data['scenarios'][0]['pending_posts_at_stop']>0 and data['scenarios'][0]['server_p95_ms']==5 and data['scenarios'][0]['cache_ingest_p95_ms']==2 and data['scenarios'][0]['peak_outstanding_requests']<=16 and 'fixture-secret' not in json.dumps(data) and 'fixture-0' not in json.dumps(data)
                 with page.expect_download() as csv:page.locator('#csv').click()
                 csv_text=csv.value.path().read_text();assert all(k in csv_text for k in ('successful_cps','admission_successful_cps','drain_elapsed_ms','outside_server_p95_ms','oldest_pending_at_stop_ms'));assert batches
                 assert not errors,errors

@@ -43,5 +43,24 @@ try{
     $q=new OAuthRateCoordinator('ceiling',$clock);$first=$q->reserveLaunch('foreground',5);verify($first['reserved']&&$first['rate_target_cps']===5.0,'Requested ceiling ignored');$q->recordLaunch();
     $now+=0.05;verify(!$q->reserveLaunch('foreground',5)['reserved'],'Requested ceiling not enforced');verify(!$q->reserveLaunch('background')['reserved'],'Foreground priority lost');$now+=0.3;verify($q->reserveLaunch('foreground',5)['reserved'],'Requested cap failed to reopen');
     $iso=new OAuthRateCoordinator('other-token',$clock);verify($iso->reserveLaunch()['reserved'],'Unrelated token inherited cooldown');
+    // v3 state migration preserves the real rate boundary, but removes biased latency minima.
+    $path=$dir.'/'.hash('sha256','p2k-oauth-rate-v2:latency').'.json';
+    file_put_contents($path,json_encode(['version'=>3,'updated_at'=>$now,'target_rate_cps'=>30,'safe_rate_cps'=>28,'unsafe_rate_cps'=>34,'unsafe_until'=>$now+900,'latency_baseline_ms'=>['player-stats'=>80],'cooldown_until'=>$now+2]));
+    $lat=new OAuthRateCoordinator('latency',$clock);$s=$lat->snapshot();
+    verify($s['rate_target_cps']===30.0&&$s['safe_rate_cps']===28.0&&$s['unsafe_rate_cps']===34.0&&$s['cooldown_remaining_ms']>=2000&&$s['latency_baseline_ms']===[],'Latency migration changed safety state');
+    $now+=3;
+    $samples=function(float $ms,int $n=8)use($lat,&$now):array{
+        for($i=0;$i<$n;$i++){$now+=0.038;verify($lat->reserveLaunch()['reserved'],'Latency fixture admission');$lat->recordLaunch();}
+        return $lat->feedback(array_fill(0,$n,200),array_fill(0,$n,$ms),'player-stats',30,0,0,$now-0.1);
+    };
+    for($i=0;$i<26;$i++)$samples(1400);
+    $samples(80,1);$samples(100);
+    for($i=0;$i<24;$i++){$s=$samples(1500);verify($s['reason']!=='latency-pressure'&&$s['rate_target_cps']>=30,'Fast outlier depressed ordinary stats throughput');}
+    verify($s['latency_baseline_ms']['player-stats']===1500.0,'Rolling median did not adapt to representative latency');
+    $before=$s['rate_target_cps'];$s=$samples(4000);verify($s['rate_target_cps']===$before,'Single slow batch caused retreat');
+    $s=$samples(4000);verify($s['rate_target_cps']===$before,'Two slow batches caused retreat');
+    $retreated=false;for($i=0;$i<8;$i++){$s=$samples(4000);if($s['reason']==='latency-pressure'){$retreated=true;break;}}
+    verify($retreated&&$s['rate_target_cps']<$before,'Sustained severe latency did not trigger retreat');
+    echo "PASS latency model migration, outlier resistance, representative rolling median and sustained congestion retreat\n";
     echo "PASS actual admissions, fixed-window evidence, migration, gradual probing, observed 429 backoff, late-event coalescing, long cooldown, ceiling and token isolation\n";
 }finally{foreach(glob($dir.'/*')?:[] as $f)@unlink($f);@rmdir($dir);}

@@ -515,7 +515,7 @@ final class OAuthSession
         if(preg_match('~^/pub/club/[^/]+/?$~',$path))return 'club-profile';
         if(preg_match('~^/pub/player/[^/]+/stats/?$~',$path))return 'player-stats';
         if(preg_match('~^/pub/player/[^/]+/matches/?$~',$path))return 'player-matches';
-        if(preg_match('~^/pub/player/[^/]+/games/~',$path))return 'archive';
+        if(preg_match('~^/pub/player/[^/]+/games(?:/|$)~',$path))return 'archive';
         if(preg_match('~^/pub/player/[^/]+/?$~',$path))return 'player-profile';
         return 'other';
     }

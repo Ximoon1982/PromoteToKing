@@ -16,6 +16,9 @@ final class OAuthRateCoordinator
     private const MIN_SPAN_SECONDS = 3.5;
     private const ADJUST_INTERVAL_SECONDS = 5.0;
     private const BOUNDARY_TTL_SECONDS = 900.0;
+    private const LATENCY_MODEL_REVISION = 2;
+    private const LATENCY_HISTORY_LIMIT = 21;
+    private const LATENCY_MIN_SAMPLES = 7;
     private string $path;
     private ?\Closure $clock;
 
@@ -102,13 +105,28 @@ final class OAuthRateCoordinator
         $latencies=$successLatencies!==[]?$successLatencies:$latencies;sort($latencies,SORT_NUMERIC);
         $median=$this->percentile($latencies,0.5);$p95=$this->percentile($latencies,0.95);
         $attempted=$this->clampRate($attemptedRateCps>0?$attemptedRateCps:self::INITIAL_RATE);
-        return $this->mutate(function(array &$s,float $now)use($endpointClass,$median,$p95,$attempted,$rate429,$transient,$permanent4xx,$success,$authFailures,$retryAfterSeconds,$observedAtLaunch,$requestLaunchedAt):array{
+        return $this->mutate(function(array &$s,float $now)use($endpointClass,$median,$p95,$attempted,$rate429,$transient,$permanent4xx,$success,$authFailures,$retryAfterSeconds,$observedAtLaunch,$requestLaunchedAt,$successLatencies):array{
             $current=$this->clampRate((float)$s['target_rate_cps']);$safe=(float)$s['safe_rate_cps'];$unsafe=(float)$s['unsafe_rate_cps'];
             if($unsafe>0 && $now >= (float)$s['unsafe_until']){$unsafe=0.0;$s['unsafe_evidence']='';}
             $observed=$this->observedRate($s['recent_actual_launches'],$now);
             $baseline=(float)($s['latency_baseline_ms'][$endpointClass]??0);
-            if($success>0&&$rate429===0&&$median>0&&($baseline<=0||$median<$baseline)){$baseline=$median;$s['latency_baseline_ms'][$endpointClass]=round($median,3);}
-            $pressure=$baseline>0&&$median>0?max(0.0,$median/$baseline-1.0):0.0;
+            // Compare representative clean batches with a bounded rolling median,
+            // not the minimum-ever latency. Ignore tiny and pre-backoff samples.
+            $pressure=0.0;$pressureConfirmed=false;
+            $eligible=$endpointClass!=='mixed'&&$success>=4&&count($successLatencies)>=4&&$rate429===0&&$transient===0&&$authFailures===0&&$median>0&&(float)$s['cooldown_until']<=$now&&($requestLaunchedAt<=0||$requestLaunchedAt>(float)$s['last_throttle_at']);
+            if($eligible){
+                $history=$s['latency_history_ms'][$endpointClass]??[];
+                $ordered=$history;sort($ordered,SORT_NUMERIC);
+                $baseline=$this->percentile($ordered,0.5);
+                $pressure=count($history)>=self::LATENCY_MIN_SAMPLES&&$baseline>0?max(0.0,$median/$baseline-1.0):0.0;
+                $streak=$pressure>1.0?(int)($s['latency_pressure_streak'][$endpointClass]??0)+1:0;
+                $s['latency_pressure_streak'][$endpointClass]=$streak;
+                $pressureConfirmed=$streak>=3;
+                $history[]=$median;$history=array_slice($history,-self::LATENCY_HISTORY_LIMIT);
+                $s['latency_history_ms'][$endpointClass]=$history;
+                $ordered=$history;sort($ordered,SORT_NUMERIC);
+                $s['latency_baseline_ms'][$endpointClass]=round($this->percentile($ordered,0.5),3);
+            }
             $total=max(1,$success+$permanent4xx+$rate429+$transient);
             $reason='steady';
             if($rate429>0){
@@ -121,7 +139,7 @@ final class OAuthRateCoordinator
                     $s['unsafe_until']=$now+self::BOUNDARY_TTL_SECONDS;
                     $s['target_rate_cps']=$this->clampRate(min($current*0.70,$boundary*0.70));
                     $safe=0.0;$s['backlashes']++;$s['last_throttle_at']=$now;$s['last_adjustment_at']=$now;
-                    $s['clean_samples']=0;$s['recent_clean_completions']=[];$s['recent_actual_launches']=[];
+                    $s['clean_samples']=0;$s['recent_clean_completions']=[];$s['recent_actual_launches']=[];$s['latency_pressure_streak']=[];
                 }
                 // Honor the supplied Retry-After (OAuthSession bounds parsed values to one day).
                 $s['cooldown_until']=max((float)$s['cooldown_until'],$now+max(2,$retryAfterSeconds));
@@ -147,8 +165,8 @@ final class OAuthRateCoordinator
                 }
                 $ceiling=$unsafe>0?max(self::MIN_RATE,$unsafe*0.90):self::MAX_RATE;
                 $ready=$tested >= $current*0.80 && $s['clean_samples']>=2 && $now-(float)$s['last_adjustment_at']>=self::ADJUST_INTERVAL_SECONDS;
-                if($ready&&$pressure>1.0){
-                    $s['target_rate_cps']=$this->clampRate($current*0.90);$s['last_adjustment_at']=$now;$s['clean_samples']=0;$reason='latency-pressure';
+                if($ready&&$pressureConfirmed){
+                    $s['target_rate_cps']=$this->clampRate($current*0.90);$s['last_adjustment_at']=$now;$s['clean_samples']=0;$s['latency_pressure_streak'][$endpointClass]=0;$reason='latency-pressure';
                 }elseif($ready&&$pressure<=0.50&&$current<$ceiling-0.01){
                     $next=min($ceiling,$current+max(0.2,min(3.0,$current*0.10)));
                     $s['target_rate_cps']=$this->clampRate($next);$s['last_adjustment_at']=$now;$s['clean_samples']=0;
@@ -166,7 +184,7 @@ final class OAuthRateCoordinator
 
     private function defaultState(float $now): array
     {
-        return ['version'=>self::STATE_VERSION,'updated_at'=>$now,'target_rate_cps'=>self::INITIAL_RATE,'safe_rate_cps'=>0.0,'unsafe_rate_cps'=>0.0,'unsafe_until'=>0.0,'unsafe_evidence'=>'','next_launch_at'=>0.0,'cooldown_until'=>0.0,'foreground_until'=>0.0,'last_throttle_at'=>0.0,'last_adjustment_at'=>$now,'latency_baseline_ms'=>[],'clean_samples'=>0,'backlashes'=>0,'launches'=>0,'reservations'=>0,'recent_actual_launches'=>[],'recent_clean_completions'=>[],'permanent_4xx_seen'=>0,'background_suppressions'=>0];
+        return ['version'=>self::STATE_VERSION,'updated_at'=>$now,'target_rate_cps'=>self::INITIAL_RATE,'safe_rate_cps'=>0.0,'unsafe_rate_cps'=>0.0,'unsafe_until'=>0.0,'unsafe_evidence'=>'','next_launch_at'=>0.0,'cooldown_until'=>0.0,'foreground_until'=>0.0,'last_throttle_at'=>0.0,'last_adjustment_at'=>$now,'latency_baseline_ms'=>[],'latency_history_ms'=>[],'latency_pressure_streak'=>[],'latency_model_revision'=>self::LATENCY_MODEL_REVISION,'clean_samples'=>0,'backlashes'=>0,'launches'=>0,'reservations'=>0,'recent_actual_launches'=>[],'recent_clean_completions'=>[],'permanent_4xx_seen'=>0,'background_suppressions'=>0];
     }
 
     private function trimEvidence(array &$s,float $now): void
@@ -195,7 +213,14 @@ final class OAuthRateCoordinator
             $s=$this->defaultState($now);
             if(is_array($old)){
                 $fresh=$now-(float)($old['updated_at']??0)<=self::STATE_TTL_SECONDS||((float)($old['cooldown_until']??0)>0&&$now<=(float)$old['cooldown_until']+self::STATE_TTL_SECONDS);
-                if($fresh&&(int)($old['version']??0)===self::STATE_VERSION)$s=array_replace($s,$old);
+                if($fresh&&(int)($old['version']??0)===self::STATE_VERSION){
+                    $s=array_replace($s,$old);
+                    // Migrate only latency evidence; retain measured rates and cooldown.
+                    if((int)($old['latency_model_revision']??0)!==self::LATENCY_MODEL_REVISION){
+                        $s['latency_baseline_ms']=[];$s['latency_history_ms']=[];$s['latency_pressure_streak']=[];
+                        $s['latency_model_revision']=self::LATENCY_MODEL_REVISION;
+                    }
+                }
                 elseif($fresh&&(int)($old['version']??0)===2){
                     // Legacy reservation-derived safe rates are not valid evidence. Preserve safety deadlines and conservative ceilings.
                     $s['target_rate_cps']=min(self::INITIAL_RATE,$this->clampRate((float)($old['target_rate_cps']??self::INITIAL_RATE)));
@@ -215,7 +240,7 @@ final class OAuthRateCoordinator
 
     private function publicState(array $s,float $now,string $reason): array
     {
-        return ['rate_learning_revision'=>self::STATE_VERSION,'observed_at_ms'=>(int)floor($now*1000),'rate_target_cps'=>round($this->clampRate((float)$s['target_rate_cps']),4),'safe_rate_cps'=>round((float)$s['safe_rate_cps'],4),'unsafe_rate_cps'=>round((float)$s['unsafe_rate_cps'],4),'unsafe_evidence'=>(string)$s['unsafe_evidence'],'clean_samples'=>(int)$s['clean_samples'],'backlashes'=>(int)$s['backlashes'],'launches'=>(int)$s['launches'],'reservations'=>(int)$s['reservations'],'observed_launch_cps'=>round($this->observedRate($s['recent_actual_launches'],$now),4),'observed_clean_cps'=>round(count($s['recent_clean_completions'])/self::WINDOW_SECONDS,4),'cooldown_remaining_ms'=>max(0,(int)ceil(((float)$s['cooldown_until']-$now)*1000)),'permanent_4xx_seen'=>(int)$s['permanent_4xx_seen'],'background_suppressions'=>(int)$s['background_suppressions'],'foreground_hold_ms'=>(int)round(self::FOREGROUND_HOLD_SECONDS*1000),'latency_baseline_ms'=>$s['latency_baseline_ms'],'last_endpoint_class'=>(string)($s['last_endpoint_class']??''),'last_median_ms'=>(float)($s['last_median_ms']??0),'last_p95_ms'=>(float)($s['last_p95_ms']??0),'reason'=>$reason];
+        return ['rate_learning_revision'=>self::STATE_VERSION,'latency_model_revision'=>self::LATENCY_MODEL_REVISION,'observed_at_ms'=>(int)floor($now*1000),'rate_target_cps'=>round($this->clampRate((float)$s['target_rate_cps']),4),'safe_rate_cps'=>round((float)$s['safe_rate_cps'],4),'unsafe_rate_cps'=>round((float)$s['unsafe_rate_cps'],4),'unsafe_evidence'=>(string)$s['unsafe_evidence'],'clean_samples'=>(int)$s['clean_samples'],'backlashes'=>(int)$s['backlashes'],'launches'=>(int)$s['launches'],'reservations'=>(int)$s['reservations'],'observed_launch_cps'=>round($this->observedRate($s['recent_actual_launches'],$now),4),'observed_clean_cps'=>round(count($s['recent_clean_completions'])/self::WINDOW_SECONDS,4),'cooldown_remaining_ms'=>max(0,(int)ceil(((float)$s['cooldown_until']-$now)*1000)),'permanent_4xx_seen'=>(int)$s['permanent_4xx_seen'],'background_suppressions'=>(int)$s['background_suppressions'],'foreground_hold_ms'=>(int)round(self::FOREGROUND_HOLD_SECONDS*1000),'latency_baseline_ms'=>$s['latency_baseline_ms'],'last_endpoint_class'=>(string)($s['last_endpoint_class']??''),'last_median_ms'=>(float)($s['last_median_ms']??0),'last_p95_ms'=>(float)($s['last_p95_ms']??0),'reason'=>$reason];
     }
 
     private function percentile(array $values,float $p):float { return $values===[]?0.0:(float)$values[(int)floor((count($values)-1)*max(0,min(1,$p)))]; }
