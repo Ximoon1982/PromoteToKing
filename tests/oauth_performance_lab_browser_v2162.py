@@ -32,7 +32,7 @@ try:
                 return r.continue_()
             page.route('**/*',route);page.goto(origin+'/OAuthPerformanceLab.html')
             assert page.locator('script[src]').get_attribute('src').endswith('v=2162-lab8')
-            expect(page.locator('thead')).to_contain_text('POST median / P95 ms')
+            expect(page.locator('thead').first).to_contain_text('POST median / P95 ms')
             page.locator('#names').evaluate("(el,value)=>{el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));}", '\n'.join('fixture-'+str(i) for i in range(1200)));page.locator('#confirm').check()
             if mode=='diagnostic':page.locator('#mode').select_option('rate-concurrency')
             if mode not in ('valid','diagnostic'):
