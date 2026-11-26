@@ -39,6 +39,18 @@ try{
     $now+=3;$s=clean($g,8,120,$sent);verify($s['safe_rate_cps']===0.0&&$s['rate_target_cps']===$target,'Pre-backoff responses polluted evidence');
     // Second independent episode retreats again. Long cooldown survives idle state TTL.
     $s=$g->feedback([429],[200.0],'player-profile',$target,4000,0.0,$now);verify($s['backlashes']===$backlashes+1&&$s['rate_target_cps']<$target,'New episode did not back off');$backedOff=$s['rate_target_cps'];$now+=2000;verify(!$g->reserveLaunch()['reserved'],'Long cooldown lost across idle TTL');verify($g->snapshot()['rate_target_cps']===$backedOff,'Backoff target lost during long cooldown');
+    // Stable recovery: real clean admissions do not raise the ceiling during the hold.
+    $hold=new OAuthRateCoordinator('hold',$clock);
+    $s=$hold->feedback([429],[200.0],'player-profile',30,2,30,$now);
+    $backoff=$s['rate_target_cps'];$now+=3;
+    for($i=0;$i<640;$i++){$now+=1/$backoff+0.001;verify($hold->reserveLaunch()['reserved'],'Recovery admission');$hold->recordLaunch();if($i%8===7){$s=clean($hold,8,$backoff,$now-0.3);verify($s['rate_target_cps']===$backoff,'Premature recovery growth');}}
+    verify($s['recovery_hold_remaining_ms']>0,'Hold ended too soon');$now+=40;
+    for($i=0;$i<180;$i++){$now+=1/$backoff+0.001;verify($hold->reserveLaunch()['reserved'],'Post-hold admission');$hold->recordLaunch();if($i%8===7)$s=clean($hold,8,$backoff,$now-0.3);}
+    verify($s['rate_target_cps']>$backoff,'Clean growth did not resume after hold');
+    $miss=new OAuthRateCoordinator('miss',$clock);verify($miss->reserveLaunch()['reserved'],'Initial permit');$miss->recordLaunch();$before=$miss->diagnostics();
+    for($i=0;$i<20;$i++)verify(!$miss->reserveLaunch()['reserved'],'Early permit');
+    $after=$miss->diagnostics();verify($after['writes']===$before['writes']&&$after['no_write']-$before['no_write']===20,'Failed reservations rewrote state');
+    echo "PASS stable recovery and no redundant foreground reservation writes\n";
     // Requested ceiling controls shared pacing; foreground suppresses background without changing identity.
     $q=new OAuthRateCoordinator('ceiling',$clock);$first=$q->reserveLaunch('foreground',5);verify($first['reserved']&&$first['rate_target_cps']===5.0,'Requested ceiling ignored');$q->recordLaunch();
     $now+=0.05;verify(!$q->reserveLaunch('foreground',5)['reserved'],'Requested ceiling not enforced');verify(!$q->reserveLaunch('background')['reserved'],'Foreground priority lost');$now+=0.3;verify($q->reserveLaunch('foreground',5)['reserved'],'Requested cap failed to reopen');

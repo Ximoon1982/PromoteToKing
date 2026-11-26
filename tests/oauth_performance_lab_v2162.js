@@ -1,6 +1,6 @@
 "use strict";
 const assert=require("node:assert/strict");
-const {Bench,PLAN,parseNames,connectionCap,MAX_MS,POST_TIMEOUT,MAX_OUTSTANDING,MAX_POSTS,curlPeak}=require("../assets/js/pages/oauth-performance-lab.js");
+const {Bench,PLAN,parseNames,connectionCap,MAX_MS,POST_TIMEOUT,MAX_OUTSTANDING,MAX_POSTS,curlPeak,throttleDiagnostics}=require("../assets/js/pages/oauth-performance-lab.js");
 const names=Array.from({length:12000},(_,i)=>"fixture-"+i);
 const plan=(name,settings={})=>({name,batch:8,posts:2,workers:24,headroom:1.35,admissionMs:90,drainMs:100,...settings});
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
@@ -23,7 +23,7 @@ function fixture({status=200,omit=false,hang=false,delay=5}={}){
   const f=fixture(),b=new Bench({names,seed:123,post:f.post,plan:[plan("A"),plan("B",{posts:3})],maxMs:1000,postTimeout:200});
   const result=await b.run();assert.equal(result.stop_reason,null);assert(result.scenarios.every(s=>s.status==="completed"&&s.successful>0&&s.submitted===s.received+s.deferred));
   assert.equal(result.scenarios[0].controller_end.target,40);assert.equal(result.scenarios[1].controller_start.target,40);assert(f.peak<=3);
-  assert(!JSON.stringify(result).includes("fixture-"));assert(result.scenarios[0].successful_cps>0);assert.equal(result.benchmark_revision,6);
+  assert(!JSON.stringify(result).includes("fixture-"));assert(result.scenarios[0].successful_cps>0);assert.equal(result.benchmark_revision,7);
   assert(result.scenarios.every(s=>s.admission_received+s.drain_received===s.received&&s.admission_successful+s.drain_successful===s.successful&&s.server_p95_ms===5&&s.outside_server_p95_ms>=0));
   // Reproduce the old premature drain abort: a valid POST ends well after the former drain deadline.
   const slow=fixture({delay:140}),fast=fixture({delay:5});let late;
@@ -88,6 +88,9 @@ function fixture({status=200,omit=false,hang=false,delay=5}={}){
   let lowBench,lowOutstanding=0,lowLearned=false,lowCalls=0;
   const lowPost=async body=>{const before=lowOutstanding;lowOutstanding+=body.requests.length;lowCalls++;if(lowLearned)assert(lowOutstanding<=Math.max(6,before));try{await wait(5);lowLearned=true;return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:2},median_latency_ms:100,p95_latency_ms:200,results:body.requests.map(r=>({id:r.id,status:200,elapsed_ms:100,json:{status:"basic"}}))};}finally{lowOutstanding-=body.requests.length;}};
   lowBench=new Bench({names,seed:99,post:lowPost,plan:[plan("Low rate",{batch:8,posts:4,workers:64,maxOutstanding:32,admissionMs:90})],maxMs:1000,postTimeout:200});const low=await lowBench.run();assert.equal(low.stop_reason,null);assert(lowCalls>4);assert(low.scenarios[0].peak_outstanding_requests<=32);
+  // Throttle windows include prior returned batches, separate endpoint counts and flag partial coverage.
+  const diag=throttleDiagnostics([{batches:[{endpoint:"profile",curl_intervals_ms:[[1000,1200],[5300,5500]]}]},{batches:[{endpoint:"games",curl_intervals_ms:[[5600,5800],[5900,6100]],throttle_events:[{endpoint:"games",launch_ms:5600,response_ms:5800,retry_after_seconds:2}]}]}]);
+  assert.equal(diag.length,1);assert.deepEqual(diag[0].windows[0],{seconds:1,admissions:2,by_endpoint:{profile:1,stats:0,games:1},complete_benchmark_window:true});assert.equal(diag[0].windows[1].admissions,3);assert.equal(diag[0].windows[1].complete_benchmark_window,false);assert.equal(diag[0].active_handles_at_response,0);
   // Test adaptive saturation with realistic endpoint heterogeneity and fixed validation ceiling.
   assert.deepEqual(curlPeak([{curl_intervals_ms:[[100,140],[120,170]]},{curl_intervals_ms:[[130,180],[170,190]]}]),{peak:3,measured:4});
   let adaptive,activePosts=0,activeReqs=0,peakReqs=0,peakPosts=0,statCap=0,fastCap=0,validationRate=null;const sent=new Set();

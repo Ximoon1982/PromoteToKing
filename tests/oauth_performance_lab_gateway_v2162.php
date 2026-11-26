@@ -68,6 +68,8 @@ FIXTURE
         foreach (['acquisition_ms','cache_ingest_ms','reservation_call_ms','reservation_attempts','reservation_misses','first_launch_delay_ms','launch_span_ms'] as $key) {
             verify(isset($timing[$key]) && is_numeric($timing[$key]) && $timing[$key]>=0, 'Missing/invalid timing: '.$key);
         }
+        verify($timing['coordinator_io']['calls']===$timing['coordinator_io']['writes']+$timing['coordinator_io']['no_write'],'Coordinator accounting invalid');
+        verify($timing['coordinator_io']['no_write']>0,'No read-only coordinator transactions');
         verify(count($timing['curl_intervals_ms'])===8,'Missing cURL admission/completion intervals');
         foreach($timing['curl_intervals_ms'] as $pair)verify(count($pair)===2&&$pair[1]>$pair[0],'Invalid cURL interval');
         verify($timing['acquisition_ms']>0 && $timing['cache_ingest_ms']>=130, 'Timing phases are not measured');
@@ -81,6 +83,8 @@ FIXTURE
         $before=microtime(true);$throttled=$method->invoke(null,$limited,'limited-fixture-token',1,120.0,'foreground');
         verify(microtime(true)-$before<3.0,'Long cooldown pinned the gateway');
         verify($throttled['rate_429']===1&&$throttled['launched']===1&&$throttled['deferred']===7&&count($throttled['results'])===8,'Throttle/deferred counts invalid');
+        $events429=$throttled['gateway_timing']['throttle_events'];verify(count($events429)===1&&$events429[0]['retry_after_seconds']===120&&$events429[0]['response_ms']>$events429[0]['launch_ms'],'Exact throttle timing missing');
+        verify($throttled['controller']['recovery_hold_remaining_ms']>170000,'Recovery hold missing');
         verify($throttled['controller']['cooldown_remaining_ms']>110000&&$throttled['controller']['rate_target_cps']<30,'Shared backoff invalid');
         foreach($throttled['results'] as $row){if(!empty($row['deferred']))verify($row['status']===503&&$row['elapsed_ms']===0&&($row['headers']['retry-after']??0)>100,'Deferred result is not explicitly retryable');}
         $before=microtime(true);$held=$method->invoke(null,$requests,'limited-fixture-token',4,120.0,'foreground');

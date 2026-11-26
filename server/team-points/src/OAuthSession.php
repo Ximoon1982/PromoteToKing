@@ -543,7 +543,7 @@ final class OAuthSession
         if(defined('CURLMOPT_MAX_HOST_CONNECTIONS'))@curl_multi_setopt($mh,CURLMOPT_MAX_HOST_CONNECTIONS,$requested);
         if(defined('CURLMOPT_PIPELINING')&&defined('CURLPIPE_MULTIPLEX'))@curl_multi_setopt($mh,CURLMOPT_PIPELINING,CURLPIPE_MULTIPLEX);
 
-        $next=0;$active=[];$results=[];$latencies=[];$statuses=[];$peak=0;$http2=false;$completionCounts=[];$curlIntervals=[];
+        $next=0;$active=[];$results=[];$latencies=[];$statuses=[];$peak=0;$http2=false;$completionCounts=[];$curlIntervals=[];$throttleEvents=[];
         $started=microtime(true);$retryAfterMax=0;$rate429Seen=0;$launched=0;$reservation=null;$launchTimes=[];$launchRates=[];$controller=$controllerBefore;$feedbackStatuses=[];$feedbackLatencies=[];$feedbackRates=[];$feedbackTimes=[];$deferred=0;$reservationAttempts=0;$reservationMisses=0;$reservationCallMs=0.0;
 
         $add=static function(array $req,array $slot)use($mh,$token,&$active,&$launchTimes,&$launchRates,$coordinator,&$reservationCallMs):void{
@@ -592,6 +592,7 @@ final class OAuthSession
                     curl_multi_remove_handle($mh,$ch);$curlIntervals[]=[round((float)$meta['admitted_at']*1000,3),round(microtime(true)*1000,3)];curl_close($ch);unset($active[$id]);
                     $launchRate=max(1.0,(float)($meta['launch_rate_cps']??$controller['rate_target_cps']??30));
                     if($status===429){
+                        $throttleEvents[]=['endpoint_class'=>$endpointClass,'launch_ms'=>round((float)$meta['admitted_at']*1000,3),'response_ms'=>end($curlIntervals)[1],'retry_after_seconds'=>$retryAfter,'launch_target_cps'=>$launchRate,'observed_at_launch_cps'=>(float)($meta['observed_launch_cps']??0)];
                         $rate429Seen++;$retryAfterMax=max($retryAfterMax,max(1,$retryAfter?:1));
                         $controller=$coordinator->feedback([429],[$elapsed],$endpointClass,$launchRate,$retryAfterMax,(float)($meta['observed_launch_cps']??0),(float)$meta['started']);$reservation=null;
                         $feedbackStatuses=[];$feedbackLatencies=[];$feedbackRates=[];$feedbackTimes=[];
@@ -631,6 +632,7 @@ final class OAuthSession
         $launchCps=0.0;if(count($launchTimes)>1){$span=max(0.001,end($launchTimes)-$launchTimes[0]);$launchCps=(count($launchTimes)-1)/$span;}elseif(count($launchTimes)===1)$launchCps=1.0/max(0.001,$elapsedMs/1000);
         $attemptedRate=$launchRates!==[]?self::percentile($launchRates,.5):(float)($controllerBefore['rate_target_cps']??30);
         if($feedbackStatuses!==[]){sort($feedbackRates,SORT_NUMERIC);$attempt=$feedbackRates[(int)floor((count($feedbackRates)-1)*.5)]??$attemptedRate;$controller=$coordinator->feedback($feedbackStatuses,$feedbackLatencies,$endpointClass,(float)$attempt,0,0.0,min($feedbackTimes));}else{$controller=$coordinator->snapshot();}
+        $timing['coordinator_io']=$coordinator->diagnostics();$timing['throttle_events']=$throttleEvents;
         RuntimeTelemetry::record('chess_api_batch',['mode'=>'oauth-bearer','calls'=>$launched,'successes'=>$ok,'rate_429'=>$r429,'errors'=>max(0,$errors-$deferred),'deferred'=>$deferred,'elapsed_ms'=>$elapsedMs,'cps'=>round($cps,3),'launch_cps'=>round($launchCps,3),'requested_rate_cps'=>$requestedRate,'rate_cps'=>(float)($controller['rate_target_cps']??$attemptedRate),'requested_concurrency'=>$requested,'concurrency'=>$currentLimit,'peak_in_flight'=>$peak,'retry_after_seconds'=>$retryAfterMax,'completion_counts'=>$completionCounts,'endpoint_class'=>$endpointClass,'traffic_class'=>$trafficClass,'controller'=>$controller]);
         return ['ok'=>true,'mode'=>'oauth-bearer','results'=>$results,'processed'=>$processed,'launched'=>$launched,'deferred'=>$deferred,'successes'=>$ok,'rate_429'=>$r429,'errors'=>$errors,'elapsed_ms'=>$elapsedMs,'cps'=>$cps,'launch_cps'=>$launchCps,'requested_rate_cps'=>$requestedRate,'rate_cps'=>(float)($controller['rate_target_cps']??$attemptedRate),'requested_concurrency'=>$requested,'concurrency'=>$currentLimit,'peak_in_flight'=>$peak,'transport_cap'=>$transportCap,'transport_capacity'=>$transportCap,'batch_size'=>count($requests),'retry_after_seconds'=>$retryAfterMax,'median_latency_ms'=>self::percentile($latencies,.5),'p95_latency_ms'=>self::percentile($latencies,.95),'http2_seen'=>$http2,'gateway_timing'=>$timing,'curl_http2_capable'=>self::curlHttp2Capable(),'endpoint_class'=>$endpointClass,'traffic_class'=>$trafficClass,'controller'=>$controller];
     }

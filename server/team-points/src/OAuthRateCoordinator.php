@@ -17,6 +17,8 @@ final class OAuthRateCoordinator
     private const ADJUST_INTERVAL_SECONDS = 5.0;
     private const BOUNDARY_TTL_SECONDS = 900.0;
     private const LATENCY_MODEL_REVISION = 2;
+    private const RECOVERY_HOLD_SECONDS = 60.0;
+    private array $io = ['calls'=>0,'writes'=>0,'no_write'=>0,'lock_wait_ms'=>0.0,'write_ms'=>0.0];
     private const LATENCY_HISTORY_LIMIT = 21;
     private const LATENCY_MIN_SAMPLES = 7;
     private string $path;
@@ -54,14 +56,15 @@ final class OAuthRateCoordinator
             if ($trafficClass === 'background') {
                 if ((float)$s['foreground_until'] > $slot) $s['background_suppressions']++;
                 $slot = max($slot, (float)$s['foreground_until']);
-            } else $s['foreground_until'] = max((float)$s['foreground_until'], $now + self::FOREGROUND_HOLD_SECONDS);
+            } else if ((float)$s['foreground_until'] < $now + self::FOREGROUND_HOLD_SECONDS/2) $s['foreground_until'] = $now + self::FOREGROUND_HOLD_SECONDS;
             $reserved = $slot <= $now;
             if ($reserved) {
+                if ($trafficClass === 'foreground') $s['foreground_until'] = $now + self::FOREGROUND_HOLD_SECONDS;
                 $s['next_launch_at'] = $now + 1.0 / $rate;
                 $s['reservations']++;
             }
             return ['slot'=>$slot,'reserved'=>$reserved,'rate_target_cps'=>$rate,'safe_rate_cps'=>(float)$s['safe_rate_cps'],'unsafe_rate_cps'=>(float)$s['unsafe_rate_cps'],'cooldown_remaining_ms'=>max(0,(int)ceil(((float)$s['cooldown_until']-$now)*1000))];
-        });
+        }, true);
         $r['wait_ms'] = max(0.0, ((float)$r['slot'] - $this->now()) * 1000.0);
         return $r;
     }
@@ -143,6 +146,7 @@ final class OAuthRateCoordinator
                 }
                 // Honor the supplied Retry-After (OAuthSession bounds parsed values to one day).
                 $s['cooldown_until']=max((float)$s['cooldown_until'],$now+max(2,$retryAfterSeconds));
+                $s['recovery_hold_until']=max((float)$s['recovery_hold_until'],(float)$s['cooldown_until']+self::RECOVERY_HOLD_SECONDS);
                 $reason=$sameEpisode?'rate-limit-coalesced':'rate-limit-boundary';
             }elseif($transient/$total>0.15){
                 if($now-(float)$s['last_adjustment_at']>=self::ADJUST_INTERVAL_SECONDS){$s['target_rate_cps']=$this->clampRate($current*0.90);$s['last_adjustment_at']=$now;}
@@ -167,6 +171,8 @@ final class OAuthRateCoordinator
                 $ready=$tested >= $current*0.80 && $s['clean_samples']>=2 && $now-(float)$s['last_adjustment_at']>=self::ADJUST_INTERVAL_SECONDS;
                 if($ready&&$pressureConfirmed){
                     $s['target_rate_cps']=$this->clampRate($current*0.90);$s['last_adjustment_at']=$now;$s['clean_samples']=0;$s['latency_pressure_streak'][$endpointClass]=0;$reason='latency-pressure';
+                }elseif($ready&&$now<(float)$s['recovery_hold_until']){
+                    $reason='recovery-hold';
                 }elseif($ready&&$pressure<=0.50&&$current<$ceiling-0.01){
                     $next=min($ceiling,$current+max(0.2,min(3.0,$current*0.10)));
                     $s['target_rate_cps']=$this->clampRate($next);$s['last_adjustment_at']=$now;$s['clean_samples']=0;
@@ -180,11 +186,13 @@ final class OAuthRateCoordinator
         });
     }
 
-    public function snapshot(): array { return $this->mutate(fn(array &$s,float $now):array=>$this->publicState($s,$now,'snapshot')); }
+    public function snapshot(): array { return $this->mutate(fn(array &$s,float $now):array=>$this->publicState($s,$now,'snapshot'),true); }
+
+    public function diagnostics(): array { return $this->io; }
 
     private function defaultState(float $now): array
     {
-        return ['version'=>self::STATE_VERSION,'updated_at'=>$now,'target_rate_cps'=>self::INITIAL_RATE,'safe_rate_cps'=>0.0,'unsafe_rate_cps'=>0.0,'unsafe_until'=>0.0,'unsafe_evidence'=>'','next_launch_at'=>0.0,'cooldown_until'=>0.0,'foreground_until'=>0.0,'last_throttle_at'=>0.0,'last_adjustment_at'=>$now,'latency_baseline_ms'=>[],'latency_history_ms'=>[],'latency_pressure_streak'=>[],'latency_model_revision'=>self::LATENCY_MODEL_REVISION,'clean_samples'=>0,'backlashes'=>0,'launches'=>0,'reservations'=>0,'recent_actual_launches'=>[],'recent_clean_completions'=>[],'permanent_4xx_seen'=>0,'background_suppressions'=>0];
+        return ['version'=>self::STATE_VERSION,'updated_at'=>$now,'target_rate_cps'=>self::INITIAL_RATE,'safe_rate_cps'=>0.0,'unsafe_rate_cps'=>0.0,'unsafe_until'=>0.0,'unsafe_evidence'=>'','next_launch_at'=>0.0,'cooldown_until'=>0.0,'foreground_until'=>0.0,'last_throttle_at'=>0.0,'recovery_hold_until'=>0.0,'last_adjustment_at'=>$now,'latency_baseline_ms'=>[],'latency_history_ms'=>[],'latency_pressure_streak'=>[],'latency_model_revision'=>self::LATENCY_MODEL_REVISION,'clean_samples'=>0,'backlashes'=>0,'launches'=>0,'reservations'=>0,'recent_actual_launches'=>[],'recent_clean_completions'=>[],'permanent_4xx_seen'=>0,'background_suppressions'=>0];
     }
 
     private function trimEvidence(array &$s,float $now): void
@@ -202,13 +210,15 @@ final class OAuthRateCoordinator
         return count($events)/self::WINDOW_SECONDS;
     }
 
-    private function mutate(callable $callback): mixed
+    private function mutate(callable $callback, bool $skipUnchanged = false): mixed
     {
         $handle=@fopen($this->path,'c+');
         if($handle===false)throw new \RuntimeException('OAuth rate coordinator unavailable.');
         @chmod($this->path,0600);
         try{
+            $this->io['calls']++;$lockStarted=hrtime(true);
             if(!flock($handle,LOCK_EX))throw new \RuntimeException('OAuth rate coordinator lock unavailable.');
+            $this->io['lock_wait_ms']+=(hrtime(true)-$lockStarted)/1e6;
             rewind($handle);$raw=stream_get_contents($handle);$old=is_string($raw)&&trim($raw)!==''?json_decode($raw,true):null;$now=$this->now();
             $s=$this->defaultState($now);
             if(is_array($old)){
@@ -230,17 +240,24 @@ final class OAuthRateCoordinator
                 // Even a long Retry-After survives state age or a v2-to-v3 migration.
                 foreach(['cooldown_until','next_launch_at','foreground_until'] as $key)$s[$key]=max((float)$s[$key],(float)($old[$key]??0));
             }elseif(is_string($raw)&&trim($raw)!=='')throw new \RuntimeException('OAuth rate coordinator state is invalid.');
+            // Preserve a recent legacy throttle's hold without resetting learned state.
+            if((float)$s['last_throttle_at']>0)$s['recovery_hold_until']=max((float)$s['recovery_hold_until'],(float)$s['cooldown_until']+self::RECOVERY_HOLD_SECONDS);
             $this->trimEvidence($s,$now);
-            $result=$callback($s,$now);$s['version']=self::STATE_VERSION;$s['updated_at']=$this->now();
-            $encoded=json_encode($s,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
+            $before=$s;$result=$callback($s,$now);
+            if($skipUnchanged&&$before===$s&&is_array($old)&&$fresh&&(int)($old['version']??0)===self::STATE_VERSION&&(int)($old['latency_model_revision']??0)===self::LATENCY_MODEL_REVISION&&isset($old['recovery_hold_until'])){
+                $this->io['no_write']++;flock($handle,LOCK_UN);return $result;
+            }
+            $s['version']=self::STATE_VERSION;$s['updated_at']=$this->now();
+            $writeStarted=hrtime(true);$encoded=json_encode($s,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
             rewind($handle);if(!ftruncate($handle,0)||fwrite($handle,$encoded)!==strlen($encoded)||!fflush($handle))throw new \RuntimeException('OAuth rate coordinator state write failed.');
+            $this->io['writes']++;$this->io['write_ms']+=(hrtime(true)-$writeStarted)/1e6;
             flock($handle,LOCK_UN);return $result;
         }finally{fclose($handle);}
     }
 
     private function publicState(array $s,float $now,string $reason): array
     {
-        return ['rate_learning_revision'=>self::STATE_VERSION,'latency_model_revision'=>self::LATENCY_MODEL_REVISION,'observed_at_ms'=>(int)floor($now*1000),'rate_target_cps'=>round($this->clampRate((float)$s['target_rate_cps']),4),'safe_rate_cps'=>round((float)$s['safe_rate_cps'],4),'unsafe_rate_cps'=>round((float)$s['unsafe_rate_cps'],4),'unsafe_evidence'=>(string)$s['unsafe_evidence'],'clean_samples'=>(int)$s['clean_samples'],'backlashes'=>(int)$s['backlashes'],'launches'=>(int)$s['launches'],'reservations'=>(int)$s['reservations'],'observed_launch_cps'=>round($this->observedRate($s['recent_actual_launches'],$now),4),'observed_clean_cps'=>round(count($s['recent_clean_completions'])/self::WINDOW_SECONDS,4),'cooldown_remaining_ms'=>max(0,(int)ceil(((float)$s['cooldown_until']-$now)*1000)),'permanent_4xx_seen'=>(int)$s['permanent_4xx_seen'],'background_suppressions'=>(int)$s['background_suppressions'],'foreground_hold_ms'=>(int)round(self::FOREGROUND_HOLD_SECONDS*1000),'latency_baseline_ms'=>$s['latency_baseline_ms'],'last_endpoint_class'=>(string)($s['last_endpoint_class']??''),'last_median_ms'=>(float)($s['last_median_ms']??0),'last_p95_ms'=>(float)($s['last_p95_ms']??0),'reason'=>$reason];
+        return ['rate_learning_revision'=>self::STATE_VERSION,'latency_model_revision'=>self::LATENCY_MODEL_REVISION,'observed_at_ms'=>(int)floor($now*1000),'rate_target_cps'=>round($this->clampRate((float)$s['target_rate_cps']),4),'safe_rate_cps'=>round((float)$s['safe_rate_cps'],4),'unsafe_rate_cps'=>round((float)$s['unsafe_rate_cps'],4),'unsafe_evidence'=>(string)$s['unsafe_evidence'],'clean_samples'=>(int)$s['clean_samples'],'backlashes'=>(int)$s['backlashes'],'launches'=>(int)$s['launches'],'reservations'=>(int)$s['reservations'],'observed_launch_cps'=>round($this->observedRate($s['recent_actual_launches'],$now),4),'observed_clean_cps'=>round(count($s['recent_clean_completions'])/self::WINDOW_SECONDS,4),'cooldown_remaining_ms'=>max(0,(int)ceil(((float)$s['cooldown_until']-$now)*1000)),'permanent_4xx_seen'=>(int)$s['permanent_4xx_seen'],'background_suppressions'=>(int)$s['background_suppressions'],'recovery_hold_remaining_ms'=>max(0,(int)ceil(((float)$s['recovery_hold_until']-$now)*1000)),'foreground_hold_ms'=>(int)round(self::FOREGROUND_HOLD_SECONDS*1000),'latency_baseline_ms'=>$s['latency_baseline_ms'],'last_endpoint_class'=>(string)($s['last_endpoint_class']??''),'last_median_ms'=>(float)($s['last_median_ms']??0),'last_p95_ms'=>(float)($s['last_p95_ms']??0),'reason'=>$reason];
     }
 
     private function percentile(array $values,float $p):float { return $values===[]?0.0:(float)$values[(int)floor((count($values)-1)*max(0,min(1,$p)))]; }
