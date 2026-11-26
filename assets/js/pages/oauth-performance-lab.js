@@ -93,7 +93,14 @@
     async run(){
       if(this.running)throw Error("Benchmark already running.");
       this.running=true;this.started=this.now();this.wallStarted=Date.now();
-      const deadline=setTimeout(()=>this.stop("Five-minute deadline reached"),this.maxMs);
+      let deadline;
+      const checkDeadline=()=>{
+        if(!this.running||this.reason)return;
+        const remaining=this.maxMs-this.elapsed();
+        if(remaining>0)deadline=setTimeout(checkDeadline,Math.max(1,Math.ceil(remaining)));
+        else this.stop("Five-minute deadline reached");
+      };
+      deadline=setTimeout(checkDeadline,this.maxMs);
       try{
         const minimum=c=>Math.min(c.admissionMs,c.minAdmissionMs??c.admissionMs);
         const reserve=c=>Math.max(c.drainMs??0,this.postTimeout);
@@ -134,6 +141,10 @@
         const complete=c=>{if(p.candidates.delete(c.name))m.candidates_completed++;};
         const closeAdmission=()=>{
           if(p.finished||!p.admitting)return;
+          // Timers may fire fractionally early. Never close admission before the measured cutoff.
+          if(this.elapsed()>=this.maxMs){this.stop("Five-minute deadline reached");return;}
+          const remaining=cfg.admissionMs-phaseElapsed();
+          if(remaining>0){clearTimeout(p.admissionTimer);p.admissionTimer=setTimeout(closeAdmission,Math.max(1,Math.ceil(remaining)));return;}
           const pending=this.pending(p);m.active_at_admission_close=pending.length;m.requests_at_admission_close=pending.reduce((n,r)=>n+r.requests,0);m.oldest_at_admission_close_ms=pending[0]?.age_ms??null;
           p.admitting=false;clearTimeout(p.wake);for(const key of Object.keys(p.queues))p.queues[key]=[];
           if(!p.active.size)finish();
@@ -202,10 +213,15 @@
             p.active.set(key,pending);m.submitted+=entries.length;m.peak_posts=Math.max(m.peak_posts,p.active.size);
             const requests=entries.map(e=>({id:e.id,url:"https://api.chess.com/pub/player/"+encodeURIComponent(e.candidate.name)+(e.kind==="profile"?"":"/"+e.kind),headers:{accept:"application/json"}}));
             const age=()=>Math.max(this.now()-start,Date.now()-wallStart);
-            const timedOut=()=>this.stop(this.elapsed()>=this.maxMs?"Five-minute deadline reached":"Gateway POST exceeded its "+(timeoutMs/1000).toFixed(1)+" s timeout ("+kind+", "+entries.length+" requests); no new scenario started");
+            const timedOut=()=>{
+              if(p.finished||this.reason||!p.active.has(key))return;
+              const remaining=Math.min(timeoutMs-age(),this.maxMs-this.elapsed());
+              if(remaining>0){pending.timer=setTimeout(timedOut,Math.max(1,Math.ceil(remaining)));return;}
+              this.stop(this.elapsed()>=this.maxMs?"Five-minute deadline reached":"Gateway POST exceeded its "+(timeoutMs/1000).toFixed(1)+" s timeout ("+kind+", "+entries.length+" requests); no new scenario started");
+            };
             pending.timer=setTimeout(timedOut,timeoutMs);
             Promise.resolve().then(()=>{if(!p.finished&&!this.reason)return this.post({requests,concurrency:Math.min(entries.length,p.cap),rate_cps:RATE_CEILING,traffic_class:"foreground"},controller.signal);})
-              .then(payload=>{if(!p.finished&&!this.reason){if(age()>=timeoutMs)timedOut();else{clearTimeout(pending.timer);p.active.delete(key);consume(payload,entries,start);}}})
+              .then(payload=>{if(!p.finished&&!this.reason){if(age()>=timeoutMs||this.elapsed()>=this.maxMs)timedOut();else{clearTimeout(pending.timer);p.active.delete(key);consume(payload,entries,start);}}})
               .catch(error=>{if(!p.finished&&!this.reason)this.stop(error?.message||"Gateway error");})
               .finally(()=>{clearTimeout(pending.timer);p.active.delete(key);if(!p.finished){if(!p.admitting&&!p.active.size)finish();else schedule();}});
           }

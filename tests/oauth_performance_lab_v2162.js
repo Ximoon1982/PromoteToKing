@@ -39,5 +39,15 @@ function fixture({status=200,omit=false,hang=false,delay=5}={}){
   const hanging=fixture({hang:true}),h=await new Bench({names,seed:1,post:hanging.post,plan:[plan("A",{admissionMs:15,drainMs:20}),plan("B")],maxMs:1000,postTimeout:200}).run();assert.match(h.stop_reason,/Gateway POST exceeded its .* timeout/);assert.equal(h.scenarios[1].status,"not run");assert(h.actual_elapsed_ms>=190&&h.actual_elapsed_ms<600);assert.equal(h.scenarios[0].pending_posts_at_stop,2);assert.equal(h.scenarios[0].pending_requests_at_stop,16);assert(h.scenarios[0].oldest_pending_at_stop_ms>=190);assert.equal(hanging.active,0);
   const expired=fixture(),e=await new Bench({names,seed:1,post:expired.post,plan:[plan("A")],maxMs:10,postTimeout:200}).run();assert.match(e.stop_reason,/insufficient/);assert.equal(expired.calls,0);
   const manual=fixture({hang:true}),m=new Bench({names,seed:1,post:manual.post,plan:[plan("A"),plan("B")],maxMs:1000,postTimeout:200});const promise=m.run();setTimeout(()=>m.stop("manual stop"),10);const stopped=await promise;assert.equal(stopped.stop_reason,"manual stop");assert.equal(stopped.scenarios[1].status,"not run");assert(stopped.scenarios[0].pending_posts_at_stop>0);assert.equal(manual.active,0);
-  console.log("PASS plan deadline, parsing, concurrency, aggregate metrics, no repeated URLs, controller carry-over, 429 stop, omitted result stop, late valid POST drain without overlap, adaptive admission budget, actual POST timeout, pending diagnostics, manual stop, no credentials or usernames in export");
+  // Force timer callbacks to arrive a little before their requested deadline.
+  // The actual elapsed clock, not the callback alone, determines cutoff/timeout.
+  const realSetTimeout=global.setTimeout;
+  global.setTimeout=(fn,ms,...args)=>realSetTimeout(fn,ms>=10?ms-5:ms,...args);
+  try{
+    const early=fixture({delay:3}),earlyResult=await new Bench({names,seed:9,post:early.post,plan:[plan("Early clock",{admissionMs:40,drainMs:100})],maxMs:400,postTimeout:100}).run();
+    assert.equal(earlyResult.stop_reason,null);assert.equal(earlyResult.scenarios[0].status,"completed");assert(earlyResult.scenarios[0].admission_elapsed_ms>=40);
+    const earlyHang=fixture({hang:true}),earlyTimeout=await new Bench({names,seed:9,post:earlyHang.post,plan:[plan("Early timeout",{admissionMs:20,drainMs:120})],maxMs:400,postTimeout:100}).run();
+    assert.match(earlyTimeout.stop_reason,/Gateway POST exceeded/);assert(earlyTimeout.scenarios[0].oldest_pending_at_stop_ms>=100);assert(earlyTimeout.actual_elapsed_ms>=100);
+  }finally{global.setTimeout=realSetTimeout;}
+  console.log("PASS plan deadline, parsing, concurrency, aggregate metrics, no repeated URLs, controller carry-over, 429 stop, omitted result stop, late valid POST drain without overlap, adaptive admission budget, actual POST timeout, pending diagnostics, manual stop, early timer callbacks, no credentials or usernames in export");
 })().catch(e=>{console.error(e);process.exit(1)});
