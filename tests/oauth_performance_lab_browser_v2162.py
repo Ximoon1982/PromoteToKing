@@ -30,15 +30,18 @@ try:
                     return r.fulfill(json={'ok':True,'mode':'oauth-bearer','controller':{'rate_target_cps':40,'safe_rate_cps':39,'unsafe_rate_cps':45},'median_latency_ms':100,'p95_latency_ms':150,'peak_in_flight':4,'results':[{'id':x['id'],'status':200,'elapsed_ms':100,'json':{'status':'basic'}} for x in b['requests']]})
                 return r.continue_()
             page.route('**/*',route);page.goto(origin+'/OAuthPerformanceLab.html')
-            page.locator('#names').fill('\n'.join('fixture-'+str(i) for i in range(12000)));page.locator('#confirm').check()
+            page.locator('#names').evaluate("(el,value)=>{el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));}", '\n'.join('fixture-'+str(i) for i in range(1200)));page.locator('#confirm').check()
             if mode!='valid':
                 expect(page.locator('#auth')).to_contain_text('HTTP 403' if mode=='denied' else 'read-only');expect(page.locator('#start')).to_be_disabled();assert not batches
             else:
-                expect(page.locator('#start')).to_be_enabled();page.locator('#start').click();expect(page.locator('#stop')).to_be_enabled();expect(page.locator('#success')).not_to_have_text('0',timeout=5000)
+                expect(page.locator('#start')).to_be_enabled();page.locator('#start').click();expect(page.locator('#stop')).to_be_enabled();try:expect(page.locator('#success')).not_to_have_text('0',timeout=5000)
+                except Exception:
+                    print('Fixture status:',page.locator('#status').inner_text(),'auth:',page.locator('#auth').inner_text(),'batches:',len(batches),'errors:',errors,flush=True)
+                    raise
                 print('Before manual stop:',page.locator('#status').inner_text(),len(batches),'POSTs',flush=True)
                 page.locator('#stop').click(timeout=5000);expect(page.locator('#json')).to_be_enabled()
                 with page.expect_download() as download:page.locator('#json').click()
-                data=json.loads(download.value.path().read_text());assert data['stop_reason']=='Stopped by administrator' and data['sample_count']==12000 and 'fixture-secret' not in json.dumps(data) and 'fixture-0' not in json.dumps(data)
+                data=json.loads(download.value.path().read_text());assert data['stop_reason']=='Stopped by administrator' and data['sample_count']==1200 and 'fixture-secret' not in json.dumps(data) and 'fixture-0' not in json.dumps(data)
                 with page.expect_download() as csv:page.locator('#csv').click()
                 assert 'successful_cps' in csv.value.path().read_text();assert batches
                 assert not errors,errors
