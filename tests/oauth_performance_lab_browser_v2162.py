@@ -27,9 +27,11 @@ try:
                     assert r.request.headers['x-p2k-oauth-csrf']=='fixture-secret'
                     assert b['rate_cps']==120 and b['traffic_class']=='foreground' and len(b['requests'])<=32
                     if len(batches)>1:return # Keep later fixture POSTs in flight until manual cancellation.
-                    return r.fulfill(json={'ok':True,'mode':'oauth-bearer','controller':{'rate_target_cps':40,'safe_rate_cps':39,'unsafe_rate_cps':45},'median_latency_ms':100,'p95_latency_ms':150,'peak_in_flight':4,'results':[{'id':x['id'],'status':200,'elapsed_ms':100,'json':{'status':'basic'}} for x in b['requests']]})
+                    return r.fulfill(json={'ok':True,'mode':'oauth-bearer','controller':{'rate_target_cps':40,'safe_rate_cps':39,'unsafe_rate_cps':45},'median_latency_ms':100,'p95_latency_ms':150,'peak_in_flight':4,'elapsed_ms':5,'results':[{'id':x['id'],'status':200,'elapsed_ms':100,'json':{'status':'basic'}} for x in b['requests']]})
                 return r.continue_()
             page.route('**/*',route);page.goto(origin+'/OAuthPerformanceLab.html')
+            assert page.locator('script[src]').get_attribute('src').endswith('v=2162-lab2')
+            expect(page.locator('thead')).to_contain_text('POST median / P95 ms')
             page.locator('#names').evaluate("(el,value)=>{el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));}", '\n'.join('fixture-'+str(i) for i in range(1200)));page.locator('#confirm').check()
             if mode!='valid':
                 expect(page.locator('#auth')).to_contain_text('HTTP 403' if mode=='denied' else 'read-only');expect(page.locator('#start')).to_be_disabled();assert not batches
@@ -39,12 +41,13 @@ try:
                 except Exception:
                     print('Fixture status:',page.locator('#status').inner_text(),'auth:',page.locator('#auth').inner_text(),'batches:',len(batches),'errors:',errors,flush=True)
                     raise
+                expect(page.locator('#outstanding')).not_to_have_text('0');expect(page.locator('#oldest')).not_to_have_text('—')
                 print('Before manual stop:',page.locator('#status').inner_text(),len(batches),'POSTs',flush=True)
                 page.locator('#stop').click(timeout=5000);expect(page.locator('#json')).to_be_enabled()
                 with page.expect_download() as download:page.locator('#json').click()
-                data=json.loads(download.value.path().read_text());assert data['stop_reason']=='Stopped by administrator' and data['sample_count']==1200 and 'fixture-secret' not in json.dumps(data) and 'fixture-0' not in json.dumps(data)
+                data=json.loads(download.value.path().read_text());assert data['stop_reason']=='Stopped by administrator' and data['sample_count']==1200 and data['benchmark_revision']==2 and data['post_timeout_ms']==20000 and data['scenarios'][0]['pending_posts_at_stop']>0 and data['scenarios'][0]['server_p95_ms']==5 and 'fixture-secret' not in json.dumps(data) and 'fixture-0' not in json.dumps(data)
                 with page.expect_download() as csv:page.locator('#csv').click()
-                assert 'successful_cps' in csv.value.path().read_text();assert batches
+                csv_text=csv.value.path().read_text();assert all(k in csv_text for k in ('successful_cps','admission_successful_cps','drain_elapsed_ms','outside_server_p95_ms','oldest_pending_at_stop_ms'));assert batches
                 assert not errors,errors
             page.close()
         browser.close()
