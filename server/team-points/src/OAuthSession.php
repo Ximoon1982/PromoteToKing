@@ -570,9 +570,15 @@ final class OAuthSession
                 if($reservation===null){$reservationStarted=microtime(true);$reservation=$coordinator->reserveLaunch($trafficClass,$requestedRate);$reservationCallMs+=(microtime(true)-$reservationStarted)*1000;$reservationAttempts++;if(empty($reservation['reserved']))$reservationMisses++;}
                 // Do not occupy a PHP worker waiting through an upstream Retry-After.
                 // Return explicit retryable, NOT upstream 429, results for work never launched.
-                if((int)($reservation['cooldown_remaining_ms']??0)>0){
-                    $retryAfterMax=max($retryAfterMax,(int)ceil($reservation['cooldown_remaining_ms']/1000));
-                    while($next<count($requests)){$req=$requests[$next++];$results[]=['id'=>$req['id'],'url'=>$req['url'],'status'=>503,'status_text'=>'OAuth rate cooldown - not launched','headers'=>['retry-after'=>(string)$retryAfterMax,'content-type'=>'application/json'],'body'=>'','json'=>null,'elapsed_ms'=>0,'deferred'=>true];$deferred++;}
+                $cooldown=(int)($reservation['cooldown_remaining_ms']??0);
+                $foregroundWait=(int)($reservation['foreground_wait_ms']??0);
+                // A background POST must not hold a PHP worker indefinitely
+                // while another tab owns foreground launch priority. Return the
+                // unlaunched tail; already admitted cURL handles still drain.
+                if($cooldown>0||($trafficClass==='background'&&empty($reservation['reserved'])&&$foregroundWait>=500)){
+                    $reason=$cooldown>0?'rate-cooldown':'foreground-protection';
+                    $retryAfterMax=max($retryAfterMax,(int)ceil(max($cooldown,$foregroundWait)/1000),1);
+                    while($next<count($requests)){$req=$requests[$next++];$results[]=['id'=>$req['id'],'url'=>$req['url'],'status'=>503,'status_text'=>$reason==='foreground-protection'?'OAuth foreground protection - not launched':'OAuth rate cooldown - not launched','headers'=>['retry-after'=>(string)$retryAfterMax,'content-type'=>'application/json'],'body'=>'','json'=>null,'elapsed_ms'=>0,'deferred'=>true,'deferred_reason'=>$reason];$deferred++;}
                     $reservation=null;break;
                 }
                 $now=microtime(true);$slot=(float)($reservation['slot']??$now);

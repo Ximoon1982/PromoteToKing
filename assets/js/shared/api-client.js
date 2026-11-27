@@ -2,7 +2,7 @@
 (() => {
   "use strict";
 
-  const RUNTIME_VERSION = "2.16.2-oauth-inc3";
+  const RUNTIME_VERSION = "2.16.2-oauth-inc4";
   const existingClient = window.P2K_API_CLIENT;
   if (
     existingClient?.runtimeVersion === RUNTIME_VERSION &&
@@ -465,6 +465,9 @@
     if (!Array.isArray(items)) throw new TypeError("items must be an array.");
     if (typeof worker !== "function") throw new TypeError("worker must be a function.");
     const signal = options.signal || null;
+    // A cold authenticated page must not freeze its feeder depth at serial
+    // simply because the same-origin session bootstrap has not settled yet.
+    await oauthContext.waitForRealDecision();
     const transportConcurrency = effectiveBatchConcurrency();
     const requestedConcurrency = integer(options.concurrency, transportConcurrency, 1, oauthContext.logicalConcurrency);
     // In bearer mode `concurrency` is logical feeder depth, not a physical

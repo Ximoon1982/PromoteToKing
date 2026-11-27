@@ -14,6 +14,11 @@
   const OAUTH_INITIAL_TARGET = 8;
   const OAUTH_MIN_CONNECTION_CAP = 3;
   const OAUTH_GATEWAY_BATCH_SIZE = 32;
+  // These are browser workload bounds, not upstream concurrent-handle limits.
+  const OAUTH_MAX_OUTSTANDING = 90;
+  const OAUTH_BACKGROUND_MAX_OUTSTANDING = 16;
+  const OAUTH_COALESCE_MS = 30;
+  const OAUTH_LATENCY_DEFAULTS = Object.freeze({"player-profile":200,"player-stats":1300,archive:200,"player-matches":800,"match-detail":1600,"club-index":500,roster:900,"club-profile":300,other:600});
   const OAUTH_GATEWAY_MAX_POSTS = 6;
   // P0 interactive survival: background acquisition can never occupy every
   // same-origin OAuth gateway POST lane. One lane is permanently reserved for
@@ -24,7 +29,7 @@
   // their cURL-multi batch is active. On shared hosting, five simultaneous
   // background POSTs can starve admin/session/CRON requests even though one
   // *browser gateway* lane is nominally reserved. Keep only two background
-  // PHP requests resident; each can still multiplex up to 32 Chess.com calls.
+  // PHP requests resident; each can still multiplex bounded Chess.com work.
   const OAUTH_BACKGROUND_MAX_POSTS = 2;
   const OAUTH_INTERACTIVE_WAIT_TARGET_MS = 250;
   const OAUTH_INITIAL_RATE_CPS = 24;
@@ -37,7 +42,6 @@
   let oauthGatewayTarget = OAUTH_INITIAL_TARGET;
   let oauthGatewayMax = 256;
   let oauthGatewayBestRate = 0;
-  let oauthGatewayBestMedianLatency = 0;
   let oauthGatewayLatencyByClass = Object.create(null);
   let oauthGatewayRateTarget = OAUTH_INITIAL_RATE_CPS;
   let oauthGatewayRatePolicy = null;
@@ -48,13 +52,40 @@
   let oauthGatewaySafeRateTarget = 0;
   let oauthGatewayUnsafeRateTarget = 0;
   let oauthGatewayBestTargetRate = 0;
-  let oauthGatewayStableSamples = 0;
-  let oauthGatewayPlateauStrikes = 0;
+
   let oauthGatewayCeilingDiscovered = false;
   let oauthGatewayPeakInFlight = 0;
   let oauthGatewayLastCps = 0;
   let oauthGatewayBatchSequence = 0;
-  let oauthGatewayTimer = 0;
+  let oauthGatewayTimer = 0, oauthGatewayTimerAt = 0;
+  let oauthGatewayBackgroundNotBeforeMs = 0;
+  let oauthGatewayOutstanding = 0, oauthGatewayBackgroundOutstanding = 0;
+  const oauthLatencySamples = Object.create(null);
+  const oauthScheduler = {revision:1,posts:0,submitted:0,returned:0,launched:0,successes:0,deferred:0,postErrors:0,peakOutstanding:0,peakBackgroundOutstanding:0,queueWaitMs:0,postWallMs:0,serverMs:0,serverTimingPosts:0,acquisitionMs:0,cacheIngestMs:0,reservationMs:0,coordinatorCalls:0,coordinatorWrites:0,coordinatorLockWaitMs:0,peakQueued:0,byEndpoint:{},recentPosts:[]};
+  const finitePositive = n => Number.isFinite(Number(n)) && Number(n)>0 ? Number(n) : 0;
+  function quantile(values,p=.5) { const a=values.slice().sort((x,y)=>x-y);return a.length?a[Math.floor((a.length-1)*p)]:0; }
+  function latencyFor(kind) {
+    const fallback=OAUTH_LATENCY_DEFAULTS[kind]||OAUTH_LATENCY_DEFAULTS.other;
+    const samples=oauthLatencySamples[kind]||[];
+    const median=samples.length>=3?quantile(samples.map(x=>x.median)):Math.max(fallback,finitePositive(oauthGatewayLatencyByClass[kind]));
+    const p95=samples.length>=3?quantile(samples.map(x=>x.p95)):median*1.5;
+    return {median:Math.max(100,median),p95:Math.max(median,p95),samples:samples.length};
+  }
+  function outstandingBudget(trafficClass) {
+    const budget=Math.max(4,Math.min(OAUTH_MAX_OUTSTANDING,Math.ceil(oauthGatewayRateTarget*3)));
+    // Preserve foreground headroom even at a very low learned rate.
+    return trafficClass==="background"?Math.max(1,Math.min(OAUTH_BACKGROUND_MAX_OUTSTANDING,Math.floor(budget/2))):budget;
+  }
+  function availableBudget(trafficClass) {
+    const total=outstandingBudget("foreground")-oauthGatewayOutstanding;
+    return Math.max(0,trafficClass==="background"?Math.min(total,outstandingBudget(trafficClass)-oauthGatewayBackgroundOutstanding):total);
+  }
+  function backgroundCooldown(deadline) {
+    if (!Number.isFinite(deadline)||deadline<=oauthGatewayBackgroundNotBeforeMs||deadline<=Date.now()) return;
+    oauthGatewayBackgroundNotBeforeMs=deadline;
+    for (const entry of oauthGatewayQueue) if (!entry.settled&&entry.trafficClass==="background"&&entry.deferMode==="return") entry.finish(false,localCooldownError(entry.url,deadline));
+    scheduleOAuthGatewayFlush();
+  }
   let oauthGatewayNotBeforeMs = 0;
   let oauthGatewayDeferredRows = 0;
   // The PHP controller owns pacing. This document merely avoids sending work
@@ -69,10 +100,10 @@
     oauthGatewayTimer = 0;
     scheduleOAuthGatewayFlush();
   }
-  function localCooldownError(url) {
+  function localCooldownError(url, deadline=oauthGatewayNotBeforeMs) {
     return apiError("OAuth request deferred in browser before launch.", {
       category:"deferred", code:"OAUTH_DEFERRED", status:503, url, retryable:true, deferred:true,
-      notBeforeMs:oauthGatewayNotBeforeMs, retryAfterMs:Math.max(0,oauthGatewayNotBeforeMs-Date.now()), transport:"oauth-bearer"
+      notBeforeMs:deadline, retryAfterMs:Math.max(0,deadline-Date.now()), transport:"oauth-bearer"
     });
   }
   function readRetryAfter(headers) {
@@ -99,7 +130,6 @@
         unsafeRateTarget: Math.max(0, Number(parsed.unsafeRateTarget || 0)),
         bestTargetRate: Math.max(0, Math.min(OAUTH_MAX_RATE_CPS, Number(parsed.bestTargetRate || 0))),
         bestRate: Math.max(0, Number(parsed.bestRate || 0)),
-        bestMedianLatency: Math.max(0, Number(parsed.bestMedianLatency || 0)),
         latencyByClass: parsed.latencyByClass && typeof parsed.latencyByClass === "object" ? parsed.latencyByClass : {}
       };
     } catch (_) { return null; }
@@ -114,7 +144,6 @@
         unsafeRateTarget: oauthGatewayUnsafeRateTarget,
         bestTargetRate: oauthGatewayBestTargetRate,
         bestRate: oauthGatewayBestRate,
-        bestMedianLatency: oauthGatewayBestMedianLatency,
         latencyByClass: oauthGatewayLatencyByClass,
         updatedAt: Date.now()
       }));
@@ -142,7 +171,7 @@
       else if (/^\/pub\/club\/[^/]+\/?$/.test(path)) classes.add("club-profile");
       else if (/^\/pub\/player\/[^/]+\/stats\/?$/.test(path)) classes.add("player-stats");
       else if (/^\/pub\/player\/[^/]+\/matches\/?$/.test(path)) classes.add("player-matches");
-      else if (/^\/pub\/player\/[^/]+\/games\//.test(path)) classes.add("archive");
+      else if (/^\/pub\/player\/[^/]+\/games(?:\/|$)/.test(path)) classes.add("archive");
       else if (/^\/pub\/player\/[^/]+\/?$/.test(path)) classes.add("player-profile");
       else classes.add("other");
       if (classes.size > 1) return "mixed";
@@ -156,27 +185,6 @@
     // Little's law plus headroom: enough in-flight work to sustain the learned rate,
     // but no giant connection burst just because logical page concurrency is 256.
     return Math.max(Math.min(OAUTH_MIN_CONNECTION_CAP, oauthGatewayMax), Math.min(oauthGatewayMax, Math.ceil(rate * (serviceMs / 1000) * 1.35 + 1)));
-  }
-
-  function oauthBackoffRate(requestedRate, factor = 0.7) {
-    if (oauthGatewaySafeRateTarget > 0 && oauthGatewaySafeRateTarget < requestedRate) {
-      // We already proved a lower rate clean. Retreat just below that known-safe
-      // point instead of collapsing all the way to a blind multiplicative cut.
-      return Math.max(OAUTH_MIN_RATE_CPS, oauthGatewaySafeRateTarget * 0.9);
-    }
-    return Math.max(OAUTH_MIN_RATE_CPS, requestedRate * factor);
-  }
-
-  function oauthNextProbeRate(currentRate) {
-    const current = Math.max(OAUTH_MIN_RATE_CPS, Number(currentRate) || OAUTH_INITIAL_RATE_CPS);
-    if (oauthGatewayUnsafeRateTarget > current + 0.5) {
-      // Once a backlash boundary is known, converge geometrically and never jump
-      // straight back to it. Each clean probe closes only 25% of the remaining gap.
-      const gap = oauthGatewayUnsafeRateTarget - current;
-      return Math.min(oauthGatewayUnsafeRateTarget * 0.94, current + Math.max(0.5, gap * 0.25));
-    }
-    // Before a boundary is known, use conservative additive/multiplicative growth.
-    return current + Math.max(1, current * 0.12);
   }
 
   function adaptOAuthGateway(batch) {
@@ -212,23 +220,22 @@
       const legacyCap = Number(batch?.transport_cap || 0);
       if (Number.isFinite(legacyCap) && legacyCap > oauthGatewayMax) oauthGatewayMax = Math.min(256, legacyCap);
     }
-    const median = Math.max(0, Number(batch?.median_latency_ms || 0));
-    const p95 = Math.max(0, Number(batch?.p95_latency_ms || 0));
     const endpointClass = String(batch?.endpoint_class || oauthBatchEndpointClass(batch) || "unknown");
-    const baselines = controller.latency_baseline_ms && typeof controller.latency_baseline_ms === "object"
-      ? controller.latency_baseline_ms
-      : null;
-    if (baselines) oauthGatewayLatencyByClass = { ...baselines };
-    else if (median > 0 && endpointClass !== "mixed" && endpointClass !== "unknown") {
-      const existing = Math.max(0, Number(oauthGatewayLatencyByClass[endpointClass] || 0));
-      if (existing <= 0 || median < existing) oauthGatewayLatencyByClass[endpointClass] = median;
+    const baselines = controller.latency_baseline_ms;
+    if (baselines && typeof baselines === "object") for (const [kind,value] of Object.entries(baselines)) if (finitePositive(value)) oauthGatewayLatencyByClass[kind]=Number(value);
+    // Learn from successful individual upstream timings, never the wall time of
+    // a POST, a tiny tail, a throttled response, or a mixed endpoint wave.
+    const rows=Array.isArray(batch?.results)?batch.results:[];
+    const samples=rows.filter(row=>!row.deferred&&Number(row.status)>=200&&Number(row.status)<400).map(row=>finitePositive(row.elapsed_ms)).filter(Boolean);
+    if (samples.length>=4&&samples.length===rows.length&&endpointClass!=="mixed"&&endpointClass!=="unknown") {
+      const history=oauthLatencySamples[endpointClass] ||= [];
+      history.push({median:quantile(samples),p95:quantile(samples,.95)});if(history.length>9)history.shift();
     }
     oauthGatewayBestRate = Math.max(oauthGatewayBestRate, oauthGatewayLastCps);
     oauthGatewayBestTargetRate = Math.max(oauthGatewayBestTargetRate, oauthGatewaySafeRateTarget);
     oauthGatewayCeilingDiscovered = oauthGatewayUnsafeRateTarget > 0;
-    // Each gateway POST is intentionally bounded; multiple concurrent POSTs provide
-    // the latency headroom required for slow endpoints without giant single waves.
-    oauthGatewayTarget = Math.max(1, Math.min(OAUTH_GATEWAY_BATCH_SIZE, oauthGatewayMax, oauthConcurrencyForRate(serverRate, median, p95)));
+    // The last requested handle cap remains a compatibility diagnostic. It is
+    // not used to size another endpoint's batch.
     persistOAuthTuning();
     emitConcurrencyChange(String(controller.reason || "oauth-server-rate-sync"));
   }
@@ -241,7 +248,7 @@
     if (/^\/pub\/club\/[^/]+\/?$/.test(path)) return "club-profile";
     if (/^\/pub\/player\/[^/]+\/stats\/?$/.test(path)) return "player-stats";
     if (/^\/pub\/player\/[^/]+\/matches\/?$/.test(path)) return "player-matches";
-    if (/^\/pub\/player\/[^/]+\/games\//.test(path)) return "archive";
+    if (/^\/pub\/player\/[^/]+\/games(?:\/|$)/.test(path)) return "archive";
     if (/^\/pub\/player\/[^/]+\/?$/.test(path)) return "player-profile";
     return "other";
   }
@@ -281,64 +288,51 @@
 
   function canLaunchOAuthTraffic(trafficClass) {
     const counts = updateInteractiveProtection("admission-check");
-    if (trafficClass !== "background") return oauthGatewayActivePosts < OAUTH_GATEWAY_MAX_POSTS;
+    if (trafficClass !== "background") return oauthGatewayActivePosts < OAUTH_GATEWAY_MAX_POSTS && availableBudget(trafficClass)>0;
     // Server-admin requests do not pass through the OAuth gateway queue, but they
     // compete for the same PHP-FCGI process pool. Treat them as P0 foreground too.
     if (serverForegroundPressure()) return false;
     // Reserve gateway capacity even before foreground arrives. Once foreground is
     // queued, stop admitting new background waves altogether.
     if (counts.foreground > 0 || oauthGatewayActiveForegroundPosts > 0) return false;
-    return oauthGatewayActiveBackgroundPosts < OAUTH_BACKGROUND_MAX_POSTS && oauthGatewayActivePosts < OAUTH_BACKGROUND_MAX_POSTS;
+    return oauthGatewayActiveBackgroundPosts < OAUTH_BACKGROUND_MAX_POSTS && oauthGatewayActivePosts < OAUTH_BACKGROUND_MAX_POSTS && availableBudget(trafficClass)>0;
   }
 
-  function takeOAuthGatewayBatch() {
-    if (!oauthGatewayQueue.length) return [];
-    // Foreground always wins. Within the winning traffic class, keep endpoint
-    // classes homogeneous so slow match details cannot distort a fast-index sample.
-    let seedIndex = -1;
-    let seed = null;
-    for (let index = 0; index < oauthGatewayQueue.length; index += 1) {
-      const entry = oauthGatewayQueue[index];
-      if (entry.settled) continue;
-      if (!seed || (seed.trafficClass === "background" && entry.trafficClass !== "background") ||
-          (seed.trafficClass === entry.trafficClass && Number(entry.priority || 0) > Number(seed.priority || 0))) {
-        seed = entry; seedIndex = index;
-      }
-    }
-    if (!seed) return [];
-    const trafficClass = seed.trafficClass;
-    const endpointClass = seed.endpointClass;
-    const matching = [];
-    const remaining = [];
-    for (const entry of oauthGatewayQueue) {
-      if (!entry.settled && matching.length < OAUTH_GATEWAY_BATCH_SIZE && entry.trafficClass === trafficClass && entry.endpointClass === endpointClass) matching.push(entry);
-      else remaining.push(entry);
-    }
-    oauthGatewayQueue.length = 0;
-    oauthGatewayQueue.push(...remaining);
-    matching.sort((a, b) => Number(b.priority || 0) - Number(a.priority || 0) || Number(a.sequence || 0) - Number(b.sequence || 0));
-    return matching;
+  function priorityOf(entry) { return entry.priority+Math.floor(Math.max(0,Date.now()-entry.queuedAt)/5000); }
+  function batchPlan(trafficClass) {
+    const candidates=oauthGatewayQueue.filter(e=>!e.settled&&e.trafficClass===trafficClass).sort((a,b)=>priorityOf(b)-priorityOf(a)||a.sequence-b.sequence);
+    const seed=candidates[0];if(!seed)return null;
+    const rate=oauthGatewayRateTarget, model=latencyFor(seed.endpointClass);
+    const cap=Math.min(OAUTH_GATEWAY_BATCH_SIZE,trafficClass==="background"?8:24,availableBudget(trafficClass),Math.max(1,Math.ceil(rate*.8)),Math.max(1,Math.floor(Math.max(0,seed.timeoutMs-model.p95-500)*rate/1000)));
+    if(cap<=0)return null;
+    // Sort before taking the bounded slice. Keep incompatible timeout budgets
+    // apart, and do not fill urgent waves with much lower priority bulk work.
+    const entries=candidates.filter(e=>e.endpointClass===seed.endpointClass&&e.timeoutMs===seed.timeoutMs&&e.priority>=seed.priority-19).slice(0,cap);
+    return {entries,seed,cap,model};
   }
-
+  function takeOAuthGatewayBatch(plan) {
+    const chosen=new Set(plan.entries);for(let i=oauthGatewayQueue.length-1;i>=0;i--)if(chosen.has(oauthGatewayQueue[i]))oauthGatewayQueue.splice(i,1);
+    return plan.entries;
+  }
   function scheduleOAuthGatewayFlush() {
-    // Cancelled entries must not accumulate during a long shared cooldown.
-    for (let i = oauthGatewayQueue.length - 1; i >= 0; i--) if (oauthGatewayQueue[i].settled) oauthGatewayQueue.splice(i, 1);
-    if (!oauthGatewayQueue.length) {
-      if (oauthGatewayTimer) window.clearTimeout(oauthGatewayTimer);
-      oauthGatewayTimer = 0;
-      updateInteractiveProtection("empty-queue");
-      return;
-    }
-    if (oauthGatewayTimer) return;
-    const counts = updateInteractiveProtection("schedule");
-    if (counts.foreground > 0) {
-      if (oauthGatewayActivePosts >= OAUTH_GATEWAY_MAX_POSTS) return;
-    } else if (counts.background > 0 && !canLaunchOAuthTraffic("background")) { oauthBackgroundAdmissionSuppressions++; return; }
-    oauthGatewayTimer = window.setTimeout(flushOAuthGateway, Math.min(60_000, Math.max(0, Math.ceil(oauthGatewayNotBeforeMs - Date.now()))));
+    for(let i=oauthGatewayQueue.length-1;i>=0;i--)if(oauthGatewayQueue[i].settled)oauthGatewayQueue.splice(i,1);
+    if(!oauthGatewayQueue.length){if(oauthGatewayTimer)window.clearTimeout(oauthGatewayTimer);oauthGatewayTimer=0;oauthGatewayTimerAt=0;updateInteractiveProtection("empty-queue");return;}
+    if(oauthGatewayTimer&&oauthGatewayTimerAt<=Date.now())return;
+    const counts=updateInteractiveProtection("schedule"),traffic=counts.foreground?"foreground":"background";
+    if(!canLaunchOAuthTraffic(traffic)){if(traffic==="background")oauthBackgroundAdmissionSuppressions++;if(oauthGatewayTimer)window.clearTimeout(oauthGatewayTimer);oauthGatewayTimer=0;oauthGatewayTimerAt=0;return;}
+    const now=Date.now(),gate=Math.max(oauthGatewayNotBeforeMs,traffic==="background"?oauthGatewayBackgroundNotBeforeMs:0);
+    const plan=batchPlan(traffic);if(!plan)return;
+    // Initial/interactive work starts immediately. Coalesce only tiny bulk tails
+    // while other POSTs are already serving work, and cap the wait at 30 ms.
+    const coalesce=oauthGatewayActivePosts>0&&plan.entries.length<Math.min(4,plan.cap)&&plan.seed.priority<20?Math.max(0,OAUTH_COALESCE_MS-(now-plan.seed.queuedAt)):0;
+    const at=now+Math.min(60000,Math.max(0,Math.ceil(gate-now),coalesce));
+    if(oauthGatewayTimer&&oauthGatewayTimerAt===at)return;
+    if(oauthGatewayTimer)window.clearTimeout(oauthGatewayTimer);
+    oauthGatewayTimerAt=at;oauthGatewayTimer=window.setTimeout(flushOAuthGateway,at-now);
   }
 
   async function flushOAuthGateway() {
-    oauthGatewayTimer = 0;
+    oauthGatewayTimer = 0; oauthGatewayTimerAt=0;
     if (oauthGatewayNotBeforeMs > Date.now()) { scheduleOAuthGatewayFlush(); return; }
     const countsBefore = updateInteractiveProtection("flush");
     const preferredTraffic = countsBefore.foreground > 0 ? "foreground" : "background";
@@ -346,7 +340,9 @@
       if (preferredTraffic === "background") oauthBackgroundAdmissionSuppressions++;
       return;
     }
-    const entries = takeOAuthGatewayBatch().filter(entry => !entry.settled);
+    if(preferredTraffic==="background"&&oauthGatewayBackgroundNotBeforeMs>Date.now()){scheduleOAuthGatewayFlush();return;}
+    const plan=batchPlan(preferredTraffic);if(!plan)return;
+    const entries = takeOAuthGatewayBatch(plan).filter(entry => !entry.settled);
     if (!entries.length) { if (oauthGatewayQueue.length) scheduleOAuthGatewayFlush(); return; }
     const active = entries.filter(entry => !entry.signal?.aborted);
     entries.filter(entry => entry.signal?.aborted).forEach(entry => entry.finish(false, abortError(entry.url)));
@@ -359,6 +355,16 @@
     }
     const trafficClass = active[0]?.trafficClass === "background" ? "background" : "foreground";
     oauthGatewayActivePosts += 1;
+    oauthGatewayOutstanding+=active.length;
+    if(trafficClass==="background")oauthGatewayBackgroundOutstanding+=active.length;
+    oauthScheduler.peakOutstanding=Math.max(oauthScheduler.peakOutstanding,oauthGatewayOutstanding);
+    oauthScheduler.peakBackgroundOutstanding=Math.max(oauthScheduler.peakBackgroundOutstanding,oauthGatewayBackgroundOutstanding);
+    oauthScheduler.posts++;oauthScheduler.submitted+=active.length;
+    const postStarted=Date.now(),endpointClass=active[0].endpointClass;
+    const postConcurrency=Math.min(active.length,oauthConcurrencyForRate(oauthGatewayRateTarget,plan.model.median,plan.model.p95));
+    oauthGatewayTarget=postConcurrency;
+    const residence={endpointClass,trafficClass,submitted:active.length,concurrency:postConcurrency,queueWaitMs:Math.max(...active.map(e=>postStarted-e.queuedAt)),timeoutMs:active[0].timeoutMs,wallMs:0};
+    oauthScheduler.queueWaitMs+=active.reduce((n,e)=>n+Math.max(0,postStarted-e.queuedAt),0);
     if (trafficClass === "background") oauthGatewayActiveBackgroundPosts += 1;
     else oauthGatewayActiveForegroundPosts += 1;
     oauthGatewayMaximumActivePosts = Math.max(oauthGatewayMaximumActivePosts, oauthGatewayActivePosts);
@@ -382,7 +388,7 @@
         headers:{"Content-Type":"application/json","Accept":"application/json","X-P2K-OAuth-CSRF":csrf},
         body:JSON.stringify({
           requests,
-          concurrency: Math.max(1, Math.min(active.length, oauthGatewayTarget, OAUTH_GATEWAY_BATCH_SIZE)),
+          concurrency: postConcurrency,
           // This is a ceiling/permission, not the actual launch target. v2.9.12's
           // server-side coordinator supplies the learned shared target.
           rate_cps: OAUTH_MAX_RATE_CPS,
@@ -406,12 +412,20 @@
       }
       adaptOAuthGateway(payload);
       const rows = Array.isArray(payload.results) ? payload.results : [];
+      const timing=payload.gateway_timing||{};
+      const returned=rows.filter(r=>!r.deferred).length,successes=rows.filter(r=>!r.deferred&&r.status>=200&&r.status<400).length,deferred=rows.filter(r=>r.deferred===true).length;
+      Object.assign(residence,{returned,successes,deferred,serverMs:finitePositive(payload.elapsed_ms),acquisitionMs:finitePositive(timing.acquisition_ms),cacheIngestMs:finitePositive(timing.cache_ingest_ms),reservationMs:finitePositive(timing.reservation_call_ms),peakHandles:finitePositive(payload.peak_in_flight)});
+      oauthScheduler.returned+=returned;oauthScheduler.launched+=finitePositive(payload.launched)||returned;oauthScheduler.successes+=successes;oauthScheduler.deferred+=deferred;
+      if(Number.isFinite(Number(payload.elapsed_ms))&&Number(payload.elapsed_ms)>0)oauthScheduler.serverTimingPosts++;
+      for(const field of ["serverMs","acquisitionMs","cacheIngestMs","reservationMs"])oauthScheduler[field]+=residence[field];
+      oauthScheduler.coordinatorCalls+=finitePositive(timing.coordinator_io?.calls);oauthScheduler.coordinatorWrites+=finitePositive(timing.coordinator_io?.writes);oauthScheduler.coordinatorLockWaitMs+=finitePositive(timing.coordinator_io?.lock_wait_ms);
       // Establish the maximum known deadline before settling any subscribers,
       // even if the throttled row belongs to an already cancelled subscriber.
       for (const row of rows) {
         if (row.deferred === true || Number(row.status) === 429) {
           const deadline = readRetryAfter(new Headers(row.headers || {}));
-          extendOAuthCooldown(Math.max(deadline, Date.now() + (deadline > Date.now() ? 0 : 2000)));
+          const until=Math.max(deadline,Date.now()+(deadline>Date.now()?0:2000));
+          if(row.deferred===true&&row.deferred_reason==="foreground-protection"&&trafficClass==="background")backgroundCooldown(until);else extendOAuthCooldown(until);
         }
         if (row.deferred === true) oauthGatewayDeferredRows++;
       }
@@ -422,7 +436,7 @@
         if (!row) return entry.finish(false, apiError("OAuth gateway omitted a response.", { category:"network", code:"OAUTH_GATEWAY_MISSING_RESULT", url:entry.url, retryable:true }));
         const status = Number(row.status || 0); const h = new Headers(row.headers || {});
         if (row.deferred === true) {
-          const notBeforeMs = Math.max(oauthGatewayNotBeforeMs, readRetryAfter(h));
+          const notBeforeMs = Math.max(oauthGatewayNotBeforeMs, trafficClass==="background"?oauthGatewayBackgroundNotBeforeMs:0, readRetryAfter(h));
           return entry.finish(false, apiError("OAuth request deferred before launch.", {
             category:"deferred", code:"OAUTH_DEFERRED", status:503, url:entry.url,
             retryable:true, deferred:true, notBeforeMs, retryAfterMs:Math.max(0,notBeforeMs-Date.now()), transport:"oauth-bearer"
@@ -436,6 +450,7 @@
         catch (cause) { entry.finish(false, apiError("Unable to construct OAuth gateway response.", { category:"parse", code:"OAUTH_GATEWAY_RESPONSE", status, url:entry.url, retryable:true, cause })); }
       });
     } catch (error) {
+      oauthScheduler.postErrors++;residence.error=true;
       if (postController.signal.aborted) {
         active.forEach(entry => entry.finish(false, apiError("OAuth API gateway timed out.", {
           category:"timeout", code:"OAUTH_GATEWAY_TIMEOUT", url:entry.url, retryable:true
@@ -445,6 +460,12 @@
       }
     } finally {
       window.clearTimeout(postTimer);
+      residence.wallMs=Math.max(0,Date.now()-postStarted);oauthScheduler.postWallMs+=residence.wallMs;
+      const endpoint=oauthScheduler.byEndpoint[endpointClass] ||= {posts:0,submitted:0,returned:0,successes:0,deferred:0,wallMs:0};
+      endpoint.posts++;endpoint.submitted+=active.length;endpoint.returned+=residence.returned||0;endpoint.successes+=residence.successes||0;endpoint.deferred+=residence.deferred||0;endpoint.wallMs+=residence.wallMs;
+      oauthScheduler.recentPosts.push(residence);if(oauthScheduler.recentPosts.length>80)oauthScheduler.recentPosts.shift();
+      oauthGatewayOutstanding=Math.max(0,oauthGatewayOutstanding-active.length);
+      if(trafficClass==="background")oauthGatewayBackgroundOutstanding=Math.max(0,oauthGatewayBackgroundOutstanding-active.length);
       oauthGatewayActivePosts = Math.max(0, oauthGatewayActivePosts - 1);
       if (trafficClass === "background") oauthGatewayActiveBackgroundPosts = Math.max(0, oauthGatewayActiveBackgroundPosts - 1);
       else oauthGatewayActiveForegroundPosts = Math.max(0, oauthGatewayActiveForegroundPosts - 1);
@@ -455,7 +476,8 @@
 
   function executeOAuthGateway(url, { headers, signal, priority = 0, trafficClass = "foreground", timeoutMs = 20_000, deferMode = "wait" }) {
     if (signal?.aborted) return Promise.reject(abortError(url));
-    if (deferMode === "return" && oauthGatewayNotBeforeMs > Date.now()) return Promise.reject(localCooldownError(url));
+    const gate=Math.max(oauthGatewayNotBeforeMs,trafficClass==="background"?oauthGatewayBackgroundNotBeforeMs:0);
+    if (deferMode === "return" && gate > Date.now()) return Promise.reject(localCooldownError(url,gate));
     return new Promise((resolve, reject) => {
       const entry = {
         id:`g${++oauthGatewayBatchSequence}`,
@@ -476,7 +498,7 @@
       };
       const onAbort = () => { entry.finish(false, abortError(url)); scheduleOAuthGatewayFlush(); };
       signal?.addEventListener?.("abort", onAbort, { once:true });
-      oauthGatewayQueue.push(entry);
+      oauthGatewayQueue.push(entry);oauthScheduler.peakQueued=Math.max(oauthScheduler.peakQueued,oauthGatewayQueue.length);
       updateInteractiveProtection("enqueue");
       scheduleOAuthGatewayFlush();
     });
@@ -515,18 +537,17 @@
       oauthGatewayUnsafeRateTarget = Math.max(0, Number(saved?.unsafeRateTarget || 0));
       oauthGatewayBestTargetRate = Math.max(0, Number(saved?.bestTargetRate || 0));
       oauthGatewayBestRate = Math.max(0, Number(saved?.bestRate || 0));
-      oauthGatewayBestMedianLatency = Math.max(0, Number(saved?.bestMedianLatency || 0));
       oauthGatewayLatencyByClass = saved?.latencyByClass && typeof saved.latencyByClass === "object" ? { ...saved.latencyByClass } : Object.create(null);
-      oauthGatewayStableSamples = 0;
-      oauthGatewayPlateauStrikes = 0;
+
       oauthGatewayCeilingDiscovered = oauthGatewayUnsafeRateTarget > 0;
     }
     return oauthBearerMode;
   }
 
+  function recommendedFeederDepth() { return Math.min(OAUTH_LOGICAL_CONCURRENCY,Math.max(24,Math.ceil(oauthGatewayRateTarget*4))); }
   function effectiveBatchConcurrency() {
     return oauthBearerMode
-      ? OAUTH_LOGICAL_CONCURRENCY
+      ? recommendedFeederDepth()
       : Math.max(1, Math.min(maxConcurrency, configuredConcurrency(), adaptiveConcurrency()));
   }
 
@@ -534,7 +555,8 @@
     return {
       oauthBearerMode,
       oauthGatewayTarget, oauthGatewayMax,
-      oauthLogicalFeederConcurrency: OAUTH_LOGICAL_CONCURRENCY,
+      oauthLogicalFeederConcurrency: recommendedFeederDepth(),
+      oauthLogicalFeederMaximum: OAUTH_LOGICAL_CONCURRENCY,
       oauthTransportCapacity: oauthGatewayMax,
       oauthGatewayRateTarget, oauthGatewaySafeRateTarget, oauthGatewayUnsafeRateTarget,
       oauthGatewayRatePolicy: oauthGatewayRatePolicy ? { ...oauthGatewayRatePolicy } : null,
@@ -542,7 +564,8 @@
       oauthGatewayBestTargetRate, oauthGatewayLastCps, oauthGatewayBestRate,
       oauthGatewayPeakInFlight, oauthGatewayCeilingDiscovered,
       oauthGatewayLatencyByClass: { ...oauthGatewayLatencyByClass },
-      oauthGatewayNotBeforeMs, oauthGatewayDeferredRows,
+      oauthGatewayNotBeforeMs, oauthGatewayBackgroundNotBeforeMs, oauthGatewayDeferredRows,
+      oauthScheduler:{...oauthScheduler,byEndpoint:Object.fromEntries(Object.entries(oauthScheduler.byEndpoint).map(([k,v])=>[k,{...v}])),recentPosts:oauthScheduler.recentPosts.map(p=>({...p})),outstanding:oauthGatewayOutstanding,backgroundOutstanding:oauthGatewayBackgroundOutstanding,budget:outstandingBudget("foreground"),backgroundBudget:outstandingBudget("background"),endpointModels:Object.fromEntries(Object.keys(OAUTH_LATENCY_DEFAULTS).map(k=>[k,latencyFor(k)]))},
       oauthGatewayActivePosts, oauthGatewayMaximumActivePosts,
       oauthGatewayActiveForegroundPosts, oauthGatewayActiveBackgroundPosts,
       oauthGatewayQueued: oauthGatewayQueue.length,
@@ -573,6 +596,7 @@
     observeBatch(batch) {
       if (!oauthBearerMode || !batch || typeof batch !== "object") return false;
       adaptOAuthGateway(batch);
+      scheduleOAuthGatewayFlush();
       return true;
     },
     effectiveBatchConcurrency,

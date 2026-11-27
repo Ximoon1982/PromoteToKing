@@ -103,7 +103,7 @@ final class OAuthRateCoordinator
                 $s['next_launch_at'] = $now + 1.0 / $rate;
                 $s['reservations']++;
             }
-            return ['slot'=>$slot,'reserved'=>$reserved,'rate_target_cps'=>$rate,'safe_rate_cps'=>(float)$s['safe_rate_cps'],'unsafe_rate_cps'=>(float)$s['unsafe_rate_cps'],'cooldown_remaining_ms'=>max(0,(int)ceil(((float)$s['cooldown_until']-$now)*1000))];
+            return ['slot'=>$slot,'reserved'=>$reserved,'rate_target_cps'=>$rate,'safe_rate_cps'=>(float)$s['safe_rate_cps'],'unsafe_rate_cps'=>(float)$s['unsafe_rate_cps'],'cooldown_remaining_ms'=>max(0,(int)ceil(((float)$s['cooldown_until']-$now)*1000)),'foreground_wait_ms'=>$trafficClass==='background'?max(0,(int)ceil(((float)$s['foreground_until']-$now)*1000)):0];
         }, true);
         $r['wait_ms'] = max(0.0, ((float)$r['slot'] - $this->now()) * 1000.0);
         return $r;

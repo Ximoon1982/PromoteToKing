@@ -10,6 +10,8 @@ on:
       - 'tests/oauth_standalone_runtime_v2162.php'
       - 'tests/match_assistant_detailed_analysis_v2162.py'
       - 'tools/install-p2k-v2162-oauth-standalone-inc3.sh'
+      - 'tools/install-p2k-v2162-oauth-standalone-inc4.sh'
+      - 'tests/oauth_transport_scheduler_v2162.js'
       - 'assets/js/shared/green-accelerator.js'
       - 'assets/js/pages/v2-11-0.js'
       - 'assets/js/pages/recruit-match*.js'
@@ -58,6 +60,7 @@ jobs:
           node --check assets/js/shared/api-oauth-context.js
           node tests/oauth_policy_client_v2162.js
           node tests/oauth_acquisition_correctness_v2162.js
+          node tests/oauth_transport_scheduler_v2162.js
           node tests/oauth_application_integration_v2162.js
           node tests/tgp_match_recruit_scheduler.test.cjs
           node tests/team_france_recruitment.test.cjs
@@ -69,7 +72,7 @@ jobs:
             php -l "$app/compat/ActiveOAuthRuntime.php"
             if [[ "$app" == */MatchRecruitment ]]; then php -l "$app/api/index.php"; fi
           done
-          bash -n tools/install-p2k-v2162-oauth-standalone-inc3.sh
+          bash -n tools/install-p2k-v2162-oauth-standalone-inc4.sh
       - name: Shared rate controller regression
         run: |
           php -l server/team-points/src/OAuthRateCoordinator.php
@@ -100,7 +103,7 @@ jobs:
           name: p2k-v2162-oauth-performance-lab-rc
           path: |
             dist/P2K_2.16.2_OAuth_Performance_Lab_RC_*.zip
-            dist/P2K_2.16.2_OAuth_Standalone_Inc3_*.zip
+            dist/P2K_2.16.2_OAuth_Standalone_Inc4_*.zip
             dist/SHA256SUMS
           if-no-files-found: error
           retention-days: 14
@@ -121,6 +124,8 @@ jobs:
             tests/oauth_standalone_runtime_v2162.php
             tests/match_assistant_detailed_analysis_v2162.py
             tools/install-p2k-v2162-oauth-standalone-inc3.sh
+            tools/install-p2k-v2162-oauth-standalone-inc4.sh
+            tests/oauth_transport_scheduler_v2162.js
             OAuthPerformanceLab.html
             assets/js/shared/api-oauth-context.js
             assets/js/shared/api-request-semantics.js

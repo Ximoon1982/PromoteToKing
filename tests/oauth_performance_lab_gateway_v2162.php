@@ -93,6 +93,16 @@ FIXTURE
         verify(microtime(true)-$before<2.0&&$held['launched']===0&&$held['deferred']===8&&$held['rate_429']===0&&$held['errors']===0,'Second batch launched during shared cooldown');
         verify(\P2K\Shared\SharedChessGateway::$ingested===7,'Throttled/deferred responses entered canonical cache');
         $events=\P2K\TeamPoints\RuntimeTelemetry::$events;verify(count($events)===3&&$events[1][1]['calls']===1&&$events[2][1]['calls']===0,'Deferred entries falsely counted as upstream calls');
+        $foregroundToken='foreground-fixture-token';
+        $foregroundOwner=new \P2K\TeamPoints\OAuthRateCoordinator($foregroundToken);
+        $foregroundOwner->announceTraffic('foreground');
+        $before=microtime(true);$yielded=$method->invoke(null,$requests,$foregroundToken,4,30.0,'background');
+        verify(microtime(true)-$before<1.0&&$yielded['launched']===0&&$yielded['deferred']===8&&$yielded['errors']===0,'Background gateway pinned worker during foreground protection');
+        verify($yielded['controller']['cooldown_remaining_ms']===0,'Foreground protection became a global cooldown');
+        foreach($yielded['results'] as $row)verify($row['deferred_reason']==='foreground-protection'&&$row['status']===503&&(int)$row['headers']['retry-after']>=1,'Missing distinct foreground-protection deferral');
+        $foreground=$method->invoke(null,[$requests[0]],$foregroundToken,1,30.0,'foreground');
+        verify($foreground['successes']===1&&$foreground['launched']===1,'Background deferral blocked foreground acquisition');
+        echo "PASS background worker yields unlaunched rows without a global cooldown; foreground remains eligible\n";
         echo 'PASS actual PHP multiGet + rate coordinator, success/error results, cache preservation, reconciled timings, long Retry-After, deferred accounting, credential isolation'.PHP_EOL;
     } finally {
         if (is_resource($server)) { proc_terminate($server); proc_close($server); }

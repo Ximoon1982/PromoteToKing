@@ -1,6 +1,6 @@
 "use strict";
 const assert=require("node:assert/strict");
-const {Bench,PLAN,DIAGNOSTIC_PLAN,concurrencyExposure,diagnosticSummary,parseNames,connectionCap,MAX_MS,POST_TIMEOUT,MAX_OUTSTANDING,MAX_POSTS,curlPeak,throttleDiagnostics}=require("../assets/js/pages/oauth-performance-lab.js");
+const {cleanLatencySample,updateLatencyModel,pressureReference,Bench,PLAN,DIAGNOSTIC_PLAN,concurrencyExposure,diagnosticSummary,parseNames,connectionCap,MAX_MS,POST_TIMEOUT,MAX_OUTSTANDING,MAX_POSTS,curlPeak,throttleDiagnostics}=require("../assets/js/pages/oauth-performance-lab.js");
 const names=Array.from({length:12000},(_,i)=>"fixture-"+i);
 const plan=(name,settings={})=>({name,batch:8,posts:2,workers:24,headroom:1.35,admissionMs:90,drainMs:100,...settings});
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
@@ -16,6 +16,15 @@ function fixture({status=200,omit=false,hang=false,delay=5}={}){
   }};
 }
 (async()=>{
+  const latencyRows=(n,ms,status=200)=>Array.from({length:n},()=>({status,elapsed_ms:ms}));
+  const history={};let learned=null;
+  for(let i=0;i<3;i++)learned=updateLatencyModel(history,"stats",cleanLatencySample(latencyRows(8,1000+i*10)));
+  assert.equal(learned.median,1010);
+  for(let i=0;i<20;i++)assert.equal(updateLatencyModel(history,"stats",cleanLatencySample(latencyRows(1,100))),null);
+  assert.equal(history.stats.length,3);assert.equal(cleanLatencySample(latencyRows(8,100,404)),null);
+  assert.equal(pressureReference("stats",{median:200}),975);assert(939<2.5*pressureReference("stats",{median:200}));
+  assert.equal(PLAN.find(p=>p.role==="probe").recoveryMs,85000);
+  console.log("PASS representative latency reference, tiny tails ignored, statistics pressure floor and recovery budget");
   assert.equal(PLAN.reduce((s,p)=>s+p.minAdmissionMs+p.drainMs,0),280000);assert(PLAN.every(p=>p.drainMs>POST_TIMEOUT&&p.maxOutstanding<=MAX_OUTSTANDING));assert.equal(POST_TIMEOUT,45000);
   assert(MAX_MS===300000);assert.equal(PLAN.length,3);assert.equal(PLAN[0].maxOutstanding,16);assert.equal(MAX_OUTSTANDING,96);
   assert.deepEqual(parseNames("ABC\nabc\nhttps://www.chess.com/member/DEF\nbad name"),{names:["abc","def"],invalid:1,duplicates:1});
@@ -23,7 +32,7 @@ function fixture({status=200,omit=false,hang=false,delay=5}={}){
   const f=fixture(),b=new Bench({names,seed:123,post:f.post,plan:[plan("A"),plan("B",{posts:3})],maxMs:1000,postTimeout:200});
   const result=await b.run();assert.equal(result.stop_reason,null);assert(result.scenarios.every(s=>s.status==="completed"&&s.successful>0&&s.submitted===s.received+s.deferred));
   assert.equal(result.scenarios[0].controller_end.target,30);assert.equal(result.scenarios[1].controller_start.target,30);assert(f.peak<=3);
-  assert(!JSON.stringify(result).includes("fixture-"));assert(result.scenarios[0].successful_cps>0);assert.equal(result.benchmark_revision,9);
+  assert(!JSON.stringify(result).includes("fixture-"));assert(result.scenarios[0].successful_cps>0);assert.equal(result.benchmark_revision,10);
   assert(result.scenarios.every(s=>s.admission_received+s.drain_received===s.received&&s.admission_successful+s.drain_successful===s.successful&&s.server_p95_ms===5&&s.outside_server_p95_ms>=0));
   // Reproduce the old premature drain abort: a valid POST ends well after the former drain deadline.
   const slow=fixture({delay:140}),fast=fixture({delay:5});let late;
