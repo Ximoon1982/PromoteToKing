@@ -16,6 +16,9 @@
         url = "",
         retryable = false,
         retryAfterMs = 0,
+        notBeforeMs = 0,
+        deferred = false,
+        transport = "",
         attempt = 0,
         cause = null
       } = {}) {
@@ -26,7 +29,10 @@
         error.status = Number(status) || 0;
         error.url = String(url || "");
         error.retryable = Boolean(retryable);
-        error.retryAfterMs = Math.max(0, Number(retryAfterMs) || 0);
+        error.retryAfterMs = Number.isFinite(Number(retryAfterMs)) ? Math.max(0, Number(retryAfterMs)) : 0;
+        error.notBeforeMs = Number.isFinite(Number(notBeforeMs)) ? Math.max(0, Number(notBeforeMs)) : 0;
+        error.deferred = deferred === true;
+        error.transport = String(transport || "");
         error.attempt = Number(attempt) || 0;
         if (cause && !error.cause) error.cause = cause;
         return error;
@@ -78,7 +84,21 @@
         });
       }
 
+      // Absolute deadlines avoid repeatedly adding a relative Retry-After
+      // interval as an error passes through transport and retry layers.
+      function retryAfterDeadline(headers, now = Date.now()) {
+        const value = String(headers?.get?.("retry-after") || "").trim();
+        if (!value) return 0;
+        if (/^\d+(?:\.\d+)?$/.test(value)) {
+          const deadline = now + Number(value) * 1000;
+          return Number.isFinite(deadline) ? Math.ceil(deadline) : 0;
+        }
+        const date = Date.parse(value);
+        return Number.isFinite(date) ? Math.max(now, date) : 0;
+      }
+
       function categoryForStatus(status) {
+        if (status === 0) return { category: "network", code: "NETWORK_ERROR", retryable: true };
         if (status === 401 || status === 403) return { category: "forbidden", code: "FORBIDDEN", retryable: false };
         if (status === 404 || status === 410) return { category: "not-found", code: "NOT_FOUND", retryable: false };
         if (status === 408) return { category: "timeout", code: "HTTP_TIMEOUT", retryable: true };
@@ -100,7 +120,8 @@
         return apiError(error?.message || `Unable to load ${url}`, {
           category: error?.category || "unknown", code: error?.code || "UNKNOWN",
           status: error?.status || 0, url: error?.url || url,
-          retryable: Boolean(error?.retryable), retryAfterMs: error?.retryAfterMs || 0, cause: error
+          retryable: Boolean(error?.retryable), retryAfterMs: error?.retryAfterMs || 0,
+          notBeforeMs: error?.notBeforeMs, deferred: error?.deferred === true, transport: error?.transport, cause: error
         });
       }
 
@@ -110,7 +131,7 @@
 
       function isTransient(error) {
         const normalized = normalizeError(error, error?.url || "");
-        return normalized.retryable || ["network", "timeout", "rate-limit", "server", "cache"].includes(normalized.category);
+        return normalized.deferred === true || normalized.retryable || ["network", "timeout", "rate-limit", "server", "cache"].includes(normalized.category);
       }
 
       function isPermanent(error) { return !isTransient(error) && !isCancelled(error); }
@@ -122,6 +143,7 @@
           network: "The Chess.com API could not be reached.", "not-found": "The requested Chess.com resource was not found.",
           forbidden: "Chess.com did not allow access to this resource.",
           "rate-limit": "Chess.com is temporarily limiting requests. Please retry shortly.",
+          deferred: "Acquisition is waiting for the shared OAuth cooldown.",
           server: "Chess.com returned a temporary server error.", client: "The request could not be completed.",
           parse: "Chess.com returned data that could not be read.", cache: "The local cache could not provide this response."
         };
@@ -145,8 +167,13 @@
         });
       }
 
+      async function waitUntil(deadline, signal = null) {
+        while (deadline > Date.now()) await delay(Math.min(60_000, Math.ceil(deadline - Date.now())), signal);
+        if (signal?.aborted) throw abortError();
+      }
+
       return Object.freeze({
-        normalizeUrl, apiError, abortError, activityAwareOptions, timeoutError,
+        retryAfterDeadline, waitUntil, normalizeUrl, apiError, abortError, activityAwareOptions, timeoutError,
         categoryForStatus, normalizeError, isCancelled, isTransient, isPermanent,
         userMessage, delay
       });

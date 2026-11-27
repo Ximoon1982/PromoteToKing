@@ -64,7 +64,7 @@ FIXTURE
         verify($result['ok'] && $result['mode']==='oauth-bearer', 'Gateway result invalid');
         verify($result['offered_rate_cps']===120.0&&$result['requested_rate_cps']===30.0&&$result['effective_rate_ceiling_cps']===30.0&&$result['controller']['rate_target_cps']===24.0,'Old caller bypassed authoritative policy');
         verify($result['controller']['rate_policy']['maximum_rate_cps']===30.0,'Missing policy telemetry');
-        verify($result['processed']===8 && $result['successes']===7 && $result['rate_429']===0, 'Gateway response counts changed');
+        verify($result['processed']===8 && $result['successes']===7 && $result['rate_429']===0 && $result['errors']===1, 'Gateway response counts changed');
         verify(\P2K\Shared\SharedChessGateway::$ingested===7, 'Canonical ingestion was changed');
         $timing = $result['gateway_timing'] ?? [];
         foreach (['acquisition_ms','cache_ingest_ms','reservation_call_ms','reservation_attempts','reservation_misses','first_launch_delay_ms','launch_span_ms'] as $key) {
@@ -84,13 +84,13 @@ FIXTURE
         $limited=$requests;$limited[0]['url']='http://'.$address.'/pub/player/limited';
         $before=microtime(true);$throttled=$method->invoke(null,$limited,'limited-fixture-token',1,120.0,'foreground');
         verify(microtime(true)-$before<3.0,'Long cooldown pinned the gateway');
-        verify($throttled['rate_429']===1&&$throttled['launched']===1&&$throttled['deferred']===7&&count($throttled['results'])===8,'Throttle/deferred counts invalid');
+        verify($throttled['rate_429']===1&&$throttled['launched']===1&&$throttled['deferred']===7&&$throttled['errors']===0&&count($throttled['results'])===8,'Throttle/deferred counts invalid');
         $events429=$throttled['gateway_timing']['throttle_events'];verify(count($events429)===1&&$events429[0]['retry_after_seconds']===120&&$events429[0]['response_ms']>$events429[0]['launch_ms'],'Exact throttle timing missing');
         verify($throttled['controller']['recovery_hold_remaining_ms']>170000,'Recovery hold missing');
         verify($throttled['controller']['cooldown_remaining_ms']>110000&&$throttled['controller']['rate_target_cps']<30,'Shared backoff invalid');
         foreach($throttled['results'] as $row){if(!empty($row['deferred']))verify($row['status']===503&&$row['elapsed_ms']===0&&($row['headers']['retry-after']??0)>100,'Deferred result is not explicitly retryable');}
         $before=microtime(true);$held=$method->invoke(null,$requests,'limited-fixture-token',4,120.0,'foreground');
-        verify(microtime(true)-$before<2.0&&$held['launched']===0&&$held['deferred']===8&&$held['rate_429']===0,'Second batch launched during shared cooldown');
+        verify(microtime(true)-$before<2.0&&$held['launched']===0&&$held['deferred']===8&&$held['rate_429']===0&&$held['errors']===0,'Second batch launched during shared cooldown');
         verify(\P2K\Shared\SharedChessGateway::$ingested===7,'Throttled/deferred responses entered canonical cache');
         $events=\P2K\TeamPoints\RuntimeTelemetry::$events;verify(count($events)===3&&$events[1][1]['calls']===1&&$events[2][1]['calls']===0,'Deferred entries falsely counted as upstream calls');
         echo 'PASS actual PHP multiGet + rate coordinator, success/error results, cache preservation, reconciled timings, long Retry-After, deferred accounting, credential isolation'.PHP_EOL;

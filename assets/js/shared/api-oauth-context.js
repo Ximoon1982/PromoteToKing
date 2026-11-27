@@ -7,7 +7,7 @@
     create(dependencies) {
       const {
         nativeFetch, maxConcurrency, integer, apiError, abortError, normalizeError,
-        emitConcurrencyChange, configuredConcurrency, adaptiveConcurrency
+        emitConcurrencyChange, configuredConcurrency, adaptiveConcurrency, retryAfterDeadline
       } = dependencies;
   const OAUTH_GATEWAY_ENDPOINT = String(window.P2K_SITE_CONFIG?.api?.oauthGatewayEndpoint || "server/team-points/public/oauth.php");
   const OAUTH_LOGICAL_CONCURRENCY = 256;
@@ -55,6 +55,20 @@
   let oauthGatewayLastCps = 0;
   let oauthGatewayBatchSequence = 0;
   let oauthGatewayTimer = 0;
+  let oauthGatewayNotBeforeMs = 0;
+  let oauthGatewayDeferredRows = 0;
+  // The PHP controller owns pacing. This document merely avoids sending work
+  // that the server has already told it cannot launch yet.
+  function extendOAuthCooldown(deadline) {
+    if (!Number.isFinite(deadline) || deadline <= oauthGatewayNotBeforeMs || deadline <= Date.now()) return;
+    oauthGatewayNotBeforeMs = deadline;
+    if (oauthGatewayTimer) window.clearTimeout(oauthGatewayTimer);
+    oauthGatewayTimer = 0;
+    scheduleOAuthGatewayFlush();
+  }
+  function readRetryAfter(headers) {
+    return typeof retryAfterDeadline === "function" ? retryAfterDeadline(headers) : 0;
+  }
   let oauthGatewayActivePosts = 0;
   let oauthGatewayMaximumActivePosts = 0;
   let oauthGatewayActiveForegroundPosts = 0;
@@ -162,6 +176,8 @@
     // and sizes its per-POST connection cap; it no longer independently punishes or
     // probes the same upstream event a second time.
     const controller = batch?.controller && typeof batch.controller === "object" ? batch.controller : {};
+    const remaining = Number(controller.cooldown_remaining_ms || 0);
+    if (remaining > 0) extendOAuthCooldown(Date.now() + remaining);
     const observedAt = Number(controller.observed_at_ms || 0);
     // Concurrent POSTs may arrive out of order. An older state must not replace
     // a newer shared rate, boundary or latency snapshot.
@@ -296,16 +312,25 @@
   }
 
   function scheduleOAuthGatewayFlush() {
-    if (oauthGatewayTimer || !oauthGatewayQueue.length) return;
+    // Cancelled entries must not accumulate during a long shared cooldown.
+    for (let i = oauthGatewayQueue.length - 1; i >= 0; i--) if (oauthGatewayQueue[i].settled) oauthGatewayQueue.splice(i, 1);
+    if (!oauthGatewayQueue.length) {
+      if (oauthGatewayTimer) window.clearTimeout(oauthGatewayTimer);
+      oauthGatewayTimer = 0;
+      updateInteractiveProtection("empty-queue");
+      return;
+    }
+    if (oauthGatewayTimer) return;
     const counts = updateInteractiveProtection("schedule");
     if (counts.foreground > 0) {
       if (oauthGatewayActivePosts >= OAUTH_GATEWAY_MAX_POSTS) return;
     } else if (counts.background > 0 && !canLaunchOAuthTraffic("background")) { oauthBackgroundAdmissionSuppressions++; return; }
-    oauthGatewayTimer = window.setTimeout(flushOAuthGateway, 0);
+    oauthGatewayTimer = window.setTimeout(flushOAuthGateway, Math.min(60_000, Math.max(0, Math.ceil(oauthGatewayNotBeforeMs - Date.now()))));
   }
 
   async function flushOAuthGateway() {
     oauthGatewayTimer = 0;
+    if (oauthGatewayNotBeforeMs > Date.now()) { scheduleOAuthGatewayFlush(); return; }
     const countsBefore = updateInteractiveProtection("flush");
     const preferredTraffic = countsBefore.foreground > 0 ? "foreground" : "background";
     if (!canLaunchOAuthTraffic(preferredTraffic)) {
@@ -318,8 +343,8 @@
     entries.filter(entry => entry.signal?.aborted).forEach(entry => entry.finish(false, abortError(entry.url)));
     if (!active.length) { if (oauthGatewayQueue.length) scheduleOAuthGatewayFlush(); return; }
     const csrf = String(window.P2K_AUTH?.getCsrf?.() || "");
-    if (!csrf) {
-      active.forEach(entry => entry.finish(false, apiError("OAuth session is not ready.", { category:"forbidden", code:"OAUTH_SESSION_NOT_READY", status:401, url:entry.url, retryable:true })));
+    if (!csrf || !oauthSessionActive()) {
+      active.forEach(entry => entry.finish(false, apiError("OAuth session is not ready.", { category:"forbidden", code:"OAUTH_SESSION_NOT_READY", status:401, url:entry.url, retryable:false })));
       if (oauthGatewayQueue.length) scheduleOAuthGatewayFlush();
       return;
     }
@@ -357,22 +382,47 @@
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok || payload?.ok !== true) {
-        if (response.status === 401) setEnabled(false);
+        // A failed gateway is not a request to switch the verified session to
+        // anonymous mode. The authoritative session bootstrap owns that decision.
+        const deadline = readRetryAfter(response.headers);
+        const notBeforeMs = response.status === 429 ? Math.max(deadline, Date.now() + 2000) : deadline;
+        if (response.status === 429 || response.status === 503) extendOAuthCooldown(notBeforeMs);
         throw apiError(payload?.error?.message || `OAuth API gateway HTTP ${response.status}`, {
-          category: response.status===429?"rate-limit":"server",
+          category: response.status===401 || response.status===403 ? "forbidden" : response.status===429 ? "rate-limit" : "server",
           code: payload?.error?.code || "OAUTH_GATEWAY_ERROR",
-          status: response.status,
+          status: response.status, transport: "oauth-bearer",
+          notBeforeMs, retryAfterMs: Math.max(0, notBeforeMs - Date.now()),
           retryable: response.status===429 || response.status>=500
         });
       }
       adaptOAuthGateway(payload);
-      const resultMap = new Map((Array.isArray(payload.results) ? payload.results : []).map(row => [String(row.id), row]));
+      const rows = Array.isArray(payload.results) ? payload.results : [];
+      // Establish the maximum known deadline before settling any subscribers,
+      // even if the throttled row belongs to an already cancelled subscriber.
+      for (const row of rows) {
+        if (row.deferred === true || Number(row.status) === 429) {
+          const deadline = readRetryAfter(new Headers(row.headers || {}));
+          extendOAuthCooldown(Math.max(deadline, Date.now() + (deadline > Date.now() ? 0 : 2000)));
+        }
+        if (row.deferred === true) oauthGatewayDeferredRows++;
+      }
+      const resultMap = new Map(rows.map(row => [String(row.id), row]));
       active.forEach(entry => {
         if (entry.signal?.aborted) return entry.finish(false, abortError(entry.url));
         const row = resultMap.get(entry.id);
         if (!row) return entry.finish(false, apiError("OAuth gateway omitted a response.", { category:"network", code:"OAUTH_GATEWAY_MISSING_RESULT", url:entry.url, retryable:true }));
         const status = Number(row.status || 0); const h = new Headers(row.headers || {});
-        const body = status === 304 ? null : String(row.body ?? "");
+        if (row.deferred === true) {
+          const notBeforeMs = Math.max(oauthGatewayNotBeforeMs, readRetryAfter(h));
+          return entry.finish(false, apiError("OAuth request deferred before launch.", {
+            category:"deferred", code:"OAUTH_DEFERRED", status:503, url:entry.url,
+            retryable:true, deferred:true, notBeforeMs, retryAfterMs:Math.max(0,notBeforeMs-Date.now()), transport:"oauth-bearer"
+          }));
+        }
+        if (status === 0) return entry.finish(false, apiError("Chess.com OAuth transport failed.", {
+          category:"network", code:"OAUTH_UPSTREAM_TRANSPORT", status:0, url:entry.url, retryable:true, transport:"oauth-bearer"
+        }));
+        const body = status === 304 || status === 204 || status === 205 ? null : String(row.body ?? "");
         try { entry.finish(true, new Response(body, { status, statusText: String(row.status_text || ""), headers: h })); }
         catch (cause) { entry.finish(false, apiError("Unable to construct OAuth gateway response.", { category:"parse", code:"OAUTH_GATEWAY_RESPONSE", status, url:entry.url, retryable:true, cause })); }
       });
@@ -414,7 +464,7 @@
           ok ? resolve(value) : reject(value);
         }
       };
-      const onAbort = () => entry.finish(false, abortError(url));
+      const onAbort = () => { entry.finish(false, abortError(url)); scheduleOAuthGatewayFlush(); };
       signal?.addEventListener?.("abort", onAbort, { once:true });
       oauthGatewayQueue.push(entry);
       updateInteractiveProtection("enqueue");
@@ -482,6 +532,7 @@
       oauthGatewayBestTargetRate, oauthGatewayLastCps, oauthGatewayBestRate,
       oauthGatewayPeakInFlight, oauthGatewayCeilingDiscovered,
       oauthGatewayLatencyByClass: { ...oauthGatewayLatencyByClass },
+      oauthGatewayNotBeforeMs, oauthGatewayDeferredRows,
       oauthGatewayActivePosts, oauthGatewayMaximumActivePosts,
       oauthGatewayActiveForegroundPosts, oauthGatewayActiveBackgroundPosts,
       oauthGatewayQueued: oauthGatewayQueue.length,

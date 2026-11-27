@@ -8,7 +8,7 @@
       const {
         defaultAttempts, defaultTimeoutMs, retryBaseDelayMs, counters, integer,
         normalizeUrl, apiError, activityAwareOptions, normalizeError, isTransient,
-        isCancelled, abortError, recordError, recordWarning, delay, jitter,
+        isCancelled, abortError, recordError, recordWarning, delay, jitter, waitUntil,
         endpointPriority, schedule, fetchSnapshot, cachedData, queueObservation,
         noteSuccess, noteTransientFailure
       } = dependencies;
@@ -76,6 +76,7 @@
               } catch (_) { /* Cache update remains valid even if opportunistic ingest cannot decode it. */ }
               return snapshot;
             }).catch(error => {
+              if (error?.deferred === true) { counters.deferredRequests = (counters.deferredRequests || 0) + 1; return; }
               recordWarning("Background refresh failed.", { url: normalizedUrl, category: error?.category || "unknown" });
             }).finally(() => backgroundRefreshes.delete(normalizedUrl));
             backgroundRefreshes.set(normalizedUrl, promise);
@@ -106,6 +107,9 @@
           };
         } catch (error) {
           const normalized = normalizeError(error, normalizedUrl, options.signal);
+          // A deferred request never reached Chess.com. It is not a failure,
+          // and stale-if-error must not turn it into a completed verification.
+          if (normalized.deferred === true) throw normalized;
           if (isTransient(normalized)) noteTransientFailure(normalized);
           if (cachedEntry && isTransient(normalized) && age <= Number(policy.staleIfErrorFor || policy.usableFor || 0)) {
             counters.staleIfErrorFallbacks += 1;
@@ -129,10 +133,11 @@
       async function jsonDetailed(url, options = {}) {
         const normalizedUrl = normalizeUrl(url);
         const activity = activityAwareOptions(options);
-        options = activity.options;
+        options = { ...activity.options, acquisitionRoute: {} };
         const signal = options.signal || null;
         const attempts = integer(options.attempts, defaultAttempts, 1, 6);
         let lastError = null;
+        let deferrals = 0;
         try {
           for (let attempt = 1; attempt <= attempts; attempt += 1) {
             try {
@@ -143,7 +148,7 @@
                 result.observationClaimKind = options.observationClaimKind;
               }
               queueObservation(normalizedUrl, result.data, result);
-              return Object.freeze({ ...result, url: normalizedUrl, attempts: attempt });
+              return Object.freeze({ ...result, url: normalizedUrl, attempts: attempt, deferrals });
             } catch (error) {
               const normalized = normalizeError(error, normalizedUrl, signal);
               normalized.attempt = attempt;
@@ -151,12 +156,25 @@
                 counters.cancellations += 1;
                 throw abortError(normalizedUrl);
               }
+              if (normalized.deferred === true) {
+                deferrals++;
+                counters.deferredRequests = (counters.deferredRequests || 0) + 1;
+                const deadline = Math.max(Date.now() + 1, normalized.notBeforeMs || Date.now() + Math.max(1000, normalized.retryAfterMs || 0));
+                try { window.dispatchEvent(new CustomEvent("p2k-api-deferred", { detail: { url:normalizedUrl, notBeforeMs:deadline, deferrals } })); } catch (_) {}
+                try { await waitUntil(deadline, signal); }
+                catch (cancelled) { if (isCancelled(cancelled, signal)) counters.cancellations++; throw cancelled; }
+                attempt--; // No upstream attempt was spent. Keep the candidate pending.
+                continue;
+              }
               lastError = normalized;
               recordError(normalized);
               if (!normalized.retryable || attempt >= attempts) break;
               counters.retries += 1;
-              const wait = Math.max(normalized.retryAfterMs || 0, retryBaseDelayMs * attempt);
-              await delay(jitter(wait), signal);
+              const floor = normalized.notBeforeMs || Date.now() + (normalized.retryAfterMs || 0);
+              // Jitter applies to our own backoff, never the upstream minimum.
+              const deadline = Math.max(floor, Date.now() + jitter(retryBaseDelayMs * attempt));
+              try { await waitUntil(deadline, signal); }
+              catch (cancelled) { if (isCancelled(cancelled, signal)) counters.cancellations++; throw cancelled; }
             }
           }
           throw lastError || apiError(`Unable to load ${normalizedUrl}`, { url: normalizedUrl });

@@ -2,7 +2,7 @@
 (() => {
   "use strict";
 
-  const RUNTIME_VERSION = "2.10.4";
+  const RUNTIME_VERSION = "2.16.2-oauth-inc2";
   const existingClient = window.P2K_API_CLIENT;
   if (
     existingClient?.runtimeVersion === RUNTIME_VERSION &&
@@ -146,6 +146,7 @@
     cacheMisses: 0,
     staleIfErrorFallbacks: 0,
     retries: 0,
+    deferredRequests: 0,
     rateLimits: 0,
     cancellations: 0
   };
@@ -184,7 +185,7 @@
   const {
     normalizeUrl, apiError, abortError, activityAwareOptions, timeoutError,
     categoryForStatus, normalizeError, isCancelled, isTransient, isPermanent,
-    userMessage, delay
+    userMessage, delay, retryAfterDeadline, waitUntil
   } = requestSemanticsFactory({ allowedOrigins: ALLOWED_ORIGINS });
 
   function recordError(error) {
@@ -230,8 +231,10 @@
   }
 
   async function waitForGlobalGate(signal = null) {
-    const gate = Math.max(nextAllowedRequestAt, circuitOpenUntil);
-    if (gate > Date.now()) await delay(gate - Date.now(), signal);
+    while (Math.max(nextAllowedRequestAt, circuitOpenUntil) > Date.now()) {
+      await waitUntil(Math.max(nextAllowedRequestAt, circuitOpenUntil), signal);
+    }
+    if (signal?.aborted) throw abortError();
   }
 
   function drainQueue() {
@@ -282,12 +285,13 @@
   }
   const oauthContext = oauthContextFactory({
     nativeFetch, maxConcurrency: MAX_CONCURRENCY, integer, apiError, abortError,
-    normalizeError, emitConcurrencyChange,
+    normalizeError, emitConcurrencyChange, retryAfterDeadline,
     configuredConcurrency: () => configuredConcurrency,
     adaptiveConcurrency: () => adaptiveConcurrency
   });
 
   function noteTransientFailure(error) {
+    if (error?.deferred === true) return;
     const time = Date.now();
     recentTransientFailures = recentTransientFailures.filter(value => time - value < 30_000);
     recentTransientFailures.push(time);
@@ -303,7 +307,7 @@
     if (recentTransientFailures.length >= 6) circuitOpenUntil = Math.max(circuitOpenUntil, time + 5_000);
     if (error.category === "rate-limit") {
       adaptiveConcurrency = Math.max(1, Math.floor(adaptiveConcurrency / 2));
-      nextAllowedRequestAt = Math.max(nextAllowedRequestAt, time + Math.max(error.retryAfterMs || 0, 2_000));
+      nextAllowedRequestAt = Math.max(nextAllowedRequestAt, time + 2_000, error.notBeforeMs || time + (error.retryAfterMs || 0));
       emitConcurrencyChange("rate-limit");
     } else {
       adaptiveConcurrency = Math.max(1, adaptiveConcurrency - 1);
@@ -348,7 +352,8 @@
     counters, integer, normalizeUrl, apiError, abortError, timeoutError, normalizeError,
     isCancelled, categoryForStatus, oauthSessionActive: oauthContext.sessionActive,
     executeOAuthGateway: oauthContext.executeGateway,
-    waitForRealOAuthDecision: oauthContext.waitForRealDecision
+    waitForRealOAuthDecision: oauthContext.waitForRealDecision,
+    oauthBearerMode: oauthContext.isBearerMode, retryAfterDeadline
   });
 
   const requestCoordinatorFactory = window.P2K_API_MODULES?.requestCoordinator?.create;
@@ -359,7 +364,7 @@
     defaultAttempts: DEFAULT_ATTEMPTS, defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
     retryBaseDelayMs: RETRY_BASE_DELAY_MS, counters, integer, normalizeUrl, apiError,
     activityAwareOptions, normalizeError, isTransient, isCancelled, abortError,
-    recordError, recordWarning, delay, jitter, endpointPriority, schedule,
+    recordError, recordWarning, delay, jitter, waitUntil, endpointPriority, schedule,
     fetchSnapshot, cachedData, queueObservation, noteSuccess, noteTransientFailure
   });
 
@@ -531,6 +536,11 @@
             break;
           }
           const normalized = normalizeError(error, error?.url || "", signal);
+          if (normalized.deferred === true) {
+            interrupted.push(entry);
+            report({ ...entry, error: normalized }, "deferred");
+            continue;
+          }
           failures.push({ ...entry, error: normalized });
           report({ ...entry, error: normalized }, "failed");
         }
@@ -552,6 +562,9 @@
       url: normalized.url,
       retryable: normalized.retryable,
       retryAfterMs: normalized.retryAfterMs,
+      notBeforeMs: normalized.notBeforeMs || 0,
+      deferred: normalized.deferred === true,
+      transport: normalized.transport || "",
       message: normalized.message
     });
   }

@@ -11,7 +11,7 @@
         nativeFetch, defaultTimeoutMs, jsonpEnabled, counters, integer,
         normalizeUrl, apiError, abortError, timeoutError, normalizeError,
         isCancelled, categoryForStatus, oauthSessionActive,
-        executeOAuthGateway, waitForRealOAuthDecision
+        executeOAuthGateway, waitForRealOAuthDecision, oauthBearerMode, retryAfterDeadline
       } = dependencies;
 
       function combineSignal(externalSignal, timeoutMs, url) {
@@ -31,15 +31,6 @@
             externalSignal?.removeEventListener("abort", onAbort);
           }
         };
-      }
-
-      function retryAfterMilliseconds(response) {
-        const value = response.headers?.get?.("retry-after");
-        if (!value) return 0;
-        const seconds = Number(value);
-        if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
-        const timestamp = Date.parse(value);
-        return Number.isFinite(timestamp) ? Math.max(0, timestamp - Date.now()) : 0;
       }
 
       function appendCallbackParameter(url, callbackName) {
@@ -93,11 +84,17 @@
         return headers;
       }
 
-      async function executeFetch(url, { headers, signal, timeoutMs, conditional = false, priority = 0, trafficClass = "foreground" }) {
+      async function executeFetch(url, { headers, signal, timeoutMs, conditional = false, priority = 0, trafficClass = "foreground", route = {} }) {
         await waitForRealOAuthDecision();
+        // Once a logical request selects verified OAuth, keep its route for
+        // conditional fetches and all subsequent attempts, even on expiry.
+        if (oauthSessionActive() || oauthBearerMode?.()) route.bearer = true;
         counters.fetches += 1;
         if (conditional) counters.conditionalFetches += 1;
-        if (oauthSessionActive()) {
+        if (route.bearer) {
+          if (!oauthSessionActive()) throw apiError("Verified OAuth session is no longer available.", {
+            category:"forbidden", code:"OAUTH_SESSION_NOT_READY", status:401, url, transport:"oauth-bearer", retryable:false
+          });
           try { return await executeOAuthGateway(url, { headers, signal, priority, trafficClass, timeoutMs }); }
           catch (error) { throw normalizeError(error, url, signal); }
         }
@@ -117,6 +114,7 @@
 
       async function fetchSnapshot(url, cachedEntry, options) {
         const signal = options.signal || null;
+        const route = options.acquisitionRoute || {};
         const timeoutMs = integer(options.timeoutMs, defaultTimeoutMs, 1_000, 120_000);
         const baseHeaders = new Headers(options.headers || { Accept: "application/json" });
         const conditionalHeaders = new Headers(baseHeaders);
@@ -128,21 +126,21 @@
         try {
           response = await executeFetch(url, {
             headers: hasConditional ? conditionalHeaders : baseHeaders, signal, timeoutMs,
-            conditional: hasConditional, priority: Number(options.priority) || 0,
+            conditional: hasConditional, priority: Number(options.priority) || 0, route,
             trafficClass: options.trafficClass === "background" ? "background" : "foreground"
           });
         } catch (conditionalError) {
-          if (isCancelled(conditionalError, signal)) throw conditionalError;
+          if (route.bearer || isCancelled(conditionalError, signal)) throw conditionalError;
           if (hasConditional) {
             counters.plainFetchRetries += 1;
             try {
               response = await executeFetch(url, {
-                headers: baseHeaders, signal, timeoutMs, conditional: false,
+                headers: baseHeaders, signal, timeoutMs, conditional: false, route,
                 priority: Number(options.priority) || 0,
                 trafficClass: options.trafficClass === "background" ? "background" : "foreground"
               });
             } catch (plainError) {
-              if (isCancelled(plainError, signal)) throw plainError;
+              if (route.bearer || isCancelled(plainError, signal)) throw plainError;
               if (options.jsonpFallback === false || !jsonpEnabled) throw plainError;
               const data = await loadJSONP(url, { signal, timeoutMs });
               return {url, body:JSON.stringify(data), status:200, statusText:"OK", headers:{"content-type":"application/json"}, etag:"", lastModified:"", fetchedAt:Date.now(), transport:"jsonp"};
@@ -158,8 +156,10 @@
         if (!response.ok) {
           const status = Number(response.status) || 0;
           const category = categoryForStatus(status);
+          const notBeforeMs = retryAfterDeadline(response.headers);
           throw apiError(`Unable to load ${url}: HTTP ${status}`, {
-            ...category, status, url, retryAfterMs: retryAfterMilliseconds(response)
+            ...category, status, url, transport: route.bearer ? "oauth-bearer" : "fetch", notBeforeMs,
+            retryAfterMs: Math.max(0, notBeforeMs - Date.now())
           });
         }
         const body = await response.text();

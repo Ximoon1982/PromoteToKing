@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 import json
 import re
+import shutil
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
-CHROMIUM = '/usr/bin/chromium'
+CHROMIUM = shutil.which('google-chrome') or shutil.which('chromium')
 
 HTML = (ROOT/'MatchCreationAnalyzer.htm').read_text(encoding='utf-8')
 HTML = re.sub(r'<script\b[^>]*>.*?</script>', '', HTML, flags=re.S|re.I)
@@ -57,7 +58,7 @@ def main():
         details=[row for row in batches if row['isDetail']]
         assert details and details[0]['conc'] == 3, details
         assert abs(details[0]['rate'] - 8) < 0.01 and abs(details[0]['cps'] - 8) < 0.01, details[0]
-        assert details[0]['ceiling'] == 120, details[0]
+        assert details[0]['ceiling'] == 30, details[0]
         assert min(row['rate'] for row in details) >= 8, details
         assert max(row['rate'] for row in details) >= 9, details
         diag=page.evaluate('window.P2K_API_CLIENT.diagnostics()')
