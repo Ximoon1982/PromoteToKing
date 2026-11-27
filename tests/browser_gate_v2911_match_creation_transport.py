@@ -56,7 +56,11 @@ def main():
         assert not errors, errors
         batches=page.evaluate('window.__gateway')
         details=[row for row in batches if row['isDetail']]
-        assert details and details[0]['conc'] == 3, details
+        # At 8/s, ceil(rate * .8) gives a seven-request wave. The slow
+        # match-detail model supports the whole wave, independently of the
+        # preceding fast club-index response. At 9/s, waves grow to eight.
+        assert details and details[0]['conc'] == details[0]['size'] == 7, details
+        assert all(1 <= row['size'] <= 8 and row['conc'] == row['size'] for row in details), details
         assert abs(details[0]['rate'] - 8) < 0.01 and abs(details[0]['cps'] - 8) < 0.01, details[0]
         assert details[0]['ceiling'] == 30, details[0]
         assert min(row['rate'] for row in details) >= 8, details
