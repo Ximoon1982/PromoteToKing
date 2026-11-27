@@ -208,7 +208,7 @@ final class OAuthSession
                 'legacy_session_migrated'=>self::$sessionLegacyMigratedAtStart,
                 'refresh_token_available'=>$refreshTokenAvailable,
             ],
-            'transport'=>['batch_available'=>$curl,'http2_capable'=>self::curlHttp2Capable(),'max_concurrency'=>$curl?self::runtimeOpenFileCap():1],
+            'transport'=>['rate_policy'=>OAuthRateCoordinator::policy(),'batch_available'=>$curl,'http2_capable'=>self::curlHttp2Capable(),'max_concurrency'=>$curl?self::runtimeOpenFileCap():1],
         ];
     }
 
@@ -364,8 +364,8 @@ final class OAuthSession
             $headers=[];foreach((array)($row['headers']??[]) as $name=>$value){$n=strtolower(trim((string)$name));if(in_array($n,['if-none-match','if-modified-since','accept'],true))$headers[$n]=trim((string)$value);}
             $normalized[]=['id'=>(string)($row['id']??$i),'url'=>$url,'headers'=>$headers];
         }
-        if($normalized===[])return ['ok'=>true,'mode'=>'oauth-bearer','results'=>[],'processed'=>0,'successes'=>0,'rate_429'=>0,'errors'=>0,'elapsed_ms'=>0,'cps'=>0,'concurrency'=>0,'peak_in_flight'=>0,'transport_cap'=>self::runtimeOpenFileCap(),'transport_capacity'=>self::runtimeOpenFileCap(),'batch_size'=>0,'requested_rate_cps'=>$requestedRateCps,'rate_cps'=>$requestedRateCps];
         self::closeSession();
+        if($normalized===[])return self::emptyBatch($token,$requestedRateCps);
         return self::multiGet($normalized,$token,$requestedConcurrency,$requestedRateCps,$trafficClass);
     }
 
@@ -388,8 +388,15 @@ final class OAuthSession
             $normalized[]=['id'=>(string)($row['id']??$i),'url'=>$url,'headers'=>$headers];
         }
         self::closeSession();
-        if($normalized===[])return ['ok'=>true,'mode'=>'oauth-bearer','results'=>[],'processed'=>0,'successes'=>0,'rate_429'=>0,'errors'=>0,'elapsed_ms'=>0,'cps'=>0,'concurrency'=>0,'peak_in_flight'=>0,'transport_cap'=>self::runtimeOpenFileCap(),'transport_capacity'=>self::runtimeOpenFileCap(),'batch_size'=>0,'requested_rate_cps'=>$requestedRateCps,'rate_cps'=>$requestedRateCps];
+        if($normalized===[])return self::emptyBatch($token,$requestedRateCps);
         return self::multiGet($normalized,$token,$requestedConcurrency,$requestedRateCps,$trafficClass);
+    }
+
+    private static function emptyBatch(string $token,float $requestedRateCps): array
+    {
+        $controller=(new OAuthRateCoordinator($token))->snapshot();
+        $caller=OAuthRateCoordinator::callerCeiling($requestedRateCps);
+        return ['ok'=>true,'mode'=>'oauth-bearer','results'=>[],'processed'=>0,'launched'=>0,'deferred'=>0,'successes'=>0,'rate_429'=>0,'errors'=>0,'elapsed_ms'=>0,'cps'=>0,'concurrency'=>0,'peak_in_flight'=>0,'transport_cap'=>self::runtimeOpenFileCap(),'transport_capacity'=>self::runtimeOpenFileCap(),'batch_size'=>0,'requested_rate_cps'=>$caller,'offered_rate_cps'=>is_finite($requestedRateCps)&&$requestedRateCps>0?$requestedRateCps:0.0,'effective_rate_ceiling_cps'=>min($caller,(float)$controller['effective_ceiling_cps']),'rate_cps'=>(float)$controller['rate_target_cps'],'controller'=>$controller];
     }
 
     public static function assertCsrf(string $value): void
@@ -532,7 +539,8 @@ final class OAuthSession
         $requested=max(1,min(count($requests),$transportCap,max(1,$requestedConcurrency)));
         // Browser/admin callers may ask for a ceiling, but the shared coordinator is
         // authoritative. A zero requested rate means "use the learned server rate".
-        $requestedRate=$requestedRateCps>0?max(0.5,min(120.0,$requestedRateCps)):120.0;
+        $requestedRate=OAuthRateCoordinator::callerCeiling($requestedRateCps);
+        $offeredRate=is_finite($requestedRateCps)&&$requestedRateCps>0?$requestedRateCps:0.0;
         $trafficClass=strtolower(trim($trafficClass))==='background'?'background':'foreground';
         $endpointClass=self::endpointClassForRequests($requests);
         $coordinator=new OAuthRateCoordinator($token);$coordinator->announceTraffic($trafficClass);
@@ -590,7 +598,7 @@ final class OAuthSession
                     $json=json_decode($body,true);$headers=$meta['headers'];$retryAfter=self::retryAfterSeconds((string)($headers['retry-after']??''));
                     $results[]=['id'=>$meta['req']['id'],'url'=>$meta['req']['url'],'status'=>$status,'status_text'=>'','headers'=>['content-type'=>(string)($headers['content-type']??'application/json'),'etag'=>(string)($headers['etag']??''),'last-modified'=>(string)($headers['last-modified']??''),'retry-after'=>(string)($headers['retry-after']??'')],'body'=>$body,'json'=>is_array($json)?$json:null,'elapsed_ms'=>(int)round($elapsed)];
                     curl_multi_remove_handle($mh,$ch);$curlIntervals[]=[round((float)$meta['admitted_at']*1000,3),round(microtime(true)*1000,3)];curl_close($ch);unset($active[$id]);
-                    $launchRate=max(1.0,(float)($meta['launch_rate_cps']??$controller['rate_target_cps']??30));
+                    $launchRate=max(1.0,(float)($meta['launch_rate_cps']??$controller['rate_target_cps']??OAuthRateCoordinator::policy()['initial_rate_cps']));
                     if($status===429){
                         $throttleEvents[]=['endpoint_class'=>$endpointClass,'launch_ms'=>round((float)$meta['admitted_at']*1000,3),'response_ms'=>end($curlIntervals)[1],'retry_after_seconds'=>$retryAfter,'launch_target_cps'=>$launchRate,'observed_at_launch_cps'=>(float)($meta['observed_launch_cps']??0)];
                         $rate429Seen++;$retryAfterMax=max($retryAfterMax,max(1,$retryAfter?:1));
@@ -630,11 +638,11 @@ final class OAuthSession
         foreach($results as $r){$s=(int)$r['status'];if($s>=200&&$s<400)$ok++;elseif($s===429)$r429++;else$errors++;}
         $cps=$launched/($elapsedMs/1000);
         $launchCps=0.0;if(count($launchTimes)>1){$span=max(0.001,end($launchTimes)-$launchTimes[0]);$launchCps=(count($launchTimes)-1)/$span;}elseif(count($launchTimes)===1)$launchCps=1.0/max(0.001,$elapsedMs/1000);
-        $attemptedRate=$launchRates!==[]?self::percentile($launchRates,.5):(float)($controllerBefore['rate_target_cps']??30);
+        $attemptedRate=$launchRates!==[]?self::percentile($launchRates,.5):(float)($controllerBefore['rate_target_cps']??OAuthRateCoordinator::policy()['initial_rate_cps']);
         if($feedbackStatuses!==[]){sort($feedbackRates,SORT_NUMERIC);$attempt=$feedbackRates[(int)floor((count($feedbackRates)-1)*.5)]??$attemptedRate;$controller=$coordinator->feedback($feedbackStatuses,$feedbackLatencies,$endpointClass,(float)$attempt,0,0.0,min($feedbackTimes));}else{$controller=$coordinator->snapshot();}
         $timing['coordinator_io']=$coordinator->diagnostics();$timing['throttle_events']=$throttleEvents;
-        RuntimeTelemetry::record('chess_api_batch',['mode'=>'oauth-bearer','calls'=>$launched,'successes'=>$ok,'rate_429'=>$r429,'errors'=>max(0,$errors-$deferred),'deferred'=>$deferred,'elapsed_ms'=>$elapsedMs,'cps'=>round($cps,3),'launch_cps'=>round($launchCps,3),'requested_rate_cps'=>$requestedRate,'rate_cps'=>(float)($controller['rate_target_cps']??$attemptedRate),'requested_concurrency'=>$requested,'concurrency'=>$currentLimit,'peak_in_flight'=>$peak,'retry_after_seconds'=>$retryAfterMax,'completion_counts'=>$completionCounts,'endpoint_class'=>$endpointClass,'traffic_class'=>$trafficClass,'controller'=>$controller]);
-        return ['ok'=>true,'mode'=>'oauth-bearer','results'=>$results,'processed'=>$processed,'launched'=>$launched,'deferred'=>$deferred,'successes'=>$ok,'rate_429'=>$r429,'errors'=>$errors,'elapsed_ms'=>$elapsedMs,'cps'=>$cps,'launch_cps'=>$launchCps,'requested_rate_cps'=>$requestedRate,'rate_cps'=>(float)($controller['rate_target_cps']??$attemptedRate),'requested_concurrency'=>$requested,'concurrency'=>$currentLimit,'peak_in_flight'=>$peak,'transport_cap'=>$transportCap,'transport_capacity'=>$transportCap,'batch_size'=>count($requests),'retry_after_seconds'=>$retryAfterMax,'median_latency_ms'=>self::percentile($latencies,.5),'p95_latency_ms'=>self::percentile($latencies,.95),'http2_seen'=>$http2,'gateway_timing'=>$timing,'curl_http2_capable'=>self::curlHttp2Capable(),'endpoint_class'=>$endpointClass,'traffic_class'=>$trafficClass,'controller'=>$controller];
+        RuntimeTelemetry::record('chess_api_batch',['mode'=>'oauth-bearer','calls'=>$launched,'successes'=>$ok,'rate_429'=>$r429,'errors'=>max(0,$errors-$deferred),'deferred'=>$deferred,'elapsed_ms'=>$elapsedMs,'cps'=>round($cps,3),'launch_cps'=>round($launchCps,3),'requested_rate_cps'=>$requestedRate,'offered_rate_cps'=>$offeredRate,'effective_rate_ceiling_cps'=>min($requestedRate,(float)$controller['effective_ceiling_cps']),'rate_cps'=>(float)($controller['rate_target_cps']??$attemptedRate),'requested_concurrency'=>$requested,'concurrency'=>$currentLimit,'peak_in_flight'=>$peak,'retry_after_seconds'=>$retryAfterMax,'completion_counts'=>$completionCounts,'endpoint_class'=>$endpointClass,'traffic_class'=>$trafficClass,'controller'=>$controller]);
+        return ['ok'=>true,'mode'=>'oauth-bearer','results'=>$results,'processed'=>$processed,'launched'=>$launched,'deferred'=>$deferred,'successes'=>$ok,'rate_429'=>$r429,'errors'=>$errors,'elapsed_ms'=>$elapsedMs,'cps'=>$cps,'launch_cps'=>$launchCps,'requested_rate_cps'=>$requestedRate,'offered_rate_cps'=>$offeredRate,'effective_rate_ceiling_cps'=>min($requestedRate,(float)$controller['effective_ceiling_cps']),'rate_cps'=>(float)($controller['rate_target_cps']??$attemptedRate),'requested_concurrency'=>$requested,'concurrency'=>$currentLimit,'peak_in_flight'=>$peak,'transport_cap'=>$transportCap,'transport_capacity'=>$transportCap,'batch_size'=>count($requests),'retry_after_seconds'=>$retryAfterMax,'median_latency_ms'=>self::percentile($latencies,.5),'p95_latency_ms'=>self::percentile($latencies,.95),'http2_seen'=>$http2,'gateway_timing'=>$timing,'curl_http2_capable'=>self::curlHttp2Capable(),'endpoint_class'=>$endpointClass,'traffic_class'=>$trafficClass,'controller'=>$controller];
     }
 
     private static function safeReturn(string $value): string

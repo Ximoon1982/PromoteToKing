@@ -62,6 +62,8 @@ FIXTURE
         $method = new ReflectionMethod(\P2K\TeamPoints\OAuthSession::class, 'multiGet');
         $result = $method->invoke(null, $requests, 'local-fixture-token-not-a-credential', 4, 120.0, 'foreground');
         verify($result['ok'] && $result['mode']==='oauth-bearer', 'Gateway result invalid');
+        verify($result['offered_rate_cps']===120.0&&$result['requested_rate_cps']===30.0&&$result['effective_rate_ceiling_cps']===30.0&&$result['controller']['rate_target_cps']===24.0,'Old caller bypassed authoritative policy');
+        verify($result['controller']['rate_policy']['maximum_rate_cps']===30.0,'Missing policy telemetry');
         verify($result['processed']===8 && $result['successes']===7 && $result['rate_429']===0, 'Gateway response counts changed');
         verify(\P2K\Shared\SharedChessGateway::$ingested===7, 'Canonical ingestion was changed');
         $timing = $result['gateway_timing'] ?? [];

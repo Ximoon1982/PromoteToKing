@@ -27,9 +27,10 @@
   // PHP requests resident; each can still multiplex up to 32 Chess.com calls.
   const OAUTH_BACKGROUND_MAX_POSTS = 2;
   const OAUTH_INTERACTIVE_WAIT_TARGET_MS = 250;
-  const OAUTH_INITIAL_RATE_CPS = 30;
+  const OAUTH_INITIAL_RATE_CPS = 24;
   const OAUTH_MIN_RATE_CPS = 1;
-  const OAUTH_MAX_RATE_CPS = 120;
+  // Compatibility defaults; actual policy and launch rate are owned by PHP.
+  const OAUTH_MAX_RATE_CPS = 30;
   const OAUTH_TUNING_KEY = "p2k-oauth-gateway-tuning-v4";
   const OAUTH_TUNING_TTL_MS = 30 * 60 * 1000;
   let oauthBearerMode = false;
@@ -39,6 +40,11 @@
   let oauthGatewayBestMedianLatency = 0;
   let oauthGatewayLatencyByClass = Object.create(null);
   let oauthGatewayRateTarget = OAUTH_INITIAL_RATE_CPS;
+  let oauthGatewayRatePolicy = null;
+  let oauthGatewayEffectiveCeiling = OAUTH_MAX_RATE_CPS;
+  let oauthGatewayObservedLaunchCps = 0;
+  let oauthGatewayObservedCleanCps = 0;
+  let oauthGatewayControllerObservedAtMs = 0;
   let oauthGatewaySafeRateTarget = 0;
   let oauthGatewayUnsafeRateTarget = 0;
   let oauthGatewayBestTargetRate = 0;
@@ -67,7 +73,7 @@
         target: integer(parsed.target, OAUTH_INITIAL_TARGET, 1, OAUTH_LOGICAL_CONCURRENCY),
         rateTarget: Math.max(OAUTH_MIN_RATE_CPS, Math.min(OAUTH_MAX_RATE_CPS, Number(parsed.rateTarget || OAUTH_INITIAL_RATE_CPS))),
         safeRateTarget: Math.max(0, Math.min(OAUTH_MAX_RATE_CPS, Number(parsed.safeRateTarget || 0))),
-        unsafeRateTarget: Math.max(0, Math.min(OAUTH_MAX_RATE_CPS, Number(parsed.unsafeRateTarget || 0))),
+        unsafeRateTarget: Math.max(0, Number(parsed.unsafeRateTarget || 0)),
         bestTargetRate: Math.max(0, Math.min(OAUTH_MAX_RATE_CPS, Number(parsed.bestTargetRate || 0))),
         bestRate: Math.max(0, Number(parsed.bestRate || 0)),
         bestMedianLatency: Math.max(0, Number(parsed.bestMedianLatency || 0)),
@@ -156,9 +162,19 @@
     // and sizes its per-POST connection cap; it no longer independently punishes or
     // probes the same upstream event a second time.
     const controller = batch?.controller && typeof batch.controller === "object" ? batch.controller : {};
-    const serverRate = Math.max(OAUTH_MIN_RATE_CPS, Math.min(OAUTH_MAX_RATE_CPS, Number(controller.rate_target_cps || batch?.rate_cps || oauthGatewayRateTarget || OAUTH_INITIAL_RATE_CPS)));
+    const observedAt = Number(controller.observed_at_ms || 0);
+    // Concurrent POSTs may arrive out of order. An older state must not replace
+    // a newer shared rate, boundary or latency snapshot.
+    if (observedAt > 0 && observedAt < oauthGatewayControllerObservedAtMs) return;
+    if (observedAt > 0) oauthGatewayControllerObservedAtMs = observedAt;
+    if (controller.rate_policy && typeof controller.rate_policy === "object") oauthGatewayRatePolicy = { ...controller.rate_policy };
+    const policyMax = Math.max(OAUTH_MIN_RATE_CPS, Math.min(OAUTH_MAX_RATE_CPS, Number(oauthGatewayRatePolicy?.maximum_rate_cps) || OAUTH_MAX_RATE_CPS));
+    oauthGatewayEffectiveCeiling = Math.max(OAUTH_MIN_RATE_CPS, Math.min(policyMax, Number(controller.effective_ceiling_cps) || policyMax));
+    oauthGatewayObservedLaunchCps = Math.max(0, Number(controller.observed_launch_cps || 0));
+    oauthGatewayObservedCleanCps = Math.max(0, Number(controller.observed_clean_cps || 0));
+    const serverRate = Math.max(OAUTH_MIN_RATE_CPS, Math.min(oauthGatewayEffectiveCeiling, Number(controller.rate_target_cps || batch?.rate_cps || oauthGatewayRateTarget || OAUTH_INITIAL_RATE_CPS)));
     oauthGatewayRateTarget = serverRate;
-    oauthGatewaySafeRateTarget = Math.max(0, Number(controller.safe_rate_cps || 0));
+    oauthGatewaySafeRateTarget = Math.max(0, Math.min(oauthGatewayEffectiveCeiling, Number(controller.safe_rate_cps || 0)));
     oauthGatewayUnsafeRateTarget = Math.max(0, Number(controller.unsafe_rate_cps || 0));
     oauthGatewayLastCps = Math.max(0, Number(batch?.launch_cps || batch?.cps || 0));
     oauthGatewayPeakInFlight = Math.max(oauthGatewayPeakInFlight, Number(batch?.peak_in_flight || 0));
@@ -428,6 +444,11 @@
     oauthBearerMode = Boolean(enabled);
     if (oauthBearerMode && !wasEnabled) {
       const saved = loadOAuthTuning();
+      oauthGatewayRatePolicy = null;
+      oauthGatewayEffectiveCeiling = OAUTH_MAX_RATE_CPS;
+      oauthGatewayObservedLaunchCps = 0;
+      oauthGatewayObservedCleanCps = 0;
+      oauthGatewayControllerObservedAtMs = 0;
       oauthGatewayTarget = Math.max(1, Math.min(oauthGatewayMax, Math.max(OAUTH_INITIAL_TARGET, Number(saved?.target || 0))));
       oauthGatewayRateTarget = Math.max(OAUTH_MIN_RATE_CPS, Math.min(OAUTH_MAX_RATE_CPS, Number(saved?.rateTarget || OAUTH_INITIAL_RATE_CPS)));
       oauthGatewaySafeRateTarget = Math.max(0, Number(saved?.safeRateTarget || 0));
@@ -456,6 +477,8 @@
       oauthLogicalFeederConcurrency: OAUTH_LOGICAL_CONCURRENCY,
       oauthTransportCapacity: oauthGatewayMax,
       oauthGatewayRateTarget, oauthGatewaySafeRateTarget, oauthGatewayUnsafeRateTarget,
+      oauthGatewayRatePolicy: oauthGatewayRatePolicy ? { ...oauthGatewayRatePolicy } : null,
+      oauthGatewayEffectiveCeiling, oauthGatewayObservedLaunchCps, oauthGatewayObservedCleanCps, oauthGatewayControllerObservedAtMs,
       oauthGatewayBestTargetRate, oauthGatewayLastCps, oauthGatewayBestRate,
       oauthGatewayPeakInFlight, oauthGatewayCeilingDiscovered,
       oauthGatewayLatencyByClass: { ...oauthGatewayLatencyByClass },

@@ -7,11 +7,11 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 function fixture({status=200,omit=false,hang=false,delay=5}={}){
   const urls=new Set();let active=0,peak=0,calls=0;
   return {urls,get peak(){return peak},get calls(){return calls},get active(){return active},post:async(body,signal)=>{
-    calls++;active++;peak=Math.max(peak,active);assert(body.rate_cps===120);assert(body.traffic_class==="foreground");assert(body.concurrency<=body.requests.length);assert(!body.requests.some(r=>urls.has(r.url)));body.requests.forEach(r=>urls.add(r.url));
+    calls++;active++;peak=Math.max(peak,active);assert(body.rate_cps===30);assert(body.traffic_class==="foreground");assert(body.concurrency<=body.requests.length);assert(!body.requests.some(r=>urls.has(r.url)));body.requests.forEach(r=>urls.add(r.url));
     try{
       if(hang)await new Promise((resolve,reject)=>signal.addEventListener("abort",()=>reject(Error("abort")),{once:true}));
       await wait(delay);
-      return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:40,safe_rate_cps:39,unsafe_rate_cps:45},median_latency_ms:30,p95_latency_ms:80,peak_in_flight:3,elapsed_ms:5,results:(omit?body.requests.slice(1):body.requests).map(r=>({id:r.id,status,elapsed_ms:30,json:{status:"basic"},headers:{"retry-after":"1"}}))};
+      return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:30,safe_rate_cps:29,unsafe_rate_cps:45},median_latency_ms:30,p95_latency_ms:80,peak_in_flight:3,elapsed_ms:5,results:(omit?body.requests.slice(1):body.requests).map(r=>({id:r.id,status,elapsed_ms:30,json:{status:"basic"},headers:{"retry-after":"1"}}))};
     }finally{active--;}
   }};
 }
@@ -22,8 +22,8 @@ function fixture({status=200,omit=false,hang=false,delay=5}={}){
   assert.equal(connectionCap({batch:32,headroom:1.35},256,40,100,100),7);
   const f=fixture(),b=new Bench({names,seed:123,post:f.post,plan:[plan("A"),plan("B",{posts:3})],maxMs:1000,postTimeout:200});
   const result=await b.run();assert.equal(result.stop_reason,null);assert(result.scenarios.every(s=>s.status==="completed"&&s.successful>0&&s.submitted===s.received+s.deferred));
-  assert.equal(result.scenarios[0].controller_end.target,40);assert.equal(result.scenarios[1].controller_start.target,40);assert(f.peak<=3);
-  assert(!JSON.stringify(result).includes("fixture-"));assert(result.scenarios[0].successful_cps>0);assert.equal(result.benchmark_revision,8);
+  assert.equal(result.scenarios[0].controller_end.target,30);assert.equal(result.scenarios[1].controller_start.target,30);assert(f.peak<=3);
+  assert(!JSON.stringify(result).includes("fixture-"));assert(result.scenarios[0].successful_cps>0);assert.equal(result.benchmark_revision,9);
   assert(result.scenarios.every(s=>s.admission_received+s.drain_received===s.received&&s.admission_successful+s.drain_successful===s.successful&&s.server_p95_ms===5&&s.outside_server_p95_ms>=0));
   // Reproduce the old premature drain abort: a valid POST ends well after the former drain deadline.
   const slow=fixture({delay:140}),fast=fixture({delay:5});let late;
@@ -97,15 +97,15 @@ function fixture({status=200,omit=false,hang=false,delay=5}={}){
   const adaptivePlan=[plan("Probe",{role:"probe",batch:16,posts:6,workers:192,maxOutstanding:96,admissionMs:850,sampleMs:100,drainMs:200}),plan("Validate",{role:"validate",batch:16,posts:6,workers:192,maxOutstanding:96,admissionMs:500,sampleMs:100,minValidationMs:300,drainMs:200})];
   const heterogeneous=async(body,signal)=>{
     const kind=body.requests[0].url.endsWith("/stats")?"stats":body.requests[0].url.endsWith("/games")?"games":"profile",phase=adaptive.phase.m.config.role;
-    if(phase==="validate"){if(validationRate===null)validationRate=body.rate_cps;assert.equal(body.rate_cps,validationRate);assert(body.rate_cps<120);}else assert.equal(body.rate_cps,120);
+    if(phase==="validate"){if(validationRate===null)validationRate=body.rate_cps;assert.equal(body.rate_cps,validationRate);assert(body.rate_cps<=30);}else assert.equal(body.rate_cps,30);
     activePosts++;activeReqs+=body.requests.length;peakPosts=Math.max(peakPosts,activePosts);peakReqs=Math.max(peakReqs,activeReqs);assert(activePosts<=MAX_POSTS&&activeReqs<=MAX_OUTSTANDING);
     assert(body.requests.every(r=>!sent.has(r.url)));body.requests.forEach(r=>sent.add(r.url));
     if(kind==="stats")statCap=Math.max(statCap,body.concurrency);else fastCap=Math.max(fastCap,body.concurrency);
     const slow=kind==="stats",delay=slow?60:10,t=Date.now();
-    try{await wait(delay);return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:40,observed_launch_cps:adaptive.loadLevel===4?36:20,observed_clean_cps:adaptive.loadLevel===4?35:20},median_latency_ms:slow?1300:200,p95_latency_ms:slow?1900:350,elapsed_ms:delay,peak_in_flight:body.concurrency,gateway_timing:{curl_intervals_ms:body.requests.map((r,i)=>[t+i/100,t+delay+i/100])},results:body.requests.map(r=>({id:r.id,status:200,elapsed_ms:slow?1300:200,json:{status:"basic"}}))};}finally{activePosts--;activeReqs-=body.requests.length;}
+    try{await wait(delay);return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:30,observed_launch_cps:adaptive.loadLevel===4?29:20,observed_clean_cps:adaptive.loadLevel===4?28:20},median_latency_ms:slow?1300:200,p95_latency_ms:slow?1900:350,elapsed_ms:delay,peak_in_flight:body.concurrency,gateway_timing:{curl_intervals_ms:body.requests.map((r,i)=>[t+i/100,t+delay+i/100])},results:body.requests.map(r=>({id:r.id,status:200,elapsed_ms:slow?1300:200,json:{status:"basic"}}))};}finally{activePosts--;activeReqs-=body.requests.length;}
   };
   adaptive=new Bench({names,seed:123,post:heterogeneous,plan:adaptivePlan,maxMs:2200,postTimeout:200});
-  const saturation=await adaptive.run();assert.equal(saturation.stop_reason,null);assert.equal(saturation.boundary.kind,"not-observed");assert.equal(saturation.validation.status,"clean-window");assert.equal(adaptive.validationSummary([{...saturation.scenarios[1],admission_completed_cps:1}]).status,"clean-underfed");assert.equal(adaptive.validationSummary([{...saturation.scenarios[1],first_post_at_ms:450}]).status,"not-qualified");assert.equal(saturation.scenarios[0].workload_steps.at(-1).level,4);assert(peakPosts===6&&peakReqs>64&&peakReqs<=96);assert(statCap===16&&fastCap<statCap);assert.equal(validationRate,35);assert(saturation.scenarios.every(s=>s.curl_intervals_measured===s.received&&s.peak_curl_across_posts>0));assert.equal(activePosts,0);
+  const saturation=await adaptive.run();assert.equal(saturation.stop_reason,null);assert.equal(saturation.boundary.kind,"not-observed");assert.equal(saturation.validation.status,"clean-window");assert.equal(adaptive.validationSummary([{...saturation.scenarios[1],admission_completed_cps:1}]).status,"clean-underfed");assert.equal(adaptive.validationSummary([{...saturation.scenarios[1],first_post_at_ms:450}]).status,"not-qualified");assert.equal(saturation.scenarios[0].workload_steps.at(-1).level,4);assert(peakPosts===6&&peakReqs>64&&peakReqs<=96);assert(statCap===16&&fastCap<statCap);assert.equal(validationRate,28);assert(saturation.scenarios.every(s=>s.curl_intervals_measured===s.received&&s.peak_curl_across_posts>0));assert.equal(activePosts,0);
   // First actual 429 ends the adaptive probe. No forced re-probing, validation waits for drain and cooldown.
   let limitedBench,limitedCalls=0,limitAt=0,validationAt=0;const limitUrls=new Set();
   const boundaryPost=async body=>{const n=++limitedCalls,role=limitedBench.phase.m.config.role;assert(body.requests.every(r=>!limitUrls.has(r.url)));body.requests.forEach(r=>limitUrls.add(r.url));await wait(5);if(n===1){limitAt=Date.now();return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:18,cooldown_remaining_ms:1000,backlashes:1},results:body.requests.map((r,i)=>({id:r.id,status:i===0?429:200,json:{status:"basic"},headers:{"retry-after":"1"},elapsed_ms:100}))};}if(role==="validate"){validationAt||=Date.now();assert.equal(body.rate_cps,18);}return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:18,observed_launch_cps:17,observed_clean_cps:17},results:body.requests.map(r=>({id:r.id,status:200,json:{status:"basic"},elapsed_ms:100}))};};
@@ -119,7 +119,7 @@ function fixture({status=200,omit=false,hang=false,delay=5}={}){
     assert(body.requests.every(r=>!recoverUrls.has(r.url)));body.requests.forEach(r=>recoverUrls.add(r.url));
     await wait(5);
     if(role==="probe"&&!throttledAt){throttledAt=Date.now();return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:18,unsafe_rate_cps:28,cooldown_remaining_ms:1000,backlashes:1},results:body.requests.map((r,i)=>({id:r.id,status:i===0?429:200,json:{status:"basic"},headers:{"retry-after":"1"},elapsed_ms:100}))};}
-    if(role==="recover"){recoverFirst||=Date.now();assert.equal(body.rate_cps,120);recoverCalls++;}
+    if(role==="recover"){recoverFirst||=Date.now();assert.equal(body.rate_cps,30);recoverCalls++;}
     if(role==="validate"){validateFirst||=Date.now();assert.equal(body.rate_cps,25.2);}
     const target=recoverCalls>4?25.2:18;
     return {ok:true,mode:"oauth-bearer",controller:{rate_target_cps:target,unsafe_rate_cps:28,observed_launch_cps:target,observed_clean_cps:target},results:body.requests.map(r=>({id:r.id,status:200,json:{status:"basic"},elapsed_ms:100}))};
