@@ -3,13 +3,14 @@ const assert=require("node:assert/strict"),fs=require("node:fs"),vm=require("nod
 const root=path.resolve(__dirname,"..");
 const sources=["TeamFrance","TGP"].map(club=>fs.readFileSync(path.join(root,club,"MatchRecruitment/assets/js/recruitment.js"),"utf8"));
 const extract=s=>s.slice(s.indexOf("function pause("),s.indexOf("\nfunction criteria("));
+const prelude=s=>s.slice(s.indexOf("const BATCH_SIZE"),s.indexOf("function renderLog("));
 assert.equal(extract(sources[0]),extract(sources[1]),"Club scheduler implementations drifted");
 function fixture(source,handler){
   let now=Date.UTC(2026,10,27,9),seq=0;const epoch=now,timers=new Map(),posts=[],logs=[];
   class Clock extends Date{constructor(...a){super(...(a.length?a:[now]))}static now(){return now}}
   const setTimeout=(fn,ms=0)=>{timers.set(++seq,{at:now+Math.max(0,Math.ceil(ms)),fn});return seq};
-  const context=vm.createContext({Date:Clock,Math,Number,URL,AbortController,DOMException,performance:{now:()=>now-epoch},setTimeout,clearTimeout:i=>timers.delete(i),logEvent:(...a)=>logs.push(a),status(){},fetch:async(url,opt)=>{const entry={url,at:now-epoch,requests:opt.body?JSON.parse(opt.body).requests:[]};posts.push(entry);return handler(entry,posts.length,epoch)}});
-  vm.runInContext('const queue=[],responseCache=new Map(),CACHE_TTL_MS=90000,BATCH_SIZE=12,MAX_GATEWAY_POSTS=2,BATCH_WINDOW_MS=28,csrf="test";let activePosts=0,pumpTimer=null,completedRequests=0,adaptiveWorkers=18,successStreak=0,rateLimitCount=0;'+extract(source)+';globalThis.test={chess,fetchRoster,metrics:()=>({completedRequests,deferredCount,rateLimitCount,activePosts,notBefore})};',context);
+  const context=vm.createContext({Date:Clock,Math,Number,URL,AbortController,DOMException,performance:{now:()=>now-epoch},setTimeout,clearTimeout:i=>timers.delete(i),logEvent:(...a)=>logs.push(a),status(){},fetch:async(url,opt)=>{const entry={url,at:now-epoch,requests:opt.body?JSON.parse(opt.body).requests:[]};posts.push(entry);return handler(entry,posts.length,epoch,ms=>new Promise(resolve=>setTimeout(resolve,ms)))}});
+  vm.runInContext('const queue=[],responseCache=new Map(),CACHE_TTL_MS=90000,csrf="test";'+prelude(source)+extract(source)+';globalThis.test={chess,fetchRoster,metrics:()=>({completedRequests,deferredCount,rateLimitCount,activePosts,notBefore,sharedRate,adaptiveWorkers,activeSlowPosts})};',context);
   async function micro(){for(let i=0;i<80;i++)await Promise.resolve()}
   async function advance(ms=0){const end=now+ms;await micro();for(let i=0;i<2000;i++){const next=[...timers].filter(([,v])=>v.at<=end).sort((a,b)=>a[1].at-b[1].at||a[0]-b[0])[0];if(!next){now=end;await micro();if(![...timers.values()].some(t=>t.at<=end))return;continue}now=Math.max(now,next[1].at);timers.delete(next[0]);next[1].fn();await micro()}throw Error("timer loop")}
   return{...context.test,advance,posts,logs,epoch};
@@ -17,10 +18,20 @@ function fixture(source,handler){
 const url=name=>"https://api.chess.com/pub/player/"+name+"/stats";
 const response=(payload,status=200,headers={})=>({ok:status>=200&&status<300,status,headers:new Headers(headers),json:async()=>payload});
 const row=(id,status=200,extra={})=>({id:String(id),status,json:status===200?{ok:true}:null,elapsed_ms:10,...extra});
-const batch=(entry,rows,remaining=0)=>response({ok:true,mode:"oauth-bearer",results:rows||entry.requests.map((_,i)=>row(i)),cooldown_remaining_ms:remaining});
+const batch=(entry,rows,remaining=0,controller)=>response({ok:true,mode:"oauth-bearer",results:rows||entry.requests.map((_,i)=>row(i)),cooldown_remaining_ms:remaining,controller});
 const outcome=p=>{const x={done:false};p.then(v=>{x.done=true;x.value=v},e=>{x.done=true;x.error=e});return x};
 (async()=>{
  for(const source of sources){
+   // Test actual endpoint-specific batching with overlapping slow and fast replies.
+   let active=0,slow=0,peak=0,slowPeak=0;
+   const lane=url=>url.endsWith("/stats")?"stats":url.endsWith("/clubs")?"clubs":"profile";
+   const w=fixture(source,async(e,n,epoch,delay)=>{const kinds=new Set(e.requests.map(x=>lane(x.url)));assert.equal(kinds.size,1);assert(e.requests.length<=24);const isSlow=kinds.has("stats");active++;if(isSlow)slow++;peak=Math.max(peak,active);slowPeak=Math.max(slowPeak,slow);await delay((isSlow?1200:200)+e.requests.length*42);active--;if(isSlow)slow--;return batch(e)});
+   const work=[];for(let i=0;i<80;i++)work.push(w.chess(url("slow"+i)));for(let i=0;i<40;i++){work.push(w.chess("https://api.chess.com/pub/player/fast"+i));work.push(w.chess("https://api.chess.com/pub/player/fast"+i+"/clubs"))}
+   const finished=outcome(Promise.all(work));await w.advance(15000);assert(finished.done&&!finished.error);assert.equal(finished.value.length,160);assert(peak<=4&&slowPeak<=3);assert(w.posts.some(e=>e.requests[0].url.includes("/fast")&&e.at<1200),"fast work must have a lane before slow replies");
+   const tune=fixture(source,(e,n,epoch)=>batch(e,undefined,0,{rate_target_cps:10,effective_ceiling_cps:10,observed_at_ms:epoch+n}));
+   const seed=outcome(tune.chess(url("seed")));await tune.advance(28);assert(seed.done);assert.equal(tune.metrics().sharedRate,10);assert.equal(tune.metrics().adaptiveWorkers,40);
+   const more=outcome(Promise.all(Array.from({length:50},(_,i)=>tune.chess(url("tuned"+i)))));await tune.advance(1000);assert(more.done&&!more.error);assert(tune.posts.slice(1).every(e=>e.requests.length<=8));
+
    const f=fixture(source,(e,n)=>n<=4?batch(e,[row(0,503,{deferred:true,retry_after:"120"})],120000):batch(e));
    const a=outcome(f.chess(url("deferred")));
    await f.advance(28);assert.equal(f.posts.length,1);assert(!a.done);

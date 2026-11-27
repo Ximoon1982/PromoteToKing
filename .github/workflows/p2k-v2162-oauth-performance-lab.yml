@@ -7,6 +7,10 @@ on:
       - 'TeamFrance/MatchAnalyzer/**'
       - 'TGP/MatchRecruitment/**'
       - 'tests/oauth_application_integration_v2162.js'
+      - 'tests/oauth_recruitment_increment5a_v2162.js'
+      - 'tests/team_france_recruitment.test.cjs'
+      - 'tests/tgp_match_recruit_scheduler.test.cjs'
+      - 'tools/install-p2k-v2162-oauth-standalone-inc5a.sh'
       - 'tests/oauth_standalone_runtime_v2162.php'
       - 'tests/match_assistant_detailed_analysis_v2162.py'
       - 'tools/install-p2k-v2162-oauth-standalone-inc3.sh'
@@ -64,6 +68,10 @@ jobs:
           node tests/oauth_application_integration_v2162.js
           node tests/tgp_match_recruit_scheduler.test.cjs
           node tests/team_france_recruitment.test.cjs
+          P2K_RECRUITMENT_FIXTURE=inactive node tests/tgp_match_recruit_scheduler.test.cjs
+          P2K_RECRUITMENT_FIXTURE=inactive node tests/team_france_recruitment.test.cjs
+          node tests/oauth_recruitment_increment5a_v2162.js
+          node --check assets/js/pages/recruit-match.js
           python3 tests/test_tgp_match_recruitment_isolation.py
           php tests/oauth_standalone_runtime_v2162.php
           php -l server/team-points/public/detailed-match-analysis.php
@@ -72,7 +80,7 @@ jobs:
             php -l "$app/compat/ActiveOAuthRuntime.php"
             if [[ "$app" == */MatchRecruitment ]]; then php -l "$app/api/index.php"; fi
           done
-          bash -n tools/install-p2k-v2162-oauth-standalone-inc4.sh
+          bash -n tools/install-p2k-v2162-oauth-standalone-inc5a.sh
       - name: Shared rate controller regression
         run: |
           php -l server/team-points/src/OAuthRateCoordinator.php
@@ -103,7 +111,7 @@ jobs:
           name: p2k-v2162-oauth-performance-lab-rc
           path: |
             dist/P2K_2.16.2_OAuth_Performance_Lab_RC_*.zip
-            dist/P2K_2.16.2_OAuth_Standalone_Inc4_*.zip
+            dist/P2K_2.16.2_OAuth_Standalone_Inc5A_*.zip
             dist/SHA256SUMS
           if-no-files-found: error
           retention-days: 14
@@ -121,6 +129,10 @@ jobs:
             assets/js/site-config.js
             server/team-points/public/detailed-match-analysis.php
             tests/oauth_application_integration_v2162.js
+            tests/oauth_recruitment_increment5a_v2162.js
+            tests/team_france_recruitment.test.cjs
+            tests/tgp_match_recruit_scheduler.test.cjs
+            tools/install-p2k-v2162-oauth-standalone-inc5a.sh
             tests/oauth_standalone_runtime_v2162.php
             tests/match_assistant_detailed_analysis_v2162.py
             tools/install-p2k-v2162-oauth-standalone-inc3.sh

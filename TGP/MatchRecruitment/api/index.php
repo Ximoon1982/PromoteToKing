@@ -111,7 +111,7 @@ function recruitment_batch():never {
     $raw=file_get_contents('php://input');
     if(!is_string($raw)||strlen($raw)>16384)recruitment_reply(413,['ok'=>false,'error'=>['message'=>'Invalid request length.']]);
     $payload=json_decode($raw,true);$items=is_array($payload['requests']??null)?$payload['requests']:[];
-    if(count($items)<1||count($items)>12)recruitment_reply(400,['ok'=>false,'error'=>['message'=>'Expected 1 to 12 requests.']]);
+    if(count($items)<1||count($items)>24)recruitment_reply(400,['ok'=>false,'error'=>['message'=>'Expected 1 to 24 requests.']]);
     $requests=[];
     foreach($items as $i=>$item){
         $url=is_array($item)?trim((string)($item['url']??'')):'';
@@ -122,14 +122,14 @@ function recruitment_batch():never {
         $requests[]=['id'=>(string)$i,'url'=>$url];
     }
     try{
-        $r=recruitment_bearer($requests,6);
+        $r=recruitment_bearer($requests,count($requests));
         $rows=[];
         foreach($r['results']??[] as $item)$rows[]=[
             'id'=>(string)($item['id']??''),'status'=>(int)($item['status']??0),
             'json'=>is_array($item['json']??null)?$item['json']:null,
             'elapsed_ms'=>(int)($item['elapsed_ms']??0),'deferred'=>!empty($item['deferred']),
             'retry_after'=>(string)($item['headers']['retry-after']??'')];
-        recruitment_reply(200,['ok'=>true,'mode'=>'oauth-bearer','results'=>$rows,'cooldown_remaining_ms'=>max(0,(int)($r['controller']['cooldown_remaining_ms']??0))]);
+        recruitment_reply(200,['ok'=>true,'mode'=>'oauth-bearer','results'=>$rows,'cooldown_remaining_ms'=>max(0,(int)($r['controller']['cooldown_remaining_ms']??0)),'controller'=>['rate_target_cps'=>(float)($r['controller']['rate_target_cps']??24),'effective_ceiling_cps'=>(float)($r['controller']['effective_ceiling_cps']??30),'observed_at_ms'=>(int)($r['controller']['observed_at_ms']??0)],'scheduler_revision'=>'5a']);
     }catch(Throwable $e){
         error_log('TGP recruitment bearer: '.get_class($e).': '.$e->getMessage());
         recruitment_reply(503,['ok'=>false,'error'=>['message'=>'Authenticated Chess.com API transport unavailable.']]);
