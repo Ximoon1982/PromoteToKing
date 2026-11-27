@@ -61,6 +61,10 @@ if ($status !== 200) {
 <base href="/"/>
 
 <meta charset="utf-8"/>
+<?php if (!PreviewIsolation::active()): ?>
+<meta name="p2k-oauth-required" content="1"/>
+<script defer src="assets/js/shared/real-oauth.js?v=2.11.5-bf6a828490f57"></script>
+<?php endif; ?>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <meta content="dark" name="color-scheme"/>
 <meta content="default-src 'self'; connect-src 'self' https://api.chess.com; script-src 'self' https://api.chess.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.chesscomfiles.com https://www.chess.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" http-equiv="Content-Security-Policy"/><title>Promote to King Detailed Match Analysis</title>

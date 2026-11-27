@@ -1,17 +1,21 @@
 <?php
 declare(strict_types=1);
-require_once dirname(__DIR__, 2).'/server/team-points/src/bootstrap.php';
+require_once __DIR__.'/compat/ActiveOAuthRuntime.php';
 // The stable public P2K runtime may predate PreviewIsolation.php, while the
 // shared match-tracking helpers already call PreviewIsolation::active().
 // Provide the exact P2K implementation locally only when absent; never
 // modify the stable public source tree or weaken preview write protection.
-if (!class_exists(\P2K\TeamPoints\PreviewIsolation::class)) {
-    require_once __DIR__.'/compat/PreviewIsolation.php';
-}
 use P2K\TeamPoints\Auth;
 use P2K\TeamPoints\OAuthSession;
 use P2K\Shared\SharedChessGateway;
 function tgp_authorize(): array {
+    try {
+        recruitment_active_oauth_runtime(dirname(__DIR__, 2));
+        if (!class_exists(\P2K\TeamPoints\PreviewIsolation::class)) require_once __DIR__.'/compat/PreviewIsolation.php';
+    } catch (Throwable $e) {
+        error_log('Recruitment public OAuth runtime: '.$e->getMessage());
+        return ['ok'=>false,'status'=>503,'code'=>'OAUTH_RUNTIME_UNAVAILABLE'];
+    }
     // Share the already-established P2KOAUTH identity, as in the standalone
     // Super Bingo/TGP applications. authenticatedUsername(true) closes the
     // OAuth PHP session AND restores its original session runtime.

@@ -3,6 +3,17 @@ on:
   push:
     branches: [release/v2.16.2]
     paths:
+      - 'TeamFrance/MatchRecruitment/**'
+      - 'TeamFrance/MatchAnalyzer/**'
+      - 'TGP/MatchRecruitment/**'
+      - 'tests/oauth_application_integration_v2162.js'
+      - 'tests/oauth_standalone_runtime_v2162.php'
+      - 'tests/match_assistant_detailed_analysis_v2162.py'
+      - 'tools/install-p2k-v2162-oauth-standalone-inc3.sh'
+      - 'assets/js/shared/green-accelerator.js'
+      - 'assets/js/pages/v2-11-0.js'
+      - 'assets/js/pages/recruit-match*.js'
+      - 'server/team-points/public/detailed-match-analysis.php'
       - 'assets/js/shared/api-oauth-context.js'
       - 'assets/js/shared/api-request-semantics.js'
       - 'assets/js/shared/api-request-coordinator.js'
@@ -47,6 +58,18 @@ jobs:
           node --check assets/js/shared/api-oauth-context.js
           node tests/oauth_policy_client_v2162.js
           node tests/oauth_acquisition_correctness_v2162.js
+          node tests/oauth_application_integration_v2162.js
+          node tests/tgp_match_recruit_scheduler.test.cjs
+          node tests/team_france_recruitment.test.cjs
+          python3 tests/test_tgp_match_recruitment_isolation.py
+          php tests/oauth_standalone_runtime_v2162.php
+          php -l server/team-points/public/detailed-match-analysis.php
+          for app in TeamFrance/MatchRecruitment TGP/MatchRecruitment TeamFrance/MatchAnalyzer; do
+            php -l "$app/auth.php"
+            php -l "$app/compat/ActiveOAuthRuntime.php"
+            if [[ "$app" == */MatchRecruitment ]]; then php -l "$app/api/index.php"; fi
+          done
+          bash -n tools/install-p2k-v2162-oauth-standalone-inc3.sh
       - name: Shared rate controller regression
         run: |
           php -l server/team-points/src/OAuthRateCoordinator.php
@@ -66,15 +89,18 @@ jobs:
           python3 -m pip install --user --break-system-packages playwright
           python3 tests/oauth_performance_lab_browser_v2162.py
           python3 tests/browser_gate_v2911_match_creation_transport.py
+          python3 tests/match_assistant_detailed_analysis_v2162.py
+          python3 tests/recruitment_analyses_v2162.py
       - name: Build and validate cumulative Release Control package
         run: |
           python3 tools/build-p2k-v2162-oauth-performance-lab.py
-          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $m=(new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]))->validate(); if($m["version"]!=="2.16.2" || $m["overlay_file_count"]!==39)exit(2); echo "PASS ".$m["release_id"].PHP_EOL;' dist/P2K_2.16.2_OAuth_Performance_Lab_RC
+          php -r 'require "server/release-control/src/ReleaseSlotPolicy.php"; require "server/release-control/src/ReleaseCandidatePackage.php"; $m=(new \P2K\ReleaseControl\ReleaseCandidatePackage($argv[1]))->validate(); if($m["version"]!=="2.16.2" || $m["overlay_file_count"]!==42)exit(2); echo "PASS ".$m["release_id"].PHP_EOL;' dist/P2K_2.16.2_OAuth_Performance_Lab_RC
       - uses: actions/upload-artifact@v4
         with:
           name: p2k-v2162-oauth-performance-lab-rc
           path: |
             dist/P2K_2.16.2_OAuth_Performance_Lab_RC_*.zip
+            dist/P2K_2.16.2_OAuth_Standalone_Inc3_*.zip
             dist/SHA256SUMS
           if-no-files-found: error
           retention-days: 14
@@ -83,6 +109,18 @@ jobs:
         with:
           name: p2k-v2162-oauth-performance-lab-source
           path: |
+            TeamFrance/MatchRecruitment/
+            TeamFrance/MatchAnalyzer/
+            TGP/MatchRecruitment/
+            assets/js/shared/green-accelerator.js
+            assets/js/pages/v2-11-0.js
+            assets/js/pages/recruit-match*.js
+            assets/js/site-config.js
+            server/team-points/public/detailed-match-analysis.php
+            tests/oauth_application_integration_v2162.js
+            tests/oauth_standalone_runtime_v2162.php
+            tests/match_assistant_detailed_analysis_v2162.py
+            tools/install-p2k-v2162-oauth-standalone-inc3.sh
             OAuthPerformanceLab.html
             assets/js/shared/api-oauth-context.js
             assets/js/shared/api-request-semantics.js

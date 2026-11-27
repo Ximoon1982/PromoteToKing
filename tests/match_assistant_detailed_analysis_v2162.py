@@ -80,6 +80,7 @@ for role,status in [('',401),('expired',401),('member',403),('admin',200),('supe
     assert code==status,(role,code)
     assert (b'id="p2kUpcomingAnalyzer"' in body)==(status==200)
     assert 'no-store' in headers['Cache-Control']
+    assert (b'name="p2k-oauth-required"' in body)==(status==200 and role!='preview-admin'),role
 print('PASS PHP gate: anonymous, expired, member, admin, super admin, outage, authorized and denied preview; query spoofing does not grant access')
 
 class Quiet(SimpleHTTPRequestHandler):
@@ -90,12 +91,33 @@ origin='http://127.0.0.1:'+str(server.server_port)
 shell='<!doctype html><html><head><link rel="stylesheet" href="/assets/css/detailed-analysis-host.css"></head><body><iframe id="assistant" style="width:100%;height:820px" src="/FindMatch.htm"></iframe><script src="/assets/js/shared/detailed-analysis-host.js"></script></body></html>'
 def route(r,role):
     url=r.request.url
-    if not url.startswith(origin+'/'):return r.abort()
+    if not url.startswith(origin+'/'):
+        if len(role)>1 and 'api.chess.com/' in url:role[1].append(('public',url))
+        return r.abort()
     path=url.split('?',1)[0]
     if path.endswith(ENDPOINT):
         query=url[len(path):]
         code,headers,body=php_request(query,role[0])
         return r.fulfill(status=code,headers={k:headers[k] for k in ('Content-Type','Cache-Control','Content-Security-Policy','X-Frame-Options')},body=body)
+    detail=ENDPOINT in r.request.frame.url or ENDPOINT in r.request.headers.get('referer','')
+    if detail and path.endswith('/oauth.php'):
+        from urllib.parse import urlsplit,parse_qs
+        action=parse_qs(urlsplit(url).query).get('action',[''])[0]
+        if action=='session':
+            signed=not (len(role)>2 and role[2])
+            return r.fulfill(json={'ok':True,'enabled':True,'authenticated':signed,'profile':{'username':'admin-user'} if signed else None,'csrf':'fixture-oauth'})
+        if action=='batch':
+            assert r.request.headers.get('x-p2k-oauth-csrf')=='fixture-oauth'
+            payload=r.request.post_data_json
+            assert payload['rate_cps']<=30
+            rows=[]
+            for req in payload['requests']:
+                u=req['url']
+                data=match if u.endswith('/match/'+ID) else {'registered':[{'@id':URL,'time_class':'daily'}]} if u.endswith('/matches') else {'clubs':[{'@id':'https://api.chess.com/pub/club/promote-to-king'}]} if u.endswith('/clubs') else {'username':'fixture-user'}
+                rows.append({'id':req['id'],'url':u,'status':200,'body':json.dumps(data),'headers':{'content-type':'application/json'}})
+            if len(role)>1:role[1].append(('bearer',len(rows)))
+            return r.fulfill(json={'ok':True,'results':rows,'controller':{'rate_target_cps':24,'safe_rate_cps':24,'rate_ceiling_cps':30}})
+    if detail and any(path.endswith('/assets/js/shared/'+x+'.js') for x in ('api-client','real-oauth')):return r.continue_()
     if path.endswith('/test-shell.html'):return r.fulfill(content_type='text/html',body=shell)
     if path.endswith('/assets/js/shared/api-client.js'):return r.fulfill(content_type='application/javascript',body=api)
     if any(path.endswith('/assets/js/shared/'+s+'.js') for s in ['real-oauth','simulated-oauth','authenticated-member-refresh','analytics','analysis-coordinator','tab-activity']):return r.fulfill(content_type='application/javascript',body='/* fixture */')
@@ -118,7 +140,7 @@ def verify_analysis(frame):
     expect(frame.locator('#p2kChartModal')).to_be_hidden()
 def run(browser,embedded,role,allowed,query=''):
     page=browser.new_page(viewport={'width':1280,'height':900})
-    errors=[];state=[role]
+    errors=[];state=[role,[]]
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.route('**/*',lambda r:route(r,state))
     page.goto(origin+('/test-shell.html' if embedded else '/FindMatch.htm'+query))
@@ -136,6 +158,8 @@ def run(browser,embedded,role,allowed,query=''):
         expect(page.locator(modal)).to_be_visible()
         expect(page.locator(modal+' iframe')).to_have_attribute('src',origin+'/AnalyzeMatchModal.html?match='+ID)
         verify_analysis(page.frame_locator(modal+' iframe'))
+        assert any(k=='bearer' for k,v in state[1]),state
+        assert not any(k=='public' for k,v in state[1]),state
         page.locator(modal+' button').first.click()
         expect(page.locator(modal)).to_be_hidden()
         expect(assistant.locator('.match-card')).to_have_count(1)
@@ -169,6 +193,13 @@ try:
         page=browser.new_page();page.route('**/*',lambda r:route(r,['admin']))
         page.goto(origin+'/AnalyzeMatchModal.html')
         expect(page.locator('#p2kResults')).to_contain_text('missing or invalid')
+        page.close()
+        page=browser.new_page();state=['admin',[],True];page.route('**/*',lambda r:route(r,state))
+        page.goto(origin+ENDPOINT+'?match='+ID)
+        page.wait_for_function('window.P2K_REAL_OAUTH_READY && window.P2K_API_CLIENT')
+        code=page.evaluate("""async () => {await window.P2K_REAL_OAUTH_READY;try {await window.P2K_API_CLIENT.jsonDetailed('https://api.chess.com/pub/match/2019768',{cacheMode:'no-store',attempts:1});return 'unexpected success';} catch(e){return e.code;}}""")
+        assert code=='OAUTH_SESSION_NOT_READY',(code,state)
+        assert not state[1],state
         page.close()
         browser.close()
 finally:

@@ -62,9 +62,18 @@
   function extendOAuthCooldown(deadline) {
     if (!Number.isFinite(deadline) || deadline <= oauthGatewayNotBeforeMs || deadline <= Date.now()) return;
     oauthGatewayNotBeforeMs = deadline;
+    for (const entry of oauthGatewayQueue) {
+      if (!entry.settled && entry.deferMode === "return") entry.finish(false, localCooldownError(entry.url));
+    }
     if (oauthGatewayTimer) window.clearTimeout(oauthGatewayTimer);
     oauthGatewayTimer = 0;
     scheduleOAuthGatewayFlush();
+  }
+  function localCooldownError(url) {
+    return apiError("OAuth request deferred in browser before launch.", {
+      category:"deferred", code:"OAUTH_DEFERRED", status:503, url, retryable:true, deferred:true,
+      notBeforeMs:oauthGatewayNotBeforeMs, retryAfterMs:Math.max(0,oauthGatewayNotBeforeMs-Date.now()), transport:"oauth-bearer"
+    });
   }
   function readRetryAfter(headers) {
     return typeof retryAfterDeadline === "function" ? retryAfterDeadline(headers) : 0;
@@ -444,13 +453,14 @@
     }
   }
 
-  function executeOAuthGateway(url, { headers, signal, priority = 0, trafficClass = "foreground", timeoutMs = 20_000 }) {
+  function executeOAuthGateway(url, { headers, signal, priority = 0, trafficClass = "foreground", timeoutMs = 20_000, deferMode = "wait" }) {
     if (signal?.aborted) return Promise.reject(abortError(url));
+    if (deferMode === "return" && oauthGatewayNotBeforeMs > Date.now()) return Promise.reject(localCooldownError(url));
     return new Promise((resolve, reject) => {
       const entry = {
         id:`g${++oauthGatewayBatchSequence}`,
         sequence: oauthGatewayBatchSequence,
-        url, headers, signal,
+        url, headers, signal, deferMode,
         timeoutMs: Math.max(1_000, Math.min(120_000, Number(timeoutMs) || 20_000)),
         priority: Number(priority) || 0,
         trafficClass: trafficClass === "background" ? "background" : "foreground",

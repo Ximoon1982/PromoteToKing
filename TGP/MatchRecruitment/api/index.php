@@ -89,6 +89,14 @@ function recruitment_bearer(array $requests, int $concurrency=6): array {
 function recruitment_live_bearer_roster():array {
     $r=recruitment_bearer([['id'=>'0','url'=>'https://api.chess.com/pub/club/the-golden-phoenix/members']],1);
     $item=$r['results'][0]??[];$status=(int)($item['status']??0);
+    if(!empty($item['deferred']) || $status===429){
+        $deferred=!empty($item['deferred']);
+        $raw=(string)($item['headers']['retry-after']??'');
+        $seconds=is_numeric($raw)?max(0,(float)$raw):max(0,(int)strtotime($raw)-time());
+        $wait=max(2,(int)ceil($seconds),(int)ceil((float)($r['controller']['cooldown_remaining_ms']??0)/1000));
+        header('Retry-After: '.$wait);
+        recruitment_reply($deferred?503:429,['ok'=>false,'deferred'=>$deferred,'retry_after'=>(string)$wait,'error'=>['code'=>$deferred?'OAUTH_DEFERRED':'RATE_LIMIT','message'=>'Waiting for the shared OAuth cooldown.']]);
+    }
     if($status!==200||!is_array($item['json']??null))throw new RuntimeException('Chess.com member roster request failed (HTTP '.$status.').');
     $members=recruitment_normalize_members($item['json']);
     return ['schemaVersion'=>2,'clubSlug'=>'the-golden-phoenix','fetchedAt'=>gmdate(DATE_ATOM),'memberCount'=>count($members),'members'=>$members];
@@ -119,9 +127,9 @@ function recruitment_batch():never {
         foreach($r['results']??[] as $item)$rows[]=[
             'id'=>(string)($item['id']??''),'status'=>(int)($item['status']??0),
             'json'=>is_array($item['json']??null)?$item['json']:null,
-            'elapsed_ms'=>(int)($item['elapsed_ms']??0),
+            'elapsed_ms'=>(int)($item['elapsed_ms']??0),'deferred'=>!empty($item['deferred']),
             'retry_after'=>(string)($item['headers']['retry-after']??'')];
-        recruitment_reply(200,['ok'=>true,'mode'=>'oauth-bearer','results'=>$rows]);
+        recruitment_reply(200,['ok'=>true,'mode'=>'oauth-bearer','results'=>$rows,'cooldown_remaining_ms'=>max(0,(int)($r['controller']['cooldown_remaining_ms']??0))]);
     }catch(Throwable $e){
         error_log('TGP recruitment bearer: '.get_class($e).': '.$e->getMessage());
         recruitment_reply(503,['ok'=>false,'error'=>['message'=>'Authenticated Chess.com API transport unavailable.']]);

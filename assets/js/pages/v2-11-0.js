@@ -482,6 +482,7 @@
     let profile;
     try { profile = await chessJSON(base,3,signal); }
     catch (error) {
+      if (error?.deferred === true) throw error;
       if ([404,410].includes(Number(error?.status))) return {username,data:{closed:true,p2k_state:p2kState,error:""}};
       if(signal?.aborted)throw error;
       return {username,data:{closed:false,p2k_state:p2kState,error:error?.message||"Profile unavailable."}};
@@ -491,7 +492,7 @@
     if (closed) return {username,data:{...common,closed:true,error:""}};
     let stats,games;
     try { [stats,games] = await Promise.all([chessJSON(`${base}/stats`,3,signal),chessJSON(`${base}/games`,3,signal)]); }
-    catch (error) { if(signal?.aborted)throw error; return {username,data:{...common,closed:false,error:error?.message||"Stats or current games unavailable."}}; }
+    catch (error) { if(signal?.aborted || error?.deferred === true)throw error; return {username,data:{...common,closed:false,error:error?.message||"Stats or current games unavailable."}}; }
     const daily=stats?.chess_daily||{}, record=daily?.record||{};
     const completed=[record.win,record.loss,record.draw].reduce((sum,value)=>sum+(number(value)??0),0);
     return {username,data:{...common,daily_rating:number(daily?.last?.rating??daily?.best?.rating),timeout_percent:number(record?.timeout_percent),current_daily_games:Array.isArray(games?.games)?games.games.length:null,daily_rd:number(daily?.last?.rd),completed_daily_games:completed,avg_seconds_per_move:number(record?.time_per_move),closed:false,error:""}};
@@ -544,6 +545,7 @@
           const row=await scanCandidate(username,membership.get(text(username).toLowerCase())||"none",run.criteria||{},controller.signal);
           // A fully evaluated candidate must survive a concurrent Pause click.
           if(control.failure||generation!==scanGeneration)throw new DOMException("Scan interrupted","AbortError");
+          if(row?.data?.deferred === true) throw Object.assign(new Error("Candidate acquisition deferred."),{deferred:true,retryable:true,category:"deferred"});
           buffer.push(row);noteCandidateSettled();flush(false);
           // Bound queued batches if SQLite/Green is temporarily slower than acquisition.
           if(inFlight>=5)await chain;

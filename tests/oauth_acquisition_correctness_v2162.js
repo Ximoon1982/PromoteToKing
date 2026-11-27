@@ -4,7 +4,7 @@ const fs = require("node:fs"), vm = require("node:vm"), path = require("node:pat
 const ROOT = path.join(__dirname, "../assets/js/shared");
 const scripts = ["api-request-semantics.js", "api-oauth-context.js", "api-transport.js", "api-request-coordinator.js", "api-client.js"];
 const url = name => `https://api.chess.com/pub/club/fixture-${name}`;
-function fixture(handler, { bearer = true, search = "", cache = null, publicHandler = null } = {}) {
+function fixture(handler, { bearer = true, search = "", cache = null, publicHandler = null, requireOAuth = false } = {}) {
   const epoch = Date.UTC(2026, 10, 27, 9), timers = new Map(), posts = [], publicCalls = [], events = [];
   let now = epoch, nextTimer = 0, jsonps = 0;
   const math = Object.create(Math); math.random = () => 0; // worst-case downward jitter
@@ -31,7 +31,7 @@ function fixture(handler, { bearer = true, search = "", cache = null, publicHand
       throw Error("Unexpected fetch: " + target);
     }
   };
-  const document = { readyState:"complete", createElement:()=>({remove(){}}), head:{appendChild(script){
+  const document = { querySelector:()=>requireOAuth?{}:null, readyState:"complete", createElement:()=>({remove(){}}), head:{appendChild(script){
     jsonps++; const cb = new URL(script.src).searchParams.get("callback"); setTimeout(()=>window[cb]?.({jsonp:true}), 0);
   }}};
   const context = vm.createContext({window,document,URL,URLSearchParams,Response,Headers,AbortController,AbortSignal,Date:Clock,Math:math,TypeError,Error,console,CustomEvent:class {constructor(type,options){this.type=type;this.detail=options?.detail;}},sessionStorage:{getItem:()=>null,setItem(){}},setTimeout,clearTimeout});
@@ -88,4 +88,7 @@ const opts={cacheMode:"no-store",attempts:1};
   for(const search of ["","?oauth=1"]){const a=fixture(()=>{throw Error("Unexpected OAuth");},{bearer:false,search,publicHandler:()=>{throw new TypeError("CORS");}});const result=outcome(a.api.jsonDetailed(url("anonymous"),opts));await a.advance();assert(result.value.data.jsonp);assert.equal(a.publicCalls.length,1);assert.equal(a.jsonps,1);assert.equal(a.posts.length,0);}
   const a=fixture(()=>{throw Error("Unexpected OAuth");},{bearer:false,publicHandler:()=>new Response('{"ok":true}',{status:200})});const publicSuccess=outcome(a.api.jsonDetailed(url("public"),opts));await a.advance();assert(publicSuccess.value.data.ok);assert.equal(a.posts.length,0);
   console.log("PASS batch cancellation leaves pending items, anonymous and simulated public acquisition preserved");
+  const strict=fixture(()=>{throw Error("Unexpected OAuth");},{bearer:false,requireOAuth:true});const protectedRead=outcome(strict.api.jsonDetailed(url("protected"),opts));await strict.advance();assert.equal(protectedRead.error.category,"forbidden");assert.equal(strict.publicCalls.length,0);assert.equal(strict.jsonps,0);
+  const bg=fixture(e=>batch(e,e.body.requests.map(r=>row(r,503,{deferred:true,headers:{"retry-after":"120"}})),{cooldown_remaining_ms:120000}));const bgwork=outcome(bg.api.processPriority(["gab","heatmap"],item=>bg.api.json(url(item),{...opts,trafficClass:"background",deferMode:"return"}),{concurrency:1}));await bg.advance();assert(bgwork.done);assert.equal(bgwork.value.pending.length,2);assert.equal(bgwork.value.failures.length,0);assert.equal(bg.posts.length,1);assert.equal(bg.api.diagnostics().counters.retries,0);await bg.advance(119999);assert.equal(bg.posts.length,1);
+  console.log("PASS protected iframe fails closed, background return mode releases pending tasks without extra gateway calls");
 })().catch(e=>{console.error(e);process.exitCode=1;});

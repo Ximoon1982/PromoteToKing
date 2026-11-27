@@ -84,18 +84,18 @@
         return headers;
       }
 
-      async function executeFetch(url, { headers, signal, timeoutMs, conditional = false, priority = 0, trafficClass = "foreground", route = {} }) {
+      async function executeFetch(url, { headers, signal, timeoutMs, conditional = false, priority = 0, trafficClass = "foreground", route = {}, deferMode = "wait" }) {
         await waitForRealOAuthDecision();
         // Once a logical request selects verified OAuth, keep its route for
         // conditional fetches and all subsequent attempts, even on expiry.
-        if (oauthSessionActive() || oauthBearerMode?.()) route.bearer = true;
+        if (oauthSessionActive() || oauthBearerMode?.() || (typeof document !== "undefined" && document.querySelector?.('meta[name="p2k-oauth-required"][content="1"]'))) route.bearer = true;
         counters.fetches += 1;
         if (conditional) counters.conditionalFetches += 1;
         if (route.bearer) {
           if (!oauthSessionActive()) throw apiError("Verified OAuth session is no longer available.", {
             category:"forbidden", code:"OAUTH_SESSION_NOT_READY", status:401, url, transport:"oauth-bearer", retryable:false
           });
-          try { return await executeOAuthGateway(url, { headers, signal, priority, trafficClass, timeoutMs }); }
+          try { return await executeOAuthGateway(url, { headers, signal, priority, trafficClass, timeoutMs, deferMode }); }
           catch (error) { throw normalizeError(error, url, signal); }
         }
         const combined = combineSignal(signal, timeoutMs, url);
@@ -126,7 +126,7 @@
         try {
           response = await executeFetch(url, {
             headers: hasConditional ? conditionalHeaders : baseHeaders, signal, timeoutMs,
-            conditional: hasConditional, priority: Number(options.priority) || 0, route,
+            conditional: hasConditional, priority: Number(options.priority) || 0, route, deferMode: options.deferMode,
             trafficClass: options.trafficClass === "background" ? "background" : "foreground"
           });
         } catch (conditionalError) {
@@ -135,7 +135,7 @@
             counters.plainFetchRetries += 1;
             try {
               response = await executeFetch(url, {
-                headers: baseHeaders, signal, timeoutMs, conditional: false, route,
+                headers: baseHeaders, signal, timeoutMs, conditional: false, route, deferMode: options.deferMode,
                 priority: Number(options.priority) || 0,
                 trafficClass: options.trafficClass === "background" ? "background" : "foreground"
               });

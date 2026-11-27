@@ -161,6 +161,7 @@
                 counters.deferredRequests = (counters.deferredRequests || 0) + 1;
                 const deadline = Math.max(Date.now() + 1, normalized.notBeforeMs || Date.now() + Math.max(1000, normalized.retryAfterMs || 0));
                 try { window.dispatchEvent(new CustomEvent("p2k-api-deferred", { detail: { url:normalizedUrl, notBeforeMs:deadline, deferrals } })); } catch (_) {}
+                if (options.deferMode === "return") { normalized.notBeforeMs = deadline; throw normalized; }
                 try { await waitUntil(deadline, signal); }
                 catch (cancelled) { if (isCancelled(cancelled, signal)) counters.cancellations++; throw cancelled; }
                 attempt--; // No upstream attempt was spent. Keep the candidate pending.

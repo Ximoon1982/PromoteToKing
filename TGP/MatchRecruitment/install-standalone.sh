@@ -8,9 +8,9 @@ PHP_CLI="${PHP_CLI:-/usr/bin/php8.5-cli}"
 if [[ ! -x "$PHP_CLI" ]]; then PHP_CLI="$(command -v php || true)"; fi
 [[ -n "$PHP_CLI" && -x "$PHP_CLI" ]] || { echo 'PHP CLI not available.' >&2; exit 1; }
 [[ -d "$ROOT/server/team-points/src" && -d "$ROOT/TGP" ]] || { echo "Invalid PromoteToKing deployment root: $ROOT" >&2; exit 1; }
-FILES=(index.php auth.php MatchPolicy.php api/index.php template.html compat/PreviewIsolation.php assets/js/recruitment-core.js assets/js/recruitment.js assets/css/analyze-match.css assets/css/recruit-match.css data/.htaccess data/.gitignore data/.gitkeep README.md)
+FILES=(index.php auth.php MatchPolicy.php api/index.php template.html compat/PreviewIsolation.php compat/ActiveOAuthRuntime.php assets/js/recruitment-core.js assets/js/recruitment.js assets/css/analyze-match.css assets/css/recruit-match.css data/.htaccess data/.gitignore data/.gitkeep README.md)
 for f in "${FILES[@]}"; do [[ -f "$HERE/$f" ]] || { echo "Missing source: $f" >&2; exit 1; }; done
-for f in index.php auth.php MatchPolicy.php api/index.php compat/PreviewIsolation.php; do "$PHP_CLI" -l "$HERE/$f" || exit 1; done
+for f in index.php auth.php MatchPolicy.php api/index.php compat/PreviewIsolation.php compat/ActiveOAuthRuntime.php; do "$PHP_CLI" -l "$HERE/$f" || exit 1; done
 if command -v node >/dev/null 2>&1; then node --check "$HERE/assets/js/recruitment.js"; node --check "$HERE/assets/js/recruitment-core.js"; fi
 BACKUP="$ROOT/storage/tgp-match-recruitment-backups/$(date -u +%Y%m%dT%H%M%SZ)-$$"
 if [[ -d "$DEST" ]]; then
